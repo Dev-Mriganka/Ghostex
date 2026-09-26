@@ -416,6 +416,12 @@ where they are while you open, change and close views.
   and spacing while the section reveals or clips the list. The animation follows Sidebar
   Collapse Animation and reduced-motion preferences. Related setting:
   `sidebarCollapseAnimationDurationMs`.
+- A red dot on a session means a model, effort or mode change you picked in the
+  chat could not be applied: the agent refused it, or it kept failing for 30
+  seconds. Messages you send after picking it wait instead of reaching the agent
+  on the wrong model. Hover the session to read why, then pick a model again in
+  the chat's model menu (the same one, or another); once it applies, the dot
+  clears and the waiting messages are sent.
 - New sessions appear at the top of Sessions for 10 minutes. After that,
   a session with unsent text that has not received its first message moves
   into Drafts, below Pinned and above Sessions. Drafts starts collapsed;

@@ -102,6 +102,7 @@ pub(crate) mod session_chat_history;
 pub mod session_chat_interactive;
 pub mod session_chat_local_command;
 mod session_chat_model_selection;
+mod session_chat_model_selection_alert;
 pub mod session_chat_notice;
 mod session_chat_notice_progress;
 pub mod session_chat_omp_blocking;

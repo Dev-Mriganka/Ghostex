@@ -419,6 +419,10 @@ pub struct PresentationSession {
     /// turn; the sidebar draws it as a grey dot, separate from `activity`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_work_detected_at: Option<String>,
+    /// Why the model change the user picked could not be applied; the messages behind it are held.
+    /// The sidebar draws it as a red dot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_selection_failure: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_observation: Option<TitleObservation>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
