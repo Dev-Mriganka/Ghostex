@@ -60,7 +60,6 @@ impl Render for MaximizedComposer {
                 .capture_key_down(cx.listener(NativeChatView::composer_key_down))
                 .composer_input_actions(cx)
                 .capture_key_up(cx.listener(|chat, _, _, _| chat.composer_held_key = None))
-                .capture_action(cx.listener(NativeChatView::paste_attachments))
                 .capture_action(cx.listener(NativeChatView::composer_copy))
                 .capture_action(cx.listener(NativeChatView::composer_cut))
                 .on_drop(cx.listener(|chat, paths: &gpui::ExternalPaths, _, cx| {
@@ -113,7 +112,7 @@ impl NativeChatView {
         };
         self.maximized_opening = true;
         let pane = self.bounds.get();
-        let parent_native_view = self.config.parent_native_view;
+        let parent_native_view = self.child_window_parent(cx);
         let chat = cx.entity();
         #[cfg(target_os = "linux")]
         let owner = main;

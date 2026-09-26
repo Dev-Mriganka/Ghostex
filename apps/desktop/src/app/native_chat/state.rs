@@ -2,7 +2,7 @@ use super::runtime_worker::{ChatRuntimeOutput, ChatRuntimeWorker};
 use crate::app::{helpers::*, model::*};
 use futures::StreamExt as _;
 use gpui::{AppContext as _, Context, Entity, EventEmitter, Focusable as _, Subscription, Window};
-use gpui_component::input::{InputEvent, InputState};
+use gpui_component::input::{InputEvent, InputState, TextareaState};
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet},
@@ -46,7 +46,7 @@ pub(crate) struct NativeChatView {
     /// The open subagent transcript's items, projected and spliced on their own channel.
     pub(crate) subagent_items: Arc<Vec<Value>>,
     pub(crate) error: Option<String>,
-    pub(crate) input: Option<Entity<InputState>>,
+    pub(crate) input: Option<Entity<TextareaState>>,
     input_subscription: Option<Subscription>,
     input_observer: Option<Subscription>,
     pub(super) suggestions: super::suggestions::SuggestionWindowState,
@@ -54,6 +54,8 @@ pub(crate) struct NativeChatView {
     pub(super) composer_bounds: std::rc::Rc<std::cell::Cell<gpui::Bounds<gpui::Pixels>>>,
     pub(super) suggestion_selection: Option<(String, usize)>,
     input_window: Option<gpui::WindowId>,
+    /// The composer's focus and blur listeners, bound to `input_window`.
+    input_focus_listeners: Vec<Subscription>,
     pub(super) option_menu: Option<Entity<super::option_menu::ChatOptionMenu>>,
     /// Which trigger owns the open menu, so pressing it again shuts it (`menu_toggle.rs`).
     pub(super) menu_toggle: super::menu_toggle::ChatMenuToggle,
@@ -82,6 +84,8 @@ pub(crate) struct NativeChatView {
     /// True while this session's pane is off screen: its modal windows stay closed, and the state behind them waits for the pane to come back.
     pub(super) pane_hidden: bool,
     pub(crate) main_window: Option<gpui::AnyWindowHandle>,
+    /// The native view of `main_window`, which the chat's own child windows attach to and are placed in.
+    pub(super) drawn_native_view: Option<*mut std::ffi::c_void>,
     /// Where the composer's model pill was last painted, which Option+P opens the model pop-up against.
     pub(super) model_pill_bounds: std::rc::Rc<std::cell::Cell<gpui::Bounds<gpui::Pixels>>>,
     /// Set while the next menu this view opens belongs to another surface (the terminal's model pill), not to its own pane.
@@ -122,14 +126,14 @@ pub(crate) struct NativeChatView {
     pub(super) composer_image_hover: Option<String>,
     /// Image the caret last sat against, so a caret move repaints the thumbnails only when it matters.
     pub(super) composer_caret_image: Option<String>,
-    pub(super) async_answer_input: Option<(String, Entity<InputState>)>,
+    pub(super) async_answer_input: Option<(String, Entity<TextareaState>)>,
     pub(super) async_answer_subscription: Option<Subscription>,
     pub(super) async_answer_echo: super::async_questions::AsyncAnswerEcho,
-    pub(crate) answer_input: Option<(String, Entity<InputState>)>,
+    pub(crate) answer_input: Option<(String, Entity<TextareaState>)>,
     pub(crate) answer_subscription: Option<Subscription>,
     pub(super) terminal_dialog_input: Option<super::terminal_dialog::TerminalDialogInput>,
     pub(super) terminal_dialog_key_focus: gpui::FocusHandle,
-    pub(crate) note_input: Option<Entity<InputState>>,
+    pub(crate) note_input: Option<Entity<TextareaState>>,
     pub(crate) note_subscription: Option<Subscription>,
     /// Transcript search (Cmd+F): the field, and the navigation it last scrolled to.
     pub(super) search_input: Option<Entity<InputState>>,
@@ -292,6 +296,7 @@ impl NativeChatView {
             composer_bounds: Default::default(),
             suggestion_selection: None,
             input_window: None,
+            input_focus_listeners: Vec::new(),
             option_menu: None,
             menu_toggle: Default::default(),
             context_editor_window: Default::default(),
@@ -309,6 +314,7 @@ impl NativeChatView {
             maximized_opening: false,
             pane_hidden: false,
             main_window: None,
+            drawn_native_view: None,
             model_pill_bounds: Default::default(),
             menu_outside_pane: false,
             pending_model_menu: None,
@@ -386,8 +392,7 @@ impl NativeChatView {
         if self.input.is_none() {
             let draft = self.draft.clone();
             let input = cx.new(|cx| {
-                InputState::new(window, cx)
-                    .multi_line(true)
+                TextareaState::new(window, cx)
                     .submit_on_enter(true)
                     .auto_grow(3, 7)
                     .default_value(draft)
@@ -419,7 +424,7 @@ impl NativeChatView {
             self.input_subscription = Some(cx.subscribe_in(
                 &input,
                 window,
-                |this, input, event: &InputEvent, window, cx| match event {
+                |this, input, event: &InputEvent, _, cx| match event {
                     InputEvent::Change => {
                         let draft = input.read(cx).value().to_string();
                         if draft == this.draft {
@@ -435,25 +440,31 @@ impl NativeChatView {
                         cx.emit(NativeChatEvent::DraftState(this.draft.is_empty()));
                         cx.notify();
                     }
-                    InputEvent::Focus => {
-                        super::focus::reclaim_keyboard_focus(window);
-                        this.composer_focused = true;
-                        this.sync_suggestion_window(cx);
-                        this.invoke(json!({"type":"composerExpand","editor":true}), cx);
-                        cx.emit(NativeChatEvent::ComposerFocused);
-                        cx.notify();
-                    }
-                    InputEvent::Blur => {
-                        this.composer_focused = false;
-                        this.short_pane_composer_open = false;
-                        this.sync_suggestion_window(cx);
-                        this.save_draft(cx);
-                        // A short pane's box collapses again once it loses focus (composer_scroll.rs).
-                        cx.notify();
-                    }
                     _ => {}
                 },
             ));
+            // CDXC:SessionChat 2026-09-26 WHY:
+            // The field's own `InputEvent::Focus` and `Blur` come from focus listeners it registers on the window it was created in, and one chat view is drawn in the main window or in the floating sessions panel's window. Focusing the composer in the other window emitted nothing, so the chat never counted its composer as focused and the `$`, `@` and `/` list stayed shut while the keyboard still moved through it. The listeners are bound to the window the chat is drawn in, and a new window starts from its own focus state.
+            let focus = input.read(cx).focus_handle(cx);
+            self.composer_focused = focus.is_focused(window);
+            self.input_focus_listeners = vec![
+                cx.on_focus(&focus, window, |this, window, cx| {
+                    super::focus::reclaim_keyboard_focus(window);
+                    this.composer_focused = true;
+                    this.sync_suggestion_window(cx);
+                    this.invoke(json!({"type":"composerExpand","editor":true}), cx);
+                    cx.emit(NativeChatEvent::ComposerFocused);
+                    cx.notify();
+                }),
+                cx.on_blur(&focus, window, |this, _, cx| {
+                    this.composer_focused = false;
+                    this.short_pane_composer_open = false;
+                    this.sync_suggestion_window(cx);
+                    this.save_draft(cx);
+                    // A short pane's box collapses again once it loses focus (composer_scroll.rs).
+                    cx.notify();
+                }),
+            ];
         }
         if self.input_needs_sync {
             self.input_needs_sync = false;

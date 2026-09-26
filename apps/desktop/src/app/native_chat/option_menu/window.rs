@@ -642,11 +642,22 @@ impl NativeChatView {
         let appearance = ChatAppearance::current(&self.snapshot);
         // `trigger` is in content coordinates; a window frame with a titlebar (Chat Lab) put every
         // menu that titlebar's height above its trigger or the pointer.
-        let source_bounds = super::super::child_window::content_bounds(window);
+        let content_bounds = super::super::child_window::content_bounds(window);
+        // Menus are kept inside the chat itself. On the desktop it fills its own window, so this is
+        // that window's content; in a page it is one pane beside the sidebar, and clamping to the
+        // page let a menu opened from the model pill cover the sidebar.
+        let view = self.bounds.get();
+        let source_bounds = if view.size.width > px(0.0) && view.size.height > px(0.0) {
+            Bounds::new(content_bounds.origin + view.origin, view.size)
+        } else {
+            content_bounds
+        };
         let chat = cx.weak_entity();
         let source = window.window_handle();
         let source_focus = window.focused(cx);
-        let parent = self.config.parent_native_view;
+        // Attached to the window the trigger is drawn in, whose content `trigger` is measured in.
+        let parent = super::super::child_window::window_native_view(window)
+            .unwrap_or(self.config.parent_native_view);
         let outside_pane = std::mem::take(&mut self.menu_outside_pane);
         let menu = cx.new(|_| ChatOptionMenu {
             chat,
@@ -664,7 +675,7 @@ impl NativeChatView {
             outside_pane,
             model_efforts: Default::default(),
         });
-        let anchor = Bounds::new(source_bounds.origin + trigger.origin, trigger.size);
+        let anchor = Bounds::new(content_bounds.origin + trigger.origin, trigger.size);
         menu.update(cx, |menu, cx| {
             if below {
                 menu.open_dropdown(rows, anchor, width, 0, cx);

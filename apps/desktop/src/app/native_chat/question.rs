@@ -5,7 +5,7 @@ use gpui::{
     AnyElement, AppContext as _, Context, InteractiveElement as _, IntoElement, ParentElement as _,
     StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
-use gpui_component::input::{Input, InputEvent, InputState};
+use gpui_component::input::{InputEvent, Textarea, TextareaState};
 use serde_json::json;
 
 impl NativeChatView {
@@ -98,6 +98,26 @@ impl NativeChatView {
                 p,
                 cx,
             ));
+            // The mockup Claude shows beside the option, under the row that picks it.
+            let preview = text(option, "preview");
+            if !preview.is_empty() {
+                choices = choices.child(
+                    div()
+                        .id(format!("question-option-preview:{index}:{option_index}"))
+                        .ml(px(12.0 * s))
+                        .max_h(px(160.0 * s))
+                        .overflow_y_scroll()
+                        .px(px(10.0 * s))
+                        .py(px(8.0 * s))
+                        .rounded(px(6.0 * s))
+                        .bg(p.input)
+                        .font_family(super::fonts::CHAT_MONO)
+                        .text_size(px(12.6 * s))
+                        .line_height(px(18.0 * s))
+                        .text_color(p.muted)
+                        .child(preview),
+                );
+            }
         }
         body.push(choices.into_any_element());
         if index > 0 {
@@ -123,8 +143,7 @@ impl NativeChatView {
                 .is_none_or(|(previous, _)| previous != &key)
             {
                 let input = cx.new(|cx| {
-                    InputState::new(window, cx)
-                        .multi_line(true)
+                    TextareaState::new(window, cx)
                         .submit_on_enter(true)
                         .auto_grow(1, 4)
                         .placeholder("Write a custom answer…")
@@ -139,7 +158,7 @@ impl NativeChatView {
                 self.answer_input = Some((key, input));
             }
             actions.push(
-                Input::new(&self.answer_input.as_ref().unwrap().1)
+                Textarea::new(&self.answer_input.as_ref().unwrap().1)
                     .aria_label("Your answer")
                     .disabled(self.snapshot["questionCard"]["busy"] == true)
                     .placeholder_color(p.muted.opacity(0.6))

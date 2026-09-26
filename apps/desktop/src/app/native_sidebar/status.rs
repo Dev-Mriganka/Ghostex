@@ -2,7 +2,6 @@ use gpui::prelude::FluentBuilder;
 use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
 
 use crate::app::helpers::chrome_palette::chrome_color;
-use crate::app::helpers::titlebar_background;
 
 /// CDXC:SessionStatus 2026-09-21 DECISION:
 /// User: "I feel we have multiple degrees for the orange color status \"working\" in the sidebar pls unify all of them on this new one you picked", so every working dot, count, and badge in the sidebar uses this one orange (the Spaces badge orange, 20% darker than the old 0xf8ad07 so a white digit stays readable on it).
@@ -17,12 +16,23 @@ pub(crate) fn background_work_color() -> gpui::Rgba {
     chrome_color(0xb4b8bf, 0x6b7078)
 }
 
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: "we must show a red dot on the session in the sidebar if we fail" to apply the model change picked in chat. The red dot wins over working, attention and the grey shell dot, because the messages behind the change are held until the user picks again; the row's tooltip carries the reason.
+/// SEE-ALSO: server/src/session_chat_model_selection_alert.rs.
+pub(crate) const FAILED_COLOR: u32 = 0xef4444;
+
 pub(crate) fn activity_indicator(
     activity: &str,
     has_background_work: bool,
+    model_selection_failed: bool,
     scale: f32,
 ) -> Option<AnyElement> {
     let indicator = match activity {
+        _ if model_selection_failed => div()
+            .size(px(8.0 * scale))
+            .rounded_full()
+            .bg(rgb(FAILED_COLOR))
+            .into_any_element(),
         "working" => div()
             .size(px(8.0 * scale))
             .rounded_full()
@@ -53,8 +63,8 @@ pub(crate) fn activity_indicator(
     )
 }
 
-/// CDXC:Spaces 2026-09-25 DECISION:
-/// User: the status dots under a Space, and on a remote machine tab, overlap by half instead of sitting side by side: blue most right and on top, orange in the middle, the leftmost slot (the grey shell-running dot, which never shows with orange) behind them. Each dot keeps its session-card size (8px working, 7px attention) and gets a thin ring in the sidebar colour so the covered edge stays readable. This supersedes the 2026-09-22 side-by-side dots.
+/// CDXC:Spaces 2026-09-26 DECISION:
+/// User: the status dots under a Space, and on a remote machine tab, overlap by half instead of sitting side by side: blue most right and on top, orange in the middle, the leftmost slot (the grey shell-running dot, which never shows with orange) behind them. Each dot keeps its session-card size (8px working, 7px attention) and has "no outline on these indicator dots please at all". This supersedes the 2026-09-25 thin ring in the sidebar colour around each dot.
 /// CDXC:Spaces 2026-09-26 WHY:
 /// The stack has an explicit width with each dot placed at a fixed offset instead of negative flex margins, which left the measured box narrower than the drawn dots and pushed two or more of them right of centre.
 pub(crate) fn status_dot_stack(
@@ -63,8 +73,6 @@ pub(crate) fn status_dot_stack(
     background_work_count: usize,
     scale: f32,
 ) -> gpui::Div {
-    let ring = 1.5 * scale;
-    let ring_color = titlebar_background();
     let background = working_count == 0 && background_work_count > 0;
     let dots: Vec<(f32, gpui::Hsla)> = [
         (background, 8.0, background_work_color().into()),
@@ -73,7 +81,7 @@ pub(crate) fn status_dot_stack(
     ]
     .into_iter()
     .filter(|(shown, _, _)| *shown)
-    .map(|(_, size, color)| (size * scale + 2.0 * ring, color))
+    .map(|(_, size, color)| (size * scale, color))
     .collect();
     let step = 4.0 * scale;
     let width = dots
@@ -81,7 +89,7 @@ pub(crate) fn status_dot_stack(
         .enumerate()
         .map(|(index, (size, _))| index as f32 * step + size)
         .fold(0.0, f32::max);
-    let height = 8.0 * scale + 2.0 * ring;
+    let height = 8.0 * scale;
     div()
         .relative()
         .flex_shrink_0()
@@ -94,8 +102,6 @@ pub(crate) fn status_dot_stack(
                 .top(px((height - size) / 2.0))
                 .size(px(size))
                 .rounded_full()
-                .border(px(ring))
-                .border_color(ring_color)
                 .bg(color)
         }))
 }

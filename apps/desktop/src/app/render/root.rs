@@ -228,6 +228,15 @@ impl Render for GhostexGpuiApp {
         self.sync_session_chat_pane_focus(window, cx);
         self.refresh_zmx_persistence_focused_terminal_if_changed(cx);
         let sidebar_chrome_visible = gpui_sidebar_chrome_visible(self.sidebar_collapsed);
+        // The sidebar's peeking usage strip draws in a frosted window of its own, which outlives a
+        // docked sidebar that is no longer drawn unless it is taken down here.
+        if !sidebar_chrome_visible {
+            crate::app::window::frosted_host::hide_frosted_host_over(
+                crate::app::window::frosted_host::FrostedHostKind::SidebarUsage,
+                gpui::Window::window_handle(window),
+                cx,
+            );
+        }
         // Collapsing or expanding, the sidebar and its divider slide at their full width inside a
         // clip that tweens (panel_motion.rs).
         let sidebar_frame = self.panel_motion.sidebar.frame();
@@ -1283,16 +1292,6 @@ impl Render for GhostexGpuiApp {
                     }),
             )
             .child(self.render_gpui_status_pet_presentation(cx))
-            /*
-            gpui-component's `Root` does not draw its dialog layer; the app view
-            must render it. Without this every `open_alert_dialog` (the paste
-            protection confirmation, the terminal close confirmation) still
-            pushed an active dialog and moved keyboard focus onto it, but drew
-            nothing: the pending paste was silently held, Cmd+V and typing
-            went dead until focus moved elsewhere. Last child so it paints
-            above the workspace.
-            */
-            .children(gpui_component::Root::render_dialog_layer(window, cx))
             // Last child, so a resize drag in progress sees each mouse move
             // before the panes it is dragged across do.
             .child(self.render_resize_drag_pointer_tracker(cx))

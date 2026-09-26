@@ -2943,6 +2943,7 @@ mod tests {
                 .map(|label| SessionChatQuestionOption {
                     label: (*label).to_string(),
                     description: None,
+                    preview: None,
                 })
                 .collect(),
         }
@@ -3561,6 +3562,36 @@ pub(crate) async fn handle_send_session_chat_message_http(
             &params,
             &target,
             &text,
+        );
+    }
+    // A message never reaches the agent ahead of the model change the user picked before it
+    // (2026-09-27 decision in session_chat_model_selection_alert.rs): it waits behind the change in
+    // the queue, which applies the change first. A sleeping session keeps the wake path, which
+    // queues behind it too.
+    if crate::presentation::effective_lifecycle_state(&target.session) == "running"
+        && crate::session_chat_model_selection::has_pending_selection(
+            state,
+            &target.project_id,
+            &target.session_id,
+        )
+    {
+        if image_paths.is_empty() {
+            return crate::session_chat_send_wake::queue_startup_send(
+                state,
+                endpoint_path,
+                request_id,
+                &params,
+                &target,
+                &text,
+            );
+        }
+        return domain_error_response(
+            endpoint_path,
+            request_id,
+            DomainStateError {
+                code: "invalidState",
+                message: "The model change you picked has not applied yet, so this message was not sent. It is still in the chat box.".to_string(),
+            },
         );
     }
     match crate::session_chat_queue_runtime::send_session_chat_message_with_draft(
@@ -4575,6 +4606,11 @@ pub(crate) async fn handle_interrupt_session_chat_http(
         "/api/updateAgentActivity".to_string(),
         request_id.clone(),
         escape_params,
+    );
+    crate::session_chat_interactive::retire_interrupted_session_chat_prompt(
+        state,
+        &target.project_id,
+        &target.session_id,
     );
     // Claude Code may answer this Escape by handing the prompt back to its
     // composer; the detector decides after the write lands (CDXC:SessionChat
