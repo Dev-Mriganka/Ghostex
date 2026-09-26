@@ -97,7 +97,144 @@ fn cursor_parameters(screen: &str, label: &str) -> Option<Vec<ParameterRow>> {
     (!rows.is_empty()).then_some(rows)
 }
 
+/// Whether the input box holds exactly `command`. A plain capture cannot tell Hermes' italic
+/// placeholder from typed text, so the other readings compare against the command instead.
+fn hermes_input_is(composer_agent: &str, screen: &str, command: &str) -> bool {
+    session_chat_composer_input(composer_agent, screen)
+        .is_some_and(|input| collapse_spaces(&input.text) == command)
+}
+
+/// The command left the input box and the status bar names the requested model.
+fn hermes_applied(
+    composer_agent: &str,
+    screen: &str,
+    plan: &CodexPickerPlan,
+    command: &str,
+) -> bool {
+    !hermes_input_is(composer_agent, screen, command)
+        && detect_session_chat_selection(SessionChatOptionAgent::Hermes, screen).is_some_and(
+            |selection| {
+                selection.model.is_some_and(|model| {
+                    crate::session_chat_hermes_status::hermes_status_bar_shows(
+                        &model.value,
+                        &plan.model,
+                    )
+                })
+            },
+        )
+}
+
+/// Every refusal Hermes printed on screen (`✗ <reason>`), oldest first.
+fn hermes_refusals(screen: &str) -> Vec<String> {
+    screen_lines(screen)
+        .into_iter()
+        .filter_map(|line| {
+            line.strip_prefix('\u{2717}')
+                .map(|reason| reason.trim().to_string())
+        })
+        .collect()
+}
+
 impl PickerDriver<'_> {
+    /// CDXC:AgentProviders 2026-09-26 WHY:
+    /// Hermes never prints its reasoning effort and never echoes a typed `/model` line, so an
+    /// effort-only change cannot be recognised as already applied: the command is always typed, and
+    /// it counts once the input is taken and the status bar names the model. Delivery is verified
+    /// before Enter, so a switch that does not show within the step (Hermes refused the model, or
+    /// asks in the terminal to confirm an expensive one) is final instead of retried: retyping the
+    /// same command cannot change Hermes' answer.
+    async fn drive_hermes(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
+        if !plan.effort.is_empty()
+            && !crate::session_chat_hermes_status::HERMES_PICKER_EFFORTS
+                .contains(&plan.effort.as_str())
+        {
+            return Err(invalid_params(
+                "Hermes' model picker offers low, medium and high.",
+            ));
+        }
+        let mut command = format!("/model {}", plan.model);
+        if let Some(provider) = &plan.hermes_provider {
+            command.push_str(&format!(" --provider {provider}"));
+        }
+        if !plan.effort.is_empty() {
+            command.push_str(&format!(" --reasoning {}", plan.effort));
+        }
+        // The composer table spells the agent `hermes-agent`.
+        let composer_agent =
+            crate::agents::identity::normalize_agent_id(Some(&plan.provider)).unwrap_or_default();
+        let screen = capture_session_terminal_text_vt(self.zmx_name)
+            .await
+            .ok_or_else(|| session_not_running("Waiting for the agent's terminal."))?;
+        if (self.cancelled)()
+            || detect_session_chat_composer_readiness(Some(&plan.provider), &screen, None).state
+                != SessionChatComposerState::Ready
+        {
+            return Err(agent_busy(
+                "Waiting for Hermes to accept the model command.",
+            ));
+        }
+        // A VT capture, so the italic placeholder reads as empty.
+        if !session_chat_composer_input(&composer_agent, &screen)
+            .is_some_and(|input| input.is_empty())
+        {
+            return Err(agent_busy(
+                "Waiting for the terminal input to be sent or cleared.",
+            ));
+        }
+        let refused_before = hermes_refusals(&screen).len();
+        let result = async {
+            self.write(&build_session_chat_paste_bytes(&command))
+                .await?;
+            self.wait_for("type model command", |screen| {
+                hermes_input_is(&composer_agent, screen, &command).then_some(())
+            })
+            .await?;
+            self.write(CODEX_SUBMIT).await?;
+            let outcome = self
+                .wait_for("applied model", |screen| {
+                    if hermes_applied(&composer_agent, screen, plan, &command) {
+                        return Some(Ok(()));
+                    }
+                    hermes_refusals(screen)
+                        .into_iter()
+                        .skip(refused_before)
+                        .last()
+                        .map(Err)
+                })
+                .await;
+            match outcome {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(reason)) => Err(unsupported_selection(format!(
+                    "Hermes did not switch to {}: {reason}",
+                    plan.model
+                ))),
+                Err(error) if error.code == "timeout" => Err(unsupported_selection(format!(
+                    "Hermes did not switch to {}. Check its terminal for a question or an error.",
+                    plan.model
+                ))),
+                Err(error) => Err(error),
+            }
+        }
+        .await;
+        if result.is_err() && !(self.cancelled)() {
+            if let Some(screen) = self.capture().await {
+                if hermes_input_is(&composer_agent, &screen, &command) {
+                    // Hermes' verified clear: one Ctrl+C, only while a draft is on screen.
+                    let _ = crate::session_chat_send::clear_session_chat_composer(
+                        self.project_id,
+                        self.session_id,
+                        self.zmx_name,
+                        self.source,
+                        &plan.provider,
+                        self.cancelled,
+                    )
+                    .await;
+                }
+            }
+        }
+        result
+    }
+
     async fn drive_provider(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
         let row = crate::agent_model_catalog::catalog_model(&plan.provider, &plan.model)
             .ok_or_else(|| invalid_params("The model is not in this server's catalog."))?;
@@ -291,7 +428,11 @@ pub(crate) async fn run_provider_model_picker_job(
         source,
         cancelled,
     };
-    let outcome = driver.drive_provider(&plan).await;
+    let outcome = if plan.provider == "hermes" {
+        driver.drive_hermes(&plan).await
+    } else {
+        driver.drive_provider(&plan).await
+    };
     if let Err(error) = &outcome {
         log_picker(
             LogLevel::Error,

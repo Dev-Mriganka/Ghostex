@@ -37,6 +37,7 @@ pub enum ModelPickerProvider {
     Antigravity,
     #[serde(rename = "opencode")]
     OpenCode,
+    Hermes,
 }
 
 impl ModelPickerProvider {
@@ -49,6 +50,7 @@ impl ModelPickerProvider {
             Self::Grok => "grok",
             Self::Antigravity => "antigravity",
             Self::OpenCode => "opencode",
+            Self::Hermes => "hermes",
         }
     }
 
@@ -61,6 +63,7 @@ impl ModelPickerProvider {
             "grok" => Some(Self::Grok),
             "antigravity" => Some(Self::Antigravity),
             "opencode" => Some(Self::OpenCode),
+            "hermes" => Some(Self::Hermes),
             _ => None,
         }
     }
@@ -144,6 +147,18 @@ pub fn model_pick_scope(
 /// Antigravity.
 pub const MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON: &str =
     "This agent's model picker always saves the choice as its default.";
+
+/// Hermes is the other way round: `/model` without `--global` never saves a default, and the
+/// picker never sends `--global`, so every pick applies to this session alone.
+pub const MODEL_PICKER_SESSION_SCOPE_ONLY_REASON: &str = "Every pick applies to this session only.";
+
+/// Why an agent's picker has one scope, for every agent without the session-only choice.
+pub fn model_picker_scope_reason(provider: ModelPickerProvider) -> &'static str {
+    match provider {
+        ModelPickerProvider::Hermes => MODEL_PICKER_SESSION_SCOPE_ONLY_REASON,
+        _ => MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON,
+    }
+}
 
 /// A pane size the host measured.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]

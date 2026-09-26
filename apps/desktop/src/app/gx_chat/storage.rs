@@ -126,6 +126,12 @@ const STORES: &[ChatStore] = &[
         backend: Backend::Local,
     },
     ChatStore {
+        id: "hermesContext",
+        prefix: "ghostex.chat.context-details.hermes.v1",
+        collection: false,
+        backend: Backend::Local,
+    },
+    ChatStore {
         id: "notices",
         prefix: "ghostex.sessionChat.noticeDismissed.",
         collection: true,

@@ -144,7 +144,7 @@ pub fn compute_context_meter(
         input
             .selected_options
             .and_then(|options| options.context_usage.as_ref()),
-        agent == ContextDetailsAgent::Codex,
+        agent.prefers_reported_percentage(),
     );
     let status = resolve_context_detail_status(agent, input.selected_options, input.account);
     let session = ContextDetailSession {
