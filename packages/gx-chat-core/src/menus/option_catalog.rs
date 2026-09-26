@@ -887,7 +887,7 @@ pub fn session_option_catalog(
             return Some(match catalog.agents.get("hermes") {
                 Some(agent) => build_hermes_catalog(catalog, agent),
                 None => hermes_catalog(),
-            })
+            });
         }
         "omp" => return Some(omp_catalog()),
         "pi" => return Some(pi_catalog()),
