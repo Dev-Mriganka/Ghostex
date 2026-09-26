@@ -50,9 +50,11 @@ fn load() -> HashMap<String, SessionChatPendingRewind> {
     let mut entries: HashMap<String, SessionChatPendingRewind> =
         serde_json::from_str(&text).unwrap_or_default();
     // A transcript that grew past the cutoff has already answered the rewind; a missing one has
-    // nothing left to hide.
+    // nothing left to hide; a month-old entry belongs to a conversation nobody continued.
+    let oldest_ms = chrono::Utc::now().timestamp_millis() - 30 * 24 * 60 * 60 * 1000;
     entries.retain(|path, pending| {
-        std::fs::metadata(path).is_ok_and(|metadata| metadata.len() <= pending.cutoff_offset)
+        pending.set_at_ms >= oldest_ms
+            && std::fs::metadata(path).is_ok_and(|metadata| metadata.len() <= pending.cutoff_offset)
     });
     entries
 }
