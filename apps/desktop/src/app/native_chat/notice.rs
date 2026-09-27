@@ -83,7 +83,9 @@ impl NativeChatView {
             } else {
                 choices.len()
             };
-            let secondary = notice["secondaryChoice"].as_u64().map(|index| index as usize);
+            let secondary = notice["secondaryChoice"]
+                .as_u64()
+                .map(|index| index as usize);
             for (index, choice) in choices.iter().take(count).enumerate() {
                 let shortcut = if self.snapshot["showShortcutLabels"] != false {
                     if index == 0 {
@@ -201,7 +203,7 @@ impl NativeChatView {
                                 .border_color(p.control_border.opacity(0.65))
                                 .bg(p.background.opacity(0.7))
                                 .p(px(12.0 * p.scale))
-                                .font_family("Menlo")
+                                .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                                 .text_size(px(12.0 * p.scale))
                                 .child(text(notice, "screenTail"))
                                 .into_any_element(),

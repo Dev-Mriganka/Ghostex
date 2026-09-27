@@ -132,7 +132,7 @@ impl NativeChatView {
                         .flex()
                         .justify_center()
                         .items_center()
-                        .font_family("Menlo")
+                        .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                         .text_size(px(13.0 * s))
                         .font_weight(gpui::FontWeight::MEDIUM)
                         .text_color(p.muted)
