@@ -18,10 +18,10 @@
 //!
 //! SEE-ALSO: server/src/presentation/session_projection.rs (publishes `botProfile` and `botGatewayRunning` on the project row), packages/gx-core/src/sidebar_view/projects.rs (`build_project_meta` reads the profile), apps/desktop/src/app/native_sidebar/project_header.rs (draws the tile and the gateway dot).
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde_json::{json, Map, Value};
 
@@ -57,6 +57,16 @@ pub(crate) fn is_bot_profile_name(profile: &str) -> bool {
         && profile
             .chars()
             .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+}
+
+/// A bot's Hermes home: `HERMES_HOME` itself for the default profile, `profiles/<profile>` for the
+/// others.
+pub(crate) fn bot_profile_home(hermes_home: &Path, profile: &str) -> PathBuf {
+    if profile == DEFAULT_BOT_PROFILE {
+        hermes_home.to_path_buf()
+    } else {
+        hermes_home.join("profiles").join(profile)
+    }
 }
 
 /// The command a bot's "+" runs.
@@ -135,7 +145,7 @@ pub(crate) fn bot_gateway_running(hermes_home: &Path, profile: &str) -> bool {
     if profile == DEFAULT_BOT_PROFILE {
         return live_gateway_state(hermes_home).is_some();
     }
-    live_gateway_state(&hermes_home.join("profiles").join(profile)).is_some()
+    live_gateway_state(&bot_profile_home(hermes_home, profile)).is_some()
         || live_gateway_state(hermes_home).is_some_and(|state| {
             state
                 .get("served_profiles")
@@ -144,50 +154,67 @@ pub(crate) fn bot_gateway_running(hermes_home: &Path, profile: &str) -> bool {
         })
 }
 
-/// The gateway state each bot profile was last published with. The projection only reads it, so
-/// building a snapshot stays in memory; the 60s pass in `server/bot_sync.rs` refreshes it.
-fn published_gateways() -> &'static Mutex<HashMap<String, bool>> {
-    static PUBLISHED: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
-    PUBLISHED.get_or_init(Default::default)
+/// A fact about each bot, published on its project row. The projection only reads it, so building
+/// a snapshot stays in memory; the 60s pass in `server/bot_sync.rs` refreshes it.
+pub(crate) struct PublishedBotFacts<T>(Mutex<BTreeMap<String, T>>);
+
+impl<T: Copy + PartialEq> PublishedBotFacts<T> {
+    pub(crate) const fn new() -> Self {
+        Self(Mutex::new(BTreeMap::new()))
+    }
+
+    fn published(&self) -> MutexGuard<'_, BTreeMap<String, T>> {
+        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// The fact as last published. A profile nobody has read yet is read now, once.
+    pub(crate) fn get(&self, profile: &str, read: impl FnOnce() -> T) -> T {
+        let cached = self.published().get(profile).copied();
+        cached.unwrap_or_else(|| {
+            let value = read();
+            self.published().insert(profile.to_string(), value);
+            value
+        })
+    }
+
+    /// Stores freshly read facts and returns the profiles whose fact changed since it was last
+    /// published. A profile read for the first time is recorded, not reported.
+    pub(crate) fn refresh<'a>(&self, fresh: impl IntoIterator<Item = (&'a str, T)>) -> Vec<String> {
+        // Read every profile before the lock is taken, so the projection never waits on a file.
+        let fresh: Vec<(&str, T)> = fresh.into_iter().collect();
+        let mut published = self.published();
+        fresh
+            .into_iter()
+            .filter(|&(profile, value)| {
+                published
+                    .insert(profile.to_string(), value)
+                    .is_some_and(|before| before != value)
+            })
+            .map(|(profile, _)| profile.to_string())
+            .collect()
+    }
 }
 
-/// Whether a bot's gateway runs, as last read. A profile nobody has read yet is read now, once.
+static PUBLISHED_GATEWAYS: PublishedBotFacts<bool> = PublishedBotFacts::new();
+
+/// Whether a bot's gateway runs, as last read.
 pub(crate) fn published_bot_gateway_running(profile: &str) -> bool {
-    let cached = published_gateways()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .get(profile)
-        .copied();
-    cached.unwrap_or_else(|| {
-        let running = bot_gateway_running(&crate::session_chat_hermes::hermes_home(), profile);
-        published_gateways()
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .insert(profile.to_string(), running);
-        running
+    PUBLISHED_GATEWAYS.get(profile, || {
+        bot_gateway_running(&crate::session_chat_hermes::hermes_home(), profile)
     })
 }
 
 /// Re-reads each profile's gateway and returns the profiles whose state changed since it was
-/// last published. A profile read for the first time is recorded, not reported.
+/// last published.
 pub(crate) fn refresh_published_bot_gateways<'a>(
     hermes_home: &Path,
     profiles: impl IntoIterator<Item = &'a str>,
 ) -> Vec<String> {
-    let fresh: Vec<(&str, bool)> = profiles
-        .into_iter()
-        .map(|profile| (profile, bot_gateway_running(hermes_home, profile)))
-        .collect();
-    let mut published = published_gateways()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    fresh
-        .into_iter()
-        .filter(|&(profile, running)| {
-            published.insert(profile.to_string(), running) == Some(!running)
-        })
-        .map(|(profile, _)| profile.to_string())
-        .collect()
+    PUBLISHED_GATEWAYS.refresh(
+        profiles
+            .into_iter()
+            .map(|profile| (profile, bot_gateway_running(hermes_home, profile))),
+    )
 }
 
 /// A home's `gateway_state.json` when it says `running` and its pid is alive.

@@ -256,6 +256,7 @@ pub const CATALOG: &[CatalogStore] = &[
     store("nativeSettings", "ghostex-native-settings", false, Local),
     store("boardView", "ghostex-project-board-view", false, Local),
     store("boardCards", "ghostexProjectBoardCardView.v1", false, Local),
+    store("botFeed", "ghostex.botFeed.v1", false, Local),
     store("docsSide", "ghostex.manage.sidebarSide", false, Local),
     store("docsPinned", "ghostex.manage.sidebarPinned", false, Local),
     store(

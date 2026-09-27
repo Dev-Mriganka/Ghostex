@@ -1303,6 +1303,37 @@ before.
 
 Setting: `botsHidden` (on by default, which keeps Bots hidden).
 
+**Bot automations** is a second switch in Settings > Extensions, off by default
+and available only while Bots is on. It adds an Automations row at the top of
+the Bots sidebar that shows how many runs landed today; click it to open a feed
+of every Hermes cron run in the view panel, and click it again to close the
+feed. The feed has one `#channel` per cron job across every profile, plus
+`#all` for every run at once; a job with no delivered run yet (paused, never
+run, or silent every time) has no channel. To read several jobs together the
+way a Discord channel does, click + New group under the groups and type a name:
+the group shows every run of its jobs in time order. Right-click a job's
+channel and choose Move to group to put it in one (a job sits in one group at
+a time, listed under it), or Remove from group to take it out; right-click a
+group to rename or delete it (its jobs go back to the list), and click its
+arrow to collapse it. A group shows how many jobs it holds, and each group and
+channel shows how many runs arrived since you last opened it; `#all` never
+clears those counts. Job names come from Hermes, so a job's channel can't be
+renamed.
+Right-click `#all` to hide it, and right-click the Feeds title to show it
+again; with it hidden the feed opens on the first channel. The grouping lives
+in Ghostex only and changes nothing in Hermes or Discord. Each run is a message
+showing the bot, the time and the job's output, newest at the bottom; runs that
+stayed silent are left out, a run that failed is marked failed, and new runs
+appear while the feed is open. The bot menu at the top narrows the channels and
+`#all` to one bot. Newest activity lists the channels that ran most recently
+first; Manual lets you drag channels into your own order within their section,
+and new jobs land at the bottom. The feed remembers the bot, the sort, your
+order, your groups, which groups are collapsed, whether `#all` is hidden and
+what you have read. It is read-only and needs the Ghostex app, not the browser
+build.
+
+Setting: `botAutomationsHidden` (on by default, which keeps the feed hidden).
+
 ## Remote machines, web, and mobile
 
 Ghostex is a client/server system: gxserver runs on each computer and owns its

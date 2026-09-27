@@ -44,7 +44,7 @@ impl GhostexGpuiApp {
             TitlebarMode::Source => ViewSkeletonKind::Code,
             TitlebarMode::Manage => ViewSkeletonKind::Docs,
             TitlebarMode::Kanban => ViewSkeletonKind::Kanban,
-            TitlebarMode::Automate => ViewSkeletonKind::Automate,
+            TitlebarMode::Automate | TitlebarMode::BotFeed => ViewSkeletonKind::Automate,
             TitlebarMode::Extension(id) if id.as_str() == "storybook" => {
                 ViewSkeletonKind::Storybook
             }

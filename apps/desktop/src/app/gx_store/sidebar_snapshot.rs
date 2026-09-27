@@ -399,6 +399,8 @@ pub(super) fn snapshot_from_view(
         spaces_enabled: view.spaces_enabled,
         bots_enabled: view.bots_enabled,
         bots_mode: view.bots_mode,
+        automations_row: view.automations_row,
+        automations_today: view.automations_today,
         collections,
         order: view
             .order

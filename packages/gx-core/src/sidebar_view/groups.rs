@@ -52,6 +52,7 @@ pub(crate) struct ProjectContextInput {
     pub(crate) git_remote_origin_url: Option<String>,
     pub(crate) bot_profile: Option<String>,
     pub(crate) bot_gateway_running: bool,
+    pub(crate) bot_runs_today: u64,
 }
 
 /// Who is focused right now, in the vocabulary the rows compare against.

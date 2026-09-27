@@ -312,6 +312,7 @@ export type GxserverEndpointPath =
   | "/api/addProjectPath"
   | "/api/createQuickProject"
   | "/api/syncBotProjects"
+  | "/api/listBotFeed"
   | "/api/listProjectWorktrees"
   | "/api/createProjectWorktree"
   | "/api/openProjectWorktree"
@@ -2664,6 +2665,8 @@ export interface GxserverPresentationProject {
   botProfile?: string;
   /** Whether that bot's Hermes gateway runs; absent for every other project. */
   botGatewayRunning?: boolean;
+  /** How many runs that bot's cron jobs delivered since local midnight; absent for every other project. */
+  botRunsToday?: number;
   /*
   CDXC:Icons 2026-07-29 (discovered icons):
   The icon the PROJECT ITSELF ships, discovered server-side inside the checkout

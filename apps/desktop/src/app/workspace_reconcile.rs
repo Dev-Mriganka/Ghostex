@@ -2113,6 +2113,9 @@ impl GhostexGpuiApp {
         if mode == TitlebarMode::Browser {
             self.seed_current_project_browser_tab_if_empty();
         }
+        if mode == TitlebarMode::BotFeed && previous_mode != mode {
+            self.native_bot_feed_opened(cx);
+        }
         self.focus_default_surface_for_active_mode(cx);
         if mode == TitlebarMode::Terminal {
             self.request_focused_command_terminal_text_focus_handoff();

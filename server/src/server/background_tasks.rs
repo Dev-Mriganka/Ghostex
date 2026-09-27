@@ -343,11 +343,12 @@ pub(crate) fn spawn_session_git_status_refresh_task(
                 if let Err(error) = run_project_icon_refresh_once(&pass_state) {
                     log_project_icon_refresh_failure(&pass_state, &error.message);
                 }
-                // Bot gateway dots: one small file read per bot and no spawn, so it rides here too.
-                if let Err(error) = super::bot_sync::run_bot_gateway_refresh_once(&pass_state) {
+                // Bot gateway dots and today's run counts: small file reads per bot and no spawn,
+                // so they ride here too.
+                if let Err(error) = super::bot_sync::run_bot_refresh_once(&pass_state) {
                     super::bot_sync::log_bot_warning(
                         &pass_state,
-                        "botGatewayRefreshFailed",
+                        "botRefreshFailed",
                         &error.message,
                     );
                 }

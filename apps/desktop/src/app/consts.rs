@@ -560,6 +560,7 @@ pub(crate) const TITLEBAR_ICON_DOWNLOAD: &str = "titlebar/download.svg";
 pub(crate) const TITLEBAR_ICON_WORLD: &str = "titlebar/world.svg";
 
 pub(crate) const TITLEBAR_ICON_BOLT: &str = "titlebar/bolt.svg";
+pub(crate) const TITLEBAR_ICON_MESSAGES: &str = "titlebar/messages.svg";
 
 pub(crate) const TITLEBAR_ICON_FILE_TEXT: &str = "titlebar/file-text.svg";
 

@@ -78,6 +78,7 @@ fn view_picker_description(mode: TitlebarMode) -> (gpui::SharedString, Option<gp
         TitlebarMode::Automate => "Run repeatable project routines.",
         TitlebarMode::Terminal => "Shell commands beside your agents..",
         TitlebarMode::Manage => "Notes, plans and reference files.",
+        TitlebarMode::BotFeed => "Every Hermes cron run, one channel per job.",
         TitlebarMode::Extension(id) => {
             let Some(view) = gpui_custom_view(id).filter(|view| !view.url.is_empty()) else {
                 return ("".into(), None);
@@ -439,6 +440,6 @@ fn view_picker_shortcut(mode: TitlebarMode) -> Option<char> {
         TitlebarMode::Automate => Some('U'),
         TitlebarMode::Manage => Some('D'),
         TitlebarMode::Terminal => Some('T'),
-        TitlebarMode::Agents | TitlebarMode::Extension(_) => None,
+        TitlebarMode::Agents | TitlebarMode::BotFeed | TitlebarMode::Extension(_) => None,
     }
 }

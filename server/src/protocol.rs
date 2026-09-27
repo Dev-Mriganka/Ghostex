@@ -670,6 +670,12 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         | "/api/extensionBadge" => remote_allowed(path),
         "/api/createQuickProject" | "/api/syncBotProjects" => full_local(path),
         /*
+        CDXC:Bots 2026-09-27 WHY:
+        The feed reads this computer's Hermes cron output, which holds whole
+        agent reports, so only the desktop on this computer may read it.
+        */
+        "/api/listBotFeed" => full_local(path),
+        /*
         CDXC:Telemetry 2026-08-26:
         The desktop app's loopback analytics ping. Authenticated like every other
         local endpoint, but deliberately NOT protocol-version gated: the caller

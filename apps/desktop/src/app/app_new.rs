@@ -298,6 +298,7 @@ impl GhostexGpuiApp {
                     crate::app::gx_store::read_primary_agent_launcher_id(),
                 native_app_modal: None,
                 native_automate: None,
+                native_bot_feed: None,
                 new_thread_picker_window: None,
                 new_thread_picker: None,
                 new_thread_picker_visible: false,

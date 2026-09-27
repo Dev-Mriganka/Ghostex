@@ -51,7 +51,10 @@ impl ProjectEditorAutoSleepEpochs {
             TitlebarMode::Kanban => Some(self.kanban),
             TitlebarMode::Automate => Some(self.automate),
             TitlebarMode::Manage => Some(self.manage),
-            TitlebarMode::Agents | TitlebarMode::Terminal | TitlebarMode::Extension(_) => None,
+            TitlebarMode::Agents
+            | TitlebarMode::Terminal
+            | TitlebarMode::BotFeed
+            | TitlebarMode::Extension(_) => None,
         }
     }
 
@@ -62,7 +65,10 @@ impl ProjectEditorAutoSleepEpochs {
             TitlebarMode::Kanban => &mut self.kanban,
             TitlebarMode::Automate => &mut self.automate,
             TitlebarMode::Manage => &mut self.manage,
-            TitlebarMode::Agents | TitlebarMode::Terminal | TitlebarMode::Extension(_) => {
+            TitlebarMode::Agents
+            | TitlebarMode::Terminal
+            | TitlebarMode::BotFeed
+            | TitlebarMode::Extension(_) => {
                 return None;
             }
         };
@@ -105,7 +111,10 @@ impl ProjectEditorAutoSleepPolicySnapshot {
             TitlebarMode::Kanban => self.kanban,
             TitlebarMode::Automate => self.automate,
             TitlebarMode::Manage => self.manage,
-            TitlebarMode::Agents | TitlebarMode::Terminal | TitlebarMode::Extension(_) => None,
+            TitlebarMode::Agents
+            | TitlebarMode::Terminal
+            | TitlebarMode::BotFeed
+            | TitlebarMode::Extension(_) => None,
         }
     }
 }
@@ -212,7 +221,7 @@ impl ProjectEditorShellModel {
                     },
                 ))
             }
-            TitlebarMode::Agents | TitlebarMode::Terminal => None,
+            TitlebarMode::Agents | TitlebarMode::Terminal | TitlebarMode::BotFeed => None,
         }
     }
 
@@ -232,7 +241,7 @@ impl ProjectEditorShellModel {
                     recency: u64::MAX,
                 },
             )),
-            TitlebarMode::Agents | TitlebarMode::Terminal => None,
+            TitlebarMode::Agents | TitlebarMode::Terminal | TitlebarMode::BotFeed => None,
         }
     }
 

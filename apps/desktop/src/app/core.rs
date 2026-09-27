@@ -557,6 +557,8 @@ pub struct GhostexGpuiApp {
     pub(crate) native_app_modal: Option<NativeAppModal>,
     /// The native Automate view, created the first time the view panel shows Automate; see app/native_automate/.
     pub(crate) native_automate: Option<Entity<crate::app::native_automate::NativeAutomateView>>,
+    /// The Bot automations feed page, cached like Automate's (`app/native_bot_feed/host.rs`).
+    pub(crate) native_bot_feed: Option<Entity<crate::app::native_bot_feed::NativeBotFeedView>>,
     pub(crate) new_thread_picker_window: Option<WindowHandle<Root>>,
     pub(crate) new_thread_picker: Option<Entity<GpuiNewThreadPickerWindow>>,
     pub(crate) new_thread_picker_visible: bool,

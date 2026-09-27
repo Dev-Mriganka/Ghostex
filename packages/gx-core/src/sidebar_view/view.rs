@@ -33,6 +33,10 @@ pub struct SidebarView {
     pub bots_enabled: bool,
     /// The list shows the Hermes bots rather than the projects.
     pub bots_mode: bool,
+    /// The Bots list starts with the pinned Automations row: Bots and Bot automations are both on.
+    pub automations_row: bool,
+    /// The runs every bot delivered today, which the Automations row shows.
+    pub automations_today: u64,
     /// Every group of the machine that is drawn, in order.
     pub groups: Vec<GroupView>,
     pub collections: Vec<CollectionView>,

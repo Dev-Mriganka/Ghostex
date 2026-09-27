@@ -400,6 +400,14 @@ export const storageCatalog = Object.freeze({
     'ghostexProjectBoardCardView.v1',
     objectCodec
   ),
+  botFeed: define(
+    'botFeed',
+    'Bot automations feed',
+    desktop + 'src/app/native_bot_feed/storage.rs',
+    'ghostex.botFeed.v1',
+    objectCodec,
+    { maxEntryBytes: 256 * KiB, maxBytes: 256 * KiB }
+  ),
   docsSide: define(
     'docsSide',
     'Docs sidebar position',

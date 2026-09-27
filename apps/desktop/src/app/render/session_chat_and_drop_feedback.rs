@@ -37,9 +37,10 @@ impl GhostexGpuiApp {
         for view in self.native_chat_views.values() {
             view.update(cx, |_, cx| cx.notify());
         }
-        // The Kanban board and the Automate page are cached views drawn from the same settings.
+        // The Kanban board, the Automate page and the Bot automations feed are cached views drawn from the same settings.
         self.native_kanban_notify_appearance(cx);
         self.native_automate_notify_appearance(cx);
+        self.native_bot_feed_notify_appearance(cx);
     }
 
     pub(crate) fn render_agents_session_chat_body(

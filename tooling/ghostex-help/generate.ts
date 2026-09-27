@@ -382,6 +382,14 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
       'Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.',
     title: 'Hide Bots',
   },
+  botAutomationsHidden: {
+    ...EXTENSIONS_TAB,
+    section: 'official',
+    sectionTitle: 'Built-in',
+    subtitle:
+      'Stop offering Bot automations, the Automations row in the Bots sidebar that opens a feed of every Hermes cron run. Hidden by default; needs Bots.',
+    title: 'Hide Bot automations',
+  },
   tipsAndTricksTitlebarButtonHidden: {
     ...viewRows,
     subtitle: 'Stop offering the Tips & Tricks page, so it is missing from the header ⋯ menu and the view picker.',

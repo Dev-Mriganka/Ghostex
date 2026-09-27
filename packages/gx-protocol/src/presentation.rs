@@ -173,6 +173,10 @@ pub struct PresentationProject {
     /// Whether that bot's Hermes gateway runs; absent for every other project.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bot_gateway_running: Option<bool>,
+    /// How many runs that bot's cron jobs delivered since local midnight; absent for every other
+    /// project and from an older daemon.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot_runs_today: Option<u64>,
 }
 
 impl PresentationProject {

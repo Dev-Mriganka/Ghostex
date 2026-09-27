@@ -98,6 +98,10 @@ pub(crate) fn project_presentation_project(project: &Value) -> Value {
             "botGatewayRunning".to_string(),
             Value::Bool(crate::bot_projects::published_bot_gateway_running(profile)),
         );
+        output.insert(
+            "botRunsToday".to_string(),
+            Value::from(crate::bot_feed::published_bot_runs_today(profile)),
+        );
     }
     Value::Object(output)
 }
