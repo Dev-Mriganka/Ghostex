@@ -104,6 +104,15 @@ fn hermes_input_is(composer_agent: &str, screen: &str, command: &str) -> bool {
         .is_some_and(|input| collapse_spaces(&input.text) == command)
 }
 
+/// Whether the status bar names `model`.
+fn hermes_shows_model(screen: &str, model: &str) -> bool {
+    detect_session_chat_selection(SessionChatOptionAgent::Hermes, screen).is_some_and(|selection| {
+        selection.model.is_some_and(|shown| {
+            crate::session_chat_hermes_status::hermes_status_bar_shows(&shown.value, model)
+        })
+    })
+}
+
 /// The command left the input box and the status bar names the requested model.
 fn hermes_applied(
     composer_agent: &str,
@@ -111,38 +120,41 @@ fn hermes_applied(
     plan: &CodexPickerPlan,
     command: &str,
 ) -> bool {
-    !hermes_input_is(composer_agent, screen, command)
-        && detect_session_chat_selection(SessionChatOptionAgent::Hermes, screen).is_some_and(
-            |selection| {
-                selection.model.is_some_and(|model| {
-                    crate::session_chat_hermes_status::hermes_status_bar_shows(
-                        &model.value,
-                        &plan.model,
-                    )
-                })
-            },
-        )
+    !hermes_input_is(composer_agent, screen, command) && hermes_shows_model(screen, &plan.model)
 }
 
-/// Every refusal Hermes printed on screen (`✗ <reason>`), oldest first.
-fn hermes_refusals(screen: &str) -> Vec<String> {
+/// What Hermes printed in answer to a `/model` command.
+#[derive(Debug, PartialEq)]
+enum HermesModelReply {
+    /// `✓ Model switched: <model>`.
+    Switched,
+    /// `✗ <reason>`.
+    Refused(String),
+    /// `Model switch cancelled.`: its expensive-model question was answered Cancel.
+    Cancelled,
+}
+
+/// Every answer to a `/model` command on screen, oldest first.
+fn hermes_model_replies(screen: &str) -> Vec<HermesModelReply> {
     screen_lines(screen)
         .into_iter()
         .filter_map(|line| {
-            line.strip_prefix('\u{2717}')
-                .map(|reason| reason.trim().to_string())
+            if line.starts_with("\u{2713} Model switched:") {
+                Some(HermesModelReply::Switched)
+            } else if let Some(reason) = line.strip_prefix('\u{2717}') {
+                Some(HermesModelReply::Refused(reason.trim().to_string()))
+            } else if line == "Model switch cancelled." {
+                Some(HermesModelReply::Cancelled)
+            } else {
+                None
+            }
         })
         .collect()
 }
 
 impl PickerDriver<'_> {
-    /// CDXC:AgentProviders 2026-09-26 WHY:
-    /// Hermes never prints its reasoning effort and never echoes a typed `/model` line, so an
-    /// effort-only change cannot be recognised as already applied: the command is always typed, and
-    /// it counts once the input is taken and the status bar names the model. Delivery is verified
-    /// before Enter, so a switch that does not show within the step (Hermes refused the model, or
-    /// asks in the terminal to confirm an expensive one) is final instead of retried: retyping the
-    /// same command cannot change Hermes' answer.
+    /// CDXC:AgentProviders 2026-09-27 WHY:
+    /// Hermes' status bar never shows the reasoning effort, so an effort-only change cannot be recognised as already applied and the command is always typed. It counts once Hermes answers it: the first `✓ Model switched`, `✗ <reason>` or `Model switch cancelled.` line past the answers already on screen. The status bar alone is not proof, because a same-model pick leaves it unchanged while Hermes can still refuse the command or hold it behind its expensive-model question (verified in Hermes Agent v0.21.4); it only counts for a new model once older answers have scrolled out of the capture. Delivery is verified before Enter, so a switch with no answer within the step is final instead of retried: retyping the same command cannot change Hermes' answer.
     async fn drive_hermes(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
         if !plan.effort.is_empty()
             && !crate::session_chat_hermes_status::HERMES_PICKER_EFFORTS
@@ -181,25 +193,33 @@ impl PickerDriver<'_> {
                 "Waiting for the terminal input to be sent or cleared.",
             ));
         }
-        let refused_before = hermes_refusals(&screen).len();
         let result = async {
             self.write(&build_session_chat_paste_bytes(&command))
                 .await?;
-            self.wait_for("type model command", |screen| {
-                hermes_input_is(&composer_agent, screen, &command).then_some(())
-            })
-            .await?;
+            // Read off the screen that shows the command typed, the last one before Enter.
+            let (replies_before, model_was_shown) = self
+                .wait_for("type model command", |screen| {
+                    hermes_input_is(&composer_agent, screen, &command).then(|| {
+                        (
+                            hermes_model_replies(screen).len(),
+                            hermes_shows_model(screen, &plan.model),
+                        )
+                    })
+                })
+                .await?;
             self.write(CODEX_SUBMIT).await?;
             let outcome = self
                 .wait_for("applied model", |screen| {
-                    if hermes_applied(&composer_agent, screen, plan, &command) {
-                        return Some(Ok(()));
+                    match hermes_model_replies(screen).into_iter().nth(replies_before) {
+                        Some(HermesModelReply::Switched) => Some(Ok(())),
+                        Some(HermesModelReply::Refused(reason)) => Some(Err(reason)),
+                        Some(HermesModelReply::Cancelled) => {
+                            Some(Err("the switch was cancelled in its terminal.".to_string()))
+                        }
+                        None => (!model_was_shown
+                            && hermes_applied(&composer_agent, screen, plan, &command))
+                        .then_some(Ok(())),
                     }
-                    hermes_refusals(screen)
-                        .into_iter()
-                        .skip(refused_before)
-                        .last()
-                        .map(Err)
                 })
                 .await;
             match outcome {
