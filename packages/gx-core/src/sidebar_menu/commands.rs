@@ -362,6 +362,14 @@ pub(crate) mod message {
         json!({ "type": "openWorkspaceProjectInFinderForGroup", "groupId": group_id })
     }
 
+    pub(crate) fn open_project_in_target(group_id: &str, target_id: &str) -> Value {
+        json!({
+            "type": "openWorkspaceProjectInTargetForGroup",
+            "groupId": group_id,
+            "targetId": target_id,
+        })
+    }
+
     pub(crate) fn prompt_rename_worktree(group_id: &str) -> Value {
         json!({ "type": "promptRenameWorktreeForGroup", "groupId": group_id })
     }
@@ -416,6 +424,17 @@ pub(crate) mod message {
 
     pub(crate) fn create_project_terminal(group_id: &str) -> Value {
         json!({ "type": "createProjectTerminal", "groupId": group_id })
+    }
+
+    /// A bot's Edit SOUL or Edit config: `filePath` opens in the Code view of the bot's own
+    /// project, `projectPath` (gx_store/create/bot.rs).
+    pub(crate) fn open_bot_file(group_id: &str, project_path: &str, file_path: &str) -> Value {
+        json!({
+            "type": "openBotFile",
+            "groupId": group_id,
+            "projectPath": project_path,
+            "filePath": file_path,
+        })
     }
 
     pub(crate) fn run_sidebar_command(command_id: &str, scope: &str, group_id: &str) -> Value {

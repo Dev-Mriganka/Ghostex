@@ -19,6 +19,12 @@ use super::text::transcript_agent;
 /// CDXC:AgentLauncher 2026-09-18 DECISION:
 /// User: remove the gap between the last-used agent button and the Select agent button in the
 /// project header. Both halves render as the one split button the React header shows.
+///
+/// CDXC:Bots 2026-09-27 DECISION:
+/// User: a bot row shows its pinned Actions, Edit SOUL, Edit config and one "+", because a bot is not a repo: no worktree, PR, history, browser or terminal button, and no agent split with its picker.
+/// Edit SOUL and Edit config always open that bot's own `SOUL.md` and `config.yaml`, in Ghostex's built-in Code view under the bot.
+/// They are fixed buttons on every bot row on this computer, not editable or deletable Actions; a remote computer's bot has none, because its file would open on this computer.
+/// Supersedes the 2026-09-26 decision (pinned Actions and "+" only, with seeded `code <file>` Actions).
 pub fn project_header_actions(
     group: &MenuGroup<'_>,
     settings: &SidebarSettings,
@@ -32,6 +38,64 @@ pub fn project_header_actions(
             MenuCommand::command(message::create_session_in_group(group_id)),
         )];
     };
+    let mut pinned = Vec::new();
+    let project_commands = host
+        .project_commands
+        .get(project.project_id.as_str())
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    for (scope, commands) in [
+        ("global", host.global_commands.as_slice()),
+        ("project", project_commands),
+    ] {
+        for command in commands
+            .iter()
+            .filter(|command| command.show_on_project_row)
+        {
+            let label = command.name.trim();
+            pinned.push(MenuItem::row(
+                if label.is_empty() {
+                    "Run Action"
+                } else {
+                    label
+                },
+                command.icon.as_deref().unwrap_or("bolt"),
+                MenuCommand::command(message::run_sidebar_command(
+                    &command.command_id,
+                    scope,
+                    group_id,
+                )),
+            ));
+        }
+    }
+    if project.bot_profile.is_some() {
+        let edit_files: &[_] = if group.is_remote {
+            &[]
+        } else {
+            &[
+                ("Edit SOUL", "brain", "SOUL.md"),
+                ("Edit config", "settings", "config.yaml"),
+            ]
+        };
+        for &(label, icon, file) in edit_files {
+            let file_path = std::path::Path::new(&project.path).join(file);
+            pinned.push(MenuItem::row(
+                label,
+                icon,
+                MenuCommand::command(message::open_bot_file(
+                    group_id,
+                    &project.path,
+                    &file_path.to_string_lossy(),
+                )),
+            ));
+        }
+        pinned.push(MenuItem::row(
+            &format!("New {} session", group.title),
+            "plus",
+            MenuCommand::project_action(group_id, "bot", None),
+        ));
+        return pinned;
+    }
     let mut actions = vec![
         if project.worktree.is_some() {
             MenuItem::row(
@@ -64,35 +128,7 @@ pub fn project_header_actions(
         "terminal-2",
         MenuCommand::command(message::create_project_terminal(group_id)),
     ));
-    let project_commands = host
-        .project_commands
-        .get(project.project_id.as_str())
-        .map(Vec::as_slice)
-        .unwrap_or_default();
-    for (scope, commands) in [
-        ("global", host.global_commands.as_slice()),
-        ("project", project_commands),
-    ] {
-        for command in commands
-            .iter()
-            .filter(|command| command.show_on_project_row)
-        {
-            let label = command.name.trim();
-            actions.push(MenuItem::row(
-                if label.is_empty() {
-                    "Run Action"
-                } else {
-                    label
-                },
-                command.icon.as_deref().unwrap_or("bolt"),
-                MenuCommand::command(message::run_sidebar_command(
-                    &command.command_id,
-                    scope,
-                    group_id,
-                )),
-            ));
-        }
-    }
+    actions.append(&mut pinned);
     let primary = host.primary_agent();
     let primary_icon = primary.and_then(|agent| agent.icon.as_deref());
     actions.push(MenuItem {

@@ -4,7 +4,7 @@
 //! before it or after it), so the order, the Project Group membership and the documents it writes
 //! are exactly a drag's. The neighbour is the next project of the same kind: a main project steps
 //! over main projects (its worktrees travel with it), a worktree over the other worktrees of its
-//! own project, and a chat project over chat projects.
+//! own project, a chat project over chat projects, and a bot over bots.
 
 use serde_json::Value;
 
@@ -65,7 +65,12 @@ pub fn plan_project_step(
             .map(js_trim)
             .filter(|parent| !parent.is_empty())
             .map(str::to_string);
-        (machine.is_chat_project(project_id), parent)
+        // The same test `build_project_meta` applies, so a bot's peers are the rows Bots mode draws.
+        let is_bot = machine
+            .loaded()
+            .and_then(|loaded| loaded.project(project_id))
+            .is_some_and(|project| project.bot_profile.is_some());
+        (machine.is_chat_project(project_id), is_bot, parent)
     };
     let own_kind = kind(project_id);
     let peers: Vec<&String> = order

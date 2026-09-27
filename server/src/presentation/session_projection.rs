@@ -90,6 +90,15 @@ pub(crate) fn project_presentation_project(project: &Value) -> Value {
     output.insert("title".to_string(), value_field(project, "name"));
     output.insert("updatedAt".to_string(), value_field(project, "updatedAt"));
     insert_optional_value(&mut output, "worktree", project.get("worktree").cloned());
+    // CDXC:Bots 2026-09-26 WHY:
+    // The snapshot's project row is what every client holds from its first frame; the domain row with `launchSettings` only reaches a client in a later add or update delta, so a bot flag read from there vanished on every reload.
+    if let Some(profile) = crate::bot_projects::bot_profile(project) {
+        output.insert("botProfile".to_string(), Value::String(profile.to_string()));
+        output.insert(
+            "botGatewayRunning".to_string(),
+            Value::Bool(crate::bot_projects::published_bot_gateway_running(profile)),
+        );
+    }
     Value::Object(output)
 }
 

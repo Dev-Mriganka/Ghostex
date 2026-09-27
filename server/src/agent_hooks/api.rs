@@ -145,14 +145,31 @@ pub fn repair_installed_agent_hook_paths(
             continue;
         }
 
+        /*
+        CDXC:AgentHooks 2026-09-27 WHY:
+        A marked-block install writes every file its provider lists (each Hermes profile's config), so hooks in any of them are consent for all: a profile without them (created later, or never copied) is repaired like a stale one.
+        JSON providers' profile candidates stay opt-in per file.
+        */
+        let inspections = provider_paths
+            .into_iter()
+            .map(|provider_path| {
+                let inspection = inspect_agent_hook_installation(
+                    definition,
+                    &hook_paths,
+                    std::slice::from_ref(&provider_path),
+                );
+                (provider_path, inspection)
+            })
+            .collect::<Vec<_>>();
+        let installed_for_every_path = matches!(
+            hook_format(definition.agent_id),
+            HookFormat::MarkedYaml | HookFormat::TomlMarked
+        ) && inspections
+            .iter()
+            .any(|(_, inspection)| inspection.ghostex_hook_present);
         let mut stale_paths = Vec::new();
-        for provider_path in provider_paths {
-            let inspection = inspect_agent_hook_installation(
-                definition,
-                &hook_paths,
-                std::slice::from_ref(&provider_path),
-            );
-            if !inspection.ghostex_hook_present {
+        for (provider_path, inspection) in inspections {
+            if !inspection.ghostex_hook_present && !installed_for_every_path {
                 continue;
             }
             has_installed_ghostex_hook = true;

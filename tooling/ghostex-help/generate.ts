@@ -374,6 +374,14 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
       'Stop offering the Terminal view, so it is missing from the view panel tab strip, its + menu and the view picker.',
     title: 'Hide Terminal view',
   },
+  botsHidden: {
+    ...EXTENSIONS_TAB,
+    section: 'official',
+    sectionTitle: 'Built-in',
+    subtitle:
+      'Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.',
+    title: 'Hide Bots',
+  },
   tipsAndTricksTitlebarButtonHidden: {
     ...viewRows,
     subtitle: 'Stop offering the Tips & Tricks page, so it is missing from the header ⋯ menu and the view picker.',

@@ -38,7 +38,7 @@ pub(crate) use header::account_provider;
 pub use header::{
     agent_launcher_items, agent_launcher_items_with_accounts, project_header_actions,
 };
-pub use host::{HeaderCommand, LauncherAgent, MenuHost};
+pub use host::{HeaderCommand, LauncherAgent, MenuHost, MenuOpenTarget};
 pub use hover::{hover_strip, HoverAction, HoverStrip};
 pub use item::{menu_to_json, MenuItem, MenuSecondary, MenuSplit};
 pub use menus::SidebarMenus;

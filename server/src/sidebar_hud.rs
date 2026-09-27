@@ -1676,6 +1676,13 @@ fn default_sidebar_agent_name(agent_id: &str, stored_name: &str) -> String {
     }
 }
 
+/// The ids of the Dev, Build, Test and Setup placeholders every project starts with.
+pub(crate) fn default_sidebar_command_ids() -> impl Iterator<Item = &'static str> {
+    DEFAULT_SIDEBAR_COMMANDS
+        .iter()
+        .map(|command| command.command_id)
+}
+
 fn is_default_sidebar_command_id(command_id: &str) -> bool {
     DEFAULT_SIDEBAR_COMMANDS
         .iter()

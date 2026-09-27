@@ -137,6 +137,11 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   storybookViewTabHidden: false,
   ...DEFAULT_PROJECT_WEBSITE_VISIBILITY,
   projectWebsiteViews: {},
+  /**
+   * CDXC:Bots 2026-09-26 DECISION:
+   * User: Bots is off by default, so Ghostex looks exactly as it did until the user turns it on.
+   */
+  botsHidden: true,
   tipsAndTricksTitlebarButtonHidden: false,
   notificationsTitlebarButtonHidden: false,
   helpTitlebarButtonHidden: false,

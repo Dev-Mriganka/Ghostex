@@ -18,10 +18,15 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use ghostex_gx_core::{HeaderCommand, HoverAction, LauncherAgent, MenuHost, SidebarMenus};
+use ghostex_gx_core::{
+    HeaderCommand, HoverAction, LauncherAgent, MenuHost, MenuOpenTarget, SidebarMenus,
+};
 use serde_json::Value;
 
 use crate::GhostexGpuiApp;
+use crate::app::helpers::{
+    gpui_visible_open_targets_from_current_settings, titlebar_open_target_icon_for_id,
+};
 
 /// How long the two client-storage values are reused. Reading them is one indexed row each on an
 /// open connection, and an install can run several times a second.
@@ -33,6 +38,8 @@ pub(super) struct MenuHostCache {
     read_at: Option<Instant>,
     primary_agent_id: Option<String>,
     keep_awake_minutes: Option<i64>,
+    /// The Open In targets, re-read from Settings on the same clock.
+    open_targets: Vec<MenuOpenTarget>,
     /// Bumped whenever a re-read found a different value, so the install gate can see a change
     /// that neither the store nor a publish reports.
     generation: u64,
@@ -45,8 +52,8 @@ impl MenuHostCache {
 }
 
 impl GhostexGpuiApp {
-    /// Re-reads the two client-storage values at most once a second and returns the generation,
-    /// which moves only when one of them really changed.
+    /// Re-reads the two client-storage values and the Open In targets at most once a second and
+    /// returns the generation, which moves only when one of them really changed.
     pub(super) fn gx_store_menu_host_generation(&mut self) -> u64 {
         let cache = &mut self.gx_store.menu_host;
         if cache
@@ -62,6 +69,11 @@ impl GhostexGpuiApp {
                 cache.keep_awake_minutes = keep_awake;
                 cache.generation += 1;
             }
+        }
+        let open_targets = open_targets();
+        if cache.open_targets != open_targets {
+            cache.open_targets = open_targets;
+            cache.generation += 1;
         }
         cache.generation
     }
@@ -128,6 +140,7 @@ impl GhostexGpuiApp {
                 .as_ref()
                 .map(|runtime| runtime.duration_minutes.minutes() as i64),
             machine_connected,
+            open_targets: self.gx_store.menu_host.open_targets.clone(),
         }
     }
 
@@ -244,6 +257,26 @@ fn commands(value: &Value) -> Vec<HeaderCommand> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// The header Open In button's targets, each with the icon that button draws for it.
+fn open_targets() -> Vec<MenuOpenTarget> {
+    gpui_visible_open_targets_from_current_settings()
+        .into_iter()
+        .map(|target| {
+            // The button's icons live in the folder a menu row's icon name resolves into, so the
+            // row names the same file without its folder and extension.
+            let (asset, _) = titlebar_open_target_icon_for_id(&target.id);
+            MenuOpenTarget {
+                icon: asset
+                    .trim_start_matches("titlebar/")
+                    .trim_end_matches(".svg")
+                    .to_string(),
+                target_id: target.id,
+                label: target.label,
+            }
+        })
+        .collect()
 }
 
 fn commands_by_project(value: &Value) -> BTreeMap<String, Vec<HeaderCommand>> {

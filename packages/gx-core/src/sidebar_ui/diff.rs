@@ -16,9 +16,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde_json::{json, Map, Value};
 
 use super::persist::{
-    collapse_into_storage, stored_state_object, stored_version, COLLAPSE_STORAGE_VERSION,
+    collapse_into_storage, stored_state_object, stored_version, write_sidebar_mode,
+    COLLAPSE_STORAGE_VERSION,
 };
-use crate::sidebar_view::{SectionCollapse, SidebarCollapseState};
+use crate::sidebar_view::{SectionCollapse, SidebarCollapseState, SidebarMode};
 
 /// The keys one burst added and removed, per collapse field.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -34,6 +35,7 @@ pub struct SidebarCollapseDiff {
     /// replaced. A finer diff would buy nothing and would need a third level of Option to say
     /// "this Space's list was removed", which nothing produces.
     recent_sessions_by_space: BTreeMap<String, Option<BTreeMap<String, Vec<String>>>>,
+    sidebar_mode: Option<SidebarMode>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -95,6 +97,7 @@ impl SidebarCollapseDiff {
                 &base.recent_sessions_by_space,
                 &next.recent_sessions_by_space,
             ),
+            sidebar_mode: (base.sidebar_mode != next.sidebar_mode).then_some(next.sidebar_mode),
         }
     }
 
@@ -106,6 +109,7 @@ impl SidebarCollapseDiff {
             && self.section_collapse.is_empty()
             && self.selected_space_by_section.is_empty()
             && self.recent_sessions_by_space.is_empty()
+            && self.sidebar_mode.is_none()
     }
 
     /// The envelope to store: the stored one with this difference applied, stamped with the
@@ -218,6 +222,9 @@ impl SidebarCollapseDiff {
                 "recentSessionIdsBySpace".to_string(),
                 Value::Object(sections),
             );
+        }
+        if let Some(mode) = self.sidebar_mode {
+            write_sidebar_mode(&mut object, mode);
         }
         json!({ "state": Value::Object(object), "version": version }).to_string()
     }

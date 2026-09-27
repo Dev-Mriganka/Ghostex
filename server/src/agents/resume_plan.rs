@@ -3,6 +3,7 @@ use serde_json::{Map, Value};
 #[cfg(not(windows))]
 mod claude_background;
 mod claude_identity;
+mod hermes_profile;
 #[cfg(windows)]
 mod windows;
 use super::*;
@@ -224,6 +225,13 @@ pub(crate) fn to_agent_resume_input(
             })
             .or(stored_agent_command)
     };
+    let base_command = base_command.map(|command| {
+        hermes_profile::with_external_hermes_profile(
+            agent_id.as_deref(),
+            command,
+            &runtime_settings,
+        )
+    });
     let runtime_command = agent_id
         .as_ref()
         .and_then(|agent_id| {

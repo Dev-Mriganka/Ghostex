@@ -162,7 +162,7 @@ impl SidebarViewModel {
             return Vec::new();
         };
         let mut ids: Vec<String> = vec![chats_group_id(&state.machine)];
-        for project_id in &state.meta.project_order {
+        for project_id in state.meta.grouped_project_ids() {
             ids.push(
                 ProjectKey {
                     machine: state.machine.clone(),
@@ -417,7 +417,12 @@ impl SidebarViewModel {
         // 4. Membership, per project.
         let membership_all_dirty = previous.is_none() || meta_dirty;
         let mut membership: BTreeMap<String, Arc<ProjectMembers>> = BTreeMap::new();
-        for project_id in meta.project_order.iter().chain(&meta.chat_order) {
+        // A project group's own user-made groups are drawn; a chat project's never are.
+        let listed = meta
+            .grouped_project_ids()
+            .map(|project_id| (project_id, true))
+            .chain(meta.chat_order.iter().map(|project_id| (project_id, false)));
+        for (project_id, emit_subgroups) in listed {
             let reuse = !membership_all_dirty && !dirty_projects.contains(project_id.as_str());
             let members = match (&previous, reuse) {
                 (Some(previous), true) => previous.membership.get(project_id).cloned(),
@@ -425,13 +430,9 @@ impl SidebarViewModel {
             };
             let members = members.unwrap_or_else(|| {
                 Arc::new(match store.machine(&machine) {
-                    Some(entry) => project_members(
-                        store,
-                        entry,
-                        &machine,
-                        project_id,
-                        meta.project_order.iter().any(|id| id == project_id),
-                    ),
+                    Some(entry) => {
+                        project_members(store, entry, &machine, project_id, emit_subgroups)
+                    }
                     None => ProjectMembers::default(),
                 })
             });
@@ -533,7 +534,7 @@ impl SidebarViewModel {
             remote_machine: remote_context(None),
             is_stale,
         });
-        for project_id in meta.project_order.iter() {
+        for project_id in meta.grouped_project_ids() {
             let project_key = ProjectKey {
                 machine: machine.clone(),
                 project_id: project_id.clone(),
@@ -879,6 +880,8 @@ fn project_context(
             .value()
             .filter(|url| !url.is_empty())
             .cloned(),
+        bot_profile: meta.bot_profile(project_id).map(str::to_string),
+        bot_gateway_running: project.bot_gateway_running == Some(true),
     })
 }
 

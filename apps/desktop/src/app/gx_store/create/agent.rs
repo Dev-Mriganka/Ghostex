@@ -427,7 +427,12 @@ impl GhostexGpuiApp {
             None,
             None,
         );
-        let title = agent_session_default_title(Some(&agent.name));
+        // A Hermes session in a bot is named after the bot: gxserver launches the bot's own profile
+        // in place of the HUD agent resolved here, whose name may be another bot's.
+        let title_name = self
+            .gx_store_bot_name(&project_id, &agent.agent_id)
+            .unwrap_or_else(|| agent.name.clone());
+        let title = agent_session_default_title(Some(&title_name));
         let params =
             local_agent_launch_params(&agent, &project_id, title_settings, account_id, &title);
         let preferred_interface = self.gx_store_preferred_interface(&agent.agent_id);

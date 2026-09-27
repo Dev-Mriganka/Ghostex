@@ -311,6 +311,7 @@ export type GxserverEndpointPath =
   | "/api/runProjectDocsAction"
   | "/api/addProjectPath"
   | "/api/createQuickProject"
+  | "/api/syncBotProjects"
   | "/api/listProjectWorktrees"
   | "/api/createProjectWorktree"
   | "/api/openProjectWorktree"
@@ -2659,6 +2660,10 @@ export interface GxserverPresentationProject {
   measure and degrades to plain repository merging.
   */
   gitRepositoryRootPath?: string;
+  /** The Hermes profile this project is the bot of (server/src/bot_projects.rs); absent otherwise. */
+  botProfile?: string;
+  /** Whether that bot's Hermes gateway runs; absent for every other project. */
+  botGatewayRunning?: boolean;
   /*
   CDXC:Icons 2026-07-29 (discovered icons):
   The icon the PROJECT ITSELF ships, discovered server-side inside the checkout

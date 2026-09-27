@@ -98,6 +98,9 @@ impl GhostexGpuiApp {
         } else {
             0.0
         };
+        // With Spaces on, the Hermes button is the Space row's last slot instead.
+        let bots_toggle = (!footer && snapshot.bots_enabled && !snapshot.spaces_enabled)
+            .then_some(snapshot.bots_mode);
         let compact_room = self.sidebar_width
             - if owns_window_corner {
                 SIDEBAR_TOGGLE_LEADING_X
@@ -105,6 +108,7 @@ impl GhostexGpuiApp {
                 5.0 * scale
             }
             - sidebar_toggle_width
+            - bots_toggle.map_or(0.0, |_| (super::bots::BOTS_TOGGLE_WIDTH + 4.0) * scale)
             - 5.0 * scale;
         let bell_visible = !footer && self.titlebar_notification_bell_visible();
         let overflowed = !footer
@@ -190,6 +194,9 @@ impl GhostexGpuiApp {
                     ),
                 )
                 .when(compact, |row| row.child(div().flex_1()))
+            })
+            .when_some(bots_toggle, |row, bots_mode| {
+                row.child(self.render_native_sidebar_bots_toggle(bots_mode, appearance, cx))
             })
             /*
             CDXC:Sidebar 2026-09-20 WHY:

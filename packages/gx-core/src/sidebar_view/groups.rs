@@ -50,6 +50,8 @@ pub(crate) struct ProjectContextInput {
     /// How many worktree projects name this project as their parent.
     pub(crate) worktree_count: usize,
     pub(crate) git_remote_origin_url: Option<String>,
+    pub(crate) bot_profile: Option<String>,
+    pub(crate) bot_gateway_running: bool,
 }
 
 /// Who is focused right now, in the vocabulary the rows compare against.
@@ -216,6 +218,8 @@ pub(crate) fn build_group(
             diff_stats: project.diff_stats,
             worktree: project.worktree.clone(),
             git_remote_origin_url: project.git_remote_origin_url.clone(),
+            bot_profile: project.bot_profile.clone(),
+            bot_gateway_running: project.bot_gateway_running,
         }),
         summary,
         collapsed: ui.collapse.collapsed_groups.contains(&plan.group_id),
@@ -267,12 +271,26 @@ pub(crate) fn group_summary(sessions: &[SessionView]) -> GroupSummary {
 }
 
 /// The project header tooltip: title, kind, path, git numbers, and the session and worktree
-/// counts.
+/// counts. A bot's has no git or worktree line, because a bot is not a repo, and names its
+/// gateway state, which its row's dot shows.
 fn project_title_tooltip(
     plan: &GroupPlan,
     project: &ProjectContextInput,
     session_count: usize,
 ) -> String {
+    if project.bot_profile.is_some() {
+        let gateway = if project.bot_gateway_running {
+            "running"
+        } else {
+            "stopped"
+        };
+        return format!(
+            "{}\nHermes bot · gateway {gateway}\n{}\n{session_count} {}",
+            plan.title,
+            project.path,
+            count_label(session_count as i64, "session"),
+        );
+    }
     let kind = if project.worktree.is_some() {
         "Worktree project"
     } else {

@@ -8,7 +8,7 @@ use crate::{
 use gpui::prelude::FluentBuilder;
 use gpui::{
     AnyElement, InteractiveElement, IntoElement, MouseButton, ParentElement,
-    StatefulInteractiveElement, Styled, div, img, px,
+    StatefulInteractiveElement, Styled, div, img, px, rgb,
 };
 use gpui_component::tooltip::{ManagedTooltipExt as _, ManagedTooltipPlacement};
 use gpui_component::{ElementExt as _, h_flex};
@@ -56,6 +56,8 @@ impl GhostexGpuiApp {
             })
             .and_then(Value::as_str)
             .and_then(super::images::sidebar_image);
+        // Set only on a bot's row, which draws a gateway dot instead of git stats and counts.
+        let bot_gateway_running = group.bot_gateway_running();
         let dragged = SidebarDrag {
             kind: "group",
             preview: super::drag::SidebarDragPreview::Row(super::row_drag::RowDragPreview {
@@ -180,33 +182,23 @@ impl GhostexGpuiApp {
                 hud["settings"]["showProjectIcons"].as_bool() != Some(false),
                 |row| {
                     row.child(match icon_image {
+                        _ if bot_gateway_running.is_some() => letter_tile(
+                            &group.title,
+                            super::bots::hermes_color(),
+                            rgb(0x111111).into(),
+                            scale,
+                        ),
                         Some(image) => img(image)
                             .size(px(16.0 * scale))
                             .flex_shrink_0()
                             .into_any_element(),
                         // CDXC:Icons 2026-09-24 DECISION: User: when a project has no favicon, show a square with the first letter of its name instead of the folder icon.
-                        None => div()
-                            .size(px(16.0 * scale))
-                            .flex_shrink_0()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .rounded(px(3.0 * scale))
-                            .bg(appearance.muted.opacity(0.12))
-                            .text_color(appearance.muted)
-                            .text_size(px(10.0 * scale))
-                            .line_height(px(16.0 * scale))
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                            .child(
-                                group
-                                    .title
-                                    .trim()
-                                    .chars()
-                                    .next()
-                                    .map(|letter| letter.to_uppercase().to_string())
-                                    .unwrap_or_else(|| "?".to_owned()),
-                            )
-                            .into_any_element(),
+                        None => letter_tile(
+                            &group.title,
+                            appearance.muted.opacity(0.12),
+                            appearance.muted,
+                            scale,
+                        ),
                     })
                 },
             )
@@ -218,7 +210,10 @@ impl GhostexGpuiApp {
                 row.child(super::drag::drop_line(position, scale))
             })
             .child(title)
-            .when(!hovered, |row| {
+            .when_some(bot_gateway_running, |row, running| {
+                row.child(super::bots::bot_gateway_dot(running, appearance))
+            })
+            .when(!hovered && bot_gateway_running.is_none(), |row| {
                 row.children(super::project_status::project_status(
                     group, hud, appearance,
                 ))
@@ -342,4 +337,34 @@ impl GhostexGpuiApp {
             }))
             .into_any_element()
     }
+}
+
+/// The first letter of a row's name on a colored square, in the project icon's slot and size.
+fn letter_tile(
+    title: &str,
+    background: gpui::Hsla,
+    foreground: gpui::Hsla,
+    scale: f32,
+) -> AnyElement {
+    div()
+        .size(px(16.0 * scale))
+        .flex_shrink_0()
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(3.0 * scale))
+        .bg(background)
+        .text_color(foreground)
+        .text_size(px(10.0 * scale))
+        .line_height(px(16.0 * scale))
+        .font_weight(gpui::FontWeight::SEMIBOLD)
+        .child(
+            title
+                .trim()
+                .chars()
+                .next()
+                .map(|letter| letter.to_uppercase().to_string())
+                .unwrap_or_else(|| "?".to_owned()),
+        )
+        .into_any_element()
 }

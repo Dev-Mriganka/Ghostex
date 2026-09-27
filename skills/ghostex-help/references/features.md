@@ -560,7 +560,14 @@ when you open it.
   from outside Ghostex. Opening an imported ZCode conversation resumes it in
   a terminal with `zcode --resume <session-id>`; install the ZCode CLI on that
   computer first. Deleted, archived, running, and subagent ZCode conversations
-  are excluded from discovery.
+  are excluded from discovery. With Bots on, Hermes conversations started
+  outside Ghostex (in a terminal, the Hermes app, Discord, or Telegram) are
+  discovered from every Hermes profile and listed under their bot; opening one
+  runs `hermes -p <profile> --resume <session-id>` (plain `hermes --resume` for
+  the default profile). A Discord or Telegram chat continues in that terminal,
+  and replies there do not reach the chat app. Other chat apps, cron, empty
+  sessions, Discord threads only bots wrote in, and scripted one-shot runs
+  (`hermes chat -q`) are left out.
 - Search by Prompt (More Options, Actions (Cmd+K) in Quick Access > Sessions,
   the `openFindPrompts` hotkey, default
   `cmd+shift+f`, or `gx f` in a terminal) fuzzy-searches every prompt you ever
@@ -1117,7 +1124,11 @@ registers a Ghostex status line command for that agent, which still runs your
 own status line script so the terminal footer looks the same; it is what feeds
 the chat's status line and More details (for Cursor: context use, output tokens,
 version, Max Mode, auto-run, worktree, plus the branch, lines changed, and pull
-request). Removing the hooks restores your own command. Agent approvals ("accept all") is a
+request). Removing the hooks restores your own command. The Hermes Agent hooks
+cover every Hermes profile as well as the default one, so each bot's sessions
+report their status and fill their chat; a profile you add later gets them the
+next time Ghostex starts.
+Agent approvals ("accept all") is a
 per-machine default with per-project overrides. Actions (Settings > Actions)
 are saved terminal commands or browser URLs shown on project headers and in
 the header’s Quick Actions button, which shows the name and icon of the Action
@@ -1244,6 +1255,53 @@ status, transcript, and an archive action; a run must end with an
 `AUTOMATION_RESULT: <status>` line. Everything is also scriptable:
 `ghostex automations --help` documents `automation-save`,
 `automation-run-now`, `automation-set-enabled`, and `automation-state`.
+
+## Bots (Hermes agents)
+
+Bots switches the sidebar to your Hermes agents, one row per Hermes profile.
+It is off by default: turn it on in Settings > Extensions, under Planning and
+automation. The Bots card only appears on a computer where the Hermes CLI
+(`hermes`) is installed, and with Bots off the sidebar looks and works as
+before.
+
+- **Switching lists**: a Hermes button sits in the last slot of the Space row
+  when Spaces are on, or in the sidebar's top row when they are off. Click it
+  to show your bots; while they are showing it turns into a back arrow (Show
+  projects) that returns to your projects. Ghostex reopens whichever list you
+  left open.
+- **One row per profile**: the default profile shows as Hermes and every
+  folder in `~/.hermes/profiles` under its own name. They are found
+  automatically, and a profile you add shows up the next time you open Bots.
+  A profile folder you already added as an ordinary project stays a project
+  and gets no bot row. Bots never appear in the Projects list, belong to no
+  Space, and can be dragged to reorder them among themselves.
+- **The bot row**: a yellow letter tile and a dot for the bot's Hermes gateway,
+  green while it runs and grey when it is stopped (it catches up within a
+  minute). A bot is not a repository, so git stats and the worktree, pull
+  request, history, browser, and terminal buttons are left off.
+- **New sessions**: the row's **+** starts a new session with that bot, running
+  `hermes -p <profile>` in the profile folder (plain `hermes` for the default
+  profile), in chat or terminal as your agent interface setting says. There is
+  no agent, model, or terminal picker. A bot with no sessions shows a New
+  Session row that does the same. A new session is titled after the bot until
+  Hermes names it.
+- **Sessions**: a bot's sessions sit under it in the usual Sessions and Parked
+  sections, and take the usual session menu: park, rename, tag, sleep, and
+  close. They open in chat like any Hermes session.
+- **Edit SOUL and Edit config**: two buttons on every bot row that open that
+  bot's own `SOUL.md` and `config.yaml` in the Code view. They always point at
+  that bot's files and cannot be edited or removed. A bot on another computer
+  has neither, and the browser build shows a message instead, since it has no
+  Code view.
+- **Actions and Open in**: Actions you pin to project rows (Settings >
+  Actions) show on bot rows too. Right-click a bot for Open in, which opens the
+  profile folder in any of your Open In targets (VS Code, Cursor, Finder, and
+  so on).
+- Hermes conversations you started outside Ghostex are listed under their bot
+  in Quick Access > Sessions (see Sessions), and the Hermes Agent hooks cover
+  every profile (see Agents, actions, and orchestration).
+
+Setting: `botsHidden` (on by default, which keeps Bots hidden).
 
 ## Remote machines, web, and mobile
 

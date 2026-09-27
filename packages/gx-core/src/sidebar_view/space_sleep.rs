@@ -135,7 +135,11 @@ pub fn plan_space_sleep(
     } else {
         return None;
     };
-    let built = SidebarViewModel::build_from_scratch(core, &unfiltered(inputs), now_ms);
+    let built = SidebarViewModel::build_from_scratch(
+        core,
+        &unfiltered(inputs, super::inputs::SidebarMode::Projects),
+        now_ms,
+    );
     let shown: Vec<bool> = built
         .groups
         .iter()

@@ -236,15 +236,26 @@ pub(crate) fn provider_hook_paths(agent_id: &str, hook_paths: &HookPaths) -> Vec
         }
         "droid" => vec![hook_paths.home_dir.join(".factory").join("settings.json")],
         "rovodev" => vec![hook_paths.home_dir.join(".rovodev").join("config.yml")],
+        /*
+        CDXC:AgentHooks 2026-09-27 WHY:
+        A `hermes -p <name>` session reads only `profiles/<name>/config.yaml`, so hooks in the root config never fire for a bot and its chat stays blank.
+        Only profiles that already have a config are listed, so no config is ever created for a folder Hermes does not treat as a profile.
+        */
         "hermes-agent" => {
-            vec![resolve_config_directory(
+            let hermes_home = resolve_config_directory(
                 &hook_paths.home_dir,
                 hook_paths.respect_config_environment,
                 "HERMES_HOME",
                 ".hermes",
                 None,
-            )
-            .join("config.yaml")]
+            );
+            let mut paths = vec![hermes_home.join("config.yaml")];
+            paths.extend(
+                list_profile_hook_paths(&hermes_home, "profiles", "config.yaml")
+                    .into_iter()
+                    .filter(|path| path.is_file()),
+            );
+            paths
         }
         "codebuddy" => vec![resolve_config_directory(
             &hook_paths.home_dir,

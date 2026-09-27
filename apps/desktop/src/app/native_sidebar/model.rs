@@ -17,6 +17,10 @@ pub(crate) struct NativeSidebarSnapshot {
     pub(crate) machines: Vec<NativeSidebarMachine>,
     pub(crate) spaces: Vec<NativeSidebarSpace>,
     pub(crate) spaces_enabled: bool,
+    /// The Bots extension is on, so the Hermes button is drawn.
+    pub(crate) bots_enabled: bool,
+    /// The list shows the Hermes bots rather than the projects.
+    pub(crate) bots_mode: bool,
     pub(crate) collections: Vec<NativeSidebarCollection>,
     pub(crate) order: Vec<NativeSidebarOrderItem>,
     pub(crate) more_menu: Value,

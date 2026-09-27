@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use super::intents::{SidebarUiIntent, SidebarUiOutcome, ToggleAllProjectsInput};
-use crate::sidebar_view::SidebarUiState;
+use crate::sidebar_view::{SidebarMode, SidebarUiState};
 
 /// Which persisted values a change made stale. The host writes each one at most once per burst.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -162,7 +162,14 @@ impl SidebarUiStore {
             }
             SidebarUiIntent::SelectSpace { space_id } => {
                 let section_key = self.state.section_key();
-                self.set_section_space(section_key, space_id)
+                // A Space shows projects, so picking one from Bots mode goes back to Projects.
+                let left_bots = self.set_sidebar_mode(SidebarMode::Projects);
+                let mut selected = self.set_section_space(section_key, space_id);
+                selected.changed |= left_bots;
+                selected
+            }
+            SidebarUiIntent::SetSidebarMode { mode } => {
+                outcome(self.set_sidebar_mode(mode), SidebarPersistSet::collapse())
             }
             SidebarUiIntent::SetSectionSpace {
                 section_key,
@@ -261,6 +268,13 @@ impl SidebarUiStore {
             previous.as_deref() != Some(space_id.as_str()),
             SidebarPersistSet::collapse(),
         )
+    }
+
+    /// Returns whether the mode moved.
+    fn set_sidebar_mode(&mut self, mode: SidebarMode) -> bool {
+        let moved = self.state.collapse.sidebar_mode != mode;
+        self.state.collapse.sidebar_mode = mode;
+        moved
     }
 
     /// `rememberSidebarSpaceSession`: the row to the front of that Space's list, capped, with the

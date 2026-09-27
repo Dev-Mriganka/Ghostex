@@ -16,7 +16,7 @@
 //! clears the multi-selection the way the hotkey does. The full list, with the reveal and the Space
 //! differences, is in docs/2026-09-19/rust-core/PROGRESS.md.
 
-use ghostex_gx_core::{SectionId, SidebarUiIntent, ToggleAllProjectsInput};
+use ghostex_gx_core::{SectionId, SidebarMode, SidebarUiIntent, ToggleAllProjectsInput};
 use serde_json::Value;
 
 use crate::GhostexGpuiApp;
@@ -61,6 +61,9 @@ impl GhostexGpuiApp {
             }),
             "selectSpace" => Some(SidebarUiIntent::SelectSpace {
                 space_id: text("spaceId")?,
+            }),
+            "setSidebarMode" => Some(SidebarUiIntent::SetSidebarMode {
+                mode: SidebarMode::parse(command.get("mode").and_then(Value::as_str)?)?,
             }),
             "toggleTagFilter" => Some(SidebarUiIntent::ToggleTagFilter { tag: text("tag")? }),
             "projectMembership" if command.get("action") == Some(&Value::from("hide")) => {

@@ -33,10 +33,10 @@ use crate::sidebar_view::SidebarView;
 use super::plan::{ActionEffect, SidebarActionPlan};
 use super::resolve::text_field;
 
-/// Whether this renderer command is the launcher's run, without resolving anything.
+/// Whether this renderer command is the launcher's run or a bot's "+", without resolving anything.
 pub fn owns_agent_run_command(command: &Value) -> bool {
     text_field(command, "type") == Some("projectAction")
-        && text_field(command, "action") == Some("agent")
+        && matches!(text_field(command, "action"), Some("agent" | "bot"))
 }
 
 /// What the run does. `Some(nothing)` when the group is not a drawn project, which is the
@@ -50,8 +50,18 @@ pub fn plan_agent_run(view: &SidebarView, command: &Value) -> Option<SidebarActi
     let Some(group) = view.group(group_id) else {
         return Some(SidebarActionPlan::nothing());
     };
-    if group.core.project_context.is_none() {
+    let Some(project) = group.core.project_context.as_ref() else {
         return Some(SidebarActionPlan::nothing());
+    };
+    if text_field(command, "action") == Some("bot") {
+        // The bot's own agent, never the launcher's: nothing here reads or writes the primary one.
+        // Only the group travels; the host reads the profile off the list it draws.
+        if project.bot_profile.is_none() {
+            return Some(SidebarActionPlan::nothing());
+        }
+        return Some(SidebarActionPlan::one(ActionEffect::SidebarHostMessage {
+            message: json!({ "type": "runSidebarBot", "groupId": group_id }),
+        }));
     }
     // `if (!command.agentId)`: an empty string is falsy too.
     let Some(agent_id) = text_field(command, "agentId").filter(|agent_id| !agent_id.is_empty())

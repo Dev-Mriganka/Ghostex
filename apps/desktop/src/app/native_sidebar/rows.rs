@@ -10,6 +10,29 @@ use gpui_component::v_flex;
 use serde_json::{Value, json};
 
 impl GhostexGpuiApp {
+    /// CDXC:Bots 2026-09-27 DECISION:
+    /// User: New Session under a bot starts a session with that bot, the same launch as its "+", so it opens in chat or terminal per the agent-interface setting instead of a plain terminal.
+    ///
+    /// The "New Session" row of a group with no sessions: a project's opens a terminal.
+    fn start_native_sidebar_empty_group_session(
+        &mut self,
+        group_id: &str,
+        is_bot: bool,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        if is_bot {
+            self.dispatch_native_sidebar_ui(
+                json!({"type": "projectAction", "action": "bot", "groupId": group_id}),
+                cx,
+            );
+        } else {
+            self.dispatch_native_sidebar_command(
+                json!({"type": "createProjectTerminal", "groupId": group_id}),
+                cx,
+            );
+        }
+    }
+
     pub(crate) fn render_native_sidebar_group(
         &self,
         group: &NativeSidebarGroup,
@@ -39,6 +62,7 @@ impl GhostexGpuiApp {
                         group.sessions.is_empty() && group.project_context.is_some(),
                         |column| {
                             let id = group.group_id.clone();
+                            let is_bot = group.bot_gateway_running().is_some();
                             column.child(
                                 div()
                                     .id(format!("native-empty-project-{id}"))
@@ -54,9 +78,8 @@ impl GhostexGpuiApp {
                                     .sidebar_drop_target("session-group", id.clone(), None, cx)
                                     .on_click(cx.listener(move |app, _, _, cx| {
                                         cx.stop_propagation();
-                                        app.dispatch_native_sidebar_command(
-                                            json!({"type": "createProjectTerminal", "groupId": id}),
-                                            cx,
+                                        app.start_native_sidebar_empty_group_session(
+                                            &id, is_bot, cx,
                                         );
                                     })),
                             )

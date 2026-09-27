@@ -10,6 +10,7 @@
 mod agent;
 mod board;
 mod board_links_host;
+mod bot;
 mod browser;
 mod claim;
 mod focus_created;

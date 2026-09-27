@@ -174,7 +174,15 @@ impl GhostexGpuiApp {
             && matches!(target_kind, "group" | "session-group")
         {
             json!({"type": "moveSession", "sessionId": source.id, "groupId": target_id, "position": "before"})
-        } else if target_kind == "space" && matches!(source.kind, "group" | "collection") {
+        } else if target_kind == "space"
+            && matches!(source.kind, "group" | "collection")
+            // Bots belong to no Space (gx-core `assemble`), so a Space tile takes no bot.
+            && !self
+                .native_sidebar
+                .snapshot
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.bots_mode)
+        {
             json!({"type": "moveToSpace", "sourceKind": source.kind, "sourceId": source.id, "spaceId": target_id})
         } else if source.kind == "group" && matches!(target_kind, "collection" | "ungroup") {
             json!({"type": "moveToCollection", "sourceKind": source.kind, "sourceId": source.id, "collectionId": if target_kind == "collection" { Some(target_id) } else { None }})

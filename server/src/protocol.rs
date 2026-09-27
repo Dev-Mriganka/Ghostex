@@ -668,7 +668,7 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         | "/api/stopExtension"
         | "/api/extensionStatus"
         | "/api/extensionBadge" => remote_allowed(path),
-        "/api/createQuickProject" => full_local(path),
+        "/api/createQuickProject" | "/api/syncBotProjects" => full_local(path),
         /*
         CDXC:Telemetry 2026-08-26:
         The desktop app's loopback analytics ping. Authenticated like every other

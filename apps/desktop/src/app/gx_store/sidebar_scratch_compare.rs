@@ -80,6 +80,11 @@ pub(super) fn compare_views(
     );
     top("spaces", incremental.spaces == scratch.spaces);
     top(
+        "botsMode",
+        incremental.bots_enabled == scratch.bots_enabled
+            && incremental.bots_mode == scratch.bots_mode,
+    );
+    top(
         "collections",
         incremental.collections == scratch.collections,
     );

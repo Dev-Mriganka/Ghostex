@@ -137,8 +137,7 @@ fn project_membership(
         inputs.host.parked_project_ids(&project.machine),
     );
     if !meta
-        .project_order
-        .iter()
+        .grouped_project_ids()
         .any(|project_id| *project_id == project.project_id)
     {
         return None;
@@ -177,8 +176,7 @@ fn subgroup_membership(
     // A user-made group is drawn under its project, so a project the list has no row for has no
     // subgroup rows either. A CHAT project's user-made groups are never drawn at all.
     if !meta
-        .project_order
-        .iter()
+        .grouped_project_ids()
         .any(|project_id| *project_id == project.project_id)
     {
         return None;

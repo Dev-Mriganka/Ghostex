@@ -19,6 +19,7 @@ use std::{
 
 static SCANNED: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
 
+mod hermes;
 mod scan_cache;
 use scan_cache::ScanCache;
 
@@ -57,7 +58,8 @@ pub(crate) fn discover(
         return Ok(());
     }
     let mut cache = ScanCache::load(db)?;
-    let conversations = scan(home, paths.isolated_agent_home_dir.is_none(), &mut cache)?;
+    let mut conversations = scan(home, paths.isolated_agent_home_dir.is_none(), &mut cache)?;
+    conversations.extend(hermes::read_bot_conversations(db, server_id, paths)?);
     db.execute_batch("CREATE TABLE IF NOT EXISTS external_session_receipts (agent TEXT NOT NULL, conversationId TEXT NOT NULL, PRIMARY KEY(agent, conversationId))").map_err(error)?;
     let receipts = db
         .prepare("SELECT agent, conversationId FROM external_session_receipts")
@@ -115,11 +117,22 @@ pub(crate) fn discover(
         .filter_map(|p| Some((project_key(p.get("path")?.as_str()?), p)))
         .collect();
     for conversation in conversations {
+        // CDXC:Bots 2026-09-26 WHY:
+        // A Hermes conversation belongs to its bot, the project at its profile folder.
+        // Bot sync owns creating that project; an ordinary project made here would stop the folder from ever becoming a bot.
+        let is_hermes = conversation.agent == hermes::HERMES_AGENT;
+        let project_key = if is_hermes {
+            project_key(&conversation.agent_home.to_string_lossy())
+        } else {
+            project_key(&conversation.cwd)
+        };
+        if is_hermes && !projects.contains_key(&project_key) {
+            continue;
+        }
         let inserted = transaction.execute("INSERT OR IGNORE INTO external_session_receipts (agent, conversationId) VALUES (?1, ?2)", (&conversation.agent, &conversation.id)).map_err(error)?;
         if inserted == 0 || known.contains(&conversation.id) {
             continue;
         }
-        let project_key = project_key(&conversation.cwd);
         let project = match projects.get(&project_key) {
             Some(project) => project.clone(),
             None => {

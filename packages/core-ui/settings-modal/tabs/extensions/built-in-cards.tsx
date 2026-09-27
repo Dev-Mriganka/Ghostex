@@ -18,6 +18,7 @@ import {
   IconPlayerPlay,
   IconPuzzle,
   IconRefresh,
+  IconRobot,
   IconTerminal2,
   IconWorld,
   type Icon as TablerIcon,
@@ -59,6 +60,7 @@ const OFFICIAL_EXTENSION_ICONS: Record<GhostexOfficialExtensionId, TablerIcon> =
   posthog: IconChartBar,
   'custom-website': IconWorld,
   automate: IconBolt,
+  bots: IconRobot,
   browser: IconWorld,
   code: IconCodeDots,
   devServers: IconWorld,
@@ -103,7 +105,10 @@ export function builtInFilterSubject(extension: GhostexOfficialExtension): Exten
     searchText: [extension.description],
     source: 'built-in',
     title: extension.title,
-    types: [extension.placement === 'view' ? 'view' : category.id === 'header-buttons' ? 'header-button' : 'menu-item'],
+    types:
+      extension.placement === 'sidebar'
+        ? []
+        : [extension.placement === 'view' ? 'view' : category.id === 'header-buttons' ? 'header-button' : 'menu-item'],
   };
 }
 
@@ -190,7 +195,13 @@ export function BuiltInExtensionGroups({
                       enabled={isOfficialExtensionEnabled(settings, extension)}
                       icon={OFFICIAL_EXTENSION_ICONS[extension.id]}
                       id={extension.id}
-                      meta={extension.appWide ? `${category.typeLabel} · Every project` : category.typeLabel}
+                      meta={
+                        extension.placement === 'sidebar'
+                          ? 'Sidebar'
+                          : extension.appWide
+                            ? `${category.typeLabel} · Every project`
+                            : category.typeLabel
+                      }
                       onEditScope={scoped ? () => scopeControls.edit(scopeKey, extension.title) : undefined}
                       onEnabledChange={(enabled) => onToggle(extension.settingsKey, !enabled)}
                       onReinstall={runtimeId && onReinstallPlugin ? () => onReinstallPlugin(runtimeId) : undefined}

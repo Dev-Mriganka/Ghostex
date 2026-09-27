@@ -64,6 +64,7 @@ import {
   type ExtensionFilter,
 } from '../../extensions-modal';
 import { createExtensionsModalTransport } from '../../extensions-modal/transport';
+import { useInstalledAgentClis } from '../../agent-cli/use-installed-agent-clis';
 import { TitlebarAccountUsageSection } from '../../accounts/titlebar-settings-section';
 import { TitlebarViewOrderDialog } from './titlebar-view-order-dialog';
 import { titlebarViewOrderItems } from '@/packages/shared/ghostex-settings/titlebar-view-order';
@@ -84,6 +85,17 @@ import {
 import { AddCustomViewCard, CustomViewCard, customViewFilterSubject } from './extensions/custom-view-cards';
 
 export type OfficialExtensionSettingKey = GhostexOfficialExtensionSettingsKey;
+
+/** The agent CLIs some Official entries need before they are offered. */
+const OFFICIAL_EXTENSION_AGENT_CLIS = [
+  ...new Set(GHOSTEX_OFFICIAL_EXTENSIONS.flatMap((extension) => extension.requiresAgentCli ?? [])),
+];
+
+/** An entry that needs an agent CLI is left off the page until that CLI is found on this computer. */
+function officialExtensionAvailable(key: string, installedClis: ReadonlySet<string>): boolean {
+  const required = GHOSTEX_OFFICIAL_EXTENSIONS.find((extension) => extension.id === key)?.requiresAgentCli;
+  return !required || installedClis.has(required);
+}
 type ExtensionPageSettingKey =
   OfficialExtensionSettingKey | 'customViews' | 'titlebarViewOrder' | 'customViewTemplates' | 'viewScopes';
 
@@ -196,7 +208,9 @@ export function ExtensionsSettingsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [browser.installed, initialViewScopeKey, isActive, settings.customViews, settings.viewScopes]);
   const detailOpen = Boolean(transport) && browser.detailOpen;
-  const showOfficial = (key: string) => shouldShowSetting(search.sections.official, key);
+  const installedClis = useInstalledAgentClis(OFFICIAL_EXTENSION_AGENT_CLIS);
+  const showOfficial = (key: string) =>
+    shouldShowSetting(search.sections.official, key) && officialExtensionAvailable(key, installedClis);
 
   const updateCustomViews = (customViews: GhostexCustomView[]) => {
     onUpdateSetting('customViews', normalizeGhostexCustomViews(customViews));

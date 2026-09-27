@@ -28,6 +28,8 @@ pub(crate) struct ProjectOverlay {
     pub(crate) icon_data_url: Option<String>,
     pub(crate) is_chat_project: bool,
     pub(crate) is_quick_project: bool,
+    /// The Hermes profile a bot project stands for (`default` for `HERMES_HOME` itself).
+    pub(crate) bot_profile: Option<String>,
     pub(crate) order_index: Option<usize>,
     pub(crate) worktree: Option<WorktreeView>,
 }
@@ -43,6 +45,8 @@ pub(crate) struct ProjectMeta {
     pub(crate) chat_order: Vec<String>,
     /// Visible code projects in sidebar order, worktrees under their parents.
     pub(crate) project_order: Vec<String>,
+    /// Visible bot projects in sidebar order, which Bots mode lists instead of `project_order`.
+    pub(crate) bot_order: Vec<String>,
     /// How many projects the Projects settings page would list; the empty state reads it.
     pub(crate) project_settings_count: usize,
 }
@@ -50,6 +54,16 @@ pub(crate) struct ProjectMeta {
 impl ProjectMeta {
     pub(crate) fn overlay(&self, project_id: &str) -> Option<&ProjectOverlay> {
         self.overlays.get(project_id)
+    }
+
+    /// Every project that gets a project group, code projects first, then bots. Both kinds are
+    /// built in either mode; `assemble` draws the kind the mode lists, the way it applies a Space.
+    pub(crate) fn grouped_project_ids(&self) -> impl Iterator<Item = &String> {
+        self.project_order.iter().chain(&self.bot_order)
+    }
+
+    pub(crate) fn bot_profile(&self, project_id: &str) -> Option<&str> {
+        self.overlay(project_id)?.bot_profile.as_deref()
     }
 }
 
@@ -251,6 +265,7 @@ pub(crate) fn build_project_meta(
                 is_quick_project: is_quick,
                 order_index: order_index.get(project_id.as_str()).copied(),
                 worktree,
+                ..ProjectOverlayPatch::default()
             },
         );
     }
@@ -258,13 +273,18 @@ pub(crate) fn build_project_meta(
         let index = order_index.get(project.project_id.as_str()).copied();
         let worktree =
             resolve_worktree_parent(normalize_worktree(project.worktree.as_ref()), &candidates);
-        if index.is_some() || worktree.is_some() {
+        // CDXC:Bots 2026-09-26 WHY:
+        // A bot is an ordinary gxserver project flagged in `launchSettings` (`isBot`, `botProfile`), the same JSON split the Chats projects use, so no schema migration and no `systemKind` value is needed.
+        // The presentation row carries the profile (`botProfile`), which every client holds from its first frame.
+        let bot_profile = project.bot_profile.clone();
+        if index.is_some() || worktree.is_some() || bot_profile.is_some() {
             merge_overlay(
                 &mut meta.overlays,
                 &project.project_id,
                 ProjectOverlayPatch {
                     order_index: index,
                     worktree,
+                    bot_profile,
                     ..ProjectOverlayPatch::default()
                 },
             );
@@ -312,15 +332,16 @@ pub(crate) fn build_project_meta(
             .filter(|project| is_chat(project, &meta)),
         &meta,
     );
-    let project_order = order_sidebar_projects(
-        visible
-            .iter()
-            .copied()
-            .filter(|project| !is_chat(project, &meta)),
-        &meta,
-    );
+    let (bots, projects): (Vec<&PresentationProject>, Vec<&PresentationProject>) = visible
+        .iter()
+        .copied()
+        .filter(|project| !is_chat(project, &meta))
+        .partition(|project| meta.bot_profile(&project.project_id).is_some());
+    let project_order = order_sidebar_projects(projects.into_iter(), &meta);
+    let bot_order = order_sidebar_projects(bots.into_iter(), &meta);
     meta.chat_order = chat_order;
     meta.project_order = project_order;
+    meta.bot_order = bot_order;
     meta.project_settings_count = project_settings_count(machine);
     meta
 }
@@ -345,6 +366,9 @@ fn merge_overlay(
     if patch.is_quick_project {
         overlay.is_quick_project = true;
     }
+    if let Some(bot_profile) = patch.bot_profile {
+        overlay.bot_profile = Some(bot_profile);
+    }
     if let Some(order_index) = patch.order_index {
         overlay.order_index = Some(order_index);
     }
@@ -358,6 +382,7 @@ struct ProjectOverlayPatch {
     icon_data_url: Option<String>,
     is_chat_project: bool,
     is_quick_project: bool,
+    bot_profile: Option<String>,
     order_index: Option<usize>,
     worktree: Option<WorktreeView>,
 }
@@ -367,6 +392,7 @@ impl ProjectOverlayPatch {
         self.icon_data_url.is_none()
             && !self.is_chat_project
             && !self.is_quick_project
+            && self.bot_profile.is_none()
             && self.order_index.is_none()
             && self.worktree.is_none()
     }

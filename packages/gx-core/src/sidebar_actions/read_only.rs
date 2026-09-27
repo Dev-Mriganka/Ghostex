@@ -16,6 +16,7 @@ use serde_json::Value;
 
 use crate::core::Core;
 use crate::keys::ProjectKey;
+use crate::sidebar_view::text::js_trim;
 use crate::sidebar_view::SidebarInputs;
 
 use super::plan::{ActionEffect, SidebarActionPlan, ToastLevel};
@@ -26,12 +27,13 @@ use super::resolve::{
 /// Every message type this file answers. The host checks it before it handles a command (it kept
 /// such commands out of the old runtime, and the deleted parity gate enumerated it), so the set
 /// lives in one place.
-pub const READ_ONLY_MESSAGE_TYPES: [&str; 5] = [
+pub const READ_ONLY_MESSAGE_TYPES: [&str; 6] = [
     "copySessionDetails",
     "copyWorkspaceProjectPathForGroup",
     "copyWorkspaceProjectRemoteUrl",
     "openWorkspaceProjectInFinderForGroup",
     "openWorkspaceProjectInIdeForGroup",
+    "openWorkspaceProjectInTargetForGroup",
 ];
 
 /// The calls one read-only message makes, or `None` when this file does not own that message.
@@ -69,6 +71,21 @@ pub fn plan_read_only_action(
             message,
             ProjectPathAction::OpenInIde,
         )),
+        // A bot row's Open in names one Open In target by id; the host runs the target it finds
+        // under that id in its own Settings, so no command text travels with the message.
+        "openWorkspaceProjectInTargetForGroup" => Some(
+            text_field(message, "targetId")
+                .map(js_trim)
+                .filter(|target_id| !target_id.is_empty())
+                .map_or_else(SidebarActionPlan::nothing, |target_id| {
+                    project_path_action(
+                        core,
+                        inputs,
+                        message,
+                        ProjectPathAction::OpenInTarget(target_id),
+                    )
+                }),
+        ),
         _ => None,
     }
 }
@@ -82,23 +99,26 @@ fn copy_text(value: Option<&str>) -> SidebarActionPlan {
     }
 }
 
-/// The three actions `postProjectPathActionForGroup` accepts, with what each one does on a remote
-/// project. Only Copy Path and Open in Editor have a remote form; the local file manager cannot
-/// open a path on another computer, and the TypeScript says so in a toast rather than failing
-/// silently.
+/// The actions `postProjectPathActionForGroup` accepts, plus a bot row's Open in, with what each
+/// one does on a remote project. Only Copy Path and Open in Editor have a remote form; the local
+/// file manager and the local Open In targets cannot open a path on another computer, and the
+/// TypeScript says so in a toast rather than failing silently.
 #[derive(Clone, Copy)]
-enum ProjectPathAction {
+enum ProjectPathAction<'a> {
     CopyPath,
     OpenInFinder,
     OpenInIde,
+    /// The Open In target id the row names.
+    OpenInTarget(&'a str),
 }
 
-impl ProjectPathAction {
+impl ProjectPathAction<'_> {
     fn local_action(self) -> &'static str {
         match self {
             Self::CopyPath => "copyWorkspaceProjectPath",
             Self::OpenInFinder => "openWorkspaceProjectInFinder",
             Self::OpenInIde => "openWorkspaceProjectInIde",
+            Self::OpenInTarget(_) => "openWorkspaceProjectInTarget",
         }
     }
 
@@ -106,7 +126,7 @@ impl ProjectPathAction {
         match self {
             Self::CopyPath => Some("copyRemoteProjectPath"),
             Self::OpenInIde => Some("openRemoteWorkspaceProjectInIde"),
-            Self::OpenInFinder => None,
+            Self::OpenInFinder | Self::OpenInTarget(_) => None,
         }
     }
 }
@@ -115,7 +135,7 @@ fn project_path_action(
     core: &Core,
     inputs: &SidebarInputs,
     message: &Value,
-    action: ProjectPathAction,
+    action: ProjectPathAction<'_>,
 ) -> SidebarActionPlan {
     let Some(group_id) = text_field(message, "groupId") else {
         return SidebarActionPlan::nothing();
@@ -141,7 +161,15 @@ fn project_path_action(
     let Some(project_id) = local_project_group_project_id(core, inputs, group_id) else {
         return SidebarActionPlan::nothing();
     };
-    match native_project_path_action(action.local_action(), &project_id) {
+    let mut effect = native_project_path_action(action.local_action(), &project_id);
+    if let (
+        ProjectPathAction::OpenInTarget(target_id),
+        Some(ActionEffect::NativeProjectPathAction { payload }),
+    ) = (action, effect.as_mut())
+    {
+        payload["targetId"] = Value::String(target_id.to_string());
+    }
+    match effect {
         Some(effect) => SidebarActionPlan::one(effect),
         None => SidebarActionPlan::nothing(),
     }

@@ -166,6 +166,13 @@ pub struct PresentationProject {
     /// Copied verbatim from the domain row; kept loose.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worktree: Option<Value>,
+    /// The Hermes profile this project is the bot of; absent for every other project and from an
+    /// older daemon (server/src/bot_projects.rs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot_profile: Option<String>,
+    /// Whether that bot's Hermes gateway runs; absent for every other project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bot_gateway_running: Option<bool>,
 }
 
 impl PresentationProject {

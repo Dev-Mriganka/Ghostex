@@ -141,6 +141,30 @@ impl SectionCollapse {
     }
 }
 
+/// Which projects the sidebar lists: the user's projects, or one row per Hermes profile.
+///
+/// CDXC:Bots 2026-09-26 DECISION:
+/// User: Bots is a sidebar mode, entered from a Hermes-logo button, off by default.
+/// Projects mode never lists a bot project and Bots mode lists only bot projects, ignoring the Space filter.
+/// The mode is remembered across restarts beside the selected Space.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SidebarMode {
+    #[default]
+    Projects,
+    Bots,
+}
+
+impl SidebarMode {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "projects" => Some(SidebarMode::Projects),
+            "bots" => Some(SidebarMode::Bots),
+            _ => None,
+        }
+    }
+}
+
 /// What the user collapsed and expanded. Group ids key the project rows; the storage id (a
 /// project's own id, or the group id for a user-made group) keys everything below a project.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -160,6 +184,9 @@ pub struct SidebarCollapseState {
     /// `restore`. It is written on every focus change, which is why it is a plain list and not
     /// something richer: a value the sidebar writes that often has to be cheap to compare.
     pub recent_sessions_by_space: BTreeMap<String, BTreeMap<String, Vec<String>>>,
+    /// The mode the user left the sidebar in. Read through [`effective_sidebar_mode`], which falls
+    /// back to Projects while Bots is switched off.
+    pub sidebar_mode: SidebarMode,
 }
 
 /// `MAX_RECENT_SIDEBAR_SPACE_SESSION_IDS`.
@@ -240,6 +267,8 @@ pub struct SidebarSettings {
     pub expand_collapsed_projects_on_jump: bool,
     /// That jump also puts the project's session list back to the compact one.
     pub show_less_for_expanded_project_jumps: bool,
+    /// The Bots extension is on (`botsHidden` is false), so the sidebar offers its Bots mode.
+    pub bots_enabled: bool,
 }
 
 impl Default for SidebarSettings {
@@ -261,6 +290,7 @@ impl Default for SidebarSettings {
             browser_view_tab_hidden: false,
             expand_collapsed_projects_on_jump: true,
             show_less_for_expanded_project_jumps: false,
+            bots_enabled: false,
         }
     }
 }
@@ -333,6 +363,8 @@ impl SidebarSettings {
                 "showLessForExpandedProjectJumps",
                 defaults.show_less_for_expanded_project_jumps,
             ),
+            // An inverted key like every Official extension switch, hidden unless set to false.
+            bots_enabled: !boolean("botsHidden", !defaults.bots_enabled),
         }
     }
 
@@ -478,4 +510,17 @@ pub struct SidebarInputs {
     pub ui: SidebarUiState,
     pub settings: SidebarSettings,
     pub host: SidebarHostInputs,
+}
+
+/// The mode the list is drawn in: the remembered one while Bots is on, Projects otherwise, so
+/// switching Bots off puts the sidebar back to exactly what it was.
+pub(crate) fn effective_sidebar_mode(
+    settings: &SidebarSettings,
+    ui: &SidebarUiState,
+) -> SidebarMode {
+    if settings.bots_enabled {
+        ui.collapse.sidebar_mode
+    } else {
+        SidebarMode::Projects
+    }
 }
