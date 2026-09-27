@@ -199,6 +199,59 @@ pub(crate) async fn deliver_when_started(
     }
 }
 
+/// CDXC:SessionTitles 2026-09-27 WHY:
+/// An agent rename is typed into the agent's own input box, and a sleeping session has none: the direct write to its missing zmx daemon was lost after the new title was already saved, so the agent's older title replaced it on the next wake. A command for a session whose daemon is gone waits in the queue as a startup send and wakes the session, the same way a chat message sent to a sleeping session does (2026-09-25 decision above).
+pub(crate) fn queue_startup_command_and_wake(
+    state: &AppState,
+    project_id: &str,
+    session_id: &str,
+    command: &str,
+) -> Result<(), DomainStateError> {
+    let mut params = Map::new();
+    params.insert("projectId".to_string(), json!(project_id));
+    params.insert("sessionId".to_string(), json!(session_id));
+    params.insert("text".to_string(), json!(command));
+    params.insert("startupSend".to_string(), json!(true));
+    crate::session_chat_queue::handle_session_chat_queue_endpoint(
+        &state.paths,
+        state.metadata.server_id.as_str(),
+        "/api/queueSessionChatPrompt",
+        &params,
+    )?;
+    crate::session_chat_queue_runtime::broadcast_session_chat_queue_state(
+        state, project_id, session_id,
+    );
+    let state = state.clone();
+    let project_id = project_id.to_string();
+    let session_id = session_id.to_string();
+    tokio::spawn(async move {
+        let body = json!({ "params": { "projectId": project_id, "sessionId": session_id } });
+        let woke = crate::server::handle_zmx_lifecycle_http(
+            &state,
+            "/api/wakeSession".to_string(),
+            uuid::Uuid::new_v4().to_string(),
+            &body,
+        )
+        .await
+        .response
+        .status()
+        .is_success();
+        crate::session_chat_send_diagnostics::record_send_recovery(
+            &state,
+            if woke {
+                "sessionChatSendWokeSession"
+            } else {
+                "sessionChatSendWakeFailed"
+            },
+            &project_id,
+            &session_id,
+            "The session's zmx daemon was not running when a command was queued for it.",
+            &[],
+        );
+    });
+    Ok(())
+}
+
 /// A send accepted now and typed by the queue once the agent's input box appears; the chat draws
 /// it in the transcript, not in the queue strip.
 pub(crate) fn queue_startup_send(

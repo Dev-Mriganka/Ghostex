@@ -278,18 +278,47 @@ pub(crate) fn dispatch_agent_http_blocking(
                     let _ =
                         crate::agents::arm_draft_launch_activity_suppression(&repository, &session);
                 }
-                if let Err(error) = dispatch_zmx_session_interaction_endpoint(
-                    &repository,
-                    "/api/sendSessionMessage",
-                    &send_params,
-                ) {
-                    return zmx_error_response(endpoint_path, request_id, error);
+                let lifecycle = crate::zmx::LifecycleParams {
+                    project_id: project_id.clone(),
+                    session_id: session_id.clone(),
+                };
+                let daemon_missing =
+                    crate::zmx::probe_and_cache_session_provider(&repository, &lifecycle)
+                        .is_ok_and(|(probe, ..)| probe.lifecycle_state == "missing");
+                if daemon_missing {
+                    if let Err(error) =
+                        crate::session_chat_send_wake::queue_startup_command_and_wake(
+                            state,
+                            &project_id,
+                            &session_id,
+                            &command,
+                        )
+                    {
+                        return domain_error_response(endpoint_path, request_id, error);
+                    }
+                    if let Some(result) = result.as_object_mut() {
+                        result.insert(
+                            "agentRenameCommand".to_string(),
+                            json!("queuedUntilAgentStarts"),
+                        );
+                    }
+                } else {
+                    if let Err(error) = dispatch_zmx_session_interaction_endpoint(
+                        &repository,
+                        "/api/sendSessionMessage",
+                        &send_params,
+                    ) {
+                        return zmx_error_response(endpoint_path, request_id, error);
+                    }
+                    crate::session_chat_app_command::record_session_chat_app_command(
+                        &project_id,
+                        &session_id,
+                        &command,
+                    );
+                    if let Some(result) = result.as_object_mut() {
+                        result.insert("agentRenameCommand".to_string(), json!("sent"));
+                    }
                 }
-                crate::session_chat_app_command::record_session_chat_app_command(
-                    &project_id,
-                    &session_id,
-                    &command,
-                );
             }
             if session_chat_state_changed {
                 if let Some(session) = result.get("session") {

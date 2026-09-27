@@ -261,11 +261,19 @@ fn get_agent_launch_startup_text_for_session(session: &Value) -> Option<String> 
         .filter(|value| !value.trim().is_empty())
 }
 
+/// CDXC:Cli 2026-09-27 WHY:
+/// A terminal made by `ghostex create-session --input` has no agent launch plan; its queued text is the session's own `launchSettings.startupText`, which the first provider start runs and then marks consumed like an agent launch.
 pub(crate) fn get_queued_agent_launch_startup_text_for_session(session: &Value) -> Option<String> {
     if !has_queued_agent_launch_startup_text(session) {
         return None;
     }
-    get_agent_launch_startup_text_for_session(session)
+    get_agent_launch_startup_text_for_session(session).or_else(|| {
+        session
+            .pointer("/launchSettings/startupText")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .filter(|value| !value.trim().is_empty())
+    })
 }
 
 pub(crate) fn get_persisted_provider_startup_text_for_session(

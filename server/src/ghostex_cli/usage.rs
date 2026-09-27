@@ -401,7 +401,7 @@ pub fn usage() -> String {
         format_help_command("wait-for-text <selector> <regex> [--timeout-seconds n] [--interval-seconds n] [--lines n] [--json]", "Poll a session until a scrollback line matches the regex; exits 1 on timeout or dead session"),
         format_help_command("rename-session <sessionId> <title> [--json]", "Rename a session"),
         format_help_command("rename-session --session-id <id> --title <title> [--json]", "Flag form used by Android SSH actions"),
-        format_help_command("rename-command <selector> <title>", "Send the agent rename command"),
+        format_help_command("rename-command <selector> <title>", "Rename a session through its agent's own rename command, waking a sleeping session to deliver it"),
         format_help_command("session-note read --session-id <id> [--project-id id] [--json]", "Read the note attached to the session's agent conversation"),
         format_help_command("session-note save --session-id <id> [--project-id id] --note '<text>' [--json]", "Attach a note to the session's agent conversation; an empty note clears it"),
     ]
@@ -511,6 +511,10 @@ pub fn usage() -> String {
             "Stop gxserver and kill tracked zmx sessions",
         ),
         format_help_command("server status [--json]", "Print gxserver runtime state"),
+        format_help_command(
+            "server endpoint",
+            "Print the running daemon's port and auth token as JSON (for SSH clients)",
+        ),
         format_help_command(
             "server version | server --version",
             "Print the gxserver package version",
@@ -893,6 +897,10 @@ pub fn server_usage() -> String {
             "Stop gxserver and kill tracked zmx sessions",
         ),
         format_help_command("server status [--json]", "Print gxserver runtime state"),
+        format_help_command(
+            "server endpoint",
+            "Print the running daemon's port and auth token as JSON (for SSH clients)",
+        ),
         format_help_command("server version", "Print the gxserver package version"),
         format_help_command("server --version", "Alias for server version"),
         format_help_command("server help | server --help", "Show this help"),

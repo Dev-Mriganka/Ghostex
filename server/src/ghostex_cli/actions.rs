@@ -572,15 +572,13 @@ fn send_gxserver_rename_command(payload: &Value, flags: &Flags) -> CliResult<Val
     }
     let params = with_resolved_gxserver_session_params(payload, flags)?;
     /*
-    CDXC:AgentSkills 2026-06-17-16:17:
-    Claude Code leaves `/rename <title>` staged when Enter is sent as zmx text.
-    Route generated-title renames through the native renderer command so the
-    macOS host sends the same real `sendTerminalEnter` event used before the
-    gxserver cutover.
+    CDXC:SessionTitles 2026-09-27 WHY:
+    This verb used to hand the rename to the desktop window, which pulled the session into view and typed `/rename` once its terminal mounted. A sleeping session never mounted in time, so the command was dropped while the verb still answered `accepted`, and the agent's older title then replaced the sidebar name on the next wake; it also moved the user's focus and did nothing without a desktop window. It now takes the rename modal's gxserver request, which records the title, types the agent's own command (`/rename`, Pi `/name`, Hermes `/title`) with a separate Enter, handles ZCode without a command, and wakes a sleeping session to deliver it. This supersedes the 2026-06-17 note that zmx text left `/rename` staged; gxserver sends Enter as its own write now.
     */
     let mut object = params.as_object().cloned().unwrap_or_default();
     object.insert("title".to_string(), Value::String(title));
-    dispatch_gxserver_renderer_command("renameCommand", &Value::Object(object), flags)
+    object.insert("submitAgentRenameCommand".to_string(), Value::Bool(true));
+    rpc::call_gxserver_rpc("/api/requestSessionRename", &Value::Object(object), flags)
 }
 
 fn terminal_text_for_cli_key(key: &str) -> Option<&'static str> {
@@ -852,6 +850,14 @@ fn create_gxserver_session(payload: &Value, flags: &Flags) -> CliResult<Value> {
     }
     if !input.is_empty() {
         launch_settings.insert("startupText".to_string(), json!(input));
+        /*
+        CDXC:Cli 2026-09-27 WHY:
+        gxserver runs startup text when it starts the provider only when the session marks it queued, the flag an agent launch plan sets. Without it `--start` (and the first open from the sidebar) brought up an empty shell and never ran `--input`.
+        */
+        launch_settings.insert(
+            "runtimeRelevant".to_string(),
+            json!({ "queueProviderStartupText": true }),
+        );
     }
     let mut params = Map::new();
     if let Some(value) = payload.get("cwd") {

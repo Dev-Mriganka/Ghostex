@@ -757,7 +757,7 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
         ),
         "wait-for-text" => wait::wait_for_text_command(args),
         "rename-command" => {
-            run_resolved_session_bridge_action("renameCommand", Parser::Rename, plain, args)
+            run_resolved_session_bridge_action("renameCommand", Parser::RenameRequest, plain, args)
         }
         "set-visible-count" => {
             run_bridge_action("setVisibleCount", Parser::VisibleCount, plain, args)
