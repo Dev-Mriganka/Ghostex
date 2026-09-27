@@ -203,6 +203,9 @@ pub struct SessionRow {
     /// A background shell or monitor is still running after the agent's turn; drawn as a grey dot
     /// when the row is otherwise idle.
     pub has_background_work: bool,
+    /// The model change the user picked failed and the messages behind it are held; drawn as a red
+    /// dot ahead of every other status.
+    pub model_selection_failed: bool,
     pub pending_question_count: u64,
     pub agent_icon: Option<String>,
     /// `terminal`, `browser`, or whatever else a newer daemon publishes.

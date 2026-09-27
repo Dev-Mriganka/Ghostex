@@ -150,6 +150,7 @@ pub struct ContextPreferencesByAgent {
     pub claude: ContextDetailsPreferences,
     pub codex: ContextDetailsPreferences,
     pub cursor: ContextDetailsPreferences,
+    pub hermes: ContextDetailsPreferences,
 }
 
 /// Each agent's recommended record until storage answers, like the TypeScript's
@@ -160,6 +161,7 @@ impl Default for ContextPreferencesByAgent {
             claude: default_preferences(ContextDetailsAgent::Claude),
             codex: default_preferences(ContextDetailsAgent::Codex),
             cursor: default_preferences(ContextDetailsAgent::Cursor),
+            hermes: default_preferences(ContextDetailsAgent::Hermes),
         }
     }
 }
@@ -171,6 +173,7 @@ impl ContextPreferencesByAgent {
             ContextDetailsAgent::Claude => &self.claude,
             ContextDetailsAgent::Codex => &self.codex,
             ContextDetailsAgent::Cursor => &self.cursor,
+            ContextDetailsAgent::Hermes => &self.hermes,
         }
     }
 
@@ -180,6 +183,7 @@ impl ContextPreferencesByAgent {
             ContextDetailsAgent::Claude => &mut self.claude,
             ContextDetailsAgent::Codex => &mut self.codex,
             ContextDetailsAgent::Cursor => &mut self.cursor,
+            ContextDetailsAgent::Hermes => &mut self.hermes,
         }
     }
 }

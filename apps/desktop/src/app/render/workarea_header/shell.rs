@@ -94,7 +94,7 @@ impl GhostexGpuiApp {
                 header.occlude()
             })
             .text_color(titlebar_text_color())
-            .font_family("Inter Variable")
+            .font_family(crate::ui_fonts::UI_FONT)
             .line_height(px(TITLEBAR_CONTROL_HEIGHT))
             .on_prepaint(|bounds, _window, _cx| {
                 record_workarea_header_bottom_y(bounds.bottom().as_f32());

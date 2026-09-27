@@ -16,12 +16,23 @@ pub(crate) fn background_work_color() -> gpui::Rgba {
     chrome_color(0xb4b8bf, 0x6b7078)
 }
 
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: "we must show a red dot on the session in the sidebar if we fail" to apply the model change picked in chat. The red dot wins over working, attention and the grey shell dot, because the messages behind the change are held until the user picks again; the row's tooltip carries the reason.
+/// SEE-ALSO: server/src/session_chat_model_selection_alert.rs.
+pub(crate) const FAILED_COLOR: u32 = 0xef4444;
+
 pub(crate) fn activity_indicator(
     activity: &str,
     has_background_work: bool,
+    model_selection_failed: bool,
     scale: f32,
 ) -> Option<AnyElement> {
     let indicator = match activity {
+        _ if model_selection_failed => div()
+            .size(px(8.0 * scale))
+            .rounded_full()
+            .bg(rgb(FAILED_COLOR))
+            .into_any_element(),
         "working" => div()
             .size(px(8.0 * scale))
             .rounded_full()

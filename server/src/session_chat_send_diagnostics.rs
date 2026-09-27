@@ -107,6 +107,46 @@ pub(crate) fn record_send_recovery(
     persist(state, &entry);
 }
 
+/// A model change that failed or kept failing, with the reason and the terminal screen it met, so
+/// the red sidebar dot it raised can be explained from the log alone.
+pub(crate) async fn record_model_selection_failure(
+    state: &AppState,
+    project_id: &str,
+    session_id: &str,
+    zmx_name: Option<String>,
+    details: Value,
+) {
+    let mut entry = json!({
+        "ts": chrono::Utc::now().to_rfc3339(),
+        "event": "sessionChatModelSelectionFailed",
+        "serverId": state.metadata.server_id,
+        "projectId": project_id,
+        "sessionId": session_id,
+        "zmxName": zmx_name,
+        "selection": details,
+    });
+    match zmx_name {
+        Some(name) => match tokio::task::spawn_blocking(move || {
+            crate::zmx::read_zmx_session_screen_capture(&name)
+        })
+        .await
+        {
+            Ok(Ok(capture)) => {
+                entry["terminal"] = json!({
+                    "capturedAt": chrono::Utc::now().to_rfc3339(),
+                    "captured": true,
+                    "truncated": capture.truncated,
+                    "text": capture.text,
+                });
+            }
+            Ok(Err(error)) => entry["captureError"] = json!(error),
+            Err(error) => entry["captureError"] = json!(error.to_string()),
+        },
+        None => entry["captureError"] = json!("The session has no terminal name."),
+    }
+    persist(state, &entry);
+}
+
 /// The same line from inside the send worker, which has no `AppState`.
 pub(crate) fn record_send_recovery_from_worker(
     event: &str,

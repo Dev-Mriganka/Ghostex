@@ -30,11 +30,12 @@ use super::world::{World, drive};
 /// The model catalog's cache record, which every chat's boot read carries.
 const MODEL_CATALOG_STORE: &str = "modelCatalog";
 
-/// The three context-detail preference records and the agent each belongs to.
-const CONTEXT_STORES: [(&str, &str); 3] = [
+/// The four context-detail preference records and the agent each belongs to.
+const CONTEXT_STORES: [(&str, &str); 4] = [
     ("claudeContext", "claude"),
     ("codexContext", "codex"),
     ("cursorContext", "cursor"),
+    ("hermesContext", "hermes"),
 ];
 
 /// The socket and what the host knows about it.

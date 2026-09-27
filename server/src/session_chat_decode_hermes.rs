@@ -1,6 +1,6 @@
 /*
-Hermes Agent persists conversations in `~/.hermes/state.db` (SQLite `messages`
-rows), not a jsonl transcript. `session_chat_hermes.rs` mirrors each session's
+Hermes Agent persists conversations in its session store (`~/.hermes/state.db`
+or a profile's own; SQLite `messages` rows), not a jsonl transcript. `session_chat_hermes.rs` mirrors each session's
 active rows into a per-session jsonl file — one JSON object per row, in the
 shape decoded here — so the rest of the chat pipeline can treat Hermes like
 every other agent. The record shape is Ghostex-owned:

@@ -274,6 +274,7 @@ pub fn merge_options_detail(
         "codexStatus",
         "claudeStatus",
         "cursorStatus",
+        "hermesStatus",
         "contextUsage",
     ] {
         let value = present(chosen.get(key))

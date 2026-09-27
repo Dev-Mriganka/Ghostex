@@ -1015,12 +1015,81 @@ const CURSOR_ROWS: &[RowDefinition] = &[
     },
 ];
 
+/// `HERMES_SHARED_ROWS`: Claude's rows Hermes fills, from its status line and its session store.
+fn hermes_keeps(id: &str) -> bool {
+    matches!(id, "contextUsed" | "costUsd" | "sessionTime" | "model")
+}
+
+/// `HERMES_ROWS`: the shared rows in Hermes' wording, then Hermes' own.
+///
+/// CDXC:AgentProviders 2026-09-26 DECISION:
+/// User: Hermes' Context details offers only the rows Hermes can back (context used, cost, tokens,
+/// session time, model); the 5h and 7d limit rows stay Claude-only.
+pub fn hermes_rows() -> Vec<RowDefinition> {
+    let mut rows: Vec<RowDefinition> = claude_rows()
+        .into_iter()
+        .filter(|row| hermes_keeps(row.id))
+        .map(|row| match row.id {
+            "costUsd" => RowDefinition {
+                description: "Spend this session, as Hermes billed or estimated it",
+                ..row
+            },
+            "sessionTime" => RowDefinition {
+                description: "Time since the Hermes session started",
+                value: value_hermes_session_time,
+                ..row
+            },
+            _ => row,
+        })
+        .collect();
+    rows.extend_from_slice(HERMES_ROWS);
+    rows
+}
+
+fn value_hermes_tokens(input: &RowInput) -> Option<String> {
+    let hermes = input.status.hermes.as_ref()?;
+    // Hermes counts cached input apart from `input_tokens`; its own prompt total adds it back.
+    let prompt = [
+        hermes.input_tokens,
+        hermes.cache_read_tokens,
+        hermes.cache_write_tokens,
+    ]
+    .into_iter()
+    .flatten()
+    .reduce(|total, tokens| total + tokens);
+    join_parts([
+        count(prompt).map(|tokens| format!("in {tokens}")),
+        count(hermes.output_tokens).map(|tokens| format!("out {tokens}")),
+    ])
+}
+
+fn value_hermes_session_time(input: &RowInput) -> Option<String> {
+    let hermes = input.status.hermes.as_ref()?;
+    let started = hermes.started_at.filter(|started| started.is_finite())?;
+    let ended = hermes
+        .ended_at
+        .filter(|ended| ended.is_finite())
+        .unwrap_or(input.now() / 1000.0);
+    duration(Some((ended - started).max(0.0) * 1000.0))
+}
+
+const HERMES_ROWS: &[RowDefinition] = &[RowDefinition {
+    id: "tokens",
+    group: GroupId::Usage,
+    label: "Tokens",
+    description: "Input and output tokens this session",
+    recommended: true,
+    value: value_hermes_tokens,
+    copy: None,
+}];
+
 /// The catalog for one agent.
 pub fn context_detail_rows(agent: ContextDetailsAgent) -> Vec<RowDefinition> {
     match agent {
         ContextDetailsAgent::Codex => codex_rows(),
         ContextDetailsAgent::Claude => claude_rows(),
         ContextDetailsAgent::Cursor => cursor_rows(),
+        ContextDetailsAgent::Hermes => hermes_rows(),
     }
 }
 

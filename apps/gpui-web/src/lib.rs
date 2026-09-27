@@ -70,6 +70,7 @@ mod terminal_model;
 mod terminal_scrollbar_reveal;
 #[allow(dead_code)]
 mod terminal_wheel;
+mod ui_fonts;
 
 // Linux-only window identity on the desktop; a canvas has neither.
 fn gpui_platform_window_app_id() -> Option<String> {
@@ -81,8 +82,7 @@ fn gpui_platform_window_icon() -> Option<Arc<image::RgbaImage>> {
 }
 
 /// The faces `gpui_web` used to bundle: IBM Plex Sans (the UI font) and
-/// Lilex (the fallback for a monospace family the browser does not have, such
-/// as the chat's `Menlo` inline code).
+/// Lilex (the fallback for a monospace family the browser does not have).
 ///
 /// CDXC:WebGpui 2026-09-26 WHY: upstream `gpui_web` stopped bundling IBM Plex Sans and Lilex (zed `ef075910c9`, applications provide their fonts) but still names IBM Plex Sans as the system UI font and `.ZedMono` (Lilex) as the first fallback, so without these faces no font resolves and the first text layout panics the page, and inline code falls back to the sans face. The faces come from the Zed checkout's own assets, the files the platform used to bundle.
 fn platform_fonts() -> Vec<Cow<'static, [u8]>> {
@@ -127,6 +127,7 @@ pub fn run() -> Result<(), JsValue> {
 
     app.with_assets(assets::GhostexAssets).run(|cx: &mut App| {
         gpui_component::init(cx);
+        ui_fonts::register(cx);
         // Match desktop's terminal keymap: Root's focus traversal otherwise
         // consumes Tab/Shift+Tab before the shared terminal encoder sees them.
         cx.bind_keys([
