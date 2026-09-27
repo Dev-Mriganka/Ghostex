@@ -143,6 +143,13 @@ pub fn read_pending(
     ).optional().ok().flatten()
 }
 
+/// Whether a model or option change is waiting, applying or failed for this session; a new chat
+/// message then waits behind it.
+pub(crate) fn has_pending_selection(state: &AppState, project: &str, session: &str) -> bool {
+    open_gxserver_database(&state.paths)
+        .is_ok_and(|db| read_pending(&db, project, session).is_some())
+}
+
 /// The published catalog can grow without rebuilding gxserver; the terminal is the authority on availability.
 pub(crate) fn validate_selection(
     provider: &str,
@@ -158,7 +165,7 @@ pub(crate) fn validate_selection(
     };
     if !matches!(
         provider,
-        "codex" | "claude" | "cursor" | "grok" | "antigravity" | "opencode"
+        "codex" | "claude" | "cursor" | "grok" | "antigravity" | "opencode" | "hermes"
     ) || !token(model)
         || (!effort.is_empty() && !token(effort))
     {
@@ -277,6 +284,10 @@ pub(crate) fn enqueue(
         params![project, session_id, id, model, effort, serde_json::to_string(&options).map_err(storage_error)?, scope],
     ).map_err(storage_error)?;
     transaction.commit().map_err(storage_error)?;
+    // A new pick is a new attempt; a failure it meets marks the session again.
+    crate::session_chat_model_selection_alert::clear_model_selection_failure(
+        state, project, session_id,
+    );
     let pending = read_pending(&db, &project, &session_id);
     crate::session_chat_queue_runtime::broadcast_session_chat_queue_state(
         state,
@@ -310,26 +321,41 @@ pub(crate) fn sender(state: &Arc<AppState>) -> ModelSelectionSender {
                 params.as_object().unwrap(),
             )
             .await;
+            let final_failure = result.as_ref().is_err_and(|error| {
+                error.code == crate::session_chat_codex_picker::UNSUPPORTED_SELECTION_CODE
+            });
             if let Ok(db) = open_gxserver_database(&state.paths) {
-                match result {
+                match &result {
                     Ok(_) => {
                         let _ = db.execute("DELETE FROM session_chat_model_selections WHERE projectId = ?1 AND sessionId = ?2 AND selectionId = ?3", params![project, session, pending.id]);
                     }
                     // CDXC:SessionChat 2026-09-18 WHY:
                     // A selection the terminal can never accept stops here instead of retrying:
                     // one model the CLI does not list for an account retyped `/model` into the
-                    // user's pane 181 times. The row stays only to carry its reason to the chat,
-                    // and `failed` keeps it out of delivery, wake-keeping and the desired model,
-                    // the same way a failed queued prompt is treated.
-                    Err(error)
-                        if error.code
-                            == crate::session_chat_codex_picker::UNSUPPORTED_SELECTION_CODE =>
-                    {
+                    // user's pane 181 times. The row stays to carry its reason to the chat, and
+                    // `failed` keeps it out of delivery, wake-keeping and the desired model.
+                    Err(error) if final_failure => {
                         let _ = db.execute("UPDATE session_chat_model_selections SET state = 'failed', errorMessage = ?4, retryAt = 0 WHERE projectId = ?1 AND sessionId = ?2 AND selectionId = ?3", params![project, session, pending.id, error.message]);
                     }
                     Err(error) => {
                         let _ = db.execute("UPDATE session_chat_model_selections SET state = 'queued', errorMessage = ?4, retryAt = ?5 WHERE projectId = ?1 AND sessionId = ?2 AND selectionId = ?3", params![project, session, pending.id, error.message, chrono::Utc::now().timestamp_millis() + 5_000]);
                     }
+                }
+            }
+            match &result {
+                Ok(_) => crate::session_chat_model_selection_alert::clear_model_selection_failure(
+                    &state, &project, &session,
+                ),
+                Err(error) => {
+                    crate::session_chat_model_selection_alert::note_model_selection_failure(
+                        &state,
+                        &project,
+                        &session,
+                        &pending,
+                        error,
+                        final_failure,
+                    )
+                    .await
                 }
             }
             crate::session_chat_queue_runtime::broadcast_session_chat_queue_state(

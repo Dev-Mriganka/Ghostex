@@ -250,7 +250,7 @@ impl ChatOptionMenuPanel {
                         .py(px(1.0 * scale))
                         .rounded(px(5.0 * scale))
                         .bg(palette.ink(0.05))
-                        .font_family("Menlo")
+                        .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                         .text_size(px(10.0 * scale))
                         .text_color(palette.muted)
                         .child(format!("⌥{slot}")),
@@ -366,11 +366,6 @@ impl ChatOptionMenuPanel {
                 let tooltip = match letter {
                     Some(letter) => format!("{tooltip} ({letter})"),
                     None => tooltip,
-                };
-                let tooltip = match setting["icon"].as_str() {
-                    Some("fast") => format!("{tooltip} (F)"),
-                    Some("context") => format!("{tooltip} (C)"),
-                    _ => tooltip,
                 };
                 // CDXC:SessionChat 2026-09-24 DECISION:
                 // User: the footer's values ("Default", "Medium") must not be cut short. Reasoning, Context Window and Fast keep their full width and grow into the spare room; only the Account button and labelled option buttons give way and truncate.

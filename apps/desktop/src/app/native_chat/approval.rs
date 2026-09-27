@@ -103,7 +103,7 @@ impl NativeChatView {
                             .id("approval-command")
                             .max_h(px(160.0 * s))
                             .overflow_y_scroll()
-                            .font_family("Menlo")
+                            .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                             .text_size(px(14.0 * s))
                             .line_height(px(22.75 * s))
                             .text_color(p.card_muted)

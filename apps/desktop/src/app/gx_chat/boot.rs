@@ -59,6 +59,7 @@ pub(super) fn read(session_key: &str, now_ms: i64, errors: &mut BootReads) -> Co
     let claude_context = parse(load("claudeContext", "", now_ms, errors));
     let codex_context = parse(load("codexContext", "", now_ms, errors));
     let cursor_context = parse(load("cursorContext", "", now_ms, errors));
+    let hermes_context = parse(load("hermesContext", "", now_ms, errors));
     let dismissed_notice = parse(load("notices", session_key, now_ms, errors));
     let summary_mode = decode_summary(load("summary", session_key, now_ms, errors).as_deref());
     let verbose_override = decode_verbose(load("verbose", session_key, now_ms, errors).as_deref());
@@ -75,6 +76,7 @@ pub(super) fn read(session_key: &str, now_ms: i64, errors: &mut BootReads) -> Co
             "claude": claude_context,
             "codex": codex_context,
             "cursor": cursor_context,
+            "hermes": hermes_context,
         }),
         dismissed_notice,
         summary_mode,

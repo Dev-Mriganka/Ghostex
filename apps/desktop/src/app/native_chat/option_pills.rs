@@ -91,12 +91,7 @@ fn pill(
     if kind == "model"
         && let Some(icon) = values["agentIcon"].as_str()
     {
-        let color = crate::app::helpers::workspace_tab_agent_icon_accent_color(icon);
-        let color = if appearance.light && matches!(color, 0xffffff | 0xedecec) {
-            0x27272a
-        } else {
-            color
-        };
+        let color = agent_accent(icon, appearance);
         let indicator = values["accountIndicator"]
             .as_str()
             .filter(|value| !value.is_empty());
@@ -121,7 +116,7 @@ fn pill(
                 .child(logo.absolute().size_full().opacity(0.3))
                 .child(
                     div()
-                        .font_family("Menlo")
+                        .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                         .font_weight(gpui::FontWeight::SEMIBOLD)
                         .text_size(px(9.9 * scale))
                         .line_height(px(9.9 * scale))
@@ -308,6 +303,10 @@ impl NativeChatView {
             return 0.0;
         }
         let mut width = measure("model");
+        if let Some(name) = values["agentChip"]["name"].as_str() {
+            width += text_width(name)
+                + (AGENT_CHIP_PADDING * 2.0 + AGENT_TILE + AGENT_CHIP_GAP + 2.0) * scale;
+        }
         if self.snapshot["contextMeter"].is_object() {
             width += 32.0 * scale;
         }
@@ -342,6 +341,13 @@ impl NativeChatView {
             .gap(px(2.0 * appearance.scale))
             .text_size(px(13.0 * appearance.scale))
             .text_color(appearance.primary)
+            .when_some(values["agentChip"]["name"].as_str(), |item, name| {
+                item.child(agent_chip(
+                    name,
+                    values["agentChip"]["icon"].as_str(),
+                    appearance,
+                ))
+            })
             .when(values["showModel"] == true, |item| {
                 item.child(pill(
                     "model",
@@ -392,6 +398,55 @@ impl NativeChatView {
             )
             .into_any_element()
     }
+}
+
+/// The agent's accent, with the white and near-white ones turned to ink on a light theme.
+fn agent_accent(icon: &str, appearance: &ChatAppearance) -> u32 {
+    let color = crate::app::helpers::workspace_tab_agent_icon_accent_color(icon);
+    if appearance.light && matches!(color, 0xffffff | 0xedecec) {
+        0x27272a
+    } else {
+        color
+    }
+}
+
+const AGENT_CHIP_PADDING: f32 = 8.0;
+const AGENT_TILE: f32 = 14.0;
+const AGENT_CHIP_GAP: f32 = 4.0;
+
+/// Who the chat talks to (`optionLabels.agentChip`), before the model pill: the name's initial on
+/// a tile in the agent's colour, then the name. It is a label, not a control.
+fn agent_chip(name: &str, icon: Option<&str>, appearance: &ChatAppearance) -> AnyElement {
+    let scale = appearance.scale;
+    div()
+        .flex_shrink_0()
+        .h(px(24.0 * scale))
+        .px(px(AGENT_CHIP_PADDING * scale))
+        .flex()
+        .items_center()
+        .gap(px(AGENT_CHIP_GAP * scale))
+        .child(
+            div()
+                .size(px(AGENT_TILE * scale))
+                .flex_shrink_0()
+                .rounded(px(3.0 * scale))
+                .bg(icon.map_or(appearance.muted, |icon| {
+                    gpui::rgb(agent_accent(icon, appearance)).into()
+                }))
+                .flex()
+                .items_center()
+                .justify_center()
+                .text_size(px(9.0 * scale))
+                .font_weight(gpui::FontWeight::BOLD)
+                .text_color(gpui::rgb(0x111111))
+                .child(name.chars().take(1).collect::<String>()),
+        )
+        .child(
+            div()
+                .font_weight(gpui::FontWeight::MEDIUM)
+                .child(name.to_owned()),
+        )
+        .into_any_element()
 }
 
 /// Whether the model pill opens the model pop-up, which Option+P opens too.

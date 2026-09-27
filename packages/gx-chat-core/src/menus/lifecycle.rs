@@ -30,14 +30,20 @@ use crate::wire::ChatRpcMethod;
 pub fn observe(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
     let now_ms = context.now_millis();
     let mut effects = Vec::new();
-    if state.session.agent.as_deref() == Some("opencode") {
-        if let Some(catalog) = state.session.selected_options.as_ref().and_then(|v| v.get("modelCatalog"))
-            .and_then(crate::menus::catalog::parse_agent_model_catalog) {
-            if let Some(agent) = catalog.agents.get("opencode") {
-                if state.menus.model_catalog.agents.get("opencode") != Some(agent) {
-                    state.menus.model_catalog.agents.insert("opencode".into(), agent.clone());
-                    state.menus.model_catalog_generation = state.menus.model_catalog_generation.wrapping_add(1);
-                }
+    // The session's own lineup (OpenCode's model API, a Hermes profile's session store), which
+    // gxserver sends with the detected options for that session's agent alone.
+    if let Some(catalog) = state
+        .session
+        .selected_options
+        .as_ref()
+        .and_then(|v| v.get("modelCatalog"))
+        .and_then(crate::menus::catalog::parse_agent_model_catalog)
+    {
+        for (agent_id, agent) in catalog.agents {
+            if state.menus.model_catalog.agents.get(&agent_id) != Some(&agent) {
+                state.menus.model_catalog.agents.insert(agent_id, agent);
+                state.menus.model_catalog_generation =
+                    state.menus.model_catalog_generation.wrapping_add(1);
             }
         }
     }

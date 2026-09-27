@@ -19,34 +19,44 @@ pub enum ContextDetailsAgent {
     Claude,
     Codex,
     Cursor,
+    Hermes,
 }
 
 impl ContextDetailsAgent {
     /// Every agent with its own catalog and saved record.
-    pub const ALL: [Self; 3] = [Self::Claude, Self::Codex, Self::Cursor];
+    pub const ALL: [Self; 4] = [Self::Claude, Self::Codex, Self::Cursor, Self::Hermes];
 
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Claude => "claude",
             Self::Codex => "codex",
             Self::Cursor => "cursor",
+            Self::Hermes => "hermes",
         }
     }
 
     /// `contextDetailsAgentFor`: the agent an icon selects, `None` for an agent with no context
     /// details at all.
     ///
-    /// CDXC:SessionChatDetectedOptions 2026-09-23 DECISION:
-    /// User: Cursor chats get their own status line and More details, saved separately from
-    /// Claude and Codex, built from what Cursor reports: model, reasoning effort and context use.
-    /// Other agents still have neither.
+    /// CDXC:AgentProviders 2026-09-26 DECISION:
+    /// User: Cursor and Hermes chats get their own status line and More details, saved separately
+    /// from Claude and Codex, built from what each reports: Cursor its model, reasoning effort and
+    /// context use, Hermes its status line and session store. This adds Hermes to the 2026-09-23
+    /// Cursor decision; other agents still have neither.
     pub fn for_icon(icon: Option<&str>) -> Option<Self> {
         match icon.map(|icon| icon.trim().to_lowercase()).as_deref() {
             Some("claude") => Some(Self::Claude),
             Some("codex") => Some(Self::Codex),
             Some("cursor" | "cursor-cli" | "cursor cli" | "cursor-agent") => Some(Self::Cursor),
+            Some("hermes" | "hermes-agent") => Some(Self::Hermes),
             _ => None,
         }
+    }
+
+    /// Whether the meter shows the percentage the agent printed rather than tokens over window:
+    /// Codex adjusts for its baseline, and Hermes rounds the figure its own status line shows.
+    pub fn prefers_reported_percentage(&self) -> bool {
+        matches!(self, Self::Codex | Self::Hermes)
     }
 
     /// The catalog and record an icon uses: `contextDetailsAgentFor(icon) ?? 'claude'`.
@@ -58,7 +68,7 @@ impl ContextDetailsAgent {
     pub fn other(&self) -> Self {
         match self {
             Self::Claude => Self::Codex,
-            Self::Codex | Self::Cursor => Self::Claude,
+            Self::Codex | Self::Cursor | Self::Hermes => Self::Claude,
         }
     }
 
@@ -68,6 +78,7 @@ impl ContextDetailsAgent {
             Self::Claude => "Claude Code",
             Self::Codex => "Codex",
             Self::Cursor => "Cursor",
+            Self::Hermes => "Hermes",
         }
     }
 }
@@ -211,6 +222,24 @@ pub struct CursorStatus {
     pub pr_state: Option<String>,
 }
 
+/// `hermesStatus`: the Hermes session's own row in its session store
+/// (`server/src/session_chat_hermes_status.rs`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HermesStatus {
+    pub model: Option<String>,
+    /// Epoch seconds.
+    pub started_at: Option<f64>,
+    /// Epoch seconds, once the session ended.
+    pub ended_at: Option<f64>,
+    /// Input Hermes did not read from its cache.
+    pub input_tokens: Option<f64>,
+    pub cache_read_tokens: Option<f64>,
+    pub cache_write_tokens: Option<f64>,
+    pub output_tokens: Option<f64>,
+    pub cost_usd: Option<f64>,
+}
+
 /// One usage window of a saved account.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -271,6 +300,7 @@ pub struct ContextDetailStatus {
     // The chat's own additions.
     pub codex: Option<CodexStatus>,
     pub cursor: Option<CursorStatus>,
+    pub hermes: Option<HermesStatus>,
     pub account: Option<AgentAccount>,
     /// The context meter's used share (42%).
     pub context_used_percent: Option<String>,
@@ -301,6 +331,7 @@ pub struct DetectedOptions {
     pub claude_status: Option<ClaudeStatus>,
     pub codex_status: Option<CodexStatus>,
     pub cursor_status: Option<CursorStatus>,
+    pub hermes_status: Option<HermesStatus>,
 }
 
 /// Claude's own statusline payload, the part the rows read.
@@ -356,11 +387,15 @@ pub fn resolve_context_detail_status(
 ) -> ContextDetailStatus {
     let codex = match agent {
         ContextDetailsAgent::Codex => options.and_then(|options| options.codex_status.clone()),
-        ContextDetailsAgent::Claude | ContextDetailsAgent::Cursor => None,
+        _ => None,
+    };
+    let hermes = match agent {
+        ContextDetailsAgent::Hermes => options.and_then(|options| options.hermes_status.clone()),
+        _ => None,
     };
     let usage = resolve_context_meter_usage(
         options.and_then(|options| options.context_usage.as_ref()),
-        agent == ContextDetailsAgent::Codex,
+        agent.prefers_reported_percentage(),
     );
     let mut status = match agent {
         ContextDetailsAgent::Claude => {
@@ -388,6 +423,16 @@ pub fn resolve_context_detail_status(
             .and_then(|options| options.cursor_status.as_ref())
             .map(cursor_common_status)
             .unwrap_or_default(),
+        ContextDetailsAgent::Hermes => ContextDetailStatus {
+            cost: hermes
+                .as_ref()
+                .and_then(|hermes| hermes.cost_usd)
+                .map(|total_usd| ClaudeCost {
+                    total_usd: Some(total_usd),
+                    ..ClaudeCost::default()
+                }),
+            ..ContextDetailStatus::default()
+        },
         ContextDetailsAgent::Codex => {
             let request = codex.as_ref().and_then(|codex| codex.last_request);
             ContextDetailStatus {
@@ -414,13 +459,20 @@ pub fn resolve_context_detail_status(
         ContextDetailsAgent::Cursor => options.and_then(|options| options.cursor_status.clone()),
         _ => None,
     };
+    status.hermes = hermes;
     status.account = account
         .filter(|account| account.provider == agent.as_str())
         .cloned();
     status.model_name = options
         .and_then(|options| options.model.as_ref())
         .and_then(|model| model.label.clone())
-        .or_else(|| codex.as_ref().and_then(|codex| codex.model.clone()));
+        .or_else(|| codex.as_ref().and_then(|codex| codex.model.clone()))
+        .or_else(|| {
+            status
+                .hermes
+                .as_ref()
+                .and_then(|hermes| hermes.model.clone())
+        });
     status.effort_name = options
         .and_then(|options| options.effort.as_ref())
         .and_then(|effort| effort.label.clone())

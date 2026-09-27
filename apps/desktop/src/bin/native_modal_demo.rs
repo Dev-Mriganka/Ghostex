@@ -21,6 +21,8 @@ mod export_transcript_modal;
 mod hotkey_label;
 #[path = "../app/window/native_modal_kit.rs"]
 mod native_modal_kit;
+#[path = "../ui_fonts.rs"]
+mod ui_fonts;
 // DEMO-MODULES: one `#[path]` include per converted modal, plus its demo module under native_modal_demo/.
 #[path = "native_modal_demo/agent_hooks_required.rs"]
 mod agent_hooks_required_demo;
@@ -275,6 +277,7 @@ fn main() {
         .with_assets(assets::GhostexAssets)
         .run(move |cx: &mut App| {
             gpui_component::init(cx);
+            ui_fonts::register(cx);
             match demo.modal.as_str() {
                 "export-transcript" => open_export_transcript(&demo, cx),
                 // DEMO-ARMS: one arm per converted modal.

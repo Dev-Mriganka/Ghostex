@@ -112,7 +112,7 @@ impl SessionChatCompactingPublisher {
         );
     }
 
-    fn publish_marker(
+    pub(crate) fn publish_marker(
         &self,
         project_id: &str,
         session_id: &str,

@@ -101,7 +101,7 @@ impl GhostexGpuiApp {
             .overflow_hidden()
             .bg(glass_clear(project_editor_shell_background_color()))
             .text_color(titlebar_text_color())
-            .font_family("Inter Variable")
+            .font_family(crate::ui_fonts::UI_FONT)
             .on_drag_move::<DraggedViewTab>(cx.listener(
                 |this, event: &gpui::DragMoveEvent<DraggedViewTab>, _window, cx| {
                     this.clear_view_strip_drop_outside(event.bounds, event.event.position, cx);
