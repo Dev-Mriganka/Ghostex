@@ -99,3 +99,10 @@ docs/
 # Python bytecode caches from the tooling scripts. Machine state, not source.
 __pycache__/
 *.pyc
+
+# Leftovers on Windows machines that are not source: `NONE` is a stray debug-symbols (PDB)
+# file a Windows build left in the crate folder, `apps/gpui-web/www/public/` held the deleted chat
+# runtime bundles, and `apps/web/` is the deleted React web app's own checkout.
+server/NONE
+apps/gpui-web/www/public/
+apps/web/
