@@ -1,1 +1,0 @@
-../../../../desktop/src/app/native_chat/side_question.rs

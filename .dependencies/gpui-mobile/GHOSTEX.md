@@ -5,7 +5,7 @@ Ghostex uses its Android host-driven mode (`src/android/host.rs`): a React Nativ
 `SurfaceView`/`TextureView`, and GPUI renders into it on a process-lived `gpui-main` thread. On iOS
 it uses the embedded mode (`src/ios/ffi.rs`, `gpui_ios_set_embedded`): GPUI's view controller is a
 child of the React Native view, driven by the host's `CADisplayLink` on the main thread. The
-consumer is `apps/gpui-mobile-poc/host` (crate `ghostex-gpui-mobile`).
+consumer is `packages/gpui-mobile/host` (crate `ghostex-gpui-mobile`).
 
 ## Source
 
@@ -79,7 +79,7 @@ clone to see them exactly (`diff -ru <clone>/src src`).
     `platform::set_clipboard_writer(f)` hands every write to the host, which writes Android's
     `ClipboardManager`. Reads (paste) still come from the in-process store.
 
-### iOS (embedded in a React Native view; consumer `apps/gpui-mobile-poc/host/src/ios`)
+### iOS (embedded in a React Native view; consumer `packages/gpui-mobile/host/src/ios`)
 
 15. **`Cargo.toml`: one font-kit.** The iOS `font-kit` dependency is the same git revision of
     `zed-industries/font-kit` that the Zed fork's `gpui_wgpu` and `gpui_macos` pin, instead of the

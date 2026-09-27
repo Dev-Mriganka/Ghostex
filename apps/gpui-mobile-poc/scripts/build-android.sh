@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds libghostex_gpui_mobile.so (apps/gpui-mobile-poc/host) for Android and stages it in the
+# Builds libghostex_gpui_mobile.so (packages/gpui-mobile/host) for Android and stages it in the
 # gpui-view Expo module's jniLibs, where Gradle packages it into the APK.
 #
 # Usage: scripts/build-android.sh [--release] [--abi arm64-v8a[,x86_64,...]]
@@ -11,6 +11,8 @@
 set -euo pipefail
 
 POC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The Rust workspace (host and chat crates) the app loads.
+RUST="$(cd "$POC/../../packages/gpui-mobile" && pwd)"
 PROFILE=debug
 ABIS=arm64-v8a
 
@@ -35,7 +37,7 @@ command -v cargo-ndk >/dev/null || { echo "cargo-ndk is missing: cargo install c
 [[ -d "$ANDROID_NDK_HOME" ]] || { echo "NDK not found at $ANDROID_NDK_HOME" >&2; exit 1; }
 
 # A target dir of its own: the workspace's host builds (the chat crate) never wait on this lock.
-export CARGO_TARGET_DIR="$POC/target/ndk"
+export CARGO_TARGET_DIR="$RUST/target/ndk"
 # Full debug info makes a several-hundred-MB debug .so that Gradle then strips anyway; line tables
 # keep symbolized panics and backtraces.
 export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-line-tables-only}"
@@ -65,7 +67,7 @@ for abi in "${abi_list[@]}"; do
     *) echo "unsupported ABI: $abi" >&2; exit 2 ;;
   esac
   echo "==> $abi ($PROFILE, API $PLATFORM)"
-  (cd "$POC" && cargo ndk -t "$abi" --platform "$PLATFORM" "${cargo_args[@]}")
+  (cd "$RUST" && cargo ndk -t "$abi" --platform "$PLATFORM" "${cargo_args[@]}")
   built="$CARGO_TARGET_DIR/$triple/$PROFILE/libghostex_gpui_mobile.so"
   staged="$JNI_LIBS/$abi/libghostex_gpui_mobile.so"
   mkdir -p "$JNI_LIBS/$abi"

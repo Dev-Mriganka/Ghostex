@@ -1,1 +1,0 @@
-../../../../desktop/src/app/native_chat/account_switch_card.rs

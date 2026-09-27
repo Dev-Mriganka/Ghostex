@@ -1,1 +1,0 @@
-../../../../desktop/src/app/native_chat/edit_shortcuts.rs

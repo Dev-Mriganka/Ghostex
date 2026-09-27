@@ -1,1 +1,0 @@
-../../../../desktop/src/app/helpers/indicator_animation.rs

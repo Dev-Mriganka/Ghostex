@@ -19,7 +19,7 @@
 # Idempotent: node_modules, the generated ios/ folder and the Pods are only (re)created when
 # missing or when app.json / package.json / the module's podspec changed; cargo and xcodebuild are
 # incremental. The app's standard output and error (Rust and Swift logs) go to
-# target/ios/logs/app.log; Rust also writes <app data>/Library/Application Support/gpui/logs/gpui.log.
+# packages/gpui-mobile/target/ios/logs/app.log; Rust also writes <app data>/Library/Application Support/gpui/logs/gpui.log.
 # For JS iteration use Metro instead: a Debug build (`cd app && bunx expo run:ios`) and
 # `bunx expo start`.
 set -euo pipefail
@@ -138,7 +138,7 @@ echo "    $(du -sh "$app_bundle" | cut -f1) $app_bundle"
 echo "==> install on $SIMULATOR"
 xcrun simctl install "$udid" "$app_bundle"
 if [[ "$LAUNCH" == 1 ]]; then
-  LOGS="$POC/target/ios/logs"
+  LOGS="$POC/../../packages/gpui-mobile/target/ios/logs"
   mkdir -p "$LOGS"
   # simctl appends to these files; each launch starts a fresh log.
   : >"$LOGS/app.log"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds libghostex_gpui_mobile.a (apps/gpui-mobile-poc/host) for iOS and packages it, with its C
+# Builds libghostex_gpui_mobile.a (packages/gpui-mobile/host) for iOS and packages it, with its C
 # header and module map (host/src/ios/include), as GhostexGpuiMobile.xcframework in the gpui-view
 # Expo module, whose podspec vendors it.
 #
@@ -14,6 +14,8 @@
 set -euo pipefail
 
 POC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The Rust workspace (host and chat crates) the app links.
+RUST="$(cd "$POC/../../packages/gpui-mobile" && pwd)"
 PROFILE=debug
 DEVICE=0
 
@@ -29,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # A target dir of its own: never waits on the Android build's (target/ndk) or the host's lock.
-export CARGO_TARGET_DIR="$POC/target/ios"
+export CARGO_TARGET_DIR="$RUST/target/ios"
 # Full debug info makes a multi-GB debug archive; line tables keep symbolized panics.
 export CARGO_PROFILE_DEV_DEBUG="${CARGO_PROFILE_DEV_DEBUG:-line-tables-only}"
 # The app's minimum iOS (the podspec's platform); objects built for a newer one make the linker warn.
@@ -45,13 +47,13 @@ for triple in "${triples[@]}"; do
   # neither of.
   args=(rustc -p ghostex-gpui-mobile --lib --crate-type staticlib --target "$triple")
   [[ "$PROFILE" == release ]] && args+=(--release)
-  (cd "$POC" && cargo "${args[@]}")
+  (cd "$RUST" && cargo "${args[@]}")
   lib="$CARGO_TARGET_DIR/$triple/$PROFILE/libghostex_gpui_mobile.a"
-  echo "    $(du -h "$lib" | cut -f1) ${lib#$POC/}"
+  echo "    $(du -h "$lib" | cut -f1) ${lib#$RUST/}"
   libs+=("$lib")
 done
 
-HEADERS_SRC="$POC/host/src/ios/include"
+HEADERS_SRC="$RUST/host/src/ios/include"
 XCFRAMEWORK="$POC/app/modules/gpui-view/ios/GhostexGpuiMobile.xcframework"
 STAMP="$CARGO_TARGET_DIR/xcframework.stamp"
 

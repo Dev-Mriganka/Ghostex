@@ -47,7 +47,7 @@ pub(crate) fn set_endpoint(machine_id: &str, base_url: &str, auth_token: &str) {
 /// differently (`StartConfig::touch_composer`).
 ///
 /// CDXC:Mobile 2026-09-27 WHY: the core already has the phone's wording ("Tap \u{2191} to send or hold it to queue", no Enter or Tab), and the React Native host asks for it with `touchComposer`; a GPUI transcript on the phone runs this host, so the phone's host turns it on and every chat it starts gets the same text. The desktop never does.
-#[allow(dead_code)] // only the phone's host (apps/gpui-mobile-poc) turns it on
+#[allow(dead_code)] // only the phone's host (packages/gpui-mobile) turns it on
 pub(crate) fn set_touch_composer(touch: bool) {
     TOUCH_COMPOSER.store(touch, Ordering::Relaxed);
 }
