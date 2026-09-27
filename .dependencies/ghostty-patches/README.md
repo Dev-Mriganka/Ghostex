@@ -32,6 +32,20 @@ then regenerate that patch). After a sync always:
    caught a silent +2 shift in every action tag this way.
 4. Rebuild the local GhosttyKit xcframework (macOS):
    `cd .dependencies/ghostty && zig build -Demit-xcframework -Dxcframework-target=universal -Demit-macos-app=false -Doptimize=ReleaseSafe`
+   (with `DEVELOPER_DIR`, `SDKROOT` and `GHOSTTY_METAL_DEVELOPER_DIR` set the
+   way `apps/desktop/scripts/build-macos-app.sh` prints them). The sync keeps
+   the old xcframework in place, so every desktop build keeps linking while
+   this runs; building it in a staging copy first and swapping the files in
+   right after the sync keeps the mismatch window to seconds.
+5. Refresh the web build's cached wasm archive
+   (`apps/gpui-web/target/libghostty-vt-wasm/`): `apps/gpui-web/build-wasm.mjs`
+   only builds it when it is missing, so after a sync delete it (or build a new
+   one with the flags in that script and swap it in) or the browser build keeps
+   the old Ghostty.
+6. Check `copy-on-select` and any other Ghostty config key whose values
+   `apps/desktop/src/terminal_ghostty_surface.rs` parses from the finalized
+   config string: upstream renames values there (Ghostty 1.4 did for
+   `copy-on-select`), and the parse matches on literal strings.
 
 ## The series
 
@@ -64,6 +78,18 @@ then regenerate that patch). After a sync always:
   and the fork/setsid pgid retry is bounded. Fixes the 2026-07-10/11
   process-wide freeze family (io-thread ↔ app-thread join cycles). Also
   contains a bounds guard on the renderer's shaper-cell advance scan.
+
+## Rebased in the 2026-09-27 sync
+
+- `0001` — upstream turned the libghostty-vt shared library into an optional
+  (null for native freestanding targets), so the `-Demit-lib-vt-shared=false`
+  skip is now an early `break :shared null`, and the "cannot execute the ABI
+  manifest" schema-step error is raised only for native freestanding targets
+  rather than whenever the shared library is skipped. The other patches only
+  moved line offsets; none was dropped (upstream has not changed the patched
+  code in `GhosttyXCFramework.zig`, `MetallibStep.zig`, `CApi.zig`,
+  `mouse_encode.zig` or `termio/mailbox.zig`, and still uses unbounded pushes
+  on the teardown paths 0007 bounds).
 
 ## Dropped in the 2026-08-26 sync
 

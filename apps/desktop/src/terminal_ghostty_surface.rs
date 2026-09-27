@@ -924,10 +924,11 @@ fn parse_ghostty_terminal_engine_config(
             selection_word_chars: value("selection-word-chars")
                 .unwrap_or(" \t'\"│`|:;,()[]{}<>$")
                 .to_string(),
-            copy_on_select: matches!(value("copy-on-select"), Some("clipboard")),
+            // CDXC:Clipboard 2026-09-27 WHY: Ghostty 1.4 renamed the copy-on-select values to none | primary | clipboard | both and finalizes the legacy `true` as `clipboard` on macOS, so the formatted config can no longer tell Ghostex's `true` (selection clipboard) from `clipboard` (system and selection). Both now copy to the system clipboard and keep middle-click paste; `primary` is selection-only; `none`/`false` is off.
+            copy_on_select: matches!(value("copy-on-select"), Some("clipboard" | "both")),
             selection_clipboard_enabled: matches!(
                 value("copy-on-select"),
-                Some("true" | "clipboard")
+                Some("true" | "primary" | "clipboard" | "both")
             ),
             clipboard_trim_trailing_spaces: parse_config_bool(
                 value("clipboard-trim-trailing-spaces").unwrap_or("true"),
