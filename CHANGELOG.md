@@ -2,6 +2,56 @@
 
 ## Unreleased
 
+## 10.4.0 - 2026-09-27
+
+**Ghostex 10.4.0 is out.** Docs becomes Files and opens your whole project, including pictures, video and audio; side questions and Claude's panels in chat; Hermes chats that name their bot and switch models; a red dot when a model change fails; Shift+Esc for the Commands panel; and a batch of chat and Windows fixes.
+
+### 🗂 Docs is now Files
+- **The Docs view is called Files and shows your whole project.** It lists and searches every file in the project, on this computer and on remote machines, not just the docs folders.
+- **Pictures, video and audio open in Files.** Images and SVGs show in place with an Edit source toggle, video and audio play with seeking, and PDFs and formats Files cannot show open in your system app.
+- **Choose where media from chat opens.** Settings > Tools > File opening has Images, Videos and Audio, each set to Files or System App, for files linked in agent chat or the terminal.
+- **Open any file by path.** The Open File command (set a key in Settings > Hotkeys) opens Files with its search ready: type a name or paste any path on this computer and press Enter.
+
+### 💬 Side questions and a tidier chat
+- **Ask a side question without stopping the agent.** In Claude Code chats, `/btw <question>` answers in a card above the chat box with Copy, Fork and Close, and the side question stays folded in the chat afterwards; turn on Side chat in More actions to send every message that way until you remove its pill.
+- **Claude's panels read like panels.** `/status`, `/usage` and similar panels show as clickable tabs, tables and usage meters instead of terminal text.
+- **Skills show the way each agent calls them.** A skill picked with `$` shows as `/name` for Claude Code and `$name` for Codex, and a skill you sent reads as your own turn before and after a reload.
+- **One View menu for display modes.** More actions > View holds Simple, Verbose and Summary as separate switches, and Simple mode is now on by default.
+- **Replies keep their line breaks,** and text such as `Option<String>` or `<my answer>` shows exactly as written instead of disappearing.
+- **Approval cards ask about the tool that is waiting** ("Allow this edit?"), Codex 0.157's command approval shows as a real approval card, and a turn the agent wrote no reply to shows what ended it.
+- **A rewind stays rewound** even when Ghostex restarts before your next prompt.
+- **Zoomed chat images keep the spot you clicked under the pointer,** and you can drag a zoomed picture around.
+- **The phone's chat gets side questions, Claude's panels, Side chat and the View menu too.** Update the app to get them.
+
+### 🤖 Models and Hermes
+- **Hermes chats name their bot and switch models,** thanks to @banozz0. A chip before the model pill names the bot (for example Harry), the status line shows its context, cost and tokens, and the model picker lists the bot's models with Low, Medium and High, applied to this session only; the phone shows the bot's chip too.
+- **A model change that fails turns the session red.** If the agent refuses a model, effort or mode you picked, or it keeps failing for 30 seconds, the session shows a red dot with the reason, and your messages wait instead of reaching the agent on the wrong model; pick a model again to clear it.
+- **Opus 5.5 is one row again,** starting on the 1M context window, and the model pill names the window only when it is 200K.
+- **Claude effort changes from chat work on every session,** without an extra "/effort" message in the transcript, and model changes no longer wait on the faint suggestion text in Claude's input box.
+- **The phone's model picker drops the reasoning chips from its rows** for a cleaner list.
+
+### ⌨️ Menus and hotkeys
+- **Shift+Esc opens the Commands panel.** It is Open Commands Panel's new second key; Focus Chat Box no longer has a default key, so set one in Settings > Hotkeys if you used it.
+- **Summary mode is Option+Ctrl+S on macOS.** Windows and Linux keep Ctrl+Alt+Shift+S.
+- **Session menus are shorter.** Split Right, Copy Resume and Copy Attach are gone from the sidebar and chat menus; Option+Shift+D still moves the focused session into a pane on the right.
+- **The view menu reads as three groups,** built-in views, website views and your own views, and a submenu such as Show in opens in the same place.
+- **Closing a side panel's last tab now closes the panel.** Turn off Close side panel with its last tab in Settings > Sidebar to get the view picker back.
+- **Saved Prompts and other dialogs stay in front** when a tooltip or menu appears behind them, and table previews, Mermaid diagrams and browser history open in native windows.
+
+### 🪟 Windows
+- **Dragging the titlebar moves the window reliably,** and the project breadcrumb sits centred.
+- **The Settings window comes to the front when you open it** and draws its sliders at full size.
+- **Messages sent to PowerShell sessions arrive intact,** and the Code view shows its editor again, thanks to @gvastethecreator.
+- **Text renders consistently with bundled fonts,** thanks to @gvastethecreator.
+
+### 🩹 Fixes and updates
+- **The built-in browser moves to Chromium 154** with its latest security fixes, the Code view to VS Code 1.139.1, and terminals to the latest Ghostty.
+- **Video behind the glass is now Your video under Live.** Pick your own .mov, .mp4 or .m4v for dark and light mode; the downloadable Ghostex videos and the aerial list are gone.
+- **Settings tells you when the system keeps the window opaque,** naming Reduce transparency on macOS or Transparency effects on Windows and where to change it.
+- **A refreshed app icon.**
+- **`ghostex rename-command` reaches sleeping sessions,** `ghostex create-session --input` runs its text on first start, and a session created in a project parked in Recent Projects brings the project back to the sidebar.
+- **Ghostex web keeps the session it shows awake** instead of letting Agent Auto Sleep put it to sleep, and shows the account usage meter, thanks to @gvastethecreator.
+
 ## 10.3.0 - 2026-09-26
 
 **Ghostex 10.3.0 is out.** Live animated glass and video behind the window, glass on Windows, a fully native chat on Android, OpenCode in Chat, seven new website views, a keyboard-driven model pop-up, flicker-free terminal switching, Summary mode that keeps every reply, and a large batch of chat, remote, Windows and Linux fixes.
