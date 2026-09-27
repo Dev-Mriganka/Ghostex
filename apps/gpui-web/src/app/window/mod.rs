@@ -5,6 +5,7 @@ pub(crate) mod create_worktree_modal;
 pub(crate) mod delayed_send_modal;
 pub(crate) mod delete_worktree_modal;
 pub(crate) mod frosted_host;
+pub(crate) mod modal_popover_host;
 pub(crate) mod native_modal_kit;
 pub(crate) mod popup_frame;
 pub(crate) mod quick_access;
@@ -34,4 +35,3 @@ pub(crate) mod space_editor_modal {
     use crate::*;
     include!(concat!(env!("OUT_DIR"), "/space_editor_modal.rs"));
 }
-
