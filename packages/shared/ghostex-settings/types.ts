@@ -821,12 +821,12 @@ export type ghostexSettings = {
   windowGlass: WindowGlassMode;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:
-   * What the glass blurs: only the desktop wallpaper, or everything behind the window. window_glass.rs holds the user's decision and the GPUI macOS window paints it.
+   * What the glass blurs: only the desktop wallpaper, or everything behind the window. window_glass.rs holds the user's decision and the GPUI macOS and Linux backends paint it.
    */
   windowGlassSource: WindowGlassSource;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:
-   * Absolute paths of the pictures Custom image glass shows in dark and light mode (empty: none chosen, the live blur shows); window_glass.rs holds the user's decision and the GPUI macOS window paints them.
+   * Absolute paths of the pictures Custom image glass shows in dark and light mode (empty: none chosen, the live blur shows); window_glass.rs holds the user's decision and the GPUI macOS and Linux backends paint them.
    */
   windowGlassImageDark: string;
   windowGlassImageLight: string;
@@ -840,7 +840,7 @@ export type ghostexSettings = {
   windowGlassVideoOnlyOnPower: boolean;
   /**
    * CDXC:Theming 2026-09-26 SEE-ALSO:
-   * The animated style Live glass draws in dark and light mode and how fast it moves (0.25 to 2); window_glass_live.rs holds the user's decision and the GPUI macOS window draws it in the theme's colours.
+   * The animated style Live glass draws in dark and light mode and how fast it moves (0.25 to 2); window_glass_live.rs holds the user's decision and the GPUI macOS and Linux backends draw it in the theme's colours.
    */
   windowGlassLiveStyleDark: WindowGlassLiveStyle;
   windowGlassLiveStyleLight: WindowGlassLiveStyle;
@@ -849,7 +849,7 @@ export type ghostexSettings = {
   windowGlassLiveBrightness: number;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:
-   * Whether the Wallpaper only or Custom image picture covers the window and moves with it (static) or stays still against the screen (desktop); window_glass.rs holds the user's decision and the GPUI macOS window places it.
+   * Whether the Wallpaper only or Custom image picture covers the window and moves with it (static) or stays still against the screen (desktop); window_glass.rs holds the user's decision and the GPUI macOS and Linux backends place it.
    */
   windowGlassImagePlacement: WindowGlassImagePlacement;
   /**

@@ -215,8 +215,8 @@ fn load_glass_alpha(source: &AtomicU8) -> f32 {
 /// CDXC:Theming 2026-09-23 DECISION:
 /// User: the whole desktop window can be frosted glass that shows the blurred desktop behind it, as its own setting rather than part of a theme. Automatic (the default) is frosted in dark mode and opaque in light mode, where glass has the weakest text contrast; Frosted and Opaque force one look.
 ///
-/// CDXC:Theming 2026-09-25 DECISION:
-/// User: "let's enable transparency on windows please also if possible. like it works on mac exactly." Glass runs on macOS and Windows; the system setting that turns transparency off always wins (Reduce Transparency on macOS, Transparency effects on Windows). Linux stays opaque: its compositors cannot promise a blur, so glass there would expose the raw desktop.
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "I want transparency to work on linux just like it does on macOS for the gpui app", including every transparency setting on Wayland and X11. This supersedes the Linux exclusion from the 2026-09-25 Windows glass implementation. Shared tint and source rules apply on all three desktop platforms; Linux's GPUI backend owns compositor blur, pictures and Live playback. System transparency preferences still win; Linux compositors choose their own behind-window blur algorithm.
 ///
 /// Returns whether the resolved state changed.
 pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::Value>) -> bool {
@@ -260,10 +260,9 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
     let source = object
         .get("windowGlassSource")
         .and_then(serde_json::Value::as_str);
-    // The wallpaper and custom-image backdrops exist only in the macOS window backend; Settings
-    // offers them only there.
+    // Linux and macOS implement the complete backdrop API.
     WINDOW_GLASS_WALLPAPER.store(
-        cfg!(target_os = "macos")
+        cfg!(any(target_os = "macos", target_os = "linux"))
             && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
         Ordering::Relaxed,
     );
@@ -304,7 +303,7 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
             != Some(false);
     }
     window_glass_live::refresh_window_glass_live(object);
-    let active = cfg!(any(target_os = "macos", target_os = "windows"))
+    let active = cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
         && wanted
         && !system_reduces_transparency();
     WINDOW_GLASS_SYSTEM_BLOCKED.store(
@@ -519,7 +518,7 @@ impl GhostexGpuiApp {
         window.set_background_live(live);
         window.set_background_video(video.0, video.1);
         window.set_background_wallpaper_image(image);
-        window.set_background_wallpaper(wallpaper);
+        window.set_background_wallpaper(wallpaper && wanted == WindowBackgroundAppearance::Blurred);
         window.set_background_appearance(wanted);
         // Switching between the two blurs leaves the glass on, so terminals keep their config.
         if previous != 0 && (previous == 1) != (code == 1) {
