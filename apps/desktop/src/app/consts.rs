@@ -505,6 +505,8 @@ pub(crate) const TITLEBAR_ICON_VSCODE: &str = "titlebar/vscode.svg";
 
 pub(crate) const TITLEBAR_ICON_CHEVRON_LEFT: &str = "titlebar/chevron-left.svg";
 
+pub(crate) const TITLEBAR_ICON_CHEVRON_RIGHT: &str = "titlebar/chevron-right.svg";
+
 pub(crate) const TITLEBAR_ICON_CHEVRON_DOWN: &str = "titlebar/chevron-down.svg";
 
 pub(crate) const TITLEBAR_ICON_LAYOUT_SIDEBAR: &str = "titlebar/layout-sidebar.svg";

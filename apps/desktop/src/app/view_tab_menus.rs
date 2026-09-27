@@ -68,9 +68,22 @@ impl GhostexGpuiApp {
             );
         }
         let mut previous_group: Option<u8> = None;
-        // The picker's two groups, as the only thing a compact menu can show of them: a rule
-        // between the built-ins and your views and extensions. Rows are walked by kind so a
-        // built-in the saved view order has not seen yet still lists with the built-ins.
+        /*
+        CDXC:Workarea 2026-09-27 DECISION:
+        User: put a separator above Linear. The menu shows three groups with a rule between each:
+        the built-ins, the website views (Linear, Jira, GitHub, PostHog), then your views and
+        extensions. Rows are walked by kind, keeping the saved view order inside each group, so a
+        built-in the saved order has not seen yet still lists with the built-ins.
+        */
+        let view_menu_group = |mode: TitlebarMode| -> u8 {
+            if mode.is_addon_view() {
+                2
+            } else if mode.website_provider().is_some() {
+                1
+            } else {
+                0
+            }
+        };
         let mut items = items
             .into_iter()
             .filter(|item| {
@@ -78,12 +91,9 @@ impl GhostexGpuiApp {
                     && self.titlebar_mode_view_scope_allows(item.mode)
             })
             .collect::<Vec<_>>();
-        items.sort_by_key(|item| u8::from(item.mode.is_addon_view()));
+        items.sort_by_key(|item| view_menu_group(item.mode));
         for item in items {
-            let group = match item.mode {
-                mode if mode.is_addon_view() => 1,
-                _ => 0,
-            };
+            let group = view_menu_group(item.mode);
             if previous_group.is_some_and(|previous| previous != group) {
                 menu = menu.separator();
             }

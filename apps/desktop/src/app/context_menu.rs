@@ -1,4 +1,4 @@
-use gpui::{AnyWindowHandle, SharedString};
+use gpui::{AnyWindowHandle, SharedString, WeakEntity};
 use gpui_component::{
     Root, Side,
     menu::{PopupMenu, PopupMenuItem},
@@ -29,11 +29,13 @@ impl ContextMenuRow {
     }
 }
 
-/// CDXC:ContextMenus 2026-09-26 WHY:
+/// CDXC:ContextMenus 2026-09-27 WHY:
 /// A submenu is a row kind rather than a second menu type so sizing, dispatch and dismissal stay in
-/// one place. It holds the same entries as the menu itself, ticks and separators included, because a
-/// view tab's `Show in ▸` submenu is a list of ticks. Supersedes 2026-09-20, when submenus held plain
-/// rows only for the `+` menu's `Hidden here`.
+/// one place, and it holds the same entries as the menu itself (ticks and separators included, for a
+/// view tab's `Show in ▸`). Picking a submenu row reopens the menu in the same place showing that
+/// submenu's rows, like the Kanban filters and Quick Access's Tag… do: the menu draws in a popup window
+/// sized to itself, so gpui-component's flyout, which opens to the right of its row, was drawn outside
+/// that window and never showed. Supersedes 2026-09-26, when submenus flew out.
 enum ContextMenuEntry {
     Row(ContextMenuRow),
     Separator,
@@ -74,6 +76,9 @@ pub(crate) struct GpuiContextMenu {
     entries: Vec<ContextMenuEntry>,
     source_window: Option<AnyWindowHandle>,
     source_focus: Option<FocusHandle>,
+    /// Where the menu opened and for which app, so a submenu row can reopen it in the same place.
+    app: Option<WeakEntity<GhostexGpuiApp>>,
+    trigger_bounds: Option<Bounds<Pixels>>,
 }
 
 impl GpuiContextMenu {
@@ -294,6 +299,8 @@ impl GpuiContextMenu {
         let source_window = Window::window_handle(window);
         self.source_window = Some(source_window);
         self.source_focus = window.focused(cx);
+        self.app = Some(app.downgrade());
+        self.trigger_bounds = Some(trigger_bounds);
         // Defer beyond the caller's entity borrow, including terminal-body callers.
         cx.defer(move |cx| {
             let _ = source_window.update(cx, |_, window, cx| {
@@ -340,20 +347,15 @@ impl GpuiContextMenu {
         line.width.as_f32() + 34.0 + 24.0 + check_width + icon_width + extra
     }
 
-    /// A submenu is drawn at its parent's width, so its rows count toward that width too.
-    fn entries_width(entries: &[ContextMenuEntry], window: &Window) -> f32 {
-        entries
+    pub(crate) fn content_width(&self, window: &Window) -> f32 {
+        let label_width = self
+            .entries
             .iter()
             .map(|entry| match entry {
                 ContextMenuEntry::Separator => 0.0,
                 ContextMenuEntry::Row(row) => Self::row_width(row, window, 0.0),
                 // A submenu row keeps room for its own chevron.
-                ContextMenuEntry::Submenu {
-                    label,
-                    icon,
-                    entries,
-                    ..
-                } => Self::row_width(
+                ContextMenuEntry::Submenu { label, icon, .. } => Self::row_width(
                     &ContextMenuRow {
                         label: label.clone(),
                         icon: *icon,
@@ -363,31 +365,10 @@ impl GpuiContextMenu {
                     },
                     window,
                     18.0,
-                )
-                .max(Self::entries_width(entries, window)),
+                ),
             })
-            .fold(0.0_f32, f32::max)
-    }
-
-    pub(crate) fn content_width(&self, window: &Window) -> f32 {
-        let label_width = Self::entries_width(&self.entries, window);
-        // An openable submenu with an icon makes PopupMenu reserve a blank 12px icon plus a 4px gap
-        // at the start of every other row, on top of that row's own icon.
-        let reserved_icon_column = if self.entries.iter().any(|entry| {
-            matches!(
-                entry,
-                ContextMenuEntry::Submenu {
-                    icon: Some(_),
-                    disabled: false,
-                    ..
-                }
-            )
-        }) {
-            16.0
-        } else {
-            0.0
-        };
-        (label_width + reserved_icon_column)
+            .fold(0.0_f32, f32::max);
+        label_width
             .ceil()
             .clamp(96.0, 400.0)
             .min((window.bounds().size.width.as_f32() - 16.0).max(0.0))
@@ -406,13 +387,12 @@ impl GpuiContextMenu {
         )
     }
 
-    fn popup_menu_item(&self, row: &ContextMenuRow) -> PopupMenuItem {
-        let label = row.label.clone();
-        let icon = row.icon;
-        let disabled = row.disabled;
-        let action = row.action.boxed_clone();
-        let source_window = self.source_window;
-        let source_focus = self.source_focus.clone();
+    fn row_element(
+        label: SharedString,
+        icon: Option<&'static str>,
+        disabled: bool,
+        chevron: bool,
+    ) -> PopupMenuItem {
         PopupMenuItem::element(move |_, _| {
             div()
                 .flex()
@@ -435,23 +415,78 @@ impl GpuiContextMenu {
                 // The menu is sized to its widest label, so a label keeps its full width rather
                 // than shrinking into an ellipsis ("Browser…" for "Browser Tab").
                 .child(div().flex_none().child(label.clone()))
+                .when(chevron, |row| {
+                    row.child(div().flex_1())
+                        .child(div().flex_none().opacity(0.6).child(titlebar_svg_icon(
+                            TITLEBAR_ICON_CHEVRON_RIGHT,
+                            12.0,
+                            titlebar_popup_menu_foreground(),
+                        )))
+                })
         })
-        .disabled(row.disabled)
-        .checked(row.checked)
-        .on_click(move |_, _, cx| {
-            let action = action.boxed_clone();
+    }
+
+    fn popup_menu_item(&self, row: &ContextMenuRow) -> PopupMenuItem {
+        let action = row.action.boxed_clone();
+        let source_window = self.source_window;
+        let source_focus = self.source_focus.clone();
+        Self::row_element(row.label.clone(), row.icon, row.disabled, false)
+            .disabled(row.disabled)
+            .checked(row.checked)
+            .on_click(move |_, _, cx| {
+                let action = action.boxed_clone();
+                let source_focus = source_focus.clone();
+                // PopupMenu dismisses after this callback; dispatch afterward so an action
+                // that opens another popup cannot have it closed by this menu's dismissal.
+                cx.defer(move |cx| {
+                    if let Some(source_window) = source_window {
+                        let _ = source_window.update(cx, |_, window, cx| {
+                            if let Some(focus) = source_focus {
+                                focus.focus(window, cx);
+                            }
+                            window.dispatch_action(action, cx);
+                        });
+                    }
+                });
+            })
+    }
+
+    /// A submenu row: picking it reopens this menu where it was, showing the submenu's rows.
+    fn popup_submenu_item(
+        &self,
+        label: &SharedString,
+        icon: Option<&'static str>,
+        entries: &[ContextMenuEntry],
+    ) -> PopupMenuItem {
+        let entries = entries
+            .iter()
+            .map(ContextMenuEntry::cloned)
+            .collect::<Vec<_>>();
+        let source_window = self.source_window;
+        let source_focus = self.source_focus.clone();
+        let app = self.app.clone();
+        let trigger_bounds = self.trigger_bounds;
+        Self::row_element(label.clone(), icon, false, true).on_click(move |_, _, cx| {
+            let (Some(source_window), Some(app), Some(trigger_bounds)) = (
+                source_window,
+                app.as_ref().and_then(WeakEntity::upgrade),
+                trigger_bounds,
+            ) else {
+                return;
+            };
+            let submenu = GpuiContextMenu {
+                entries: entries.iter().map(ContextMenuEntry::cloned).collect(),
+                ..GpuiContextMenu::default()
+            };
             let source_focus = source_focus.clone();
-            // PopupMenu dismisses after this callback; dispatch afterward so an action
-            // that opens another popup cannot have it closed by this menu's dismissal.
+            // PopupMenu dismisses after this callback, so the submenu opens afterward.
             cx.defer(move |cx| {
-                if let Some(source_window) = source_window {
-                    let _ = source_window.update(cx, |_, window, cx| {
-                        if let Some(focus) = source_focus {
-                            focus.focus(window, cx);
-                        }
-                        window.dispatch_action(action, cx);
-                    });
-                }
+                let _ = source_window.update(cx, |_, window, cx| {
+                    if let Some(focus) = source_focus {
+                        focus.focus(window, cx);
+                    }
+                    submenu.show_for_app_anchored(app, trigger_bounds, false, window, cx);
+                });
             });
         })
     }
@@ -462,8 +497,6 @@ impl GpuiContextMenu {
         width: f32,
         max_height: f32,
         scrollable: bool,
-        window: &mut Window,
-        cx: &mut gpui::Context<PopupMenu>,
     ) -> PopupMenu {
         let mut menu =
             titlebar_popup_menu_with_scroll_behavior(menu, width, max_height, scrollable)
@@ -478,30 +511,13 @@ impl GpuiContextMenu {
                     disabled,
                     entries,
                 } => {
-                    if *disabled {
-                        menu = menu.item(self.popup_menu_item(&ContextMenuRow {
-                            label: label.clone(),
-                            icon: *icon,
-                            checked: false,
-                            disabled: true,
-                            action: Box::new(gpui::NoAction {}),
-                        }));
-                        continue;
-                    }
-                    let nested = GpuiContextMenu {
-                        entries: entries.iter().map(ContextMenuEntry::cloned).collect(),
-                        source_window: self.source_window,
-                        source_focus: self.source_focus.clone(),
+                    menu = if *disabled {
+                        menu.item(
+                            Self::row_element(label.clone(), *icon, true, false).disabled(true),
+                        )
+                    } else {
+                        menu.item(self.popup_submenu_item(label, *icon, entries))
                     };
-                    menu = menu.submenu_with_icon(
-                        icon.map(|icon| gpui_component::Icon::empty().path(icon)),
-                        label.clone(),
-                        window,
-                        cx,
-                        move |menu, window, cx| {
-                            nested.build(menu, width, max_height, scrollable, window, cx)
-                        },
-                    );
                 }
             }
         }

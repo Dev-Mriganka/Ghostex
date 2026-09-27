@@ -289,18 +289,11 @@ impl GhostexGpuiApp {
         let _profile = crate::profiling::span(crate::profiling::Metric::PopupBuild);
         match kind {
             GpuiTitlebarPopupKind::ContextMenu => {
-                GpuiTitlebarPopupContent::Menu(PopupMenu::build(window, cx, |menu, window, cx| {
+                GpuiTitlebarPopupContent::Menu(PopupMenu::build(window, cx, |menu, _, _| {
                     self.context_menu
                         .as_ref()
                         .expect("context menu supplied before opening")
-                        .build(
-                            menu,
-                            menu_width,
-                            menu_max_height,
-                            menu_scrollable,
-                            window,
-                            cx,
-                        )
+                        .build(menu, menu_width, menu_max_height, menu_scrollable)
                 }))
             }
             GpuiTitlebarPopupKind::BrowserActions(pane_id) => {
