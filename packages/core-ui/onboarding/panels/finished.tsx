@@ -16,7 +16,7 @@ import { box, folderBasename } from '../stage';
 
 const VIEW_TITLES: Record<string, string> = {
   browser: 'Browser',
-  docs: 'Docs',
+  docs: 'Files',
   code: 'Code',
   kanban: 'Kanban',
   automate: 'Automate',

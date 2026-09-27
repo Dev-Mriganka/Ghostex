@@ -144,6 +144,12 @@ impl GhostexGpuiApp {
         let external_change = document.external_change;
         let size = document.size.map(format_file_size);
         let html_annotate = document.html_annotate;
+        let svg = kind == DocsFileKind::Image && DocsFileKind::is_svg(&path);
+        let svg_source = document.svg_source;
+        let media = matches!(
+            kind,
+            DocsFileKind::Image | DocsFileKind::Video | DocsFileKind::Audio
+        );
         // The corner restore button sits over the header's right end while the list is not
         // docked, so the actions keep clear of it.
         let reserve = if layout.docked {
@@ -212,6 +218,8 @@ impl GhostexGpuiApp {
                         titlebar_svg_icon(
                             if kind == DocsFileKind::Excalidraw {
                                 "docs/t-edit-175.svg"
+                            } else if media {
+                                super::files_list::file_icon(&path)
                             } else {
                                 "docs/t-file-text-175.svg"
                             },
@@ -300,6 +308,62 @@ impl GhostexGpuiApp {
                             )),
                         )
                     })
+                    .when(svg, |this| {
+                        let toggle_path = path.clone();
+                        this.child(
+                            header_tile(
+                                "native-docs-svg-source",
+                                header_icon(
+                                    if svg_source {
+                                        "titlebar/photo.svg"
+                                    } else {
+                                        "titlebar/code.svg"
+                                    },
+                                    false,
+                                    p,
+                                ),
+                                false,
+                                false,
+                                p,
+                            )
+                            .tooltip(move |window, cx| {
+                                titlebar_tooltip(
+                                    if svg_source {
+                                        "Show picture"
+                                    } else {
+                                        "Edit source"
+                                    },
+                                    window,
+                                    cx,
+                                )
+                            })
+                            .on_click(cx.listener(
+                                move |this, _, _, cx| {
+                                    this.native_docs_toggle_svg_source(&toggle_path, cx);
+                                },
+                            )),
+                        )
+                    })
+                    .when(media && review.is_none(), |this| {
+                        let open_path = path.clone();
+                        this.child(
+                            header_tile(
+                                "native-docs-open-system-app",
+                                header_icon("titlebar/external-link.svg", false, p),
+                                false,
+                                false,
+                                p,
+                            )
+                            .tooltip(|window, cx| {
+                                titlebar_tooltip("Open in system app", window, cx)
+                            })
+                            .on_click(cx.listener(
+                                move |this, _, _, cx| {
+                                    this.native_docs_open_with_system_app(&open_path, cx);
+                                },
+                            )),
+                        )
+                    })
                     .when(review.is_some(), |this| {
                         this.child(
                             header_tile(
@@ -317,45 +381,48 @@ impl GhostexGpuiApp {
                             ),
                         )
                     })
-                    .when(review.is_none() && kind != DocsFileKind::Image, |this| {
-                        let amber = p.amber;
-                        this.child(
-                            header_tile(
-                                "native-docs-reload",
-                                header_icon("docs/t-refresh-2.svg", false, p),
-                                false,
-                                false,
-                                p,
-                            )
-                            .when(external_change, |this| {
-                                this.child(
-                                    div()
-                                        .absolute()
-                                        .top(px(6.0))
-                                        .right(px(6.0))
-                                        .size(px(7.0))
-                                        .rounded_full()
-                                        .bg(amber),
+                    .when(
+                        review.is_none() && (kind != DocsFileKind::Image || svg_source),
+                        |this| {
+                            let amber = p.amber;
+                            this.child(
+                                header_tile(
+                                    "native-docs-reload",
+                                    header_icon("docs/t-refresh-2.svg", false, p),
+                                    false,
+                                    false,
+                                    p,
                                 )
-                            })
-                            .tooltip(move |window, cx| {
-                                titlebar_tooltip(
-                                    if external_change {
-                                        "Reload to show new changes"
-                                    } else {
-                                        "Reload file"
+                                .when(external_change, |this| {
+                                    this.child(
+                                        div()
+                                            .absolute()
+                                            .top(px(6.0))
+                                            .right(px(6.0))
+                                            .size(px(7.0))
+                                            .rounded_full()
+                                            .bg(amber),
+                                    )
+                                })
+                                .tooltip(move |window, cx| {
+                                    titlebar_tooltip(
+                                        if external_change {
+                                            "Reload to show new changes"
+                                        } else {
+                                            "Reload file"
+                                        },
+                                        window,
+                                        cx,
+                                    )
+                                })
+                                .on_click(cx.listener(
+                                    move |this, _, _, cx| {
+                                        this.native_docs_reload(&reload_path, cx);
                                     },
-                                    window,
-                                    cx,
-                                )
-                            })
-                            .on_click(cx.listener(
-                                move |this, _, _, cx| {
-                                    this.native_docs_reload(&reload_path, cx);
-                                },
-                            )),
-                        )
-                    }),
+                                )),
+                            )
+                        },
+                    ),
             )
             .into_any_element()
     }
@@ -385,6 +452,45 @@ impl GhostexGpuiApp {
         let Some(document) = self.native_docs.active_document() else {
             return notice("docs/t-file-175.svg", "Select a file".to_string());
         };
+        let open_externally = |path: String, reason: String, cx: &mut Context<Self>| {
+            div()
+                .size_full()
+                .min_h(px(140.0))
+                .flex()
+                .flex_col()
+                .items_center()
+                .justify_center()
+                .gap(px(12.0))
+                .text_size(px(13.0))
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(p.muted)
+                .child(reason)
+                .child(
+                    div()
+                        .id("native-docs-open-system-app-button")
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .h(px(28.0))
+                        .px(px(12.0))
+                        .rounded(px(7.0))
+                        .border_1()
+                        .border_color(p.border_strong)
+                        .cursor_pointer()
+                        .text_color(p.text)
+                        .hover(|style| style.bg(p.control_hover))
+                        .child(titlebar_svg_icon(
+                            "titlebar/external-link.svg",
+                            14.0,
+                            p.text,
+                        ))
+                        .child("Open in system app")
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.native_docs_open_with_system_app(&path, cx);
+                        })),
+                )
+                .into_any_element()
+        };
         match &document.load {
             DocsDocumentLoad::Loading => {
                 return notice("docs/t-refresh-2.svg", "Loading file".to_string());
@@ -392,9 +498,18 @@ impl GhostexGpuiApp {
             DocsDocumentLoad::Error(error) => {
                 return notice("titlebar/alert-triangle.svg", error.clone());
             }
+            DocsDocumentLoad::Unsupported(reason) => {
+                let (path, reason) = (document.path.clone(), reason.clone());
+                return open_externally(path, reason, cx);
+            }
             DocsDocumentLoad::Ready => {}
         }
         match document.kind {
+            DocsFileKind::SystemApp => {
+                let path = document.path.clone();
+                return open_externally(path, "This file opens in its own app.".to_string(), cx);
+            }
+            DocsFileKind::Image if document.svg_source => {}
             DocsFileKind::Image => {
                 let Some(image) = document.image.clone() else {
                     return notice("docs/t-refresh-2.svg", "Loading file".to_string());
@@ -415,7 +530,10 @@ impl GhostexGpuiApp {
                     )
                     .into_any_element();
             }
-            DocsFileKind::Html | DocsFileKind::Excalidraw => {
+            DocsFileKind::Html
+            | DocsFileKind::Excalidraw
+            | DocsFileKind::Video
+            | DocsFileKind::Audio => {
                 if self.native_docs_browser_area_covered() {
                     return div().size_full().into_any_element();
                 }

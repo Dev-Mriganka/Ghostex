@@ -341,6 +341,7 @@ pub(crate) fn gpui_global_docs_directory_text(
 pub(crate) enum ManageFilesBridgeSideEffect {
     AddToSessionContext(String),
     CopyFullPath(String),
+    OpenWithSystemApp(PathBuf),
     RevealInFinder(PathBuf),
 }
 
@@ -377,6 +378,10 @@ pub(crate) fn manage_files_bridge_outcome(
                 .and_then(|object| object.remove("revealPath"))
                 .and_then(|value| value.as_str().map(PathBuf::from))
                 .map(ManageFilesBridgeSideEffect::RevealInFinder),
+            "openWithSystemApp" => object
+                .and_then(|object| object.remove("openPath"))
+                .and_then(|value| value.as_str().map(PathBuf::from))
+                .map(ManageFilesBridgeSideEffect::OpenWithSystemApp),
             _ => None,
         }
     };
@@ -393,6 +398,7 @@ pub(crate) fn run_manage_files_bridge_request_for_project_snapshot(
     snapshot: Option<&GpuiProjectSnapshot>,
     additional_docs_folders_text: &str,
     global_docs_directory_text: &str,
+    project_scope: bool,
 ) -> ManageFilesBridgeOutcome {
     let request = serde_json::from_str::<serde_json::Value>(payload).unwrap_or_default();
     let action = request
@@ -414,6 +420,7 @@ pub(crate) fn run_manage_files_bridge_request_for_project_snapshot(
             snapshot,
             additional_docs_folders_text,
             global_docs_directory_text,
+            project_scope,
         ),
     )
 }
@@ -423,6 +430,7 @@ pub(crate) fn manage_files_bridge_result(
     snapshot: Option<&GpuiProjectSnapshot>,
     additional_docs_folders_text: &str,
     global_docs_directory_text: &str,
+    project_scope: bool,
 ) -> Result<serde_json::Value, String> {
     /*
     macOS `runManageFilesBridgeRequest` parity: the bridge is DOCS-scoped, not
@@ -455,6 +463,7 @@ pub(crate) fn manage_files_bridge_result(
     )?;
     let context = ManageDocsContext {
         additional_docs_folders_text,
+        project_scope,
         roots: &roots,
     };
 
@@ -463,6 +472,29 @@ pub(crate) fn manage_files_bridge_result(
         "save" | "rename" | "delete" | "duplicate" | "createFolder" | "move"
     )
     .then(ghostex_docs::directory::MutationGuard::new);
+
+    if project_scope {
+        if action == "list" {
+            return manage_list_project_directory(context, request);
+        }
+        if action == "search" {
+            return manage_search_project(context, request);
+        }
+        if action == "openWithSystemApp" {
+            let path =
+                manage_docs_path(context, manage_request_string(request, "path").as_deref())?;
+            let target = manage_existing_url(&path)?;
+            manage_validate_accessible_relative_path(&path, context)?;
+            if !target.is_file() {
+                return Err("Select a file to open.".to_string());
+            }
+            return Ok(serde_json::json!({
+                "action": action,
+                "openPath": target.to_string_lossy(),
+                "requestId": request_id,
+            }));
+        }
+    }
 
     if action == "list"
         && request
@@ -598,7 +630,7 @@ pub(crate) fn manage_files_bridge_result(
             "requestId": request_id,
             "rootName": MANAGE_DOCS_RELATIVE_PATH,
         })),
-        _ => Err("Unsupported Docs file action.".to_string()),
+        _ => Err("Unsupported Files action.".to_string()),
     }
 }
 
@@ -705,6 +737,8 @@ pub(crate) fn manage_session_context_language(relative_path: &str) -> &'static s
 #[derive(Clone, Copy)]
 pub(crate) struct ManageDocsContext<'a> {
     pub(crate) additional_docs_folders_text: &'a str,
+    /// The native Files view: the whole project and every file type, not only the Docs folders.
+    pub(crate) project_scope: bool,
     pub(crate) roots: &'a ManageDocsRoots,
 }
 
@@ -748,11 +782,11 @@ pub(crate) fn manage_docs_path<'a>(
     let outer = manage_normalized_relative_path(path)?;
     if manage_chat_file_root_relative_path(&outer).is_some() {
         let (_, inner) = manage_chat_file_address(&outer).ok_or_else(|| {
-            "Reopen this file from its chat link to restore access in Docs.".to_string()
+            "Reopen this file from its chat link to restore access in Files.".to_string()
         })?;
         let inner = inner.to_string();
         let root = context.roots.chat.as_deref().ok_or_else(|| {
-            "Reopen this file from its chat link to restore access in Docs.".to_string()
+            "Reopen this file from its chat link to restore access in Files.".to_string()
         })?;
         return Ok(ManageDocsPath {
             chat: true,
@@ -1042,10 +1076,12 @@ pub(crate) fn manage_validate_accessible_relative_path(
     path: &ManageDocsPath<'_>,
     context: ManageDocsContext<'_>,
 ) -> Result<(), String> {
-    if path.chat && manage_has_docs_artifact_extension(&path.inner) {
+    if path.chat && (context.project_scope || manage_has_docs_artifact_extension(&path.inner)) {
         return Ok(());
     }
+    // Files scope: any path the root-confined resolvers accept (`manage_existing_url` and friends).
     if path.extra
+        || (context.project_scope && !path.chat)
         || path.inner == MANAGE_ANNOTATIONS_SIDECAR_RELATIVE_PATH
         || manage_path_is_in_docs_scan_root(&path.inner, context.additional_docs_folders_text)
         || manage_is_root_artifact_file_relative_path(&path.inner)
@@ -1053,7 +1089,7 @@ pub(crate) fn manage_validate_accessible_relative_path(
         return Ok(());
     }
     Err(
-        "Docs files must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files."
+        "Files must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files."
             .to_string(),
     )
 }
@@ -1063,11 +1099,12 @@ pub(crate) fn manage_validate_docs_tree_relative_path(
     context: ManageDocsContext<'_>,
 ) -> Result<(), String> {
     if path.extra
+        || (context.project_scope && !path.chat)
         || manage_path_is_in_docs_scan_root(&path.inner, context.additional_docs_folders_text)
     {
         return Ok(());
     }
-    Err("Docs items must be inside configured Docs folders.".to_string())
+    Err("Items must be inside configured Docs folders.".to_string())
 }
 
 pub(crate) fn manage_validate_docs_action_relative_path(
@@ -1076,17 +1113,18 @@ pub(crate) fn manage_validate_docs_action_relative_path(
 ) -> Result<(), String> {
     if path.chat {
         return Err(
-            "Chat-opened files can be edited here but are not Docs tree items.".to_string(),
+            "Chat-opened files can be edited here but are not in the Files tree.".to_string(),
         );
     }
     if path.extra
+        || context.project_scope
         || manage_path_is_in_docs_scan_root(&path.inner, context.additional_docs_folders_text)
         || manage_is_root_artifact_file_relative_path(&path.inner)
     {
         return Ok(());
     }
     Err(
-        "Docs items must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files."
+        "Items must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files."
             .to_string(),
     )
 }
@@ -1101,7 +1139,7 @@ pub(crate) fn manage_require_same_docs_root(
     if source.extra == destination.extra && source.chat == destination.chat {
         return Ok(());
     }
-    Err("Docs cannot move items between the project and the Docs directory.".to_string())
+    Err("Items cannot move between the project and the Docs directory.".to_string())
 }
 
 pub(crate) fn manage_parent_relative_path(relative_path: &str) -> String {
@@ -1924,7 +1962,7 @@ pub(crate) fn manage_save_project_file(
 ) -> Result<serde_json::Value, String> {
     let content = content.ok_or_else(|| "No file content was provided.".to_string())?;
     if content.len() > MANAGE_FILE_SAVE_MAX_BYTES {
-        return Err("File is too large to save from Docs.".to_string());
+        return Err("File is too large to save from the Files view.".to_string());
     }
     let path = manage_docs_path(context, path)?;
     if path.inner.is_empty() {
@@ -1981,7 +2019,7 @@ pub(crate) fn manage_rename_project_file(
     if manage_parent_relative_path(&source_path.inner)
         != manage_parent_relative_path(&destination_path.inner)
     {
-        return Err("Docs rename cannot move items.".to_string());
+        return Err("Rename cannot move items.".to_string());
     }
     let source_metadata =
         fs::metadata(&source).map_err(|_| "Select an item to rename.".to_string())?;
@@ -1999,7 +2037,7 @@ pub(crate) fn manage_rename_project_file(
         return Ok(serde_json::Value::Null);
     }
     manage_require_existing_destination_parent(source_path.root, &destination)
-        .map_err(|_| "Docs rename target is unavailable.".to_string())?;
+        .map_err(|_| "Rename target is unavailable.".to_string())?;
     if destination.exists() {
         return Err("A file or folder with that name already exists.".to_string());
     }
@@ -2062,7 +2100,7 @@ pub(crate) fn manage_duplicate_project_file(
     if manage_parent_relative_path(&source_path.inner)
         != manage_parent_relative_path(&destination_path.inner)
     {
-        return Err("Docs duplicate cannot move files.".to_string());
+        return Err("Duplicate cannot move files.".to_string());
     }
     let source_metadata =
         fs::metadata(&source).map_err(|_| "Select a file to duplicate.".to_string())?;
@@ -2178,18 +2216,18 @@ pub(crate) fn manage_operation_url(path: &ManageDocsPath<'_>) -> Result<PathBuf,
     };
     if let Ok(resolved) = fs::canonicalize(&target) {
         if !path_is_inside_or_equal(&resolved, path.root) {
-            return Err("Docs paths must stay inside the project.".to_string());
+            return Err("Paths must stay inside the project.".to_string());
         }
     } else {
         let parent = target
             .parent()
-            .ok_or_else(|| "Docs paths must stay inside the project.".to_string())?;
+            .ok_or_else(|| "Paths must stay inside the project.".to_string())?;
         let nearest_existing_parent = nearest_existing_ancestor(parent)
-            .ok_or_else(|| "Docs paths must stay inside the project.".to_string())?;
+            .ok_or_else(|| "Paths must stay inside the project.".to_string())?;
         let resolved_parent = fs::canonicalize(nearest_existing_parent)
-            .map_err(|_| "Docs paths must stay inside the project.".to_string())?;
+            .map_err(|_| "Paths must stay inside the project.".to_string())?;
         if !path_is_inside_or_equal(&resolved_parent, path.root) {
-            return Err("Docs paths must stay inside the project.".to_string());
+            return Err("Paths must stay inside the project.".to_string());
         }
     }
     Ok(target)

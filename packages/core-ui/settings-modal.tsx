@@ -145,7 +145,7 @@ import {
   rememberSettingsModalScrollTop,
   rememberSettingsModalTab,
 } from './settings-modal/navigation-memory';
-import { ChatFileOpenViewSetting } from './settings-modal/chat-file-open-view-field';
+import { ChatFileOpenViewSetting, MediaFileOpenTargetSetting } from './settings-modal/chat-file-open-view-field';
 import { SessionCardHoverActionsField } from './settings-modal/session-card-hover-actions-field';
 import { areSessionCardHoverButtonsEqual } from '../shared/session-card-hover-actions';
 import { getMostlyVisibleSettingsSectionId, isAdvancedMainSetting } from './settings-modal/search';
@@ -1867,7 +1867,7 @@ export function SettingsModal({
                            * install, so it lives with the other Tools settings.
                            */
                           <SettingsSection
-                            description='Choose where supported file links from agent chat open. If that view is unavailable, Ghostex uses the other available view.'
+                            description='Choose where file links open. Markdown and HTML apply to links in agent chat; images, videos and audio apply to links in agent chat and the terminal. If a view is unavailable, Ghostex uses the other one.'
                             sectionRef={fileOpeningSectionRef}
                             title='File opening'
                           >
@@ -1887,6 +1887,33 @@ export function SettingsModal({
                                 onChange={(value) => updateDraft('htmlFileOpenView', value)}
                                 subtitle='Applies to .html and .htm links in agent chat.'
                                 value={draft.htmlFileOpenView}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.fileOpening, 'imageFileOpenTarget') ? (
+                              <MediaFileOpenTargetSetting
+                                id='image-file-open-target'
+                                label='Images'
+                                onChange={(value) => updateDraft('imageFileOpenTarget', value)}
+                                subtitle='Pictures and SVGs, such as .png, .jpg, .gif, .webp and .svg.'
+                                value={draft.imageFileOpenTarget}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.fileOpening, 'videoFileOpenTarget') ? (
+                              <MediaFileOpenTargetSetting
+                                id='video-file-open-target'
+                                label='Videos'
+                                onChange={(value) => updateDraft('videoFileOpenTarget', value)}
+                                subtitle='.webm and .ogv play in Files. Formats Files cannot play, such as .mp4 and .mov, always open in the system app.'
+                                value={draft.videoFileOpenTarget}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.fileOpening, 'audioFileOpenTarget') ? (
+                              <MediaFileOpenTargetSetting
+                                id='audio-file-open-target'
+                                label='Audio'
+                                onChange={(value) => updateDraft('audioFileOpenTarget', value)}
+                                subtitle='.mp3, .wav, .ogg, .flac and .opus play in Files. Formats Files cannot play, such as .m4a, always open in the system app.'
+                                value={draft.audioFileOpenTarget}
                               />
                             ) : null}
                           </SettingsSection>

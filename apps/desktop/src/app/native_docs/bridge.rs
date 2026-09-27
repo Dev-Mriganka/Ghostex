@@ -36,6 +36,9 @@ impl GhostexGpuiApp {
                     self.gpui_remote_gxserver_request_target(reference.remote_machine_id.as_str());
                 (reference, target)
             });
+        // The native Files view (and the embed page it shows HTML in) covers the whole project;
+        // the Docs page only its Docs folders.
+        let project_scope = super::render::native_docs_enabled();
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let outcome = background
@@ -48,6 +51,7 @@ impl GhostexGpuiApp {
                                 &additional_docs_folders_text,
                                 &reference,
                                 target.as_ref(),
+                                project_scope,
                             )
                         }
                         None => run_manage_files_bridge_request_for_project_snapshot(
@@ -55,6 +59,7 @@ impl GhostexGpuiApp {
                             snapshot.as_ref(),
                             &additional_docs_folders_text,
                             &global_docs_directory_text,
+                            project_scope,
                         ),
                     }
                 })

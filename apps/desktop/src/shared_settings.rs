@@ -222,6 +222,22 @@ impl SharedChatFileOpenView {
     }
 }
 
+/// Where an image, video or audio file link opens (`imageFileOpenTarget` and its siblings).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SharedMediaFileOpenTarget {
+    Files,
+    SystemApp,
+}
+
+impl SharedMediaFileOpenTarget {
+    pub fn from_settings_value(value: Option<&str>) -> Self {
+        match value {
+            Some("system-app") => Self::SystemApp,
+            _ => Self::Files,
+        }
+    }
+}
+
 /*
 CDXC:CommandPane 2026-08-16:
 The command pane docks below the workspace by default; `commandsPanelSide` may
@@ -983,6 +999,30 @@ impl SharedSidebarSettingsSnapshot {
         )
     }
 
+    pub fn image_file_open_target(&self) -> SharedMediaFileOpenTarget {
+        SharedMediaFileOpenTarget::from_settings_value(
+            self.object
+                .get("imageFileOpenTarget")
+                .and_then(Value::as_str),
+        )
+    }
+
+    pub fn video_file_open_target(&self) -> SharedMediaFileOpenTarget {
+        SharedMediaFileOpenTarget::from_settings_value(
+            self.object
+                .get("videoFileOpenTarget")
+                .and_then(Value::as_str),
+        )
+    }
+
+    pub fn audio_file_open_target(&self) -> SharedMediaFileOpenTarget {
+        SharedMediaFileOpenTarget::from_settings_value(
+            self.object
+                .get("audioFileOpenTarget")
+                .and_then(Value::as_str),
+        )
+    }
+
     pub fn terminal_pane_padding_px(&self) -> (f32, f32) {
         (
             read_finite_number_field(
@@ -1069,7 +1109,7 @@ impl SharedSidebarSettingsSnapshot {
     }
 
     pub fn close_side_panel_with_last_tab(&self) -> bool {
-        strict_bool_field(&self.object, "closeSidePanelWithLastTab").unwrap_or(false)
+        strict_bool_field(&self.object, "closeSidePanelWithLastTab").unwrap_or(true)
     }
 
     pub fn auto_sleep_duration(&self, target: SharedSettingsAutoSleepTarget) -> Option<Duration> {

@@ -12,7 +12,7 @@ const TAB_META: Record<WorkspaceTab, readonly [IconName, string]> = {
   browser: ['target', 'Browser'],
   kanban: ['kanban', 'Kanban'],
   automate: ['bolt', 'Automate'],
-  docs: ['list', 'Docs'],
+  docs: ['list', 'Files'],
 };
 const DEMO_AGENTS: readonly (readonly [string, string, string])[] = [
   ['claude', 'Claude Code', 'Building feature...'],
@@ -178,7 +178,7 @@ function DocsView() {
             </div>
             <div className='dnode row'>
               <Icon n='list' size={15} />
-              Docs
+              Files
             </div>
           </div>
         </div>

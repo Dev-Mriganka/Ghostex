@@ -86,6 +86,8 @@ impl TitlebarMode {
         }
     }
 
+    /// CDXC:Docs 2026-09-27 DECISION:
+    /// User: "change Docs from Docs to Files instead so it covers more". The view is called Files everywhere a user reads it; internal ids (`Manage`, the `docs` setting values, `docsViewTabHidden`) keep their names so saved settings still work.
     pub(crate) fn display_label(self) -> &'static str {
         match self {
             Self::Agents => "Agents",
@@ -93,7 +95,7 @@ impl TitlebarMode {
             Self::Browser => "Browser",
             Self::Kanban => "Kanban",
             Self::Automate => "Automate",
-            Self::Manage => "Docs",
+            Self::Manage => "Files",
             Self::Terminal => "Terminal",
             Self::Extension(id) => id.as_str(),
         }
@@ -203,7 +205,7 @@ impl TitlebarMode {
             Self::Browser => "",
             Self::Kanban => "Kanban is unavailable for the current project context.",
             Self::Automate => "Automate is unavailable for the current project context.",
-            Self::Manage => "Docs is unavailable for the current project context.",
+            Self::Manage => "Files is unavailable for the current project context.",
             Self::Terminal => "",
             Self::Extension(_) => "This extension is unavailable for the current project context.",
         }

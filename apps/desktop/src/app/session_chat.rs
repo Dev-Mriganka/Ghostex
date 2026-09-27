@@ -690,10 +690,6 @@ impl GhostexGpuiApp {
             );
             return;
         }
-        if action == "splitSessionRight" {
-            self.split_existing_agents_session_right(session_id, cx);
-            return;
-        }
         if action == "selectForkBranch" {
             self.select_session_chat_fork_branch(session_id, &message, cx);
             return;
@@ -1113,10 +1109,21 @@ impl GhostexGpuiApp {
             .extension()
             .and_then(|extension| extension.to_str())
             .map(str::to_ascii_lowercase);
-        // CDXC:SessionChat 2026-09-24 DECISION:
-        // User: clicking a video in chat opens it normally with the OS default app on macOS, Windows, and Linux, never in the code editor. Audio and PDFs follow the same rule.
-        // SEE-ALSO: `media_kind` in `packages/gx-chat-core/src/composer/reference_pills.rs` keeps the same extension list for the labels and menu rows.
+        // CDXC:SessionChat 2026-09-27 DECISION:
+        // User: images, videos and audio clicked in chat open in the Files view by default, or in the system app when their "Images / Videos / Audio open in" setting says so or Files cannot play the format; never in the code editor. PDFs keep opening in the system app. Supersedes the 2026-09-24 rule that sent every video and audio file to the system app.
+        // SEE-ALSO: `media_file_opens_in_files` in `apps/desktop/src/app/native_docs/entry.rs`; `media_kind` in `packages/gx-chat-core/src/composer/reference_pills.rs` names the same files in labels and menu rows.
+        let media_in_files = crate::app::native_docs::entry::media_file_opens_in_files(&file_path);
+        if requested_view.is_none() && media_in_files == Some(false) {
+            if gpui_open_path(&file_path).is_err() {
+                self.report_session_chat_file_open_failure(
+                    "The operating system could not open that file.",
+                    cx,
+                );
+            }
+            return;
+        }
         if requested_view.is_none()
+            && media_in_files.is_none()
             && matches!(
                 extension.as_deref(),
                 Some(
@@ -1162,6 +1169,9 @@ impl GhostexGpuiApp {
             Some("md" | "markdown" | "mdown" | "mkdn") => Some(settings.markdown_file_open_view()),
             Some("htm" | "html") => Some(settings.html_file_open_view()),
             Some("excalidraw") => Some(shared_settings::SharedChatFileOpenView::Docs),
+            _ if media_in_files == Some(true) => {
+                Some(shared_settings::SharedChatFileOpenView::Docs)
+            }
             _ => None,
         };
         let docs_available = !gpui_titlebar_mode_hidden_from_settings(TitlebarMode::Manage)
@@ -1212,8 +1222,8 @@ impl GhostexGpuiApp {
             if document_preferred_view.is_some() {
                 self.copy_path_for_unavailable_project_workarea(
                     &resolved_path,
-                    "Docs and Code",
-                    "Docs and Code views are not available for this project.",
+                    "Files and Code",
+                    "Files and Code views are not available for this project.",
                     cx,
                 );
             } else {
@@ -1231,8 +1241,11 @@ impl GhostexGpuiApp {
         if destination == Some(shared_settings::SharedChatFileOpenView::Docs) {
             let docs_folders =
                 gpui_manage_additional_docs_folders_text(&self.sidebar_runtime_settings_snapshot);
+            // The native Files view lists the whole project, so any project file is a tree path.
+            let files_scope = crate::app::native_docs::render::native_docs_enabled();
             let normal_docs_path = project_relative_path.clone().filter(|relative| {
-                manage_path_is_in_docs_scan_root(relative, &docs_folders)
+                files_scope
+                    || manage_path_is_in_docs_scan_root(relative, &docs_folders)
                     || manage_is_root_artifact_file_relative_path(relative)
             });
             let relative_path = if let Some(relative_path) = normal_docs_path {
@@ -1241,8 +1254,8 @@ impl GhostexGpuiApp {
                 let Some(project_id) = session_project_id else {
                     self.copy_path_for_unavailable_project_workarea(
                         &resolved_path,
-                        "Docs",
-                        "No active project can authorize this file for Docs.",
+                        "Files",
+                        "No active project can authorize this file for Files.",
                         cx,
                     );
                     return;
@@ -1255,7 +1268,7 @@ impl GhostexGpuiApp {
                     }
                 }
             };
-            self.report_session_chat_file_opening("Docs view", &file_path, cx);
+            self.report_session_chat_file_opening("Files view", &file_path, cx);
             self.pending_docs_file_open = Some(relative_path);
             self.native_docs.pending_origin = Some(session_id);
             self.switch_workarea_from_hotkey(TitlebarMode::Manage, window, cx);

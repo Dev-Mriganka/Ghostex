@@ -261,7 +261,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
           {
             key: 'debuggingMode',
             title: 'Show debug UI controls',
-            subtitle: 'Show diagnostic logs, and Copy Resume and Copy Attach in session menus.',
+            subtitle: 'Show diagnostic logs.',
           },
           {
             key: 'diagnosticLogging',
@@ -628,11 +628,11 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
         settings: [
           {
             key: 'docsFolders',
-            subtitle: 'Comma-separated project-relative folders to scan recursively in Docs.',
+            subtitle: 'Comma-separated project-relative folders to scan recursively in the Files view.',
             title: 'Docs folders',
           },
         ],
-        title: 'Docs',
+        title: 'Files',
       },
       {
         id: 'globalDefaults',
@@ -654,7 +654,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
           },
           {
             key: 'globalDocsDirectory',
-            subtitle: "Extra folder Docs shows in every project, alongside that project's own docs.",
+            subtitle: "Extra folder the Files view shows in every project, alongside that project's own docs.",
             title: 'Global Docs directory',
           },
         ],
@@ -681,7 +681,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
           },
           {
             key: 'docsDirectory',
-            subtitle: "Extra folder this project's Docs surface shows, in addition to its own docs.",
+            subtitle: "Extra folder this project's Files view shows, in addition to its own docs.",
             title: 'Docs directory',
           },
         ],

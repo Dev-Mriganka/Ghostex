@@ -190,7 +190,7 @@ fn settle_listing(state: &mut SaveMarkdownState, outcome: Result<&Value, String>
             if let Some(sheet) = state.sheet.as_mut() {
                 sheet.loading = false;
                 sheet.listing_error = Some(if message.is_empty() {
-                    "Could not read the project Docs files.".to_string()
+                    "Could not read the project's files.".to_string()
                 } else {
                     message
                 });
@@ -213,7 +213,7 @@ fn settle_save(
     if result.get("requestId").and_then(Value::as_str) != Some(pending.correlation.as_str()) {
         return fail_save(
             state,
-            "The Docs service returned an invalid response.".to_string(),
+            "The Files service returned an invalid response.".to_string(),
         );
     }
     match pending.stage {
@@ -221,7 +221,7 @@ fn settle_save(
             if !result.get("file").is_some_and(|file| file.is_object()) {
                 return fail_save(
                     state,
-                    "Docs did not return the saved Markdown file.".to_string(),
+                    "The Files service did not return the saved Markdown file.".to_string(),
                 );
             }
             let correlation = correlation_id(state, "saved-message-path");
@@ -250,7 +250,7 @@ fn settle_save(
             let Some(full_path) = full_path else {
                 return fail_save(
                     state,
-                    "Docs did not return the saved Markdown path.".to_string(),
+                    "The Files service did not return the saved Markdown path.".to_string(),
                 );
             };
             // The host copies the path and says so; the sheet then closes as it would have.
@@ -309,7 +309,7 @@ pub fn project(state: &SaveMarkdownState) -> Value {
 /// `checkedProjectDocsResponse` minus the id check, which each caller makes against its own.
 fn checked_response(value: &Value) -> Result<Map<String, Value>, String> {
     let Some(record) = value.as_object() else {
-        return Err("The Docs service returned an invalid response.".to_string());
+        return Err("The Files service returned an invalid response.".to_string());
     };
     if let Some(error) = record.get("error").and_then(Value::as_str) {
         if !error.is_empty() {

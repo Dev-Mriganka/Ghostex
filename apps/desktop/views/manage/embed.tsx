@@ -3,16 +3,60 @@ import { MANAGE_CONTENT_AUTOSAVE_DELAY_MS } from './constants';
 import { requestManageFiles } from './manage-app';
 import { ManageExcalidrawEditor } from './preview/excalidraw-editor';
 import { ManageHtmlRenderViewer } from './preview/html-viewer';
+import type { ManageWebKitWindow } from './types';
+
+/** The Docs resource origin's URL for one file, or `undefined` when the app gave no origin. */
+function manageDocsResourceUrl(path: string): string | undefined {
+  const configuredBaseUrl = (window as ManageWebKitWindow).ghostexGpui?.manageDocsResourceBaseUrl;
+  const components = path.split('/');
+  if (!configuredBaseUrl || components.some((component) => !component || component === '.' || component === '..')) {
+    return undefined;
+  }
+  try {
+    return new URL(components.map(encodeURIComponent).join('/'), configuredBaseUrl).toString();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * CDXC:Docs 2026-09-27 DECISION:
+ * User: "for video i think we can play videos using browser for now to keep it simple" and "audio also play in embedded browser". The Files view sends `media=video|audio` only for formats this browser can decode; the rest open in the system app (see `DocsFileKind` in apps/desktop/src/app/native_docs/state.rs). The file streams from the Docs resource origin, which answers byte ranges so the player can seek.
+ */
+function ManageEmbedMedia({ media, path, revision }: { media: 'audio' | 'video'; path: string; revision: string }) {
+  const source = manageDocsResourceUrl(path);
+  if (!source) {
+    return <div className='manage-preview-message'>This file can't be played here.</div>;
+  }
+  return (
+    <div className='manage-embed-media'>
+      {media === 'video' ? (
+        <video autoPlay controls key={revision} playsInline preload='metadata' src={source} />
+      ) : (
+        <audio autoPlay controls key={revision} preload='metadata' src={source} />
+      )}
+    </div>
+  );
+}
 
 /**
  * CDXC:Docs 2026-09-24 WHY:
- * The native Docs view draws everything itself except HTML files and Excalidraw drawings, which
+ * The native Docs view draws everything itself except HTML files, Excalidraw drawings, video and audio, which
  * need a browser engine. For those the app loads this page with `embed=1&path=…` as a normal child
  * of the document area, and it shows only that one file: no files list, no header. The native side
  * reloads it (a new `revision`) when the file changes on disk or the user presses Reload.
  * SEE-ALSO: apps/desktop/src/app/native_docs/browser_area.rs.
  */
 export function ManageEmbed() {
+  const params = new URLSearchParams(window.location.search);
+  const media = params.get('media');
+  if (media === 'video' || media === 'audio') {
+    return <ManageEmbedMedia media={media} path={params.get('path') ?? ''} revision={params.get('revision') ?? ''} />;
+  }
+  return <ManageEmbedDocument />;
+}
+
+function ManageEmbedDocument() {
   const params = new URLSearchParams(window.location.search);
   const projectId = params.get('projectId') ?? '';
   const projectEditorId = params.get('projectEditorId') ?? projectId;

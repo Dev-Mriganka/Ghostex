@@ -9,6 +9,7 @@ import { COMPLETION_SOUND_OPTIONS } from '../../shared/completion-sound';
 import {
   AUTO_SLEEP_IDLE_MINUTE_OPTIONS,
   CHAT_FILE_OPEN_VIEW_OPTIONS,
+  MEDIA_FILE_OPEN_TARGET_OPTIONS,
   COMMANDS_PANEL_SIDE_OPTIONS,
   WINDOW_GLASS_OPTIONS,
   WINDOW_GLASS_SOURCE_OPTIONS,
@@ -111,14 +112,35 @@ export function getSettingsSearchSectionDefinitions() {
         {
           key: 'markdownFileOpenView',
           options: CHAT_FILE_OPEN_VIEW_OPTIONS,
-          subtitle: 'Choose whether Markdown links from agent chat open in Docs or Code.',
+          subtitle: 'Choose whether Markdown links from agent chat open in Files or Code.',
           title: 'Markdown files',
         },
         {
           key: 'htmlFileOpenView',
           options: CHAT_FILE_OPEN_VIEW_OPTIONS,
-          subtitle: 'Choose whether HTML links from agent chat open in Docs or Code.',
+          subtitle: 'Choose whether HTML links from agent chat open in Files or Code.',
           title: 'HTML files',
+        },
+        {
+          key: 'imageFileOpenTarget',
+          options: MEDIA_FILE_OPEN_TARGET_OPTIONS,
+          subtitle:
+            'Choose whether pictures and SVGs linked in agent chat or the terminal open in Files or the system app.',
+          title: 'Images',
+        },
+        {
+          key: 'videoFileOpenTarget',
+          options: MEDIA_FILE_OPEN_TARGET_OPTIONS,
+          subtitle:
+            'Choose whether videos linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .mp4 and .mov, always open in the system app.',
+          title: 'Videos',
+        },
+        {
+          key: 'audioFileOpenTarget',
+          options: MEDIA_FILE_OPEN_TARGET_OPTIONS,
+          subtitle:
+            'Choose whether audio files linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .m4a, always open in the system app.',
+          title: 'Audio',
         },
       ],
     },
@@ -381,7 +403,7 @@ export function getSettingsSearchSectionDefinitions() {
           key: 'sidebarVisibilityMemory',
           options: SIDEBAR_VISIBILITY_MEMORY_OPTIONS,
           subtitle:
-            'Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Docs, Kanban, Automate).',
+            'Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Files, Kanban, Automate).',
           title: 'Sidebar visibility memory',
         },
         {

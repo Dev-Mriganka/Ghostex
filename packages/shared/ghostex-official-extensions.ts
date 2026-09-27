@@ -163,7 +163,7 @@ export const GHOSTEX_OFFICIAL_EXTENSIONS: readonly GhostexOfficialExtension[] = 
     id: 'docs',
     placement: 'view',
     settingsKey: 'docsViewTabHidden',
-    title: 'Docs',
+    title: 'Files',
   },
   {
     description:

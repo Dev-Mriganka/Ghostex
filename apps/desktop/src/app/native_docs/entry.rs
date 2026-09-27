@@ -3,8 +3,31 @@
 
 use gpui::Context;
 
-use super::state::{DocsDocument, DocsDocumentLoad, DocsFileKind};
+use super::state::{DocsDocument, DocsDocumentLoad, DocsFileKind, DocsMediaKind};
 use crate::GhostexGpuiApp;
+use crate::shared_settings::{self, SharedMediaFileOpenTarget};
+
+/// Where a clicked image, video or audio file opens: `Some(true)` in the Files view, `Some(false)`
+/// in the system app, `None` for any other file. Files takes it when its "Images / Videos / Audio
+/// open in" setting says Files, Files can show its format, and the native Files view is on.
+///
+/// CDXC:Docs 2026-09-27 SEE-ALSO: `imageFileOpenTarget` in packages/shared/ghostex-settings/types.ts holds the decision; terminal links (`gpui_terminal_file_opens_with_os_default`) and chat file links (`open_session_chat_file_for_session`) both ask here.
+pub(crate) fn media_file_opens_in_files(path: &std::path::Path) -> Option<bool> {
+    let path = path.to_string_lossy();
+    let media = DocsMediaKind::for_path(&path)?;
+    if DocsFileKind::for_path(&path) == DocsFileKind::SystemApp
+        || !super::render::native_docs_enabled()
+    {
+        return Some(false);
+    }
+    let settings = shared_settings::shared_sidebar_settings_snapshot();
+    let target = match media {
+        DocsMediaKind::Image => settings.image_file_open_target(),
+        DocsMediaKind::Video => settings.video_file_open_target(),
+        DocsMediaKind::Audio => settings.audio_file_open_target(),
+    };
+    Some(target == SharedMediaFileOpenTarget::Files)
+}
 
 /// Where review documents live; never read from or written to disk.
 pub(crate) const REVIEW_DOCUMENT_ROOT: &str = ".ghostex-review";
@@ -24,7 +47,7 @@ impl GhostexGpuiApp {
             return;
         }
         let origin = self.native_docs.pending_origin.take();
-        self.native_docs_reveal_in_tree(&path);
+        self.native_docs_reveal_in_tree(&path, cx);
         let display_path = self.native_docs_display_path(&path);
         self.native_docs_open(&path, &display_path, cx);
         // Opened again from another agent's chat: that agent becomes the target.

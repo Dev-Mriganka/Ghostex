@@ -88,7 +88,7 @@ pub fn reference_menu_rows(href: &str) -> Vec<ReferenceMenuRow> {
     let mut rows = Vec::new();
     let noun = path_noun(&path);
     if media_kind(&path).is_some() {
-        // No `view`: the host opens media with the OS default app.
+        // No `view`: the host picks where media opens (the desktop's "open in" settings).
         rows.push(ReferenceMenuRow {
             command: ordered! { "action": "openFile", "path": path.clone(), "type": "host" },
             icon_path: "titlebar/external-link.svg".to_string(),
@@ -107,7 +107,7 @@ pub fn reference_menu_rows(href: &str) -> Vec<ReferenceMenuRow> {
         rows.push(ReferenceMenuRow {
             command: file_command(&path, "docs", position),
             icon_path: "titlebar/file-text.svg".to_string(),
-            label: "Open in Docs".to_string(),
+            label: "Open in Files".to_string(),
             disabled: None,
         });
     }

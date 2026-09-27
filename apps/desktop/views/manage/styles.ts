@@ -96,6 +96,28 @@ export const MANAGE_STYLES = `
     min-height: 0;
   }
 
+  /* A video or audio file in the Files view: the player centred, never larger than the view. */
+  .manage-embed-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 0;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  .manage-embed-media video {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    background: #000;
+  }
+
+  .manage-embed-media audio {
+    width: min(560px, 100%);
+  }
+
   body {
     color: var(--manage-text);
     font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;

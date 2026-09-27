@@ -8,7 +8,11 @@ import { DEFAULT_PET_ID } from '../pets';
 import { DEFAULT_SIDEBAR_SESSION_TAG_LIST_ITEMS } from '../session-tags';
 import { DEFAULT_SESSION_CARD_HOVER_BUTTONS } from '../session-card-hover-actions';
 import { DEFAULT_DIAGNOSTIC_LOGGING_SCENARIOS } from './diagnostic-logging';
-import { DEFAULT_CHAT_FILE_OPEN_VIEW, DEFAULT_WEB_LINK_OPEN_TARGET } from './option-tables';
+import {
+  DEFAULT_CHAT_FILE_OPEN_VIEW,
+  DEFAULT_MEDIA_FILE_OPEN_TARGET,
+  DEFAULT_WEB_LINK_OPEN_TARGET,
+} from './option-tables';
 import { SIDEBAR_SETTINGS_PRESET_SETTINGS } from './presets';
 import { DEFAULT_SETTINGS_MODAL_NAVIGATION_STATE } from './settings-modal-navigation';
 import { DEFAULT_TERMINAL_DEV_SERVER_IGNORED_PORT_RULES } from './terminal-dev-servers';
@@ -92,6 +96,9 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   webLinkOpenTarget: DEFAULT_WEB_LINK_OPEN_TARGET,
   markdownFileOpenView: DEFAULT_CHAT_FILE_OPEN_VIEW,
   htmlFileOpenView: DEFAULT_CHAT_FILE_OPEN_VIEW,
+  imageFileOpenTarget: DEFAULT_MEDIA_FILE_OPEN_TARGET,
+  videoFileOpenTarget: DEFAULT_MEDIA_FILE_OPEN_TARGET,
+  audioFileOpenTarget: DEFAULT_MEDIA_FILE_OPEN_TARGET,
   /**
    * CDXC:Settings 2026-06-28-08:01:
    * New installs should start with ordinary Settings density, but an explicit
@@ -396,7 +403,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   preferredAgentInterfaceOverrides: {},
   sidebarCollapseAnimationDurationMs: DEFAULT_SIDEBAR_COLLAPSE_ANIMATION_DURATION_MS,
   panelAnimationSpeed: 'normal',
-  closeSidePanelWithLastTab: false,
+  closeSidePanelWithLastTab: true,
   sidebarTooltipDelayMs: DEFAULT_SIDEBAR_TOOLTIP_DELAY_MS,
   /**
    * CDXC:Sidebar 2026-06-05-04:40:
@@ -421,7 +428,8 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   sessionChatCustomTranscriptWidthEnabled: false,
   sessionChatTranscriptWidthPercent: DEFAULT_SESSION_CHAT_TRANSCRIPT_WIDTH_PERCENT,
   sessionChatVerboseMode: false,
-  sessionChatSimpleMode: false,
+  /** CDXC:SessionChat 2026-09-27 DECISION: User: "make simple mode default enabled in the gpui app". A saved `false` still wins; only chats with no saved choice start simple. */
+  sessionChatSimpleMode: true,
   sessionChatFileEditPreviews: false,
   sessionChatKeepComposerExpanded: false,
   /**

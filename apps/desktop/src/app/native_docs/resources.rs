@@ -11,6 +11,9 @@ impl GhostexGpuiApp {
     /// local project, the project's gxserver for a remote one. `None` without a project.
     pub(crate) fn manage_docs_resource_scope(&self) -> Option<cef::ManageDocsResourceScope> {
         let snapshot = self.latest_sidebar_project_snapshot.as_ref()?;
+        // The Files view opens any project file, so its pages and media load from the whole
+        // project, as the file bridge's project scope reads it.
+        let project_scope = super::render::native_docs_enabled();
         let active_project_id = snapshot.active_project_id.as_ref()?.0.as_str();
         if let Some(reference) = gpui_remote_project_reference_from_project_id(active_project_id) {
             /*
@@ -33,6 +36,7 @@ impl GhostexGpuiApp {
                         project_id.as_str(),
                         relative_path,
                         docs_folders.as_str(),
+                        project_scope,
                     )
                 },
             )))
@@ -68,10 +72,14 @@ impl GhostexGpuiApp {
                     )
                     .ok()?;
                     let mut mounts = vec![cef::ManageDocsResourceRoot {
-                        allowed_relative_roots: manage_docs_project_scan_root_relative_paths(
-                            roots.project.as_path(),
-                            docs_folders.as_str(),
-                        ),
+                        allowed_relative_roots: if project_scope {
+                            vec![String::new()]
+                        } else {
+                            manage_docs_project_scan_root_relative_paths(
+                                roots.project.as_path(),
+                                docs_folders.as_str(),
+                            )
+                        },
                         mount_segment: String::new(),
                         path: roots.project,
                     }];

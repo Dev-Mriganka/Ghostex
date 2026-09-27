@@ -65,10 +65,8 @@ impl GhostexGpuiApp {
             return;
         };
         if is_review_path(&document.path)
-            || !matches!(
-                document.kind,
-                DocsFileKind::Markdown | DocsFileKind::Html | DocsFileKind::Excalidraw
-            )
+            || document.kind == DocsFileKind::SystemApp
+            || document.load != super::state::DocsDocumentLoad::Ready
             || document.dirty
             || document.saving
             || self.native_docs.stat_in_flight

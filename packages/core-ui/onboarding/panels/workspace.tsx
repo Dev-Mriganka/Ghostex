@@ -7,7 +7,7 @@ import { box } from '../stage';
 
 const VIEW_ROWS: readonly { id: OnboardingViewKey; icon: IconName; title: string; detail: string }[] = [
   { id: 'browser', icon: 'target', title: 'Browser', detail: 'Preview and inspect the app your agent is building.' },
-  { id: 'docs', icon: 'list', title: 'Docs', detail: 'Markdown, mockups, diagrams and annotations.' },
+  { id: 'docs', icon: 'list', title: 'Files', detail: 'Markdown, mockups, diagrams and annotations.' },
   { id: 'code', icon: 'code', title: 'Code', detail: 'VS Code, built in: source, diffs and review.' },
   { id: 'kanban', icon: 'kanban', title: 'Kanban', detail: 'Split work into cards and hand each one to an agent.' },
   { id: 'automate', icon: 'bolt', title: 'Automate', detail: 'Run agents on a schedule, once or on repeat.' },
@@ -80,7 +80,7 @@ export function WorkspacePanel({ props, go, toast }: PanelProps) {
         onClick={applyRecommended}
       >
         <Icon n='checkCircle' size={18} />
-        Recommended · Browser + Docs
+        Recommended · Browser + Files
       </button>
       <div className={'glass vgroup' + (views.browser ? ' on' : '')} style={box(60, 340, 632, 112)}>
         <div className='vrow inner' {...buttonProps(() => setPreviewed('browser'))}>

@@ -104,6 +104,9 @@ impl GhostexGpuiApp {
         }
         let project = self.native_docs_project()?;
         self.native_docs_sync_project(&project, window, cx);
+        if std::mem::take(&mut self.native_docs.open_file_prompt) {
+            self.native_docs_show_search(window, cx);
+        }
         self.native_docs_ensure_watch(cx);
         self.native_docs_materialize_editors(window, cx);
         if self.native_docs.active != self.native_docs.highlighted_path {

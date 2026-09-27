@@ -43,55 +43,149 @@ pub(crate) struct DocsEntry {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum DocsFileKind {
     Markdown,
+    /// Plain text and code: the code editor.
     Text,
     Image,
     Html,
     Excalidraw,
+    /// Played by the embed page's `<video>`.
+    Video,
+    /// Played by the embed page's `<audio>`.
+    Audio,
+    /// Opened by the system's own app instead of in Files.
+    SystemApp,
+}
+
+/// CDXC:Docs 2026-09-27 DECISION:
+/// User: video and audio play in the Files view's embedded browser "to keep it simple", and formats that browser cannot play open in the system app. Ghostex's CEF is the standard build without licensed codecs, so H.264 and AAC (most `.mp4`, `.mov`, `.m4v`, `.m4a`, `.aac`) cannot play there; PDFs wait for a later change ("pdf we'll think about later").
+const BROWSER_VIDEO_EXTENSIONS: &[&str] = &["webm", "ogv"];
+const BROWSER_AUDIO_EXTENSIONS: &[&str] = &["mp3", "ogg", "oga", "opus", "wav", "flac"];
+/// Media the embedded browser cannot decode, images GPUI cannot draw, and PDFs.
+const SYSTEM_APP_EXTENSIONS: &[&str] = &[
+    "mp4", "m4v", "mov", "avi", "mkv", "wmv", "flv", "3gp", "3g2", "mpeg", "mpg", "m2ts", "mts",
+    "vob", "asf", "ogm", "m4a", "aac", "aif", "aiff", "wma", "pdf", "heic", "heif", "avif", "apng",
+    "jp2", "jxl",
+];
+const IMAGE_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "jfif", "jpe", "gif", "webp", "svg", "bmp", "ico", "tif", "tiff",
+];
+/// Images Files hands to the system app.
+const SYSTEM_APP_IMAGE_EXTENSIONS: &[&str] = &["heic", "heif", "avif", "apng", "jp2", "jxl"];
+const VIDEO_EXTENSIONS: &[&str] = &[
+    "webm", "ogv", "mp4", "m4v", "mov", "avi", "mkv", "wmv", "flv", "3gp", "3g2", "mpeg", "mpg",
+    "m2ts", "mts", "vob", "asf", "ogm",
+];
+const AUDIO_EXTENSIONS: &[&str] = &[
+    "mp3", "ogg", "oga", "opus", "wav", "flac", "m4a", "aac", "aif", "aiff", "wma",
+];
+
+/// What kind of media a file is, whether or not Files can play it: the "Images / Videos / Audio
+/// open in" settings and the files list's icons go by this.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DocsMediaKind {
+    Image,
+    Video,
+    Audio,
+}
+
+pub(crate) fn file_extension(path: &str) -> String {
+    let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    name.rsplit_once('.')
+        .map(|(_, extension)| extension.to_ascii_lowercase())
+        .unwrap_or_default()
+}
+
+impl DocsMediaKind {
+    pub(crate) fn for_path(path: &str) -> Option<Self> {
+        let extension = file_extension(path);
+        let extension = extension.as_str();
+        if IMAGE_EXTENSIONS.contains(&extension) || SYSTEM_APP_IMAGE_EXTENSIONS.contains(&extension)
+        {
+            Some(Self::Image)
+        } else if VIDEO_EXTENSIONS.contains(&extension) {
+            Some(Self::Video)
+        } else if AUDIO_EXTENSIONS.contains(&extension) {
+            Some(Self::Audio)
+        } else {
+            None
+        }
+    }
 }
 
 impl DocsFileKind {
     pub(crate) fn for_path(path: &str) -> Self {
-        let extension = path
-            .rsplit_once('.')
-            .map(|(_, extension)| extension.to_ascii_lowercase())
-            .unwrap_or_default();
-        match extension.as_str() {
+        let extension = file_extension(path);
+        let extension = extension.as_str();
+        match extension {
             "md" | "markdown" | "mdx" => Self::Markdown,
-            "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" | "ico" | "avif" => Self::Image,
             "html" | "htm" => Self::Html,
             "excalidraw" => Self::Excalidraw,
+            _ if IMAGE_EXTENSIONS.contains(&extension) => Self::Image,
+            _ if BROWSER_VIDEO_EXTENSIONS.contains(&extension) => Self::Video,
+            _ if BROWSER_AUDIO_EXTENSIONS.contains(&extension) => Self::Audio,
+            _ if SYSTEM_APP_EXTENSIONS.contains(&extension) => Self::SystemApp,
             _ => Self::Text,
         }
     }
 
-    /// The gpui-component highlighter language for a text file, from its extension.
+    /// Drawn by the embed page rather than natively.
+    pub(crate) fn uses_browser_area(self) -> bool {
+        matches!(
+            self,
+            Self::Html | Self::Excalidraw | Self::Video | Self::Audio
+        )
+    }
+
+    pub(crate) fn is_svg(path: &str) -> bool {
+        file_extension(path) == "svg"
+    }
+
+    /// The gpui-component highlighter language for a text file, from its name or extension.
     pub(crate) fn editor_language(path: &str) -> &'static str {
-        let extension = path
-            .rsplit_once('.')
-            .map(|(_, extension)| extension.to_ascii_lowercase())
-            .unwrap_or_default();
-        match extension.as_str() {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        match name {
+            "Makefile" | "makefile" | "GNUmakefile" => return "make",
+            "CMakeLists.txt" => return "cmake",
+            "Gemfile" | "Rakefile" => return "ruby",
+            ".bashrc" | ".zshrc" | ".profile" | ".bash_profile" | ".envrc" => return "bash",
+            _ => {}
+        }
+        match file_extension(path).as_str() {
             "md" | "markdown" | "mdx" => "markdown",
             "rs" => "rust",
             "ts" | "mts" | "cts" => "typescript",
             "tsx" => "tsx",
             "js" | "mjs" | "cjs" | "jsx" => "javascript",
-            "json" | "jsonc" => "json",
+            "json" | "jsonc" | "json5" | "excalidraw" => "json",
             "toml" => "toml",
             "yaml" | "yml" => "yaml",
-            "py" => "python",
+            "py" | "pyi" => "python",
             "go" => "go",
             "sh" | "bash" | "zsh" => "bash",
-            "css" => "css",
-            "html" | "htm" => "html",
+            "css" | "scss" | "less" => "css",
+            "html" | "htm" | "svg" | "xml" | "plist" | "vue" => "html",
             "sql" => "sql",
-            "zig" => "zig",
+            "zig" | "zon" => "zig",
             "c" | "h" => "c",
-            "cpp" | "cc" | "hpp" => "cpp",
+            "cpp" | "cc" | "cxx" | "hpp" | "hh" | "mm" | "m" => "cpp",
+            "cs" => "csharp",
             "java" => "java",
-            "rb" => "ruby",
+            "rb" | "rake" | "gemspec" => "ruby",
+            "erb" => "erb",
+            "ejs" => "ejs",
             "swift" => "swift",
-            "kt" => "kotlin",
+            "kt" | "kts" => "kotlin",
+            "scala" | "sc" => "scala",
+            "lua" => "lua",
+            "php" => "php",
+            "ex" | "exs" => "elixir",
+            "graphql" | "gql" => "graphql",
+            "proto" => "proto",
+            "svelte" => "svelte",
+            "astro" => "astro",
+            "diff" | "patch" => "diff",
+            "mk" => "make",
+            "cmake" => "cmake",
             _ => "text",
         }
     }
@@ -135,6 +229,9 @@ pub(crate) enum DocsDocumentLoad {
     Loading,
     Ready,
     Error(String),
+    /// Read, but not something Files can show (binary, too large): the reason, with a button that
+    /// opens the file in the system app.
+    Unsupported(String),
 }
 
 /// An open file: its row in Open Files, its editor and its unsaved state.
@@ -166,6 +263,8 @@ pub(crate) struct DocsDocument {
     pub(crate) size: Option<u64>,
     /// HTML files: the page's annotation tool (Agentation) is on.
     pub(crate) html_annotate: bool,
+    /// SVG images: the source is showing in the code editor instead of the picture.
+    pub(crate) svg_source: bool,
     /// Bumped by Reload so the browser area loads the file again.
     pub(crate) embed_revision: u64,
     /// The agent session this document was opened from; its notes go back there.
@@ -210,6 +309,7 @@ impl DocsDocument {
             mode: DocsMarkdownMode::default(),
             size: None,
             html_annotate: true,
+            svg_source: false,
             origin_session: None,
             embed_revision: 0,
             review_session_title: None,
@@ -232,6 +332,20 @@ pub(crate) struct NativeDocsState {
     pub(crate) entries: Vec<DocsEntry>,
     /// Directory paths the user opened in the tree.
     pub(crate) expanded: BTreeSet<String>,
+    /// Folders whose children have been listed; the tree loads a folder when it is first opened.
+    pub(crate) loaded_folders: BTreeSet<String>,
+    /// Each listed folder's last listing `revision`, so an unchanged folder is not redrawn.
+    pub(crate) folder_revisions: std::collections::HashMap<String, String>,
+    /// The project-wide search's answer for `search_results_query`, drawn instead of the tree
+    /// while the search box has text.
+    pub(crate) search_results: Option<Vec<DocsEntry>>,
+    pub(crate) search_results_query: String,
+    /// More files matched than the search returns.
+    pub(crate) search_truncated: bool,
+    /// The project is larger than the search walks.
+    pub(crate) search_incomplete: bool,
+    /// The pending debounced search.
+    pub(crate) search_task: Option<Task<()>>,
     pub(crate) search: Option<Entity<InputState>>,
     pub(crate) search_query: String,
     pub(crate) search_subscription: Option<Subscription>,
@@ -263,6 +377,8 @@ pub(crate) struct NativeDocsState {
     pub(crate) pending_origin: Option<crate::TerminalSessionId>,
     /// A file asked for before Docs synced to the current project.
     pub(crate) pending_open: Option<String>,
+    /// Open File was asked for before Files drew; its next draw shows the search box.
+    pub(crate) open_file_prompt: bool,
     /// A tree row being renamed in place.
     pub(crate) rename: Option<DocsRename>,
     /// The project's notes (`.ghostex/manage-annotations.json`), by file path.
@@ -397,6 +513,7 @@ impl NativeDocsState {
         self.edge_band_armed = true;
         self.tree_scroll = from.tree_scroll.clone();
         self.pending_open = from.pending_open.take();
+        self.open_file_prompt = std::mem::take(&mut from.open_file_prompt);
         self.pending_origin = from.pending_origin.take();
         self.watch_task = from.watch_task.take();
         self.drawer = from.drawer.take();

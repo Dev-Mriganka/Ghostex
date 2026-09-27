@@ -324,6 +324,9 @@ export const MAIN_SETTINGS_SECTION_SETTING_KEYS: Record<MainSettingsSectionId, r
     'terminalDevServerIgnoredPortRules',
     'markdownFileOpenView',
     'htmlFileOpenView',
+    'imageFileOpenTarget',
+    'videoFileOpenTarget',
+    'audioFileOpenTarget',
   ],
   notifications: [
     'completionSound',
@@ -409,7 +412,13 @@ export const MAIN_SETTINGS_SCROLL_TARGET_SETTING_KEYS = {
     'terminalScrollToBottomWhenTyping',
   ],
   terminalDevServers: ['terminalDevServerDetectionEnabled', 'terminalDevServerIgnoredPortRules'],
-  fileOpening: ['markdownFileOpenView', 'htmlFileOpenView'],
+  fileOpening: [
+    'markdownFileOpenView',
+    'htmlFileOpenView',
+    'imageFileOpenTarget',
+    'videoFileOpenTarget',
+    'audioFileOpenTarget',
+  ],
   browser: ['webLinkOpenTarget'],
   editor: [
     'codeServerLinkVscodeUserConfig',
@@ -619,6 +628,7 @@ export const ADVANCED_MAIN_SETTING_KEYS = new Set<string>([
   'hideProjectHeaderDiffStats',
   'showProjectEditorDiffFileCount',
   'sidebarDefaultWidthPx',
+  'closeSidePanelWithLastTab',
   'projectSessionListCollapsedCount',
   'createSessionOnSidebarDoubleClick',
   'renameSessionOnDoubleClick',

@@ -66,6 +66,7 @@ export {
   type PortlessProtocol,
   type WebLinkOpenTarget,
   type ChatFileOpenView,
+  type MediaFileOpenTarget,
   type DefaultEditorCommand,
   type CommandsPanelSide,
   type WindowGlassMode,
@@ -186,6 +187,7 @@ export {
 export {
   WEB_LINK_OPEN_TARGET_OPTIONS,
   CHAT_FILE_OPEN_VIEW_OPTIONS,
+  MEDIA_FILE_OPEN_TARGET_OPTIONS,
   SIDEBAR_THEME_SETTING_OPTIONS,
   SESSION_CHAT_THEME_OPTIONS,
   DARK_THEME_PRESET_OPTIONS,

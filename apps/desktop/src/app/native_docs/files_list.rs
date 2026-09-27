@@ -43,12 +43,20 @@ thread_local! {
 
 /// The icon a file row shows (`manageFileIconForPath`).
 pub(crate) fn file_icon(path: &str) -> &'static str {
+    match super::state::DocsMediaKind::for_path(path) {
+        Some(super::state::DocsMediaKind::Image) => return "titlebar/photo.svg",
+        Some(super::state::DocsMediaKind::Video) => return "titlebar/movie.svg",
+        Some(super::state::DocsMediaKind::Audio) => return "titlebar/music.svg",
+        None => {}
+    }
     match DocsFileKind::for_path(path) {
         DocsFileKind::Markdown => "docs/t-markdown-175.svg",
         DocsFileKind::Html => "docs/t-file-type-html-175.svg",
         DocsFileKind::Excalidraw => "docs/t-edit-175.svg",
-        DocsFileKind::Image => "titlebar/photo.svg",
-        DocsFileKind::Text => "docs/t-file-175.svg",
+        DocsFileKind::Text if DocsFileKind::editor_language(path) != "text" => {
+            "titlebar/file-code.svg"
+        }
+        _ => "docs/t-file-175.svg",
     }
 }
 
@@ -242,6 +250,21 @@ impl GhostexGpuiApp {
             .border_color(p.border)
             .child(
                 header_tile(
+                    "native-docs-open-file",
+                    header_icon("titlebar/file-search.svg", false, p),
+                    false,
+                    false,
+                    p,
+                )
+                .tooltip(|window, cx| {
+                    titlebar_tooltip("Open file: type a name or paste a path", window, cx)
+                })
+                .on_click(cx.listener(|this, _, window, cx| {
+                    this.native_docs_open_file_prompt(window, cx);
+                })),
+            )
+            .child(
+                header_tile(
                     "native-docs-toggle-all",
                     collapse_icon,
                     false,
@@ -295,7 +318,7 @@ impl GhostexGpuiApp {
                     p,
                 )
                 .child(anchor(&OVERFLOW_MENU_ANCHOR))
-                .tooltip(|window, cx| titlebar_tooltip("Docs sidebar menu", window, cx))
+                .tooltip(|window, cx| titlebar_tooltip("Files sidebar menu", window, cx))
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.show_native_docs_overflow_menu(window, cx);
                 })),
@@ -591,12 +614,29 @@ impl GhostexGpuiApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let state = &self.native_docs;
-        let status = match state.load_state {
-            Some(DocsLoadState::Loading) => Some("Updating files…".to_string()),
-            Some(DocsLoadState::Error) => state.error.clone(),
-            _ if state.entries.is_empty() => Some("No files found".to_string()),
-            _ => None,
+        let query = state.search_query.trim();
+        let status = if !query.is_empty() {
+            match &state.search_results {
+                _ if state.search_results_query != query => Some("Searching…".to_string()),
+                Some(results) if results.is_empty() && state.search_incomplete => Some(
+                    "No matching files. This project is large, so search covers its first 200,000 files and folders."
+                        .to_string(),
+                ),
+                Some(results) if results.is_empty() => Some("No matching files".to_string()),
+                _ if state.search_truncated => {
+                    Some("Showing the best matches. Type more to narrow them.".to_string())
+                }
+                _ => None,
+            }
+        } else {
+            match state.load_state {
+                Some(DocsLoadState::Loading) => Some("Updating files…".to_string()),
+                Some(DocsLoadState::Error) => state.error.clone(),
+                _ if state.entries.is_empty() => Some("No files found".to_string()),
+                _ => None,
+            }
         };
+        let query_is_empty = query.is_empty();
         let active = state.active.clone().unwrap_or_default();
         let expandable = self.native_docs_expandable_folders();
         let rename = self
@@ -612,7 +652,12 @@ impl GhostexGpuiApp {
                 let is_directory = row.kind == DocsEntryKind::Directory;
                 let selected = !is_directory && active == row.path;
                 let ancestor = is_directory && active.starts_with(&format!("{}/", row.path));
-                let has_children = expandable.contains(row.path.as_str());
+                // A folder not listed yet may have children; a listed one shows the chevron only
+                // when it does. Search results open their folder in the tree instead.
+                let has_children = row.folder.is_none()
+                    && (expandable.contains(row.path.as_str())
+                        || !self.native_docs.loaded_folders.contains(&row.path));
+                let in_search = row.folder.is_some() || !query_is_empty;
                 let text = if ancestor {
                     p.ancestor_text
                 } else if selected {
@@ -692,11 +737,32 @@ impl GhostexGpuiApp {
                         None => div()
                             .flex_1()
                             .min_w_0()
-                            .truncate()
-                            .text_size(px(NAME_SIZE))
-                            .font_weight(FontWeight::LIGHT)
-                            .line_height(px(20.0))
-                            .child(row.name)
+                            .flex()
+                            .items_baseline()
+                            .gap(px(7.0))
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .max_w_full()
+                                    .truncate()
+                                    .text_size(px(NAME_SIZE))
+                                    .font_weight(FontWeight::LIGHT)
+                                    .line_height(px(20.0))
+                                    .child(row.name),
+                            )
+                            .when_some(row.folder.clone(), |this, folder| {
+                                this.child(
+                                    div()
+                                        .flex_1()
+                                        .min_w_0()
+                                        .overflow_hidden()
+                                        .whitespace_nowrap()
+                                        .text_ellipsis_start()
+                                        .text_size(px(11.5))
+                                        .text_color(p.subtle)
+                                        .child(folder),
+                                )
+                            })
                             .into_any_element(),
                     })
                     .when(note_count > 0, |this| {
@@ -718,8 +784,16 @@ impl GhostexGpuiApp {
                                 .child(note_count.to_string()),
                         )
                     })
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        if is_directory {
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if is_directory && in_search {
+                            // A folder found by search: show it, open, in the tree.
+                            this.native_docs_clear_search(window, cx);
+                            this.native_docs.expanded.insert(click_path.clone());
+                            this.native_docs_list_folder(&click_path, cx);
+                            this.native_docs_reveal_in_tree(&click_path, cx);
+                            this.native_docs.reveal_request = Some(click_path.clone());
+                            this.native_docs_notify(cx);
+                        } else if is_directory {
                             this.native_docs_toggle_folder(&click_path, cx);
                         } else {
                             this.native_docs_open(&click_path, &click_display, cx);

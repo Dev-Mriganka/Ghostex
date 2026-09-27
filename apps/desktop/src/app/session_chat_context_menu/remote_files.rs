@@ -87,7 +87,7 @@ impl GhostexGpuiApp {
         }
         if requested_view == Some(shared_settings::SharedChatFileOpenView::Docs) {
             self.report_session_chat_file_open_failure(
-                "Docs view is not available for this project.",
+                "Files view is not available for this project.",
                 cx,
             );
             return;

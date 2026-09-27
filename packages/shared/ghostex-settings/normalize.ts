@@ -27,12 +27,14 @@ import {
   COMMANDS_PANEL_AUTO_MINIMIZE_DELAY_OPTIONS,
   CHAT_FILE_OPEN_VIEW_SET,
   DEFAULT_CHAT_FILE_OPEN_VIEW,
+  DEFAULT_MEDIA_FILE_OPEN_TARGET,
   DEFAULT_WEB_LINK_OPEN_TARGET,
   KEEP_AWAKE_DURATION_OPTIONS,
   MAX_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MAX_WINDOW_GLASS_LIVE_SPEED,
   MIN_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MIN_WINDOW_GLASS_LIVE_SPEED,
+  MEDIA_FILE_OPEN_TARGET_SET,
   WEB_LINK_OPEN_TARGET_SET,
   WINDOW_GLASS_LIVE_STYLE_OPTIONS,
 } from './option-tables';
@@ -65,6 +67,7 @@ import {
   type AutoSleepIdleMinutes,
   type ChatFileOpenView,
   type CommandsPanelSide,
+  type MediaFileOpenTarget,
   type WindowGlassMode,
   type WindowGlassLiveStyle,
   type WindowGlassSource,
@@ -268,6 +271,9 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
     webLinkOpenTarget,
     markdownFileOpenView,
     htmlFileOpenView,
+    imageFileOpenTarget: normalizeMediaFileOpenTarget(source.imageFileOpenTarget),
+    videoFileOpenTarget: normalizeMediaFileOpenTarget(source.videoFileOpenTarget),
+    audioFileOpenTarget: normalizeMediaFileOpenTarget(source.audioFileOpenTarget),
     /**
      * CDXC:Settings 2026-06-28-08:01:
      * Persist the Show Advanced density switch with other Settings so advanced
@@ -1237,6 +1243,13 @@ function normalizeWebLinkOpenTarget(source: Record<string, unknown>): WebLinkOpe
   }
 
   return DEFAULT_WEB_LINK_OPEN_TARGET;
+}
+
+function normalizeMediaFileOpenTarget(value: unknown): MediaFileOpenTarget {
+  const normalized = readLooseString(value);
+  return MEDIA_FILE_OPEN_TARGET_SET.has(normalized as MediaFileOpenTarget)
+    ? (normalized as MediaFileOpenTarget)
+    : DEFAULT_MEDIA_FILE_OPEN_TARGET;
 }
 
 function normalizeChatFileOpenView(value: unknown): ChatFileOpenView {

@@ -2810,8 +2810,8 @@ pub(crate) fn titlebar_mode_view_tab_hidden_settings_key(
 /*
 CDXC:Extensions 2026-08-23:
 Toasts and menus name a workarea the way Settings → Customize does, which is
-not always the way the enum does: `Source` is "Code" and `Manage` is "Docs"
-everywhere the user can read it.
+not always the way the enum does: `Source` is "Code" and `Manage` is "Files"
+everywhere the user can read it (it read "Docs" until CDXC:Docs 2026-09-27).
 */
 pub(crate) fn gpui_titlebar_mode_plugin_display_name(mode: TitlebarMode) -> &'static str {
     match mode {
@@ -2820,7 +2820,7 @@ pub(crate) fn gpui_titlebar_mode_plugin_display_name(mode: TitlebarMode) -> &'st
         TitlebarMode::Browser => "Browser",
         TitlebarMode::Kanban => "Kanban",
         TitlebarMode::Automate => "Automate",
-        TitlebarMode::Manage => "Docs",
+        TitlebarMode::Manage => "Files",
         TitlebarMode::Terminal => "Terminal",
         TitlebarMode::Extension(id) => id.as_str(),
     }

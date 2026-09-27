@@ -1,4 +1,5 @@
 mod listing;
+mod project_scope;
 
 use std::{
     collections::HashSet,
@@ -197,6 +198,8 @@ struct DocsExtraMount {
 #[derive(Clone, Copy)]
 struct DocsContext<'a> {
     additional_docs_folders: &'a str,
+    /// The desktop's Files view (`scope: "project"`): the whole project and every file type.
+    project_scope: bool,
     roots: &'a DocsRoots,
 }
 
@@ -303,6 +306,7 @@ fn run_action(
     let roots = docs_roots(root)?;
     let context = DocsContext {
         additional_docs_folders,
+        project_scope: string_param(params, "scope").as_deref() == Some("project"),
         roots: &roots,
     };
     let action = string_param(params, "action").unwrap_or_default();
@@ -331,6 +335,12 @@ fn run_action(
     )
     .then(ghostex_docs::directory::MutationGuard::new);
 
+    if context.project_scope && action == "list" {
+        return project_scope::list_project_directory(context, params);
+    }
+    if context.project_scope && action == "search" {
+        return project_scope::search_project(context, params);
+    }
     if action == "list" && params.get("directoryOnly").and_then(Value::as_bool) == Some(true) {
         return listing::list_directory(context, params);
     }
@@ -423,23 +433,23 @@ fn run_action(
         "readResource" => {
             let path = docs_path(context, string_param(params, "path").as_deref())?;
             if path.inner.is_empty() {
-                return Err("Select a Docs resource to read.".to_string());
+                return Err("Select a resource to read.".to_string());
             }
             let target = existing_path(&path)?;
             validate_accessible_path(&path, context)?;
             let metadata =
-                fs::metadata(&target).map_err(|_| "Docs resource is unavailable.".to_string())?;
+                fs::metadata(&target).map_err(|_| "Resource is unavailable.".to_string())?;
             if !metadata.is_file() || metadata.len() > RESOURCE_MAX_BYTES {
-                return Err("Docs resource is unavailable.".to_string());
+                return Err("Resource is unavailable.".to_string());
             }
-            let data = fs::read(target).map_err(|_| "Docs resource is unavailable.".to_string())?;
+            let data = fs::read(target).map_err(|_| "Resource is unavailable.".to_string())?;
             Ok(json!({
                 "action": action,
                 "dataBase64": BASE64_STANDARD.encode(data),
                 "requestId": request_id,
             }))
         }
-        _ => Err("Unsupported Docs file action.".to_string()),
+        _ => Err("Unsupported Files action.".to_string()),
     }
 }
 
@@ -760,31 +770,36 @@ always had.
 */
 fn validate_accessible_path(path: &DocsPath<'_>, context: DocsContext<'_>) -> Result<(), String> {
     if path.extra
+        || context.project_scope
         || path.inner == ANNOTATIONS_SIDECAR_RELATIVE_PATH
         || path_is_in_scan_root(&path.inner, context.additional_docs_folders)
         || is_root_artifact(&path.inner)
     {
         return Ok(());
     }
-    Err("Docs files must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files.".to_string())
+    Err("Files must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files.".to_string())
 }
 
 fn validate_tree_path(path: &DocsPath<'_>, context: DocsContext<'_>) -> Result<(), String> {
-    if path.extra || path_is_in_scan_root(&path.inner, context.additional_docs_folders) {
+    if path.extra
+        || context.project_scope
+        || path_is_in_scan_root(&path.inner, context.additional_docs_folders)
+    {
         Ok(())
     } else {
-        Err("Docs items must be inside configured Docs folders.".to_string())
+        Err("Items must be inside configured Docs folders.".to_string())
     }
 }
 
 fn validate_action_path(path: &DocsPath<'_>, context: DocsContext<'_>) -> Result<(), String> {
     if path.extra
+        || context.project_scope
         || path_is_in_scan_root(&path.inner, context.additional_docs_folders)
         || is_root_artifact(&path.inner)
     {
         Ok(())
     } else {
-        Err("Docs items must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files.".to_string())
+        Err("Items must be inside configured Docs folders or be root Markdown, HTML, or Excalidraw files.".to_string())
     }
 }
 
@@ -795,7 +810,7 @@ fn require_same_root(source: &DocsPath<'_>, destination: &DocsPath<'_>) -> Resul
     if source.extra == destination.extra {
         return Ok(());
     }
-    Err("Docs cannot move items between the project and the Docs directory.".to_string())
+    Err("Items cannot move between the project and the Docs directory.".to_string())
 }
 
 /*
@@ -1336,7 +1351,7 @@ fn save_project_file(
 ) -> Result<Value, String> {
     let content = content.ok_or_else(|| "No file content was provided.".to_string())?;
     if content.len() > FILE_SAVE_MAX_BYTES {
-        return Err("File is too large to save from Docs.".to_string());
+        return Err("File is too large to save from the Files view.".to_string());
     }
     let path = docs_path(context, path)?;
     if path.inner.is_empty() {
@@ -1377,7 +1392,7 @@ fn rename_project_file(
     validate_action_path(&source_path, context)?;
     validate_action_path(&destination_path, context)?;
     if parent_relative_path(&source_path.inner) != parent_relative_path(&destination_path.inner) {
-        return Err("Docs rename cannot move items.".to_string());
+        return Err("Rename cannot move items.".to_string());
     }
     let metadata = fs::metadata(&source).map_err(|_| "Select an item to rename.".to_string())?;
     if !source_path.extra && is_root_artifact(&source_path.inner) && metadata.is_dir() {
@@ -1391,7 +1406,7 @@ fn rename_project_file(
         };
     }
     require_existing_parent(source_path.root, &destination)
-        .map_err(|_| "Docs rename target is unavailable.".to_string())?;
+        .map_err(|_| "Rename target is unavailable.".to_string())?;
     if destination.exists() {
         return Err("A file or folder with that name already exists.".to_string());
     }
@@ -1442,7 +1457,7 @@ fn duplicate_project_file(
     validate_action_path(&source_path, context)?;
     validate_action_path(&destination_path, context)?;
     if parent_relative_path(&source_path.inner) != parent_relative_path(&destination_path.inner) {
-        return Err("Docs duplicate cannot move files.".to_string());
+        return Err("Duplicate cannot move files.".to_string());
     }
     if fs::metadata(&source)
         .map_err(|_| "Select a file to duplicate.".to_string())?
@@ -1534,7 +1549,7 @@ fn normalized_relative_path(path: Option<&str>) -> Result<String, String> {
         return Ok(String::new());
     }
     if trimmed.contains('\0') || trimmed.starts_with('/') || trimmed.contains('\\') {
-        return Err("Docs paths must be project-relative.".to_string());
+        return Err("Paths must be project-relative.".to_string());
     }
     let components = trimmed
         .split('/')
@@ -1544,7 +1559,7 @@ fn normalized_relative_path(path: Option<&str>) -> Result<String, String> {
         .iter()
         .any(|component| *component == "." || *component == "..")
     {
-        return Err("Docs paths must stay inside the project.".to_string());
+        return Err("Paths must stay inside the project.".to_string());
     }
     Ok(components.join("/"))
 }
@@ -1556,10 +1571,10 @@ chain or an outward symlink under one mount can never surface inside the other.
 */
 fn existing_path(path: &DocsPath<'_>) -> Result<PathBuf, String> {
     let target = path.root.join(&path.inner);
-    let resolved = fs::canonicalize(target)
-        .map_err(|_| "Docs paths must stay inside the project.".to_string())?;
+    let resolved =
+        fs::canonicalize(target).map_err(|_| "Paths must stay inside the project.".to_string())?;
     if !resolved.starts_with(path.root) {
-        return Err("Docs paths must stay inside the project.".to_string());
+        return Err("Paths must stay inside the project.".to_string());
     }
     Ok(resolved)
 }
@@ -1570,11 +1585,11 @@ fn writable_path(path: &DocsPath<'_>) -> Result<PathBuf, String> {
         .parent()
         .ok_or_else(|| "Select a project file to save.".to_string())?;
     let ancestor = nearest_existing_ancestor(parent)
-        .ok_or_else(|| "Docs paths must stay inside the project.".to_string())?;
+        .ok_or_else(|| "Paths must stay inside the project.".to_string())?;
     let resolved = fs::canonicalize(ancestor)
-        .map_err(|_| "Docs paths must stay inside the project.".to_string())?;
+        .map_err(|_| "Paths must stay inside the project.".to_string())?;
     if !resolved.starts_with(path.root) {
-        return Err("Docs paths must stay inside the project.".to_string());
+        return Err("Paths must stay inside the project.".to_string());
     }
     Ok(target)
 }
@@ -1583,18 +1598,18 @@ fn operation_path(path: &DocsPath<'_>) -> Result<PathBuf, String> {
     let target = path.root.join(&path.inner);
     if let Ok(resolved) = fs::canonicalize(&target) {
         if !resolved.starts_with(path.root) {
-            return Err("Docs paths must stay inside the project.".to_string());
+            return Err("Paths must stay inside the project.".to_string());
         }
     } else {
         let parent = target
             .parent()
-            .ok_or_else(|| "Docs paths must stay inside the project.".to_string())?;
+            .ok_or_else(|| "Paths must stay inside the project.".to_string())?;
         let ancestor = nearest_existing_ancestor(parent)
-            .ok_or_else(|| "Docs paths must stay inside the project.".to_string())?;
+            .ok_or_else(|| "Paths must stay inside the project.".to_string())?;
         let resolved = fs::canonicalize(ancestor)
-            .map_err(|_| "Docs paths must stay inside the project.".to_string())?;
+            .map_err(|_| "Paths must stay inside the project.".to_string())?;
         if !resolved.starts_with(path.root) {
-            return Err("Docs paths must stay inside the project.".to_string());
+            return Err("Paths must stay inside the project.".to_string());
         }
     }
     Ok(target)

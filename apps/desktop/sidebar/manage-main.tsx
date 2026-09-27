@@ -15,7 +15,9 @@ import '@/packages/core-ui/styles/modals.css';
 installManageCefBridge();
 installWorkareaTheme();
 
-void initializeClientStorage().then(() => import('../views/manage')).catch((error) => {
-  const root = document.getElementById('root');
-  if (root) root.textContent = `Could not load Docs: ${error instanceof Error ? error.message : String(error)}`;
-});
+void initializeClientStorage()
+  .then(() => import('../views/manage'))
+  .catch((error) => {
+    const root = document.getElementById('root');
+    if (root) root.textContent = `Could not load Files: ${error instanceof Error ? error.message : String(error)}`;
+  });

@@ -19,6 +19,8 @@ pub(crate) struct DocsTreeRow {
     /// Indent level in the tree; 0 for search results, which show their folder instead.
     pub(crate) depth: usize,
     pub(crate) expanded: bool,
+    /// A search result's folder, drawn after its name.
+    pub(crate) folder: Option<String>,
 }
 
 fn entry_from_json(value: &Value) -> Option<DocsEntry> {
@@ -77,6 +79,16 @@ fn order_entries_for_tree(entries: Vec<DocsEntry>) -> Vec<DocsEntry> {
         .into_iter()
         .filter_map(|index| slots[index].take())
         .collect()
+}
+
+/// The folder an entry was listed under ("" for the top level), as `order_entries_for_tree`
+/// groups it.
+fn tree_parent(entry: &DocsEntry) -> &str {
+    if entry.depth == 0 {
+        ""
+    } else {
+        parent_path(&entry.path)
+    }
 }
 
 /// The parent directory of a bridge path, or "" for a top-level entry.
@@ -210,87 +222,196 @@ impl GhostexGpuiApp {
         }
     }
 
-    /// Re-lists the tree. The rows already drawn stay until the answer replaces them.
+    /// Re-lists the project's top level and every open folder. The rows already drawn stay until
+    /// the answers replace them; a folder whose listing did not change is left as it is.
     pub(crate) fn native_docs_refresh(&mut self, cx: &mut Context<Self>) {
-        let generation = self.native_docs.generation;
         if self.native_docs.entries.is_empty() {
             self.native_docs.load_state = Some(DocsLoadState::Loading);
         }
-        let request = self.native_docs_request("list", json!({}));
+        let open_folders: Vec<String> = self
+            .native_docs
+            .expanded
+            .iter()
+            .filter(|folder| self.native_docs.loaded_folders.contains(*folder))
+            .cloned()
+            .collect();
+        self.native_docs_list_folder("", cx);
+        for folder in open_folders {
+            self.native_docs_list_folder(&folder, cx);
+        }
+    }
+
+    /// Lists one folder's children ("" for the top level) and puts them in the tree.
+    ///
+    /// CDXC:Docs 2026-09-27 DECISION:
+    /// User: the Files view lists the whole project, so it loads one folder at a time when it is opened ("to keep the file list more performant") instead of walking the project up front.
+    pub(crate) fn native_docs_list_folder(&mut self, folder: &str, cx: &mut Context<Self>) {
+        let generation = self.native_docs.generation;
+        let revision = self
+            .native_docs
+            .folder_revisions
+            .get(folder)
+            .cloned()
+            .unwrap_or_default();
+        let request = self.native_docs_request(
+            "list",
+            json!({ "path": folder, "directoryOnly": true, "revision": revision }),
+        );
+        let folder = folder.to_string();
         self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
             if this.native_docs.generation != generation {
                 return;
             }
             if let Some(error) = response["error"].as_str() {
-                this.native_docs.load_state = Some(DocsLoadState::Error);
-                this.native_docs.error = Some(error.to_string());
-            } else {
-                let entries: Vec<DocsEntry> = response["entries"]
-                    .as_array()
-                    .map(|entries| entries.iter().filter_map(entry_from_json).collect())
-                    .unwrap_or_default();
-                this.native_docs.entries = order_entries_for_tree(entries);
-                if this.native_docs.expand_all {
-                    let all: Vec<String> = this
-                        .native_docs_expandable_folders()
-                        .into_iter()
-                        .map(str::to_string)
-                        .collect();
-                    this.native_docs.expanded.extend(all);
+                if folder.is_empty() {
+                    this.native_docs.load_state = Some(DocsLoadState::Error);
+                    this.native_docs.error = Some(error.to_string());
+                } else {
+                    // The folder went away (renamed, deleted): drop it and what was under it.
+                    this.native_docs_forget_folder(&folder);
                 }
+                this.native_docs_notify(cx);
+                return;
+            }
+            if let Some(revision) = response["revision"].as_str() {
+                this.native_docs
+                    .folder_revisions
+                    .insert(folder.clone(), revision.to_string());
+            }
+            this.native_docs.loaded_folders.insert(folder.clone());
+            if folder.is_empty() {
                 this.native_docs.load_state = Some(DocsLoadState::Ready);
                 this.native_docs.error = None;
             }
+            if response["unchanged"].as_bool() == Some(true) {
+                this.native_docs_notify(cx);
+                return;
+            }
+            let children: Vec<DocsEntry> = response["entries"]
+                .as_array()
+                .map(|entries| entries.iter().filter_map(entry_from_json).collect())
+                .unwrap_or_default();
+            this.native_docs_apply_folder_listing(&folder, children);
             this.native_docs_notify(cx);
         });
     }
 
-    /// The rows the Project Docs tree draws: the tree with collapsed folders' children hidden, or,
-    /// while searching, every entry whose path contains the query plus the folders above it, all
-    /// open (`filterManageEntriesForSearch`).
+    /// Replaces `folder`'s direct children with `children`. A child folder that is gone takes
+    /// everything listed under it along; one that is still there keeps its listed children.
+    fn native_docs_apply_folder_listing(&mut self, folder: &str, children: Vec<DocsEntry>) {
+        let kept: HashSet<&str> = children.iter().map(|child| child.path.as_str()).collect();
+        let gone: Vec<String> = self
+            .native_docs
+            .entries
+            .iter()
+            .filter(|entry| {
+                entry.kind == DocsEntryKind::Directory
+                    && tree_parent(entry) == folder
+                    && !kept.contains(entry.path.as_str())
+            })
+            .map(|entry| entry.path.clone())
+            .collect();
+        for path in &gone {
+            self.native_docs_forget_folder(path);
+        }
+        let mut entries: Vec<DocsEntry> = std::mem::take(&mut self.native_docs.entries)
+            .into_iter()
+            .filter(|entry| tree_parent(entry) != folder)
+            .collect();
+        entries.extend(children);
+        self.native_docs.entries = order_entries_for_tree(entries);
+    }
+
+    /// Drops a folder that no longer exists: its listed contents, and its open and loaded marks.
+    fn native_docs_forget_folder(&mut self, folder: &str) {
+        let prefix = format!("{folder}/");
+        let state = &mut self.native_docs;
+        state
+            .entries
+            .retain(|entry| entry.path != folder && !entry.path.starts_with(&prefix));
+        let under = |path: &String| path == folder || path.starts_with(&prefix);
+        state.expanded.retain(|path| !under(path));
+        state.loaded_folders.retain(|path| !under(path));
+        state.folder_revisions.retain(|path, _| !under(path));
+    }
+
+    /// Runs the project-wide search for the search box's text a moment after typing stops.
+    pub(crate) fn native_docs_schedule_search(&mut self, cx: &mut Context<Self>) {
+        let query = self.native_docs.search_query.trim().to_string();
+        if query.is_empty() {
+            self.native_docs.search_task = None;
+            self.native_docs.search_results = None;
+            self.native_docs.search_results_query.clear();
+            return;
+        }
+        let generation = self.native_docs.generation;
+        self.native_docs.search_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(150))
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.native_docs.generation != generation
+                    || this.native_docs.search_query.trim() != query
+                {
+                    return;
+                }
+                let request = this.native_docs_request("search", json!({ "query": query }));
+                this.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+                    if this.native_docs.generation != generation
+                        || this.native_docs.search_query.trim() != query
+                    {
+                        return;
+                    }
+                    this.native_docs.search_results = Some(
+                        response["entries"]
+                            .as_array()
+                            .map(|entries| entries.iter().filter_map(entry_from_json).collect())
+                            .unwrap_or_default(),
+                    );
+                    this.native_docs.search_truncated =
+                        response["truncated"].as_bool().unwrap_or(false);
+                    this.native_docs.search_incomplete =
+                        response["incomplete"].as_bool().unwrap_or(false);
+                    this.native_docs.search_results_query = query;
+                    this.native_docs_notify(cx);
+                });
+            });
+        }));
+    }
+
+    /// The rows the files list draws: the tree with collapsed folders' children hidden, or, while
+    /// searching, the project-wide search's matches, each with its folder.
     pub(crate) fn native_docs_tree_rows(&self) -> Vec<DocsTreeRow> {
         let state = &self.native_docs;
-        let query = state.search_query.trim().to_lowercase();
-        let searching = !query.is_empty();
-        let visible: Option<HashSet<&str>> = searching.then(|| {
-            let paths: HashSet<&str> = state
-                .entries
+        if !state.search_query.trim().is_empty() {
+            return state
+                .search_results
                 .iter()
-                .map(|entry| entry.path.as_str())
+                .flatten()
+                .map(|entry| DocsTreeRow {
+                    path: entry.path.clone(),
+                    display_path: entry.display_path.clone(),
+                    name: entry.name.clone(),
+                    kind: entry.kind,
+                    depth: 0,
+                    expanded: false,
+                    folder: Some(parent_path(&entry.display_path).to_string())
+                        .filter(|folder| !folder.is_empty()),
+                })
                 .collect();
-            let mut visible = HashSet::new();
-            for entry in &state.entries {
-                if !entry.path.to_lowercase().contains(&query) {
-                    continue;
-                }
-                visible.insert(entry.path.as_str());
-                let mut parent = parent_path(&entry.path);
-                while !parent.is_empty() {
-                    if let Some(path) = paths.get(parent) {
-                        visible.insert(path);
-                    }
-                    parent = parent_path(parent);
-                }
-            }
-            visible
-        });
+        }
         let mut rows = Vec::new();
         // The depth below which rows are hidden because an ancestor is collapsed.
         let mut hidden_below: Option<usize> = None;
         for entry in &state.entries {
-            if let Some(visible) = visible.as_ref()
-                && !visible.contains(entry.path.as_str())
-            {
-                continue;
-            }
             if let Some(depth) = hidden_below {
                 if entry.depth > depth {
                     continue;
                 }
                 hidden_below = None;
             }
-            let expanded = entry.kind == DocsEntryKind::Directory
-                && (searching || state.expanded.contains(&entry.path));
+            let expanded =
+                entry.kind == DocsEntryKind::Directory && state.expanded.contains(&entry.path);
             if entry.kind == DocsEntryKind::Directory && !expanded {
                 hidden_below = Some(entry.depth);
             }
@@ -301,6 +422,7 @@ impl GhostexGpuiApp {
                 kind: entry.kind,
                 depth: entry.depth,
                 expanded,
+                folder: None,
             });
         }
         rows
@@ -338,13 +460,14 @@ impl GhostexGpuiApp {
             return;
         };
         self.native_docs_clear_search(window, cx);
-        self.native_docs_reveal_in_tree(&active);
+        self.native_docs_reveal_in_tree(&active, cx);
         self.native_docs.reveal_request = Some(active);
         self.native_docs_notify(cx);
     }
 
     pub(crate) fn native_docs_clear_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.native_docs.search_query.clear();
+        self.native_docs_schedule_search(cx);
         if let Some(search) = self.native_docs.search.clone() {
             search.update(cx, |search, cx| search.set_value("", window, cx));
         }
@@ -359,19 +482,32 @@ impl GhostexGpuiApp {
         self.native_docs_notify(cx);
     }
 
+    /// Opens or closes a folder; opening one lists it (again), so it shows what is there now.
     pub(crate) fn native_docs_toggle_folder(&mut self, path: &str, cx: &mut Context<Self>) {
         if !self.native_docs.expanded.remove(path) {
             self.native_docs.expanded.insert(path.to_string());
+            self.native_docs_list_folder(path, cx);
         }
         self.native_docs_notify(cx);
     }
 
-    /// Opens every folder above `path` so its row is drawn.
-    pub(crate) fn native_docs_reveal_in_tree(&mut self, path: &str) {
+    /// Opens every folder above `path` so its row is drawn, listing the ones not listed yet.
+    pub(crate) fn native_docs_reveal_in_tree(&mut self, path: &str, cx: &mut Context<Self>) {
+        if Self::native_docs_is_outside_file(path) {
+            return;
+        }
         let mut parent = parent_path(path);
+        let mut unlisted = Vec::new();
         while !parent.is_empty() {
             self.native_docs.expanded.insert(parent.to_string());
+            if !self.native_docs.loaded_folders.contains(parent) {
+                unlisted.push(parent.to_string());
+            }
             parent = parent_path(parent);
+        }
+        // Outermost first, so each answer lands under a folder that is already in the tree.
+        for folder in unlisted.into_iter().rev() {
+            self.native_docs_list_folder(&folder, cx);
         }
     }
 

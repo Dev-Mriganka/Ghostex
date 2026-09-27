@@ -193,19 +193,19 @@ export function ProjectsSettingsPanel({
         {search.tab.isSearching && !hasVisibleSettingsSearchResult(search.tab) ? searchEmptyState : null}
         {shouldShowSettingsSection(search.sections.docs) ? (
           <SettingsSection
-            description='Docs scans docs, artifacts, ai, and tmp by default, including those folders one level down. Add more project-relative folders here.'
-            title='Docs'
+            description='The Files view scans docs, artifacts, ai, and tmp by default, including those folders one level down. Add more project-relative folders here.'
+            title='Files'
           >
             {/*
               CDXC:Docs 2026-06-30-11:42:
               Docs folder scanning is a global Projects setting, not selected-project metadata. Keep it above the project selector and accept comma-separated project-relative folder names so entries like "plans, my documents, folders/folder name" scan matching folders under each project root.
-              Give this card an explicit Docs title so users coming from the Docs sidebar shortcut know the folder list controls Docs file discovery.
+              Give this card the view's own title (Files, Docs until CDXC:Docs 2026-09-27) so users coming from that view know the folder list controls which files it lists.
 
               CDXC:Docs 2026-08-09:
               This list is project-relative again. A Docs directory adds its own whole tree beside these folders instead of being narrowed by them, so the copy must not imply the two interact.
             */}
             <SettingRow
-              description='Comma-separated project-relative folders to scan recursively in Docs. Spaces around folder names are ignored. Leave blank to scan docs/, artifacts/, ai/, and tmp/ at the project root and one folder down, plus root Markdown, HTML, and Excalidraw files. A Docs directory set below adds its whole tree on top of this.'
+              description='Comma-separated project-relative folders to scan recursively in the Files view. Spaces around folder names are ignored. Leave blank to scan docs/, artifacts/, ai/, and tmp/ at the project root and one folder down, plus root Markdown, HTML, and Excalidraw files. A Docs directory set below adds its whole tree on top of this.'
               htmlFor={docsFoldersId}
               label='Docs folders'
               wide
@@ -288,7 +288,7 @@ export function ProjectsSettingsPanel({
               with the same additive meaning.
             */}
             <SettingRow
-              description="Extra folder every project's Docs surface shows unless the project sets its own. It is added alongside that project's own README, CLAUDE.md, docs/ and Docs folders; it never replaces them. It appears as one top-level folder named after itself. Leave blank to add nothing."
+              description="Extra folder every project's Files view shows unless the project sets its own. It is added alongside that project's own README, CLAUDE.md, docs/ and Docs folders; it never replaces them. It appears as one top-level folder named after itself. Leave blank to add nothing."
               htmlFor={globalDocsDirectoryId}
               label='Docs directory'
               wide
@@ -499,7 +499,7 @@ export function ProjectsSettingsPanel({
                 ever adds a tree beside them — it never replaces them.
               */}
               <SettingRow
-                description="Extra folder this project's Docs surface shows, in addition to the project's own docs. Leave blank to use the Global Default."
+                description="Extra folder this project's Files view shows, in addition to the project's own docs. Leave blank to use the Global Default."
                 htmlFor={docsDirectoryId}
                 label='Docs directory'
                 labelAddon={isDocsDirectoryInherited ? <InheritedSettingBadge /> : null}

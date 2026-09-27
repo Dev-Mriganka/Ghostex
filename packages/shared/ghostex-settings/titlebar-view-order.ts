@@ -37,7 +37,7 @@ export function titlebarViewOrderItems(
     { id: 'browser', title: 'Browser', source: 'Built-in', visible: !settings.browserViewTabHidden },
     { id: 'kanban', title: 'Kanban', source: 'Built-in', visible: !settings.kanbanViewTabHidden },
     { id: 'automate', title: 'Automate', source: 'Built-in', visible: !settings.automateViewTabHidden },
-    { id: 'manage', title: 'Docs', source: 'Built-in', visible: !settings.docsViewTabHidden },
+    { id: 'manage', title: 'Files', source: 'Built-in', visible: !settings.docsViewTabHidden },
     { id: 'terminal', title: 'Terminal', source: 'Built-in', visible: !settings.terminalViewTabHidden },
     { id: 'extension:storybook', title: 'Storybook', source: 'Built-in', visible: !settings.storybookViewTabHidden },
   ];

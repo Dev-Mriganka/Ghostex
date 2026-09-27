@@ -1,6 +1,6 @@
-//! The browser area: HTML files and Excalidraw drawings still need a browser engine, so the Docs
-//! page runs in embed mode (`apps/desktop/views/manage/embed.tsx`) as a normal child of the
-//! document area, showing that one file.
+//! The browser area: HTML files, Excalidraw drawings, video and audio need a browser engine, so
+//! the Docs page runs in embed mode (`apps/desktop/views/manage/embed.tsx`) as a normal child of
+//! the document area, showing that one file.
 
 use gpui::{AnyElement, Context, IntoElement as _};
 
@@ -16,9 +16,14 @@ impl GhostexGpuiApp {
         snapshot: &crate::GpuiProjectSnapshot,
     ) -> Option<ProjectWorkareaRealRuntimeUrl> {
         let document = self.native_docs.active_document()?;
-        if !matches!(document.kind, DocsFileKind::Html | DocsFileKind::Excalidraw) {
+        if !document.kind.uses_browser_area() {
             return None;
         }
+        let media = match document.kind {
+            DocsFileKind::Video => "video",
+            DocsFileKind::Audio => "audio",
+            _ => "",
+        };
         let base =
             crate::app::helpers::manage_workarea_runtime_url_from_project_snapshot(snapshot)?;
         ProjectWorkareaRealRuntimeUrl::from_authorized_runtime_url(
@@ -32,6 +37,7 @@ impl GhostexGpuiApp {
                         if document.html_annotate { "1" } else { "0" }.to_string(),
                     ),
                     ("revision", document.embed_revision.to_string()),
+                    ("media", media.to_string()),
                 ],
             ),
         )
@@ -52,9 +58,7 @@ impl GhostexGpuiApp {
         let key = (
             self.native_docs
                 .active_document()
-                .filter(|document| {
-                    matches!(document.kind, DocsFileKind::Html | DocsFileKind::Excalidraw)
-                })
+                .filter(|document| document.kind.uses_browser_area())
                 .map(|document| {
                     (
                         document.path.clone(),

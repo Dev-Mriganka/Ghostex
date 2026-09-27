@@ -33,6 +33,8 @@ export type PortlessProtocol = 'https' | 'http';
  */
 export type WebLinkOpenTarget = 'internal-browser' | 'system-default-browser';
 export type ChatFileOpenView = 'docs' | 'code';
+/** Where an image, video or audio file link opens: the Files view or the system's own app. */
+export type MediaFileOpenTarget = 'files' | 'system-app';
 export type DefaultEditorCommand =
   'code' | 'code-insiders' | 'zed' | 'zeditor' | 'cursor' | 'windsurf' | 'codium' | 'subl' | 'other';
 export type CommandsPanelSide = 'bottom' | 'right';
@@ -316,6 +318,13 @@ export type ghostexSettings = {
   markdownFileOpenView: ChatFileOpenView;
   /** Preferred workarea for HTML file links clicked in session chat. */
   htmlFileOpenView: ChatFileOpenView;
+  /**
+   * CDXC:Docs 2026-09-27 DECISION:
+   * User: images, SVGs, videos and audio clicked in agent chat or the terminal open in the Files view by default, with a setting per kind to open them in the system app instead. A video or audio format the Files view's browser cannot play still opens in the system app. Supersedes CDXC:SessionChat 2026-09-24, where chat videos and audio always opened in the system app.
+   */
+  imageFileOpenTarget: MediaFileOpenTarget;
+  videoFileOpenTarget: MediaFileOpenTarget;
+  audioFileOpenTarget: MediaFileOpenTarget;
   /**
    * CDXC:Settings 2026-06-28-08:01:
    * Show Advanced is a persisted Settings browsing preference. When users enable

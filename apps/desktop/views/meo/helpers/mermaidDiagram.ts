@@ -73,7 +73,7 @@ export class MermaidDiagramWidget extends WidgetType {
                     webkit?: { messageHandlers?: { ghostexManageFiles?: { postMessage: (message: unknown) => void } } };
                   }
                 ).webkit?.messageHandlers?.ghostexManageFiles;
-                if (!host) throw new Error('Docs host is unavailable.');
+                if (!host) throw new Error('Files host is unavailable.');
                 host.postMessage({ action: 'openMermaidDiagram', source });
               }
             : undefined,

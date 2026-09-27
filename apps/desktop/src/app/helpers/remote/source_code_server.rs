@@ -340,6 +340,7 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
     additional_docs_folders_text: &str,
     reference: &GpuiRemoteProjectReference,
     target: Option<&GpuiRemoteGxserverRequestTarget>,
+    project_scope: bool,
 ) -> ManageFilesBridgeOutcome {
     /*
     CDXC:Docs 2026-08-06:
@@ -356,7 +357,7 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
     let request_id = manage_request_string(&request, "requestId").unwrap_or_default();
     let result = (|| {
         let snapshot =
-            snapshot.ok_or_else(|| "No active Docs project is available.".to_string())?;
+            snapshot.ok_or_else(|| "No active project is available for Files.".to_string())?;
         manage_validate_request_identity(&request, snapshot)?;
         if !matches!(
             action.as_str(),
@@ -372,15 +373,18 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
                 | "move"
                 | "copyFullPath"
                 | "addToSessionContext"
+                | "search"
         ) {
-            return if action == "revealInFinder" {
-                Err("Open Location is unavailable for remote Docs items.".to_string())
+            return if action == "openWithSystemApp" {
+                Err("Files on a remote computer can't open in this computer's apps.".to_string())
+            } else if action == "revealInFinder" {
+                Err("Open Location is unavailable for remote files.".to_string())
             } else {
-                Err("Unsupported Docs file action.".to_string())
+                Err("Unsupported Files action.".to_string())
             };
         }
         let target =
-            target.ok_or_else(|| "Reconnect the remote machine to use Docs.".to_string())?;
+            target.ok_or_else(|| "Reconnect the remote machine to use Files.".to_string())?;
         let mut params = serde_json::Map::new();
         params.insert(
             "action".to_string(),
@@ -398,7 +402,13 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
             "additionalDocsFolders".to_string(),
             serde_json::Value::String(additional_docs_folders_text.to_string()),
         );
-        for key in ["path", "newPath", "content", "revision"] {
+        if project_scope {
+            params.insert(
+                "scope".to_string(),
+                serde_json::Value::String("project".to_string()),
+            );
+        }
+        for key in ["path", "newPath", "content", "revision", "query"] {
             if let Some(value) = manage_request_string(&request, key) {
                 params.insert(key.to_string(), serde_json::Value::String(value));
             }
@@ -421,7 +431,7 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
                 .and_then(serde_json::Value::as_str)
                 != Some(request_id.as_str())
         {
-            return Err("The remote Docs service returned an invalid response.".to_string());
+            return Err("The remote Files service returned an invalid response.".to_string());
         }
         Ok(response)
     })();
@@ -433,6 +443,7 @@ pub(crate) fn read_remote_manage_docs_resource(
     project_id: &str,
     relative_path: &str,
     additional_docs_folders_text: &str,
+    project_scope: bool,
 ) -> Option<Vec<u8>> {
     let target = target?;
     let request_id = format!(
@@ -448,6 +459,7 @@ pub(crate) fn read_remote_manage_docs_resource(
             "path": relative_path,
             "projectId": project_id,
             "requestId": request_id,
+            "scope": if project_scope { "project" } else { "docs" },
         }),
         Duration::from_secs(30),
     )

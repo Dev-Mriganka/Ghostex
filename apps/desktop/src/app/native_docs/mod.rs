@@ -21,6 +21,7 @@ pub(crate) mod live;
 pub(crate) mod notes;
 pub(crate) mod notes_view;
 pub(crate) mod notes_windows;
+pub(crate) mod open_file;
 pub(crate) mod palette;
 pub(crate) mod render;
 pub(crate) mod resources;

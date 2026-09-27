@@ -180,7 +180,7 @@ export function ManageSidebarActions({
       <button
         aria-expanded={menuOpen}
         aria-haspopup='menu'
-        aria-label='Docs sidebar menu'
+        aria-label='Files sidebar menu'
         className='manage-icon-button'
         onClick={() => {
           setMenuOpen((current) => !current);

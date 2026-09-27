@@ -78,7 +78,7 @@ pub(crate) fn authorize_manage_chat_file(project_id: &str, file: &Path) -> Resul
             drop(output);
             fs::rename(&temporary, &destination)
         };
-        persist().map_err(|error| format!("Could not remember this file for Docs: {error}"))?;
+        persist().map_err(|error| format!("Could not remember this file for Files: {error}"))?;
     }
     Ok(format!(
         "{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/{id}/{}",

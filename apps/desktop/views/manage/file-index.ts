@@ -2,7 +2,7 @@ import { storageScope } from '@/packages/client-storage';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import type { ProjectDocsFileEntry, ProjectDocsRequest, ProjectDocsResponse } from '@/packages/shared/project-docs';
 
-const clientStorage = storageScope(["docsIndex"]);
+const clientStorage = storageScope(['docsIndex']);
 
 type Entry = ProjectDocsFileEntry;
 type Request = (request: Omit<ProjectDocsRequest, 'requestId'>) => Promise<ProjectDocsResponse>;
@@ -187,7 +187,7 @@ export class ManageFileIndex {
   completeEntries = async (): Promise<Entry[]> => {
     await this.refresh(true);
     if (!this.snapshot.initialized || this.snapshot.failures.size) {
-      throw new Error(this.snapshot.error ?? 'Wait for Docs to finish loading folders.');
+      throw new Error(this.snapshot.error ?? 'Wait for Files to finish loading folders.');
     }
     return this.snapshot.entries;
   };
@@ -251,7 +251,7 @@ export class ManageFileIndex {
           throw new Error('Docs folders changed while indexing. Refreshing…');
         }
         if (response.unchanged && !this.directories.has(path))
-          throw new Error('Docs returned an unchanged folder without a cached listing.');
+          throw new Error('The Files service returned an unchanged folder without a cached listing.');
         const root = rootFor(path);
         const scannedEntries =
           response.scannedEntries ?? response.entries?.length ?? old?.scannedEntries ?? old?.entries.length ?? 0;

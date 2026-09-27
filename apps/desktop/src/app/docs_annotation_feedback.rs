@@ -420,7 +420,7 @@ impl GhostexGpuiApp {
             self.dispatch_gpui_app_modal_toast(
                 "warning",
                 "Could not open the reply for review",
-                "The Docs view is not available for this project.",
+                "The Files view is not available for this project.",
                 cx,
             );
             return;

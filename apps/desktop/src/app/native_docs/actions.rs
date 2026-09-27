@@ -202,7 +202,7 @@ impl GhostexGpuiApp {
             let request = this.native_docs_request(&action, json!({ "path": path }));
             this.run_docs_files_request(request.to_string(), cx, |this, response, cx| {
                 if let Some(error) = response["error"].as_str() {
-                    this.dispatch_gpui_workspace_action_toast("error", "Docs", error, cx);
+                    this.dispatch_gpui_workspace_action_toast("error", "Files", error, cx);
                 }
             });
         };
@@ -428,7 +428,7 @@ impl GhostexGpuiApp {
                 return;
             }
             this.native_docs.expanded.insert(directory.clone());
-            this.native_docs_reveal_in_tree(&path);
+            this.native_docs_reveal_in_tree(&path, cx);
             this.native_docs_open(&path, &path, cx);
             this.native_docs_refresh(cx);
         });
@@ -853,15 +853,20 @@ impl GhostexGpuiApp {
         if self.native_docs.search.is_some() {
             return;
         }
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search"));
+        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search or paste a path"));
         let subscription = cx.subscribe_in(
             &search,
             window,
-            |this: &mut Self, input, event: &InputEvent, _window, cx| {
+            |this: &mut Self, input, event: &InputEvent, window, cx| {
+                if matches!(event, InputEvent::PressEnter { .. }) {
+                    this.native_docs_submit_search(window, cx);
+                    return;
+                }
                 if matches!(event, InputEvent::Change) {
                     let query = input.read(cx).value().to_string();
                     if query != this.native_docs.search_query {
                         this.native_docs.search_query = query;
+                        this.native_docs_schedule_search(cx);
                         this.native_docs_notify(cx);
                     }
                 }

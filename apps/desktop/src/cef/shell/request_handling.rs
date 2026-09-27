@@ -203,10 +203,12 @@ fn resolve_manage_docs_local_resource(
     Some(candidate)
 }
 
-/// Opens a Docs resource. Runs on a CEF worker sequence, never the IO thread.
+/// Opens a Docs resource, from `range_header`'s first byte range when the request carries a
+/// satisfiable one. Runs on a CEF worker sequence, never the IO thread.
 pub(crate) fn open_manage_docs_resource(
     source: &ManageDocsResourceSource,
     relative_path: &str,
+    range_header: Option<&str>,
 ) -> Option<ManageDocsResourceBody> {
     match source {
         ManageDocsResourceSource::Local {
@@ -220,15 +222,62 @@ pub(crate) fn open_manage_docs_resource(
                 resolved_root,
                 relative_path,
             )?;
+            let total = std::fs::metadata(&candidate)
+                .ok()
+                .map(|metadata| metadata.len());
             let file_name = candidate.to_string_lossy();
             let stream = stream_reader_create_for_file(Some(&CefString::from(file_name.as_ref())))?;
-            Some(ManageDocsResourceBody::Stream(stream))
+            let range = total.and_then(|total| manage_docs_byte_range(range_header?, total));
+            // SEEK_SET; a stream that cannot seek answers the whole file instead.
+            let range = range.filter(|(start, _)| stream.seek(*start as i64, 0) == 0);
+            Some(ManageDocsResourceBody::new(
+                ManageDocsResourceBytes::Stream(stream),
+                total,
+                range,
+            ))
         }
         ManageDocsResourceSource::Remote { loader } => {
             let data = loader(relative_path)?;
-            Some(ManageDocsResourceBody::Buffer { data, offset: 0 })
+            let total = data.len() as u64;
+            let range = range_header.and_then(|header| manage_docs_byte_range(header, total));
+            let offset = range.map(|(start, _)| start as usize).unwrap_or(0);
+            Some(ManageDocsResourceBody::new(
+                ManageDocsResourceBytes::Buffer { data, offset },
+                Some(total),
+                range,
+            ))
         }
     }
+}
+
+/// The inclusive byte range a `Range: bytes=…` header asks of a `total`-byte resource: its first
+/// range only, clamped to the end, `None` when it is malformed or starts past the end.
+///
+/// CDXC:Docs 2026-09-27 WHY:
+/// The Files view plays video and audio in the embed page from this origin; a media element seeks by asking for byte ranges, and without a 206 answer it could only play from the start and would read a long video whole.
+fn manage_docs_byte_range(header: &str, total: u64) -> Option<(u64, u64)> {
+    let spec = header
+        .trim()
+        .strip_prefix("bytes=")?
+        .split(',')
+        .next()?
+        .trim();
+    let (start, end) = spec.split_once('-')?;
+    if total == 0 {
+        return None;
+    }
+    let (start, end) = match (start.trim(), end.trim()) {
+        ("", suffix) => {
+            let suffix = suffix.parse::<u64>().ok().filter(|suffix| *suffix > 0)?;
+            (total.saturating_sub(suffix), total - 1)
+        }
+        (start, "") => (start.parse::<u64>().ok()?, total - 1),
+        (start, end) => (
+            start.parse::<u64>().ok()?,
+            end.parse::<u64>().ok()?.min(total - 1),
+        ),
+    };
+    (start <= end && start < total).then_some((start, end))
 }
 
 /// A Docs resource's bytes, for the native Docs view (images). Same roots and rules as the page's
@@ -253,7 +302,7 @@ pub(crate) fn read_manage_docs_resource(
     }
 }
 
-pub(crate) enum ManageDocsResourceBody {
+pub(crate) enum ManageDocsResourceBytes {
     /// Local files stream from disk so a large Docs asset is never buffered whole.
     Stream(StreamReader),
     Buffer {
@@ -262,18 +311,62 @@ pub(crate) enum ManageDocsResourceBody {
     },
 }
 
+/// What one Docs resource response sends: the bytes, the resource's whole size when known, and
+/// the byte range answered for a `Range` request.
+pub(crate) struct ManageDocsResourceBody {
+    bytes: ManageDocsResourceBytes,
+    total: Option<u64>,
+    range: Option<(u64, u64)>,
+    remaining: u64,
+}
+
 impl ManageDocsResourceBody {
-    pub(crate) fn response_length(&self) -> i64 {
-        match self {
-            Self::Stream(_) => -1,
-            Self::Buffer { data, .. } => data.len() as i64,
+    fn new(bytes: ManageDocsResourceBytes, total: Option<u64>, range: Option<(u64, u64)>) -> Self {
+        let remaining = match (range, total) {
+            (Some((start, end)), _) => end - start + 1,
+            (None, Some(total)) => total,
+            (None, None) => u64::MAX,
+        };
+        Self {
+            bytes,
+            total,
+            range,
+            remaining,
         }
     }
 
+    pub(crate) fn response_length(&self) -> i64 {
+        match (self.range, self.total) {
+            (Some(_), _) | (None, Some(_)) => self.remaining as i64,
+            (None, None) => -1,
+        }
+    }
+
+    /// `(start, end, total)` when this response answers a byte range.
+    pub(crate) fn content_range(&self) -> Option<(u64, u64, u64)> {
+        let (start, end) = self.range?;
+        Some((start, end, self.total?))
+    }
+
     pub(crate) fn read(&mut self, data_out: *mut u8, bytes_to_read: usize) -> usize {
-        match self {
-            Self::Stream(stream) => stream.read(data_out, 1, bytes_to_read),
-            Self::Buffer { data, offset } => {
+        let bytes_to_read =
+            bytes_to_read.min(usize::try_from(self.remaining).unwrap_or(usize::MAX));
+        if bytes_to_read == 0 {
+            return 0;
+        }
+        let count = Self::read_bytes(&mut self.bytes, data_out, bytes_to_read);
+        self.remaining = self.remaining.saturating_sub(count as u64);
+        count
+    }
+
+    fn read_bytes(
+        bytes: &mut ManageDocsResourceBytes,
+        data_out: *mut u8,
+        bytes_to_read: usize,
+    ) -> usize {
+        match bytes {
+            ManageDocsResourceBytes::Stream(stream) => stream.read(data_out, 1, bytes_to_read),
+            ManageDocsResourceBytes::Buffer { data, offset } => {
                 let available = data.len().saturating_sub(*offset);
                 let count = available.min(bytes_to_read);
                 if count > 0 {
@@ -293,6 +386,7 @@ wrap_resource_handler! {
     pub(crate) struct GhostexManageDocsResourceHandler {
         source: ManageDocsResourceSource,
         relative_path: String,
+        range_header: Option<String>,
         body: Arc<Mutex<Option<ManageDocsResourceBody>>>,
     }
 
@@ -309,7 +403,11 @@ wrap_resource_handler! {
             if let Some(handle_request) = handle_request {
                 *handle_request = 1;
             }
-            let Some(opened) = open_manage_docs_resource(&self.source, &self.relative_path) else {
+            let Some(opened) = open_manage_docs_resource(
+                &self.source,
+                &self.relative_path,
+                self.range_header.as_deref(),
+            ) else {
                 // Outside the Docs roots or unreadable: cancel the request.
                 return 0;
             };
@@ -329,8 +427,18 @@ wrap_resource_handler! {
             let Some(response) = response else {
                 return;
             };
-            response.set_status(200);
-            response.set_status_text(Some(&CefString::from("OK")));
+            let content_range = self
+                .body
+                .lock()
+                .ok()
+                .and_then(|body| body.as_ref().and_then(ManageDocsResourceBody::content_range));
+            if content_range.is_some() {
+                response.set_status(206);
+                response.set_status_text(Some(&CefString::from("Partial Content")));
+            } else {
+                response.set_status(200);
+                response.set_status_text(Some(&CefString::from("OK")));
+            }
             response.set_mime_type(Some(&CefString::from(
                 get_mime_type(&self.relative_path).as_str(),
             )));
@@ -346,6 +454,18 @@ wrap_resource_handler! {
                     Some(&CefString::from("Cache-Control")),
                     Some(&CefString::from("no-store")),
                 );
+                string_multimap_append(
+                    Some(headers),
+                    Some(&CefString::from("Accept-Ranges")),
+                    Some(&CefString::from("bytes")),
+                );
+                if let Some((start, end, total)) = content_range {
+                    string_multimap_append(
+                        Some(headers),
+                        Some(&CefString::from("Content-Range")),
+                        Some(&CefString::from(format!("bytes {start}-{end}/{total}").as_str())),
+                    );
+                }
                 response.set_header_map(Some(headers));
             }
             if let Some(response_length) = response_length {
@@ -428,11 +548,15 @@ wrap_resource_request_handler! {
             _frame: Option<&mut Frame>,
             request: Option<&mut Request>,
         ) -> Option<ResourceHandler> {
-            let request_url = CefString::from(&request?.url()).to_string();
+            let request = request?;
+            let request_url = CefString::from(&request.url()).to_string();
             let relative_path = manage_docs_resource_relative_path(&request_url)?;
+            let range_header = CefString::from(&request.header_by_name(Some(&CefString::from("Range"))))
+                .to_string();
             Some(GhostexManageDocsResourceHandler::new(
                 self.source.clone(),
                 relative_path,
+                (!range_header.trim().is_empty()).then_some(range_header),
                 Arc::new(Mutex::new(None)),
             ))
         }

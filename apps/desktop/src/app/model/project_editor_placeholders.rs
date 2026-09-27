@@ -111,8 +111,8 @@ impl ProjectEditorSleepingPlaceholderSignature {
                 "Automate shell state is retained. Activate this surface to restore it.",
             ),
             TitlebarMode::Manage => (
-                "Docs is sleeping",
-                "Docs shell state is retained. Activate this surface to restore it.",
+                "Files is sleeping",
+                "Files shell state is retained. Activate this surface to restore it.",
             ),
             TitlebarMode::Extension(_) => ("View is sleeping", "Select this view to wake it."),
             // A Ghostex page is drawn by GPUI, so it never sleeps and has no sleeping placeholder.

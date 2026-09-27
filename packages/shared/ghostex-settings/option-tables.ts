@@ -7,6 +7,7 @@ import {
   type AppShotsHotkey,
   type AutoSleepIdleMinutes,
   type ChatFileOpenView,
+  type MediaFileOpenTarget,
   type CommandsPanelSide,
   type DefaultEditorCommand,
   type GhosttyConfirmCloseSurface,
@@ -39,11 +40,21 @@ export const CHAT_FILE_OPEN_VIEW_OPTIONS: ReadonlyArray<{
   label: string;
   value: ChatFileOpenView;
 }> = [
-  { label: 'Docs', value: 'docs' },
+  { label: 'Files', value: 'docs' },
   { label: 'Code', value: 'code' },
 ];
 export const DEFAULT_CHAT_FILE_OPEN_VIEW: ChatFileOpenView = 'docs';
 export const CHAT_FILE_OPEN_VIEW_SET = new Set(CHAT_FILE_OPEN_VIEW_OPTIONS.map((option) => option.value));
+
+export const MEDIA_FILE_OPEN_TARGET_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: MediaFileOpenTarget;
+}> = [
+  { label: 'Files', value: 'files' },
+  { label: 'System App', value: 'system-app' },
+];
+export const DEFAULT_MEDIA_FILE_OPEN_TARGET: MediaFileOpenTarget = 'files';
+export const MEDIA_FILE_OPEN_TARGET_SET = new Set(MEDIA_FILE_OPEN_TARGET_OPTIONS.map((option) => option.value));
 
 export const SIDEBAR_THEME_SETTING_OPTIONS: ReadonlyArray<{
   label: string;

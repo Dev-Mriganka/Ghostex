@@ -15,6 +15,10 @@ impl GhostexGpuiApp {
         display_path: &str,
         cx: &mut Context<Self>,
     ) {
+        if DocsFileKind::for_path(path) == DocsFileKind::SystemApp {
+            self.native_docs_open_with_system_app(path, cx);
+            return;
+        }
         if !super::entry::is_review_path(path) {
             self.native_docs_drop_reviews(cx);
         }
@@ -42,9 +46,14 @@ impl GhostexGpuiApp {
         };
         if kind == DocsFileKind::Image {
             self.native_docs_read_image(path, cx);
-            return;
-        }
-        if matches!(kind, DocsFileKind::Html | DocsFileKind::Excalidraw) {
+            if !self
+                .native_docs
+                .document(path)
+                .is_some_and(|document| document.svg_source)
+            {
+                return;
+            }
+        } else if kind.uses_browser_area() {
             if let Some(document) = self.native_docs.document_mut(path) {
                 document.load = DocsDocumentLoad::Ready;
             }
@@ -61,8 +70,45 @@ impl GhostexGpuiApp {
         });
     }
 
+    /// Opens a file Files does not show (a PDF, an `.mp4` the embedded browser cannot play, a
+    /// binary) in the system's own app.
+    pub(crate) fn native_docs_open_with_system_app(&mut self, path: &str, cx: &mut Context<Self>) {
+        let request = self.native_docs_request("openWithSystemApp", json!({ "path": path }));
+        self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            if let Some(error) = response["error"].as_str() {
+                this.dispatch_gpui_workspace_action_toast(
+                    "error",
+                    "Couldn't open the file",
+                    error,
+                    cx,
+                );
+            }
+        });
+    }
+
+    /// SVG images: switches between the picture and its source in the code editor.
+    pub(crate) fn native_docs_toggle_svg_source(&mut self, path: &str, cx: &mut Context<Self>) {
+        let Some(document) = self.native_docs.document_mut(path) else {
+            return;
+        };
+        document.svg_source = !document.svg_source;
+        let needs_text = document.svg_source && document.editor.is_none();
+        if needs_text {
+            let generation = self.native_docs.generation;
+            let request = self.native_docs_request("read", json!({ "path": path }));
+            let path = path.to_string();
+            self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+                if this.native_docs.generation != generation {
+                    return;
+                }
+                this.native_docs_apply_read(&path, &response, cx);
+            });
+        }
+        self.native_docs_notify(cx);
+    }
+
     /// Reads an image through the Docs resource scope, the same roots the page's images used.
-    fn native_docs_read_image(&mut self, path: &str, cx: &mut Context<Self>) {
+    pub(crate) fn native_docs_read_image(&mut self, path: &str, cx: &mut Context<Self>) {
         let Some(scope) = self.manage_docs_resource_scope() else {
             return;
         };
@@ -72,12 +118,13 @@ impl GhostexGpuiApp {
             .as_deref()
         {
             Some("png") => gpui::ImageFormat::Png,
-            Some("jpg" | "jpeg") => gpui::ImageFormat::Jpeg,
+            Some("jpg" | "jpeg" | "jfif" | "jpe") => gpui::ImageFormat::Jpeg,
             Some("gif") => gpui::ImageFormat::Gif,
             Some("webp") => gpui::ImageFormat::Webp,
             Some("svg") => gpui::ImageFormat::Svg,
             Some("bmp") => gpui::ImageFormat::Bmp,
             Some("ico") => gpui::ImageFormat::Ico,
+            Some("tif" | "tiff") => gpui::ImageFormat::Tiff,
             _ => gpui::ImageFormat::Png,
         };
         let generation = self.native_docs.generation;
@@ -119,14 +166,22 @@ impl GhostexGpuiApp {
         cx: &mut Context<Self>,
     ) {
         let file = &response["file"];
+        if file["kind"].as_str() == Some("unsupported") {
+            let reason = file["error"]
+                .as_str()
+                .unwrap_or("This file can't be shown in Files.")
+                .to_string();
+            if let Some(document) = self.native_docs.document_mut(path) {
+                document.size = file["size"].as_u64();
+                document.load = DocsDocumentLoad::Unsupported(reason);
+            }
+            self.native_docs_notify(cx);
+            return;
+        }
         let error = response["error"]
             .as_str()
             .or_else(|| file["error"].as_str())
-            .map(str::to_string)
-            .or_else(|| {
-                (file["kind"].as_str() == Some("unsupported"))
-                    .then(|| "This file can't be shown in Docs.".to_string())
-            });
+            .map(str::to_string);
         if let Some(error) = error {
             if let Some(document) = self.native_docs.document_mut(path) {
                 document.load = DocsDocumentLoad::Error(error);
@@ -178,10 +233,11 @@ impl GhostexGpuiApp {
                 }
                 continue;
             }
+            let line_numbers = self.native_docs.line_numbers;
             let editor = cx.new(|cx| {
                 EditorState::new(window, cx)
                     .language(language)
-                    .line_number(false)
+                    .line_number(line_numbers)
                     // GPUI Kit's editor closes brackets and indents structurally by default; the
                     // Docs text view keeps typing literal, with Enter copying the line's indent.
                     .auto_close(false)
@@ -296,7 +352,12 @@ impl GhostexGpuiApp {
             document.size = response["file"]["size"].as_u64().or(document.size);
             document.saved_flash_until =
                 Some(std::time::Instant::now() + std::time::Duration::from_millis(1600));
+            // An SVG's picture is drawn from the file, so it follows its saved source.
+            let redraw_picture = document.kind == DocsFileKind::Image;
             this.native_docs_notify_after(std::time::Duration::from_millis(1600), cx);
+            if redraw_picture {
+                this.native_docs_read_image(&path, cx);
+            }
             let Some(document) = this.native_docs.document_mut(&path) else {
                 return;
             };

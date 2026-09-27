@@ -823,7 +823,7 @@ export function ManageApp() {
         throw new Error(response.error);
       }
     } catch (settingsError) {
-      setError(settingsError instanceof Error ? settingsError.message : 'Could not open Docs settings.');
+      setError(settingsError instanceof Error ? settingsError.message : 'Could not open Files settings.');
     }
   }, [projectEditorId, projectId]);
 
@@ -1598,7 +1598,7 @@ export function ManageApp() {
         }
         const savedFile = response.file;
         if (!savedFile) {
-          throw new Error('Docs did not return saved file metadata.');
+          throw new Error('The Files service did not return saved file metadata.');
         }
         const savedContent = savedFile.content ?? content;
         /*
@@ -1703,7 +1703,7 @@ export function ManageApp() {
         }
         const createdFile = response.file;
         if (!createdFile) {
-          throw new Error('Docs did not return created file metadata.');
+          throw new Error('The Files service did not return created file metadata.');
         }
         selectedPathRef.current = createdFile.path;
         setSelectedPath(createdFile.path);
@@ -1859,7 +1859,7 @@ export function ManageApp() {
         }
         const renamedFile = response.file;
         if (currentEntry.kind === 'file' && !renamedFile) {
-          throw new Error('Docs did not return renamed file metadata.');
+          throw new Error('The Files service did not return renamed file metadata.');
         }
         setAnnotationsByPath((current) => remapManageAnnotationPathsForMove(current, path, nextPath));
         discoveredDirectoriesRef.current = remapManagePathSetForMove(discoveredDirectoriesRef.current, path, nextPath);
@@ -2008,7 +2008,7 @@ export function ManageApp() {
         }
         const duplicatedFile = response.file;
         if (!duplicatedFile) {
-          throw new Error('Docs did not return duplicated file metadata.');
+          throw new Error('The Files service did not return duplicated file metadata.');
         }
         setFileContextMenu(undefined);
         setCollapsedDirectoryPaths((current) => {
@@ -2858,7 +2858,7 @@ export function requestManageFiles(
 ): Promise<ManageFilesBridgeResponse> {
   const bridge = (window as ManageWebKitWindow).webkit?.messageHandlers?.ghostexManageFiles;
   if (!bridge) {
-    return Promise.reject(new Error('Docs is unavailable in this host.'));
+    return Promise.reject(new Error('Files is unavailable in this host.'));
   }
   return requestProjectDocsFromHost(request, {
     eventName: MANAGE_FILES_RESPONSE_EVENT,
