@@ -11,7 +11,7 @@ use serde_json::Value;
 
 use crate::menus::accounts_data::AccountsState;
 use crate::menus::option_catalog::{
-    session_option_catalog, OptionDescriptor, SessionOptionCatalog,
+    session_option_catalog, OptionDescriptor, OptionDispatch, SessionOptionCatalog,
 };
 use crate::menus::option_menu::{
     is_shift_tab_mode_cycler, option_menu_sections, options_may_resolve, visible_options,
@@ -54,6 +54,8 @@ pub struct OptionLabels {
     pub mode_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_chip: Option<AgentChip>,
     pub fast: bool,
     pub plan: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,6 +65,15 @@ pub struct OptionLabels {
     pub model_quick_picker: bool,
     pub show_model: bool,
     pub show_options: bool,
+}
+
+/// The bot a Hermes session talks to (`Harry`, `session_chat_hermes_status.rs`), drawn as a chip
+/// before the model pill; the pill then drops the agent logo the chip carries.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentChip {
+    pub name: String,
+    pub icon: Option<String>,
 }
 
 /// The `sessionOptions` document key: the catalog's serializable half, the descriptors for the
@@ -127,8 +138,15 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
         }
         None => Vec::new(),
     };
-    let provider =
-        model_picker_provider(catalog.as_ref().map(|catalog| catalog.model_icon.as_str()));
+    // A model pill that hands the change to the terminal has no picker behind it, so a Hermes chat
+    // keeps its `/model` hint until gxserver has read the profile's lineup (Hermes writes the
+    // session row, and with it the profile, only on the first turn).
+    let provider = model_picker_provider(
+        catalog
+            .as_ref()
+            .filter(|catalog| !matches!(catalog.model.dispatch, OptionDispatch::TerminalHandoff))
+            .map(|catalog| catalog.model_icon.as_str()),
+    );
     // `chat.pendingModelSelection !== undefined && provider !== undefined`: absent means the
     // daemon never carried the field, which is the "cannot queue a model" state.
     let can_pick_model = !state.session.pending_model_selection.is_absent() && provider.is_some();
@@ -188,6 +206,7 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
         mode: pill_values.mode.clone(),
         mode_value: pill_values.mode_value.clone(),
         agent_icon: pill_values.agent_icon.clone(),
+        agent_chip: None,
         fast: pill_values.fast,
         plan: pill_values.plan,
         account_indicator: account_indicator(accounts.as_ref()),
@@ -210,6 +229,17 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
                     .as_ref()
                     .is_some_and(|catalog| options_may_resolve(catalog, can_send_key))),
     };
+    let bot = state
+        .session
+        .selected_options
+        .as_ref()
+        .and_then(|options| options.get("hermesStatus")?.get("name")?.as_str());
+    if let Some(name) = bot.filter(|_| option_labels.show_model) {
+        option_labels.agent_chip = Some(AgentChip {
+            name: name.to_string(),
+            icon: option_labels.agent_icon.take(),
+        });
+    }
     // An agent outside the model catalog keeps its own pill: the draft's own row names it.
     if catalog.is_none() {
         if let Some(draft_agent) = draft_agent {

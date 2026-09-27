@@ -335,8 +335,9 @@ pub(crate) fn read_agent_metadata_title(
                 || !inherited_title.is_some_and(|title| titles_match(title, &metadata.title))
         }),
         AgentMetadataTitleSource::HermesStateDb {
-            agent_session_id, ..
-        } => read_hermes_state_db_title(&agent_session_id),
+            agent_session_id,
+            state_db_path,
+        } => read_hermes_state_db_title(&state_db_path, &agent_session_id),
         AgentMetadataTitleSource::AntigravityAnnotation { annotation_path } => {
             read_antigravity_annotation_title(&annotation_path)
         }
@@ -372,7 +373,10 @@ pub(crate) fn agent_metadata_title_source(
         {
             Some(AgentMetadataTitleSource::HermesStateDb {
                 agent_session_id: agent_session_id.to_string(),
-                state_db_path: crate::session_chat_hermes::hermes_state_db_path(),
+                state_db_path: crate::session_chat_hermes::hermes_state_db_path(
+                    &crate::session_chat_hermes::hermes_home(),
+                    agent_session_id,
+                ),
             })
         }
         Some("antigravity")
@@ -551,8 +555,12 @@ moment the session starts and sharpens a moment later, and the provenance rides
 along in the record revision so an upgrade that keeps the same text is still
 seen as the same title rather than a new one.
 */
-pub(crate) fn read_hermes_state_db_title(agent_session_id: &str) -> Option<AgentMetadataTitle> {
-    let session_title = crate::session_chat_hermes::read_hermes_session_title(agent_session_id)?;
+pub(crate) fn read_hermes_state_db_title(
+    state_db_path: &Path,
+    agent_session_id: &str,
+) -> Option<AgentMetadataTitle> {
+    let session_title =
+        crate::session_chat_hermes::read_hermes_session_title(state_db_path, agent_session_id)?;
     let title = normalize_metadata_title(Some(&Value::String(session_title.title)))?;
     Some(AgentMetadataTitle {
         agent_session_id: Some(agent_session_id.to_string()),

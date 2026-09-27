@@ -372,6 +372,11 @@ pub(crate) fn project_presentation_session(
         "backgroundWorkDetectedAt",
         session_background_work_detected_at(session),
     );
+    insert_optional_string(
+        &mut output,
+        "modelSelectionFailure",
+        crate::session_chat_model_selection_alert::session_model_selection_failure(session),
+    );
     output.insert("zmxName".to_string(), value_field(session, "zmxName"));
     Value::Object(output)
 }

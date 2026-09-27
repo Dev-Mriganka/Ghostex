@@ -816,9 +816,8 @@ impl ZmxQueuedSessionMessage {
     submitted. The clear burst obeys the same rule for the same reason.
     */
     fn steps(&self) -> Vec<crate::session_chat_send::SessionChatSendStep> {
-        if crate::session_chat_composer::session_chat_composer_agent_id(&self.session).as_deref()
-            == Some("grok")
-        {
+        let agent = crate::session_chat_composer::session_chat_composer_agent_id(&self.session);
+        if agent.as_deref() == Some("grok") {
             let mut steps = crate::session_chat_send::build_session_chat_message_steps(
                 Some("grok"),
                 &self.text,
@@ -834,8 +833,18 @@ impl ZmxQueuedSessionMessage {
             }
             return steps;
         }
-        let mut steps =
-            crate::session_chat_send::build_agent_tui_clear_input_steps(None, &self.text);
+        // CDXC:SessionChat 2026-09-26 WHY:
+        // Native Windows PowerShell clears its input with Escape. The agent Ctrl+U/Ctrl+K burst is inserted literally by its console reader and makes the next command fail.
+        let mut steps = if cfg!(windows) && agent.is_none() {
+            vec![
+                crate::session_chat_send::SessionChatSendStep::Write("\u{1b}".to_string()),
+                crate::session_chat_send::SessionChatSendStep::SleepMs(
+                    crate::session_chat_send::SESSION_CHAT_CLEAR_INPUT_SETTLE_MS,
+                ),
+            ]
+        } else {
+            crate::session_chat_send::build_agent_tui_clear_input_steps(None, &self.text)
+        };
         steps.push(crate::session_chat_send::SessionChatSendStep::Write(
             if self.submit {
                 crate::session_chat_send::disambiguate_agent_tui_submit_text(&self.text)

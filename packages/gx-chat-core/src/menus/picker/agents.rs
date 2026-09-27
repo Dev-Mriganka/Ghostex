@@ -21,6 +21,10 @@ pub struct PickerAgent {
 pub fn picker_agent(provider: ModelPickerProvider) -> PickerAgent {
     match provider {
         ModelPickerProvider::OpenCode => PickerAgent { name:"OpenCode", icon:"opencode" },
+        ModelPickerProvider::Hermes => PickerAgent {
+            name: "Hermes",
+            icon: "hermes-agent",
+        },
         ModelPickerProvider::Codex => PickerAgent {
             name: "Codex",
             icon: "codex",

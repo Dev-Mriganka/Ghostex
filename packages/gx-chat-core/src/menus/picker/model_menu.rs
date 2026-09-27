@@ -17,13 +17,14 @@ use crate::menus::picker::agents::picker_agent;
 use crate::menus::picker::model_picker::ModelPickerProvider;
 
 /// The tab order, and the only providers a model menu can show.
-pub const MODEL_MENU_PROVIDERS: [ModelPickerProvider; 6] = [
+pub const MODEL_MENU_PROVIDERS: [ModelPickerProvider; 7] = [
     ModelPickerProvider::Claude,
     ModelPickerProvider::Codex,
     ModelPickerProvider::Cursor,
     ModelPickerProvider::Grok,
     ModelPickerProvider::Antigravity,
     ModelPickerProvider::OpenCode,
+    ModelPickerProvider::Hermes,
 ];
 pub const MODEL_MENU_FAVORITES_TAB: &str = "favorites";
 /// `AUTO_MODEL_VALUE`: the row the agent picks for you, pinned first on its own tab.
@@ -93,6 +94,8 @@ pub struct ModelMenuCatalog {
     pub model_icon: String,
     /// `catalog.model.choices ?? []`, in catalog order.
     pub choices: Vec<ModelChoice>,
+    /// The tab's name when it is not the agent's own: a Hermes profile's bot, such as Harry.
+    pub agent_name: Option<String>,
 }
 
 /// The catalogs, keyed by provider id, in the order [`MODEL_MENU_PROVIDERS`] lists them.
@@ -173,7 +176,10 @@ pub fn model_menu_favorite_key(provider: &str, value: &str) -> String {
 
 /// `entriesFor`: one agent's rows, with the long-context twin folded into its standard row.
 fn entries_for(provider: ModelPickerProvider, catalog: &ModelMenuCatalog) -> Vec<ModelMenuEntry> {
-    let agent_name = picker_agent(provider).name.to_string();
+    let agent_name = catalog
+        .agent_name
+        .clone()
+        .unwrap_or_else(|| picker_agent(provider).name.to_string());
     let values: Vec<&str> = catalog
         .choices
         .iter()
