@@ -95,12 +95,16 @@ describe('Ghostex release automation helpers', () => {
   });
 
   test('builds final GitHub notes with Major, Minor, and Android checksum', async () => {
+    /*
+     * buildGithubReleaseNotes reads the real CHANGELOG.md, so this needs a shipped version that
+     * CHANGELOG.md still holds and whose section uses the Major and Minor groups.
+     */
     const notes = await buildGithubReleaseNotes(
-      '4.12.0',
+      '8.8.0',
       [
         {
           arch: 'arm64',
-          finalDmg: '/tmp/ghostex-4.12.0-arm64.dmg',
+          finalDmg: '/tmp/ghostex-8.8.0-arm64.dmg',
           sha256: 'a'.repeat(64),
         },
       ],
@@ -342,8 +346,8 @@ describe('Ghostex release automation helpers', () => {
      * that has already shipped (same approach as the Android notes test).
      */
     const notes = await buildGithubReleaseNotes(
-      '5.4.0',
-      [{ arch: 'arm64', finalDmg: '/tmp/ghostex-5.4.0-arm64.dmg', sha256: 'a'.repeat(64) }],
+      '8.8.0',
+      [{ arch: 'arm64', finalDmg: '/tmp/ghostex-8.8.0-arm64.dmg', sha256: 'a'.repeat(64) }],
       {
         onDemandAssets: onDemandAssetNames.map((name) => ({ name, sha256: 'c'.repeat(64) })),
       }
