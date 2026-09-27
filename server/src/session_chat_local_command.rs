@@ -742,6 +742,19 @@ fn recorded_command_texts(messages: &[SessionChatMessage]) -> Vec<String> {
         .collect()
 }
 
+/// Claude records a plugin skill as `/plugin:name` however the user typed it, so the command
+/// name is compared without its plugin.
+/// SEE-ALSO: `command_key` in `packages/gx-chat-core/src/session/app_commands.rs` pairs the live
+/// acknowledgement the same way.
+fn same_command(recorded: &str, typed: &str) -> bool {
+    fn short(text: &str) -> (&str, &str) {
+        let (name, args) = text.split_once(' ').unwrap_or((text, ""));
+        let name = name.trim_start_matches('/');
+        (name.rsplit(':').next().unwrap_or(name), args.trim())
+    }
+    short(recorded) == short(typed)
+}
+
 fn between(text: &str, open: &str, close: &str) -> Option<String> {
     let start = text.find(open)? + open.len();
     let end = text[start..].find(close)? + start;
@@ -766,8 +779,9 @@ pub fn merge_session_chat_local_commands(
                 && message
                     .timestamp
                     .is_some_and(|at| at >= row.sent_at_ms && at - row.sent_at_ms < 30_000)
-                && recorded_command_texts(std::slice::from_ref(message)).first()
-                    == Some(&row.text())
+                && recorded_command_texts(std::slice::from_ref(message))
+                    .first()
+                    .is_some_and(|recorded| same_command(recorded, &row.text()))
         });
         if let Some(at) = native {
             let replay = local_command_messages(row);

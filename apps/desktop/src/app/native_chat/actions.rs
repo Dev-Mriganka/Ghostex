@@ -17,7 +17,6 @@ const SWITCH_ACCOUNT_TRIGGER: &str = "chat-notice-switch-account";
 /// `session-chat-composer-actions.tsx`.
 fn host_action_icon(id: &str) -> Option<&'static str> {
     Some(match id {
-        "splitSessionRight" => "titlebar/layout-columns.svg",
         "closeAfterDone" => "titlebar/clock.svg",
         "delayedActions" => "titlebar/clock-check.svg",
         "exportTranscript" => "titlebar/file-export.svg",
@@ -56,6 +55,46 @@ impl NativeChatView {
         })];
         self.show_chat_menu_at(rows, position, 240.0, window, cx);
     }
+
+    /// CDXC:SessionChat 2026-09-27 DECISION:
+    /// User: combine Simple, Verbose and Summary modes in the More actions menu. One View row opens a submenu with the three modes as independent checks, and its detail names the modes that are on. Summary is listed even while its toolbar button shows. The phone has no Simple mode, so its View row holds Verbose and Summary (apps/mobile/app/src/chat/native/composer/menus.ts).
+    fn view_modes_row(&self, appearance: &super::appearance::ChatAppearance) -> Value {
+        let summary = self
+            .composer_control_available("summary")
+            .then(|| self.snapshot["summaryMode"] == true);
+        let verbose_icon = if appearance.verbose {
+            "titlebar/eye-filled.svg"
+        } else {
+            "titlebar/eye-off.svg"
+        };
+        let mut modes = vec![
+            json!({"label":"Simple mode","iconPath":"titlebar/leaf.svg","checked":appearance.simple,"command":{"type":"host","action":"setSimpleMode","enabled":!appearance.simple}}),
+            json!({"label":"Verbose mode","iconPath":verbose_icon,"checked":appearance.verbose,"command":{"type":"setVerbose","enabled":!appearance.verbose}}),
+        ];
+        if let Some(summary) = summary {
+            let summary_icon = if summary {
+                "titlebar/list-check.svg"
+            } else {
+                "titlebar/list-details.svg"
+            };
+            modes.push(json!({"label":"Summary mode","hotkeyAction":"toggleChatSummaryMode","iconPath":summary_icon,"checked":summary,"command":{"type":"toggleSummary"}}));
+        }
+        let on: Vec<&str> = [
+            (appearance.simple, "Simple"),
+            (appearance.verbose, "Verbose"),
+            (summary == Some(true), "Summary"),
+        ]
+        .into_iter()
+        .filter_map(|(enabled, name)| enabled.then_some(name))
+        .collect();
+        let detail = if on.is_empty() {
+            "Standard".to_string()
+        } else {
+            on.join(", ")
+        };
+        json!({"label":"View","iconPath":"titlebar/eye.svg","detail":detail,"children":modes})
+    }
+
     pub(crate) fn show_actions(
         &mut self,
         position: gpui::Point<gpui::Pixels>,
@@ -86,21 +125,10 @@ impl NativeChatView {
             rows.push(json!({"separator":true}));
         }
         rows.push(json!({"heading":true,"label":"Chat"}));
-        let verbose_icon = if appearance.verbose {
-            "titlebar/eye-filled.svg"
-        } else {
-            "titlebar/eye-off.svg"
-        };
-        rows.push(json!({"label":"Verbose mode","iconPath":verbose_icon,"checked":appearance.verbose,"command":{"type":"setVerbose","enabled":!appearance.verbose}}));
-        rows.push(json!({"label":"Simple mode","iconPath":"titlebar/leaf.svg","checked":appearance.simple,"command":{"type":"host","action":"setSimpleMode","enabled":!appearance.simple}}));
-        if self.composer_control_overflowed("summary") {
-            let summary = self.snapshot["summaryMode"] == true;
-            let summary_icon = if summary {
-                "titlebar/list-check.svg"
-            } else {
-                "titlebar/list-details.svg"
-            };
-            rows.push(json!({"label":"Summary mode","hotkeyAction":"toggleChatSummaryMode","iconPath":summary_icon,"checked":summary,"command":{"type":"toggleSummary"}}));
+        rows.push(self.view_modes_row(&appearance));
+        // Side chat: the core offers it only for agents that take `/btw` (composer/side_chat.rs).
+        if let Some(prefix) = self.snapshot["sideChat"].as_str() {
+            rows.push(json!({"label":"Side chat","iconPath":"titlebar/message-circle.svg","checked":self.draft.starts_with(prefix),"command":{"type":"toggleSideChat","text":self.draft}}));
         }
         let host_row = |action: &Value| {
             json!({
@@ -117,7 +145,7 @@ impl NativeChatView {
         for action in actions.iter().filter(|action| {
             matches!(
                 text(action, "id").as_str(),
-                "delayedActions" | "closeAfterDone" | "splitSessionRight"
+                "delayedActions" | "closeAfterDone"
             )
         }) {
             rows.push(host_row(action));
@@ -180,7 +208,7 @@ impl NativeChatView {
                 action["group"] != "agent"
                     && !matches!(
                         text(action, "id").as_str(),
-                        "delayedActions" | "closeAfterDone" | "splitSessionRight"
+                        "delayedActions" | "closeAfterDone"
                     )
             })
             .collect();

@@ -100,6 +100,8 @@ pub struct Document {
     pub note: Note,
     pub interaction: Interaction,
     pub host_actions: Vec<HostAction>,
+    /// The Side chat prefix (`/btw `) when the agent takes side questions, else null. Family d.
+    pub side_chat: Option<String>,
 
     // ---- questions and notices -------------------------------------------
     pub question_card: QuestionCard,

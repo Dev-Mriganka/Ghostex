@@ -51,6 +51,8 @@ pub enum ReferenceKind {
     Image,
     Skill,
     Url,
+    /// The Side chat pill: the `/btw ` prefix at the start of the chat box (side_chat.rs).
+    SideChat,
 }
 
 impl ReferenceKind {
@@ -62,6 +64,7 @@ impl ReferenceKind {
             Self::Image => "image",
             Self::Skill => "skill",
             Self::Url => "url",
+            Self::SideChat => "sideChat",
         }
     }
 }
@@ -147,8 +150,8 @@ pub enum MediaKind {
 }
 
 /// CDXC:SessionChat 2026-09-24 DECISION:
-/// User: a pasted video reads "Video #1" instead of "File #1", its menu names what it is, and clicking it opens it normally with the OS default app on macOS, Windows, and Linux instead of the code editor. Audio and PDFs follow the same rule.
-/// SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat.rs` keeps the same extension list for the click.
+/// User: a pasted video reads "Video #1" instead of "File #1", its menu names what it is, and clicking it never opens the code editor. Audio and PDFs follow the same rule. Where the click lands is the host's call: since 2026-09-27 the desktop plays video and audio in its Files view or opens them in the system app, as its "Videos / Audio open in" settings say (CDXC:SessionChat 2026-09-27).
+/// SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat.rs` routes the click.
 pub fn media_kind(path: &str) -> Option<MediaKind> {
     let lowered = crate::transcript::jsstr::ascii_lower(without_position(path));
     let has = |extensions: &[&str]| {
@@ -221,10 +224,23 @@ fn explicit_reference_kind(label: &str) -> Option<ReferenceKind> {
     if numbered_label(label, "Folder #") {
         return Some(ReferenceKind::Folder);
     }
-    if label.starts_with('$') {
+    if label.starts_with('$') || is_slash_command_label(label) {
         return Some(ReferenceKind::Skill);
     }
     None
+}
+
+/// `/name`, the label a Claude Code skill pill carries (`skill_invocation.rs`). One segment, so a
+/// path label such as `/Users/me/SKILL.md` stays a file.
+fn is_slash_command_label(label: &str) -> bool {
+    label.strip_prefix('/').is_some_and(|name| {
+        !name.is_empty()
+            && !name.chars().any(|character| {
+                character == '/'
+                    || character == '\\'
+                    || crate::transcript::jsstr::is_js_space(character)
+            })
+    })
 }
 
 /// A label that spells out its own destination, shown as its parent folder and name.
@@ -237,7 +253,10 @@ fn explicit_reference_kind(label: &str) -> Option<ReferenceKind> {
 /// User: file and folder pills always show `…/parent folder/file name.ts:123`, "because it's enough this way", and a label that still has to shorten loses its start, never the file name. The desktop GPUI chat and the React Native chat both draw this label, so they cannot differ.
 /// SEE-ALSO: `markdown_reference` in `transcript/markdown_links.rs` for the transcript, `reference_display_label` below for the composer, and `truncate_start` in `apps/desktop/src/app/native_chat/markdown_links.rs` for a pill still wider than the line.
 pub fn reference_path_label(label: &str, path: &str, kind: ReferenceKind) -> Option<String> {
-    if matches!(kind, ReferenceKind::Skill | ReferenceKind::Url) {
+    if matches!(
+        kind,
+        ReferenceKind::Skill | ReferenceKind::Url | ReferenceKind::SideChat
+    ) {
         return None;
     }
     let (label_path, _) = crate::composer::links::split_file_position(label);
@@ -307,8 +326,14 @@ pub fn reference_display_label(label: &str, path: &str, kind: ReferenceKind) -> 
 
 /// Visible text whose measured width owns the pill icon and label.
 pub fn reference_pill_text(label: &str, path: &str, kind: ReferenceKind) -> String {
+    // CDXC:SessionChat 2026-09-27 DECISION: User: there must be a space after the Side Chat pill in the chat box. The pill stands for `/btw ` including its space (so Backspace takes the whole pill), so it draws that space at full width instead of the thin gap other pills end with.
+    let trailing = if kind == ReferenceKind::SideChat {
+        "\u{a0}"
+    } else {
+        REFERENCE_PILL_TRAILING_SPACE
+    };
     format!(
-        "{REFERENCE_PILL_ICON_SPACE}{}{REFERENCE_PILL_TRAILING_SPACE}",
+        "{REFERENCE_PILL_ICON_SPACE}{}{trailing}",
         reference_display_label(label, path, kind).replace(' ', "\u{a0}")
     )
 }
@@ -612,6 +637,20 @@ fn path_without_coordinates(value: &str) -> &str {
 pub fn composer_references(text: &str) -> Vec<ComposerReference> {
     let indexed = Utf16Text::new(text);
     let mut references = Vec::new();
+    if text.starts_with(crate::composer::side_chat::SIDE_CHAT_PREFIX) {
+        references.push(ComposerReference {
+            end: crate::composer::side_chat::SIDE_CHAT_PREFIX
+                .encode_utf16()
+                .count(),
+            identity: format!("sideChat:{}", crate::composer::side_chat::SIDE_CHAT_LABEL),
+            kind: ReferenceKind::SideChat,
+            label: crate::composer::side_chat::SIDE_CHAT_LABEL.to_string(),
+            path: crate::composer::side_chat::SIDE_CHAT_PREFIX
+                .trim_end()
+                .to_string(),
+            start: 0,
+        });
+    }
     let mut cursor = 0;
     while let Some((start, source_label, destination_start)) = next_label(&indexed, cursor) {
         cursor = destination_start;

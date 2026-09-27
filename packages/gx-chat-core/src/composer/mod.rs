@@ -21,6 +21,8 @@ pub mod queue_edit;
 pub mod reference_menu;
 pub mod reference_pills;
 pub mod references;
+pub mod side_chat;
+pub mod skill_invocation;
 pub mod slash_catalogs;
 pub mod slash_commands;
 pub mod storage;
@@ -36,7 +38,7 @@ pub mod settle;
 
 pub use crate::composer::actions::handle;
 pub use crate::composer::document::document;
-pub use crate::composer::settle::settle;
 pub use crate::composer::queries::{
-    composer_references, composer_key_intent, reference_menu, send_blocked_toast, transcript_menu,
+    composer_key_intent, composer_references, reference_menu, send_blocked_toast, transcript_menu,
 };
+pub use crate::composer::settle::settle;

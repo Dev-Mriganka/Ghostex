@@ -77,7 +77,8 @@ function explicitReferenceKind(label: string): SessionChatReferenceKind | null {
   if (/^Image #\d+$/.test(label)) return 'image';
   if (/^(?:Audio|File|PDF|Video) #\d+$/.test(label)) return 'file';
   if (/^Folder #\d+$/.test(label)) return 'folder';
-  if (label.startsWith('$')) return 'skill';
+  // `/name` is a Claude Code skill pill (`gx-chat-core` `composer/skill_invocation.rs`); one segment, so a path label stays a file.
+  if (label.startsWith('$') || /^\/[^\s/\\]+$/.test(label)) return 'skill';
   return null;
 }
 

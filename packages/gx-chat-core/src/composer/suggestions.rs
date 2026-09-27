@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::composer::references::next_file_reference_index;
+use crate::composer::skill_invocation::skill_invocation;
 use crate::composer::slash_commands::{
     filter_slash_commands, slash_commands_for_agent, slash_heading_for_agent, slash_query,
     SlashCommand,
@@ -412,7 +413,12 @@ pub fn suggestion_popup(
         SuggestionKind::Skill => matches
             .skill_matches
             .iter()
-            .map(|skill| (format!("${}", skill.name), skill_detail(skill)))
+            .map(|skill| {
+                (
+                    skill_invocation(&skill.name, sources.agent.as_deref()),
+                    skill_detail(skill),
+                )
+            })
             .collect(),
         SuggestionKind::File => matches
             .file_matches
@@ -497,10 +503,14 @@ pub fn suggestion_replacement(
     kind: SuggestionKind,
     index: usize,
     text: &str,
+    agent: Option<&str>,
 ) -> Option<String> {
     match kind {
         SuggestionKind::Slash => None,
-        SuggestionKind::Skill => matches.skill_matches.get(index).map(linked_skill_mention),
+        SuggestionKind::Skill => matches
+            .skill_matches
+            .get(index)
+            .map(|skill| linked_skill_mention(skill, agent)),
         SuggestionKind::File => matches
             .file_matches
             .get(index)

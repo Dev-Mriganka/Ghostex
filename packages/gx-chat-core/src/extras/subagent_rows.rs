@@ -52,6 +52,7 @@ fn scope<'a>(
         agent_path: &view.agent_path,
         working_directory,
         line_breaks,
+        live_side_question: None,
     }
 }
 
@@ -97,6 +98,7 @@ pub fn refresh(state: &mut ChatState, context: &ChatContext) {
         backfill_revision: state.extras.subagent.view.backfill_revision,
         queue: None,
         line_breaks: crate::transcript::presentation::line_breaks(state),
+        live_side_question: None,
     };
     if state.extras.subagent.view.projection_inputs.as_ref() == Some(&inputs) {
         return;

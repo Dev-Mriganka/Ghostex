@@ -119,6 +119,7 @@ action_kinds! {
     AttachPaths => "attachPaths",
     InsertAttachments => "insertAttachments",
     RemoveAttachment => "removeAttachment",
+    ToggleSideChat => "toggleSideChat",
     LoadImage => "loadImage",
 
     // Sending.

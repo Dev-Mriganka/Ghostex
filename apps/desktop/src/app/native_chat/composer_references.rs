@@ -98,7 +98,12 @@ pub(super) fn replacements(
                     // User: hovering a composer pill shows the path, URL, or whatever else it
                     // points at, because the pill hides the markdown destination. React shows the
                     // same thing from `session-chat-lexical-input.tsx`.
-                    .tooltip(reference.path.clone()),
+                    .tooltip(if reference.kind == "sideChat" {
+                        "Side chat: sent to Claude as a side question (/btw). Click to remove."
+                            .to_string()
+                    } else {
+                        reference.path.clone()
+                    }),
             )
         })
         .collect()
@@ -199,6 +204,12 @@ impl NativeChatView {
         else {
             return false;
         };
+        // The Side Chat pill has nothing to open; a click takes it off, as the tooltip says.
+        if reference.kind == "sideChat" {
+            let draft = self.draft.clone();
+            self.invoke(json!({"type":"toggleSideChat","text":draft}), cx);
+            return true;
+        }
         if event.click_count >= 2 {
             if let Some((draft, caret)) = revealed(&self.draft, &reference) {
                 self.insert_prompt(&draft, cx);

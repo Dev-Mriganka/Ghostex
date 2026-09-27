@@ -20,7 +20,7 @@ use crate::transcript::foreign::{
 };
 use crate::transcript::images::{image_source, ImageRef};
 use crate::transcript::jsstr::js_trim;
-use crate::transcript::line_breaks::{agent_line_breaks, AgentLineBreaks};
+use crate::transcript::line_breaks::{agent_line_breaks, user_line_breaks, AgentLineBreaks};
 use crate::transcript::markdown_links::markdown_references;
 use crate::transcript::message_text::{
     message_action_content, normalize_user_message_markdown, split_reasoning_headline,
@@ -106,7 +106,7 @@ pub fn project_message(
     let is_user = message.role == ChatRole::User;
     let displayed_body = if is_user {
         normalize_user_message_markdown(&body)
-    } else if message.role == ChatRole::Assistant {
+    } else if matches!(message.role, ChatRole::Assistant | ChatRole::Reasoning) {
         agent_line_breaks(&body, line_breaks)
     } else {
         body.clone()
@@ -126,7 +126,11 @@ pub fn project_message(
         body.clone()
     };
     // Code-block headers, GitHub alerts, and typed file paths, marked for the native renderer.
-    let native_body = native_markdown(&displayed_body, is_user);
+    let native_body = if is_user {
+        native_markdown(&user_line_breaks(&displayed_body), true)
+    } else {
+        native_markdown(&displayed_body, false)
+    };
     let suppressed = suppressed_turn_presentation(message);
     let rows = tool_rows(&tool_pairs, agent_path, working_directory);
     let system_card = classify_system_card(message, &displayed_body);
@@ -164,7 +168,10 @@ pub fn project_message(
     );
     projected.insert(
         "reasoning".to_string(),
-        serde_json::json!({ "headline": reasoning.headline, "body": reasoning.body }),
+        serde_json::json!({
+            "headline": reasoning.headline,
+            "body": agent_line_breaks(&reasoning.body, line_breaks),
+        }),
     );
     projected.insert(
         "agentMessage".to_string(),
@@ -187,7 +194,7 @@ pub fn project_message(
                 "agentId": inter.agent_id,
                 "agentSessionId": inter.agent_session_id,
                 "replyTo": inter.reply_to,
-                "body": inter.body,
+                "body": agent_line_breaks(&inter.body, line_breaks),
             }),
             None => Value::Null,
         },
@@ -216,7 +223,10 @@ pub fn project_message(
                     .and_then(Value::as_str)
                     .unwrap_or_default()
                     .to_string();
-                card.insert("markdown".to_string(), native_markdown(&body, false).into());
+                card.insert(
+                    "markdown".to_string(),
+                    native_markdown(&agent_line_breaks(&body, line_breaks), false).into(),
+                );
                 Value::Object(card)
             }
             other => other,
@@ -321,6 +331,8 @@ pub struct ProjectionScope<'a> {
     /// read the same one.
     pub working_directory: Option<&'a str>,
     pub line_breaks: AgentLineBreaks,
+    /// The side question whose card is open above the composer; its row waits for Close.
+    pub live_side_question: Option<String>,
 }
 
 /// The session's line-break rule, which the subagent viewer shares: a child runs the same agent.
@@ -341,6 +353,7 @@ pub fn scope<'a>(state: &'a ChatState, view: &'a TranscriptViewState) -> Project
         agent_path: &view.agent_path,
         working_directory: view.working_directory.as_deref(),
         line_breaks: line_breaks(state),
+        live_side_question: crate::transcript::side_question::live_side_question(state),
     }
 }
 
@@ -465,8 +478,12 @@ pub fn build_scope(
     context: &ChatContext,
     cache: &mut ProjectionCache,
 ) -> Projection {
-    let projection: TranscriptProjection =
-        project_chat_transcript(scope.messages, scope.working, &[]);
+    let projection: TranscriptProjection = project_chat_transcript(
+        scope.messages,
+        scope.working,
+        &[],
+        scope.live_side_question.as_deref(),
+    );
     let summary = scope.summary;
     let length = if summary {
         projection.summary_turns.len()

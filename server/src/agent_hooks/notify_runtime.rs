@@ -106,6 +106,16 @@ pub fn run_notify_hook(args: Vec<String>) -> Result<(), DomainStateError> {
     {
         return Ok(());
     }
+    /*
+    CDXC:SessionIdentity 2026-09-27 WHY:
+    Claude runs a fork (the side question card's Fork, or opening a forked agent) as a background session in its own daemon: `claude --session-id <fork> --fork-session --resume <parent>`, marked `CLAUDE_CODE_SESSION_KIND=bg` and still carrying the terminal's GHOSTEX_SESSION_ID. Its hooks rebound the Ghostex session to the fork's conversation, which holds no messages of its own, so the thread vanished from chat and resuming it could not bring the original back (observed 2026-09-27, session G8z2s). A background session's hooks never replace the conversation the terminal owns; like a Codex subagent, it is not the session's agent.
+    */
+    if matches!(agent_key.as_str(), "claude" | "openclaude")
+        && env_string("CLAUDE_CODE_SESSION_KIND").as_deref() == Some("bg")
+        && session_id.as_deref() != read_state_string(&state, "agentSessionId").as_deref()
+    {
+        return Ok(());
+    }
     let prompt = first_string([
         payload.get("user_message"),
         payload.get("prompt"),

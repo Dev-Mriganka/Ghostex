@@ -69,8 +69,12 @@ pub fn project_chat_transcript(
     messages: &[ChatMessage],
     working: bool,
     interacted_message_ids: &[String],
+    live_side_question: Option<&str>,
 ) -> TranscriptProjection {
-    let normalized = normalize_chat_transcript(messages);
+    let mut normalized = normalize_chat_transcript(messages);
+    if let Some(question) = live_side_question {
+        crate::transcript::side_question::hide_live_side_question(&mut normalized, question);
+    }
     let rendered = fold_chat_transcript(&normalized);
     let final_ids = final_assistant_message_ids(&rendered, working);
     TranscriptProjection {

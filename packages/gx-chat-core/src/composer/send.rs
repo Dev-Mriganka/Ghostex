@@ -281,6 +281,11 @@ fn draw_agent_send(
     text: &str,
     image_paths: &[String],
 ) -> AgentSend {
+    // What the agent records, which is what the echo has to match: gxserver types a Claude skill
+    // pill as its bare `/name`, so a draft that opens with one is a slash command to Claude.
+    let agent_text =
+        crate::composer::skill_invocation::agent_skill_text(text, state.session.agent.as_deref());
+    let text = agent_text.as_ref();
     let catalog = crate::menus::option_catalog::session_option_catalog(
         &state.menus.model_catalog,
         state.session.agent.as_deref(),

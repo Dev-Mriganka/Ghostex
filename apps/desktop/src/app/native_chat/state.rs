@@ -198,6 +198,9 @@ pub(crate) struct NativeChatView {
     /// CDXC:SessionChat 2026-09-27 WHY:
     /// The phone (`packages/gpui-mobile`) draws this view inside its React Native chat screen, where the composer and the cards above it (working strip, questions, approvals, notices) are native React Native views fed by the same core. Set there through `set_transcript_only`, the view draws only the transcript region: no composer, no composer inset, no composer field, and toasts go to the host as a `toast` host action. Off everywhere else, so the desktop and the web build are unchanged.
     pub(crate) transcript_only: bool,
+    /// CDXC:SessionChat 2026-09-27 WHY:
+    /// The phone's app keeps its own React Native composer model (`apps/mobile/app/src/chat/rust/composer.ts`) and draws only the transcript with this view, so the core's composer requests belong to that model, not to this view's undrawn field. With `host_composer` set they go to the host as a `composerRequest` host action, the host answers the `readNativeComposer` read (`answer_composer_read`), and a `chatImage` also reaches the host for the composer's attachment thumbnails. Off everywhere else.
+    pub(crate) host_composer: bool,
 }
 
 impl EventEmitter<NativeChatEvent> for NativeChatView {}
@@ -389,6 +392,7 @@ impl NativeChatView {
             notify_scheduled: false,
             under_workarea_header: false,
             transcript_only: false,
+            host_composer: false,
         }
     }
 
@@ -416,8 +420,19 @@ impl NativeChatView {
             self.input_window = Some(window.window_handle().window_id());
             let input = self.input.as_ref().unwrap().clone();
             self.input_observer = Some(cx.observe_in(&input, window, |this, input, window, cx| {
-                if input.read(cx).focus_handle(cx).is_focused(window) {
+                // GPUI calls this in the window that last drew the chat, and the chat's own popups
+                // (this list, the scroll pill) draw it too; the field's focus is only known in the
+                // field's window, so another window keeps the focus the listeners reported.
+                if this.input_window != Some(window.window_handle().window_id()) {
+                    if this.composer_focused {
+                        this.update_suggestion_selection(cx);
+                    }
+                } else if input.read(cx).focus_handle(cx).is_focused(window) {
+                    // A focus edge the listeners below missed is caught up by the field's next change.
+                    this.composer_focus_gained(window, cx);
                     this.update_suggestion_selection(cx);
+                } else {
+                    this.composer_focus_lost(cx);
                 }
                 let caret_image = this.composer_caret_image(cx);
                 if this.composer_caret_image != caret_image {
@@ -447,30 +462,23 @@ impl NativeChatView {
                     _ => {}
                 },
             ));
-            // CDXC:SessionChat 2026-09-26 WHY:
-            // The field's own `InputEvent::Focus` and `Blur` come from focus listeners it registers on the window it was created in, and one chat view is drawn in the main window or in the floating sessions panel's window. Focusing the composer in the other window emitted nothing, so the chat never counted its composer as focused and the `$`, `@` and `/` list stayed shut while the keyboard still moved through it. The listeners are bound to the window the chat is drawn in, and a new window starts from its own focus state.
+            // CDXC:SessionChat 2026-09-27 WHY:
+            // The field's own `InputEvent::Focus` and `Blur` come from focus listeners it registers on the window it was created in, and one chat view is drawn in the main window or in the floating sessions panel's window. Focusing the composer in the other window emitted nothing, so the chat never counted its composer as focused and the `$`, `@` and `/` list stayed shut while the keyboard still moved through it. The listeners are therefore bound to the window the chat is drawn in, and a new window starts from its own focus state. GPUI switches a new focus listener on only after a deferred tick, so a chat that creates its field and focuses it in the same frame (Cmd+Shift+O, a new agent) lost the edge about half the time; the field's observer above reconciles the flag with the real focus on every change, so the first `$` typed still opens the list. GPUI also hands its focus listeners an empty focus path while their window is not the key window, so the window losing key status (as it did for a moment each time the list's own window opened) reached the chat as a blur and shut the list it had just opened; a blur while the field still holds its window's focus is not a blur of the composer. And GPUI calls the observer in the window that last read the chat while drawing, which is the list's own window once it is open, so asking that window about the field's focus answered "not focused" and shut the list after one frame (the flicker); the observer only judges focus in the field's own window.
             let focus = input.read(cx).focus_handle(cx);
             self.composer_focused = focus.is_focused(window);
             self.input_focus_listeners = vec![
                 cx.on_focus(&focus, window, |this, window, cx| {
-                    super::focus::reclaim_keyboard_focus(window);
-                    // The field starts its blinking caret from its own focus listener, which is bound to the window it was created in; in any other window the caret never appeared. `focus` starts it from here.
-                    if let Some(input) = this.input.clone() {
-                        input.update(cx, |input, cx| input.focus(window, cx));
-                    }
-                    this.composer_focused = true;
-                    this.sync_suggestion_window(cx);
-                    this.invoke(json!({"type":"composerExpand","editor":true}), cx);
-                    cx.emit(NativeChatEvent::ComposerFocused);
-                    cx.notify();
+                    this.composer_focus_gained(window, cx);
                 }),
-                cx.on_blur(&focus, window, |this, _, cx| {
-                    this.composer_focused = false;
-                    this.short_pane_composer_open = false;
-                    this.sync_suggestion_window(cx);
-                    this.save_draft(cx);
-                    // A short pane's box collapses again once it loses focus (composer_scroll.rs).
-                    cx.notify();
+                cx.on_blur(&focus, window, {
+                    let focus = focus.clone();
+                    move |this, window, cx| {
+                        // GPUI reports its window going inactive as a blur too; the field still
+                        // holds the window's focus then (see the CDXC above).
+                        if !focus.is_focused(window) {
+                            this.composer_focus_lost(cx);
+                        }
+                    }
                 }),
             ];
         }
@@ -511,6 +519,32 @@ impl NativeChatView {
                 input.read(cx).focus_handle(cx).focus(window, cx);
             }
         }
+    }
+
+    /// The composer took the keyboard. A second report of the same focus does nothing.
+    fn composer_focus_gained(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.composer_focused {
+            return;
+        }
+        super::focus::reclaim_keyboard_focus(window);
+        self.composer_focused = true;
+        self.sync_suggestion_window(cx);
+        self.invoke(json!({"type":"composerExpand","editor":true}), cx);
+        cx.emit(NativeChatEvent::ComposerFocused);
+        cx.notify();
+    }
+
+    /// The composer lost the keyboard. A second report of the same blur does nothing.
+    fn composer_focus_lost(&mut self, cx: &mut Context<Self>) {
+        if !self.composer_focused {
+            return;
+        }
+        self.composer_focused = false;
+        self.short_pane_composer_open = false;
+        self.sync_suggestion_window(cx);
+        self.save_draft(cx);
+        // A short pane's box collapses again once it loses focus (composer_scroll.rs).
+        cx.notify();
     }
 
     pub(crate) fn invoke(&mut self, action: Value, cx: &mut Context<Self>) {
@@ -569,6 +603,31 @@ impl NativeChatView {
             return;
         }
         self.invoke(json!({"type":"saveDraft","content":self.draft,"draftVersion":{"draftId":self.draft_id,"revision":self.draft_revision}}), cx);
+    }
+
+    /// The core's requests a host-owned composer performs (see the `host_composer` field).
+    fn is_host_composer_request(request: &Value) -> bool {
+        matches!(
+            request["kind"].as_str(),
+            Some(
+                "composerClearExpected"
+                    | "returnedPrompt"
+                    | "composerInit"
+                    | "draftSubmitted"
+                    | "submissionFailed"
+                    | "draftReceived"
+                    | "attachmentReferences"
+                    | "composer"
+            )
+        ) || (request["kind"] == "rpc" && request["method"] == "readNativeComposer")
+    }
+
+    /// A host composer's answer to a forwarded `readNativeComposer` read: the text it holds.
+    #[allow(dead_code)] // only the phone's crate (packages/gpui-mobile) forwards the read
+    pub(crate) fn answer_composer_read(&self, id: Value, text: String) {
+        if let Some(runtime) = &self.runtime {
+            runtime.call("resolve", vec![id, text.into(), Value::Null]);
+        }
     }
 
     pub(crate) fn host(&self, action: &str, fields: Value, cx: &mut Context<Self>) {
@@ -700,15 +759,24 @@ impl NativeChatView {
             }
             self.snapshot = Arc::new(snapshot);
             self.adopt_status_line_reservation();
-            self.open_pending_model_menu(cx);
-            self.sync_context_editor_window(cx);
-            self.sync_save_markdown_window(cx);
-            self.sync_rewind_window(cx);
-            self.sync_suggestion_window(cx);
+            // A host that draws the composer also draws what opens from it (the model menu, the
+            // context editor, the suggestions, the rewind and Save to Markdown dialogs), so the
+            // transcript-only view opens none of their windows.
+            if !self.host_composer {
+                self.open_pending_model_menu(cx);
+                self.sync_context_editor_window(cx);
+                self.sync_save_markdown_window(cx);
+                self.sync_rewind_window(cx);
+                self.sync_suggestion_window(cx);
+            }
             self.load_earlier_if_near_top(cx);
             self.notify_if_shown(cx);
         }
         for request in output["requests"].as_array().into_iter().flatten() {
+            if self.host_composer && Self::is_host_composer_request(request) {
+                self.host("composerRequest", json!({"request": request}), cx);
+                continue;
+            }
             match request["kind"].as_str() {
                 Some("rpc") => self.rpc(request.clone(), cx),
                 Some("broker") => cx.emit(NativeChatEvent::Broker(request.clone())),
@@ -788,7 +856,12 @@ impl NativeChatView {
                     }
                 }
                 Some("host") => self.host(request["method"].as_str().unwrap_or_default(), request["params"].clone(), cx),
-                Some("chatImage") => self.receive_chat_image(request, cx),
+                Some("chatImage") => {
+                    if self.host_composer {
+                        self.host("chatImage", json!({"request": request}), cx);
+                    }
+                    self.receive_chat_image(request, cx)
+                }
                 // The two arms the Rust brain's `Effect::Copy` and `Effect::Toast` ride in. The
                 // TypeScript brain the web build still runs pushes neither (a clipboard write only
                 // ever reaches the view inside `markdownSaved`).

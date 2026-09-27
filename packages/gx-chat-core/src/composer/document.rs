@@ -122,6 +122,7 @@ pub fn document(state: &ChatState, _context: &ChatContext, into: &mut Document) 
         stop_button_cooldown_ms: STOP_BUTTON_COOLDOWN_MS,
     };
     into.host_actions = composer_host_actions();
+    into.side_chat = crate::composer::side_chat::side_chat_prefix(state);
     into.skills_loading = composer.sources.skills_loading;
     into.files_loading = composer.sources.files_loading;
 }

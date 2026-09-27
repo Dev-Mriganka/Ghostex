@@ -8,6 +8,7 @@ use ghostex_gx_protocol::{ChatBlock, ChatMessage, ChatRole};
 use serde_json::{json, Value};
 
 use crate::transcript::foreign::{decode_escaped_markup, parse_command_envelope};
+use crate::transcript::line_breaks::{agent_line_breaks, AgentLineBreaks};
 use crate::transcript::native_markdown::native_markdown;
 
 pub const SIDE_QUESTION_ID_PREFIX: &str = "side-question:";
@@ -53,9 +54,9 @@ fn stdout_body(message: &ChatMessage) -> Option<String> {
     })
 }
 
-/// Folds every `/btw` command row and its output row into one side-question row, placed where the
-/// question was asked. The folded row keeps the command row's time and source; its blocks are the
-/// question and, once gxserver has read it, the answer.
+/// Folds every answered `/btw` command row and its output row into one side-question row, placed
+/// where the question was asked. The folded row keeps the command row's time and source; its
+/// blocks are the question and the answer.
 pub fn fold_side_questions(messages: &[ChatMessage]) -> Vec<ChatMessage> {
     let questions: Vec<(String, String)> = messages
         .iter()
@@ -82,12 +83,19 @@ pub fn fold_side_questions(messages: &[ChatMessage]) -> Vec<ChatMessage> {
             .find(|row| row.id == format!("{}:output", message.id))
             .and_then(stdout_body)
             .filter(|answer| !answer.is_empty());
+        // Until gxserver has read the answer, the card above the composer is the side question;
+        // a question closed before Claude answered leaves nothing to keep.
+        let Some(answer) = answer else {
+            continue;
+        };
         let mut row = message.clone();
         row.id = format!("{SIDE_QUESTION_ID_PREFIX}{}", message.id);
-        row.blocks = std::iter::once(question.clone())
-            .chain(answer)
-            .map(|text| ChatBlock::Text { text })
-            .collect();
+        row.blocks = vec![
+            ChatBlock::Text {
+                text: question.clone(),
+            },
+            ChatBlock::Text { text: answer },
+        ];
         folded.push(row);
     }
     folded
@@ -111,11 +119,46 @@ pub fn side_question_presentation(message: &ChatMessage) -> Value {
         })
         .collect();
     let answer = texts.get(1).copied();
-    let markdown = answer.map(|answer| native_markdown(answer, false));
+    let markdown = answer
+        .map(|answer| native_markdown(&agent_line_breaks(answer, AgentLineBreaks::Every), false));
     json!({
         "question": texts.first().copied().unwrap_or_default(),
         "answer": answer,
         "answerReferences": markdown.as_deref().map(crate::transcript::markdown_links::markdown_references),
         "answerMarkdown": markdown,
     })
+}
+
+/// The question of the side-question card open above the composer, when it is on screen.
+pub fn live_side_question(state: &crate::state::ChatState) -> Option<String> {
+    if !crate::questions::gates::notice_visible(state) {
+        return None;
+    }
+    let notice = state.session.terminal_notice.as_ref()?;
+    notice
+        .get("dialog")?
+        .get("sideQuestion")?
+        .get("question")?
+        .as_str()
+        .map(str::to_string)
+}
+
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: a sent side question showed twice, as the card above the composer and as the row in the transcript; only the card shows until the user clicks Close, then the row takes its place. The newest row asking the card's question is left out while the card is open. A question Claude cut short with `…` matches the full text it stands for.
+pub fn hide_live_side_question(messages: &mut Vec<ChatMessage>, question: &str) {
+    let asks = |message: &ChatMessage| {
+        let Some(ChatBlock::Text { text }) = message.blocks.first() else {
+            return false;
+        };
+        match question.strip_suffix('\u{2026}') {
+            Some(prefix) => text.starts_with(prefix.trim_end()),
+            None => text == question,
+        }
+    };
+    if let Some(at) = messages
+        .iter()
+        .rposition(|message| is_side_question_message(message) && asks(message))
+    {
+        messages.remove(at);
+    }
 }

@@ -150,6 +150,58 @@ fn rename_argument(command: &str) -> Option<Option<String>> {
     Some(Some(argument.to_string()))
 }
 
+/// The command a slash-command turn carries, keyed the way the user typed it: `/plugin:name args`
+/// and `/name args` are the same send.
+fn command_key(command: &str) -> String {
+    let normalized = normalize_pending_text(command);
+    let (name, args) = normalized
+        .split_once(' ')
+        .map_or((normalized.as_str(), ""), |(name, args)| (name, args));
+    let short = crate::session::composition::short_command_name(name);
+    if args.is_empty() {
+        format!("/{short}")
+    } else {
+        format!("/{short} {args}")
+    }
+}
+
+/// The agent's own record of a command the user sent from chat, as an index into `transcript`.
+///
+/// CDXC:SessionChat 2026-09-27 WHY:
+/// While the chat is live, Claude's envelope for the send arrives before any read has merged
+/// gxserver's archive over it, so the live acknowledgement, which retires only against its archive
+/// id, stayed beside it and every slash command with arguments showed twice until a reload.
+/// Paired the way `merge_session_chat_local_commands` in gxserver pairs the archive on a read: the
+/// same command, recorded within 30 seconds after the send, one record per send.
+fn agent_record_of_send(
+    transcript: &[ChatMessage],
+    command: &str,
+    sent_at_ms: i64,
+    claimed: &[usize],
+) -> Option<usize> {
+    let key = command_key(command);
+    transcript.iter().enumerate().position(|(index, message)| {
+        if claimed.contains(&index)
+            || !matches!(message.role, ChatRole::User)
+            || message.id.starts_with("local-command:")
+            || message.id.starts_with("app-command")
+            || !message
+                .timestamp
+                .is_some_and(|at| at >= sent_at_ms && at - sent_at_ms < 30_000)
+        {
+            return false;
+        }
+        // A skill's envelope has already been surfaced into the user's own words.
+        let text = joined_text(message, "\n");
+        let recorded = match parse_command_envelope(&text) {
+            Some(envelope) => format!("{} {}", envelope.name, envelope.args),
+            None if text.trim_start_matches(is_js_space).starts_with('/') => text,
+            None => return false,
+        };
+        command_key(&recorded) == key
+    })
+}
+
 /// `sessionChatAppCommandsAsMessages`.
 pub fn app_commands_as_messages(
     commands: &[Value],
@@ -166,6 +218,7 @@ pub fn app_commands_as_messages(
         })
         .collect();
     let mut rows = Vec::new();
+    let mut claimed_records: Vec<usize> = Vec::new();
     for entry in commands {
         let id = text(entry, "id").unwrap_or_default();
         let command = text(entry, "command").unwrap_or_default();
@@ -187,9 +240,16 @@ pub fn app_commands_as_messages(
         // commands the reader typed.
         if local_command {
             let stamp = sent_at_or_zero(entry);
+            // The agent's own record is the command row; a captured output still has no other.
+            let recorded_by_agent =
+                agent_record_of_send(transcript, &command, stamp, &claimed_records);
+            if let Some(index) = recorded_by_agent {
+                claimed_records.push(index);
+            }
             for (index, body) in local_command_texts(&command, text(entry, "output").as_deref())
                 .into_iter()
                 .enumerate()
+                .skip(usize::from(recorded_by_agent.is_some()))
             {
                 rows.push(row(
                     if index == 0 {
@@ -301,12 +361,16 @@ pub fn local_command_identities(
         if !message.id.starts_with("local-command:") || message.id.ends_with(":output") {
             continue;
         }
-        let Some(envelope) = parse_command_envelope(&joined_text(message, "\n")) else {
-            continue;
+        let text = joined_text(message, "\n");
+        // A skill's row has already been surfaced into the user's own words.
+        let command = match parse_command_envelope(&text) {
+            Some(envelope) => format!("{} {}", envelope.name, envelope.args),
+            None if text.trim_start_matches(is_js_space).starts_with('/') => text,
+            None => continue,
         };
         set(
             message.id["local-command:".len()..].to_string(),
-            normalize_pending_text(&format!("{} {}", envelope.name, envelope.args)),
+            normalize_pending_text(&command),
         );
     }
     covered

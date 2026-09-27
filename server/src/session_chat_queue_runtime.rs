@@ -783,34 +783,63 @@ pub(crate) async fn send_session_chat_message_with_draft(
         let session = target.session.clone();
         let message_id = draft_version.map(|version| {
             use sha2::{Digest, Sha256};
-            let identity=json!([project_id,session_id,version.draft_id,version.revision]).to_string();
+            let identity =
+                json!([project_id, session_id, version.draft_id, version.revision]).to_string();
             format!("msg_gx_{:x}", Sha256::digest(identity.as_bytes()))
         });
         let archive = tokio::task::spawn_blocking(move || {
-            let mut archive=crate::session_chat_local_command::prepare_session_chat_local_command(&message);
-            if let Some(command)=archive.as_mut() {
-                crate::session_chat_local_command::anchor_session_chat_local_command(command,&session);
+            let mut archive =
+                crate::session_chat_local_command::prepare_session_chat_local_command(&message);
+            if let Some(command) = archive.as_mut() {
+                crate::session_chat_local_command::anchor_session_chat_local_command(
+                    command, &session,
+                );
             }
-            crate::session_chat_opencode::Client::discover()?.send(&send_id, &message, &images, message_id.as_deref())?;
-            Ok::<_,DomainStateError>(archive)
-        }).await.map_err(|_| crate::session_chat_opencode::error("OpenCode delivery task failed."))??;
-        if let Some(command)=archive {
-            crate::session_chat_local_command::persist_session_chat_local_command(project_id,session_id,&command);
+            crate::session_chat_opencode::Client::discover()?.send(
+                &send_id,
+                &message,
+                &images,
+                message_id.as_deref(),
+            )?;
+            Ok::<_, DomainStateError>(archive)
+        })
+        .await
+        .map_err(|_| crate::session_chat_opencode::error("OpenCode delivery task failed."))??;
+        if let Some(command) = archive {
+            crate::session_chat_local_command::persist_session_chat_local_command(
+                project_id, session_id, &command,
+            );
         }
         crate::session_chat_opencode::invalidate(&id);
         promote_draft_session_after_send(state, project_id, session_id);
         unpark_session_after_send(state, project_id, session_id);
-        crate::session_chat_returned_prompt::record_session_chat_send_submitted(project_id, session_id);
+        crate::session_chat_returned_prompt::record_session_chat_send_submitted(
+            project_id, session_id,
+        );
         if let Some(version) = draft_version {
-            let db = open_gxserver_database(&state.paths).map_err(|e| crate::session_chat_opencode::error(e.to_string()))?;
+            let db = open_gxserver_database(&state.paths)
+                .map_err(|e| crate::session_chat_opencode::error(e.to_string()))?;
             crate::session_chat_draft_versions::consume(&db, project_id, session_id, version)?;
             broadcast_session_chat_queue_state(state, project_id, session_id);
         } else if source == SessionChatMessageSource::Composer {
-            retire_sent_session_chat_draft(state, project_id, session_id, text, draft_before_send.as_ref());
+            retire_sent_session_chat_draft(
+                state,
+                project_id,
+                session_id,
+                text,
+                draft_before_send.as_ref(),
+            );
         }
         schedule_session_chat_option_redetect(state, project_id, session_id, Some("opencode"));
         return Ok(text.len());
     }
+    // The draft was checked against the text as written; the terminal, the delivery watchdog and
+    // the local-command archive see what the agent is actually handed (a Claude skill pill typed as
+    // its bare `/name`).
+    let drafted_text = text;
+    let agent_text =
+        crate::session_chat_skill_invocation::agent_skill_text(terminal_agent.as_deref(), text);
+    let text = agent_text.as_ref();
     /*
     CDXC:AgentScreenDetection 2026-08-19:
     Sample where the transcript ends BEFORE the message is enqueued: everything
@@ -1268,7 +1297,7 @@ pub(crate) async fn send_session_chat_message_with_draft(
             state,
             &target.project_id,
             &target.session_id,
-            text,
+            drafted_text,
             draft_before_send.as_ref(),
         );
     }

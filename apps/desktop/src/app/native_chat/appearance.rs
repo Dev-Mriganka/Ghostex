@@ -219,7 +219,11 @@ impl ChatAppearance {
             verbose: state["verboseOverride"]
                 .as_bool()
                 .unwrap_or_else(|| enabled("sessionChatVerboseMode")),
-            simple: enabled("sessionChatSimpleMode"),
+            // A missing key means the shared default, which is on (defaults.ts, CDXC:SessionChat 2026-09-27).
+            simple: settings
+                .get("sessionChatSimpleMode")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
             file_previews: enabled("sessionChatFileEditPreviews"),
             transcript_width: enabled("sessionChatCustomTranscriptWidthEnabled").then(|| {
                 settings

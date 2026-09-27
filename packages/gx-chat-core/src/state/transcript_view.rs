@@ -147,6 +147,8 @@ pub struct ProjectionInputs {
     /// the degenerate splice the host compares by identity.
     pub queue: Option<Vec<serde_json::Value>>,
     pub line_breaks: crate::transcript::line_breaks::AgentLineBreaks,
+    /// The side question whose card is open above the composer, which the list leaves out.
+    pub live_side_question: Option<String>,
 }
 
 impl Default for TranscriptViewState {

@@ -8,6 +8,7 @@ use serde_json::{json, Map, Value};
 
 use crate::questions::model::{TerminalDialog, TerminalNotice, TerminalNoticeAction};
 use crate::questions::terminal_dialog_copy::terminal_dialog_copy;
+use crate::transcript::line_breaks::{agent_line_breaks, AgentLineBreaks};
 
 /// The button copy for one of the dialog's named actions.
 fn action_label(action: &str) -> Option<&'static str> {
@@ -137,7 +138,10 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
 fn side_question_presentation(side_question: &Value) -> Value {
     let answer = side_question["answer"].as_str().unwrap_or_default();
     let complete = side_question["complete"] == true;
-    let markdown = crate::transcript::native_markdown::native_markdown(answer, false);
+    let markdown = crate::transcript::native_markdown::native_markdown(
+        &agent_line_breaks(answer, AgentLineBreaks::Every),
+        false,
+    );
     json!({
         "question": side_question["question"],
         "questionTruncated": side_question["questionTruncated"] == true,

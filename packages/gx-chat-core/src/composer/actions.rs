@@ -84,6 +84,15 @@ pub fn handle(state: &mut ChatState, action: &UserAction, context: &ChatContext)
         ActionKind::AttachPaths => attach_paths(state, action),
         ActionKind::AttachmentsFinished => attachments_finished(state, action),
         ActionKind::InsertAttachments => insert_attachments(action),
+        ActionKind::ToggleSideChat => {
+            let content = crate::composer::side_chat::toggle_side_chat(text_param(action));
+            let caret = content.encode_utf16().count();
+            vec![Effect::SetComposerText {
+                content,
+                caret: Some(caret),
+                from_history: false,
+            }]
+        }
         ActionKind::RemoveAttachment => {
             let edit = remove_reference(
                 text_param(action),
@@ -411,6 +420,7 @@ fn suggestion_command(state: &mut ChatState, action: &UserAction) -> Vec<Effect>
         popup.kind,
         index,
         &state.composer.suggestions.text,
+        sources.agent.as_deref(),
     ) else {
         return Vec::new();
     };
@@ -441,7 +451,9 @@ fn edit_draft(state: &mut ChatState, action: &UserAction, context: &ChatContext)
     let record = crate::composer::storage::StoredDraftRecord {
         text: text.to_string(),
         updated_at: Some(context.now_millis() as f64),
-        version: action.param("draftVersion").and_then(|value| serde_json::from_value(value.clone()).ok()),
+        version: action
+            .param("draftVersion")
+            .and_then(|value| serde_json::from_value(value.clone()).ok()),
         submitted: false,
         parked: false,
     };

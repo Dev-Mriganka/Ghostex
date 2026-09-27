@@ -91,6 +91,7 @@ pub fn owner(kind: &ActionKind) -> Option<Family> {
         | ActionKind::AttachPaths
         | ActionKind::InsertAttachments
         | ActionKind::RemoveAttachment
+        | ActionKind::ToggleSideChat
         | ActionKind::Send
         | ActionKind::Queue
         | ActionKind::Compact

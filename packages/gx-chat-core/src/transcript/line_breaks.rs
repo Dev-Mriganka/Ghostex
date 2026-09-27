@@ -1,14 +1,13 @@
-//! Which single newlines in an agent's reply stay line breaks.
+//! Which single newlines in an agent's reply or a user's prompt stay line breaks.
 //!
-//! Markdown joins the lines of a paragraph, so the phone's renderer showed a question and the
-//! lettered options under it as one run of text. The decision is made here and travels inside the
-//! Markdown as a backslash hard break, which every renderer already draws as a new line (the GPUI
-//! `TextView` and the phone's parser in `apps/mobile/app/src/chat/native/transcript/markdown/`).
-//! The GPUI `TextView` also draws a soft newline as a line break on its own, so today this changes
-//! only what the phone shows.
+//! Markdown joins the lines of a paragraph, and so do both renderers (the GPUI `TextView` and the
+//! phone's parser in `apps/mobile/app/src/chat/native/transcript/markdown/`): a question and the
+//! lettered options under it read as one run of text, and so did a multi-line prompt. The decision
+//! is made here and travels inside the Markdown as a hard break, which every renderer draws as a
+//! new line.
 //!
-//! CDXC:SessionChat 2026-09-26 DECISION:
-//! User: a line that starts like a lettered option (`A. `, `B) `, `A1. `) stays on its own line in every agent's reply. Pi, OMP, Hermes, Antigravity and ZCode replies keep every single newline, because their terminals paint one row per line (2026-09-14/17, ported from the deleted React chat); Claude, Codex, Grok Build and Cursor otherwise follow Markdown. Supersedes the React-only rule deleted with the React chat on 2026-09-25.
+//! CDXC:SessionChat 2026-09-27 DECISION:
+//! User: "i dont want joined lines when agent sends stuff with newlines". Every agent's reply keeps each single newline as a line break, and so does every other place an agent's own words are drawn: thinking, side-question answers, a subagent's message card, and a message another agent sent into the session. Supersedes the 2026-09-26 decision, under which Claude, Codex, Grok Build and Cursor followed Markdown's joining except before a lettered option line (only Pi, OMP, Hermes, Antigravity and ZCode kept every newline).
 
 use markdown::mdast::Node;
 use markdown::ParseOptions;
@@ -24,19 +23,27 @@ pub enum AgentLineBreaks {
 }
 
 impl AgentLineBreaks {
-    /// The rule for a session, from its transcript family or, before a read names one, its
-    /// launch agent.
-    pub fn for_agent(agent: Option<&str>, session_agent: Option<&str>) -> Self {
-        match crate::extras::agents::transcript_agent([agent, session_agent]) {
-            Some("pi" | "hermes" | "antigravity" | "zcode") => Self::Every,
-            _ => Self::Markdown,
-        }
+    /// The rule for a session: every agent keeps its newlines (the 2026-09-27 decision above).
+    pub fn for_agent(_agent: Option<&str>, _session_agent: Option<&str>) -> Self {
+        Self::Every
     }
 }
 
 /// The reply with the chosen soft line breaks turned into hard breaks. Code, tables, headings and
 /// HTML are untouched: only the text of paragraphs is looked at.
 pub fn agent_line_breaks(markdown: &str, mode: AgentLineBreaks) -> String {
+    hard_breaks(markdown, mode, "\\")
+}
+
+/// A user's prompt with every newline inside a paragraph kept as a line break: it is text somebody
+/// typed, so a pasted block or a list of lines shows the way it was sent.
+///
+/// CDXC:SessionChat 2026-09-27 WHY: the break is two trailing spaces, not the backslash agent replies get, because the prompt then goes through the typed-path linker, whose path token runs to the next whitespace: a prompt line ending in `/Users/me/project` would become a link to `/Users/me/project\` and lose the break with it. Agent replies stay on the backslash because the phone trims trailing spaces from agent paragraph lines.
+pub fn user_line_breaks(markdown: &str) -> String {
+    hard_breaks(markdown, AgentLineBreaks::Every, "  ")
+}
+
+fn hard_breaks(markdown: &str, mode: AgentLineBreaks, marker: &str) -> String {
     if !markdown.contains('\n') {
         return markdown.to_string();
     }
@@ -50,11 +57,11 @@ pub fn agent_line_breaks(markdown: &str, mode: AgentLineBreaks) -> String {
     }
     offsets.sort_unstable();
     offsets.dedup();
-    let mut out = String::with_capacity(markdown.len() + offsets.len());
+    let mut out = String::with_capacity(markdown.len() + offsets.len() * marker.len());
     let mut cursor = 0;
     for offset in offsets {
         out.push_str(&markdown[cursor..offset]);
-        out.push('\\');
+        out.push_str(marker);
         cursor = offset;
     }
     out.push_str(&markdown[cursor..]);

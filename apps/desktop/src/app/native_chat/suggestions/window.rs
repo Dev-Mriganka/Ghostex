@@ -13,6 +13,8 @@ pub(in crate::app::native_chat) struct SuggestionWindowState {
     /// The open card in the chat window's content coordinates, on device pixels.
     pub(super) bounds: Option<Bounds<Pixels>>,
     opening: bool,
+    /// A sync asked for while `opening`: the step in flight measured an older state.
+    stale: bool,
     inline: Option<gpui::WeakEntity<SuggestionPanel>>,
 }
 
@@ -119,9 +121,15 @@ impl NativeChatView {
     /// so on a two-display computer the popup landed on the other screen. Both read to the user as
     /// the feature being missing. Every other chat child window passes its display the same way.
     pub(crate) fn sync_suggestion_window(&mut self, cx: &mut Context<Self>) {
+        /*
+        CDXC:SessionChat 2026-09-27 WHY:
+        The window step runs deferred and reads the state captured when it was asked for. A sync asked for while it ran used to be dropped, and the step caught up only when the composer card had moved, so a list the core opened (or a focus change) during that tick was lost: typing `$` sometimes left the list shut, or shut it again right after it showed. The step now runs once more whenever a sync arrived while it was in flight.
+        */
         if self.suggestions.opening {
+            self.suggestions.stale = true;
             return;
         }
+        self.suggestions.stale = false;
         let source = self
             .maximized_window
             .map(|window| window.into())
@@ -185,7 +193,7 @@ impl NativeChatView {
                 .filter(|(card, ..)| card.size.height > px(0.0));
             let wanted = placement.map(|(card, ..)| card);
             if chat.read(cx).suggestions.bounds == wanted {
-                chat.update(cx, |chat, _| chat.suggestions.opening = false);
+                chat.update(cx, |chat, cx| chat.finish_suggestion_step(anchor, cx));
                 return;
             }
             let old = chat.update(cx, |chat, _| {
@@ -207,10 +215,7 @@ impl NativeChatView {
                 {
                     chat.update(cx, |chat, cx| {
                         chat.suggestions.handle = Some(handle);
-                        chat.suggestions.opening = false;
-                        if chat.composer_bounds.get() != anchor {
-                            chat.sync_suggestion_window(cx);
-                        }
+                        chat.finish_suggestion_step(anchor, cx);
                     });
                     return;
                 }
@@ -272,7 +277,6 @@ impl NativeChatView {
                 )
             });
             chat.update(cx, |chat, cx| {
-                chat.suggestions.opening = false;
                 match result {
                     Some(Ok(handle)) => chat.suggestions.handle = Some(handle),
                     Some(Err(error)) => {
@@ -281,14 +285,19 @@ impl NativeChatView {
                     }
                     None => {}
                 }
-                // The card may have moved while this deferred step ran; its measurement was
-                // dropped by the `opening` guard, so catch up now.
-                if chat.composer_bounds.get() != anchor {
-                    chat.sync_suggestion_window(cx);
-                }
+                chat.finish_suggestion_step(anchor, cx);
                 cx.notify();
             });
         });
+    }
+
+    /// Ends the deferred window step, running it again when the composer card moved or a sync was
+    /// asked for while it was in flight.
+    fn finish_suggestion_step(&mut self, anchor: Bounds<Pixels>, cx: &mut Context<Self>) {
+        self.suggestions.opening = false;
+        if std::mem::take(&mut self.suggestions.stale) || self.composer_bounds.get() != anchor {
+            self.sync_suggestion_window(cx);
+        }
     }
 }
 

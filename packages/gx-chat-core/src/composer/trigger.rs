@@ -108,10 +108,14 @@ pub fn skill_detail(skill: &Skill) -> String {
     }
 }
 
-/// Markdown-linked skill mention: the label carries the `$name` the agent reads, and the
-/// destination is the skill's `SKILL.md`, which is what a reader clicking the mention wants open.
-pub fn linked_skill_mention(skill: &Skill) -> String {
-    file_reference(&skill.skill_file_path, &format!("${}", skill.name))
+/// Markdown-linked skill mention: the label carries the invocation the agent reads (`$name`, or
+/// `/name` for Claude Code), and the destination is the skill's `SKILL.md`, which is what a reader
+/// clicking the mention wants open.
+pub fn linked_skill_mention(skill: &Skill, agent: Option<&str>) -> String {
+    file_reference(
+        &skill.skill_file_path,
+        &crate::composer::skill_invocation::skill_invocation(&skill.name, agent),
+    )
 }
 
 /// The `@` picker completes to a named file link using the draft's next reference number.

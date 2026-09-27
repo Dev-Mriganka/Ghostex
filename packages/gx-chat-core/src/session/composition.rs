@@ -73,14 +73,26 @@ fn normalized_text(message: &ChatMessage) -> String {
 /// `surfaceSkillInvocationUserTurns`.
 ///
 /// Claude-family harnesses record a slash input's user turn as a `<command-name>` envelope, hidden
-/// by the noise filter, correctly, for most CATALOG commands, since a local command marker is
+/// by the noise filter, correctly, for the agent's own commands, since a local command marker is
 /// shown instead. But a skill invocation IS the user's chat turn, and `/compact`'s marker retires
 /// when compaction finishes, so those durable transcript records must be converted back into
 /// readable user turns.
+///
+/// CDXC:SessionChat 2026-09-27 WHY:
+/// A slash command sent from chat reaches the transcript three ways: Claude's own envelope while
+/// the chat is live, gxserver's archived row (`local-command:`) once a read has merged the archive
+/// over it, and the live acknowledgement (`app-command-local:`) before either. Only Claude's
+/// envelope was surfaced, and against the five default commands rather than the agent's own
+/// catalog, so a skill sent from chat was a bubble while live but a grey "Slash command" row after
+/// a reload, and a built-in such as `/usage` the other way round. Every shape now follows one
+/// rule: the agent's built-in commands stay command rows, anything else (a skill, a custom
+/// command) is the user's turn.
 pub fn surface_skill_invocation_user_turns(
     messages: &[ChatMessage],
     catalog_command_names: &[String],
+    agent: Option<&str>,
 ) -> Vec<ChatMessage> {
+    let built_in = crate::composer::slash_commands::slash_commands_for_agent(agent);
     let mut changed = false;
     let mut out = Vec::with_capacity(messages.len());
     for message in messages {
@@ -88,10 +100,7 @@ pub fn surface_skill_invocation_user_turns(
             .blocks
             .iter()
             .all(|block| matches!(block, ChatBlock::Text { .. }));
-        if message.id.starts_with("local-command:")
-            || !matches!(message.role, ChatRole::User)
-            || !plain_text
-        {
+        if !matches!(message.role, ChatRole::User) || !plain_text {
             out.push(message.clone());
             continue;
         }
@@ -106,21 +115,23 @@ pub fn surface_skill_invocation_user_turns(
         // out, so a session-only effort change surfaced as a "/effort" user bubble.
         if catalog_name != "compact"
             && (catalog_command_names.contains(&catalog_name)
-                || matches!(catalog_name.as_str(), "model" | "effort" | "fast"))
+                || matches!(catalog_name.as_str(), "model" | "effort" | "fast")
+                || built_in
+                    .iter()
+                    .any(|command| command.name.eq_ignore_ascii_case(&catalog_name)))
         {
             out.push(message.clone());
             continue;
         }
         // The harness canonicalizes a plugin skill to `/plugin:name`, but the user typed the
-        // SHORT name.
-        let short_name = envelope
-            .name
-            .trim_start_matches('/')
-            .rsplit(':')
-            .next()
-            .unwrap_or_default()
-            .to_string();
-        let token = format!("/{short_name}");
+        // SHORT name. gxserver's rows carry what the user typed, so they keep it whole.
+        let typed_by_user = message.id.starts_with("local-command:")
+            || message.id.starts_with("app-command-local:");
+        let token = if typed_by_user {
+            envelope.name.clone()
+        } else {
+            format!("/{}", short_command_name(&envelope.name))
+        };
         let mut next = message.clone();
         next.blocks = vec![ChatBlock::Text {
             text: if envelope.args.is_empty() {
@@ -137,6 +148,14 @@ pub fn surface_skill_invocation_user_turns(
     } else {
         messages.to_vec()
     }
+}
+
+/// `/plugin:name` as the user typed it: `name`.
+pub fn short_command_name(name: &str) -> &str {
+    name.trim_start_matches('/')
+        .rsplit(':')
+        .next()
+        .unwrap_or_default()
 }
 
 /// The list a pending echo is reconciled against.
@@ -244,7 +263,8 @@ pub fn boundaried_transcript(state: &ChatState, catalog: &[String]) -> Vec<ChatM
         .iter()
         .map(|row| row.message.clone())
         .collect();
-    let surfaced = surface_skill_invocation_user_turns(&assembled, catalog);
+    let surfaced =
+        surface_skill_invocation_user_turns(&assembled, catalog, state.session.agent.as_deref());
     apply_marker_boundaries(&surfaced, &state.pending.markers)
 }
 
@@ -300,9 +320,10 @@ pub fn compose(
     // the markers, then the streaming bubble, then the pending tool row, then the pending echoes.
     let mut tail: Vec<ChatMessage> =
         unreconciled_terminal_statuses(&state.pending.terminal_status_messages, &boundaried);
-    tail.extend(app_commands_as_messages(
-        &state.session.app_commands,
-        &transcript,
+    tail.extend(surface_skill_invocation_user_turns(
+        &app_commands_as_messages(&state.session.app_commands, &transcript),
+        catalog,
+        state.session.agent.as_deref(),
     ));
     tail.extend(marker_messages);
 
