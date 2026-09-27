@@ -444,10 +444,11 @@ wrap_permission_handler! {
             callback: Option<&mut PermissionPromptCallback>,
         ) -> c_int {
             /*
-            CDXC:PlatformSupport 2026-08-04:
-            Current Windows CEF asks for LOCAL_NETWORK_ACCESS, LOCAL_NETWORK,
-            or LOOPBACK_NETWORK before a bundled file:// app surface may call
-            the authenticated loopback gxserver API. Alloy has no permission
+            CDXC:PlatformSupport 2026-09-27:
+            Current Windows CEF asks for LOCAL_NETWORK or LOOPBACK_NETWORK
+            before a bundled file:// app surface may call the authenticated
+            loopback gxserver API (CEF 150 retired the combined
+            LOCAL_NETWORK_ACCESS bit, so it is no longer accepted). Alloy has no permission
             UI for these hidden first-party surfaces, so leaving the prompt to
             default handling strands fetch (and therefore sleeping-session
             wake) indefinitely.
@@ -456,10 +457,8 @@ wrap_permission_handler! {
             Browser, editor, project-workarea, and modal surfaces keep their
             existing permission behavior.
             */
-            let local_network_permissions =
-                PermissionRequestTypes::LOCAL_NETWORK_ACCESS.get_raw() as u32
-                    | PermissionRequestTypes::LOCAL_NETWORK.get_raw() as u32
-                    | PermissionRequestTypes::LOOPBACK_NETWORK.get_raw() as u32;
+            let local_network_permissions = PermissionRequestTypes::LOCAL_NETWORK.get_raw() as u32
+                | PermissionRequestTypes::LOOPBACK_NETWORK.get_raw() as u32;
             let requesting_origin = requesting_origin.map(CefString::to_string).unwrap_or_default();
             let trusted_loopback_request = self.trusted_loopback_entry_identity.as_deref().is_some_and(|entry_identity| {
                 browser.as_ref().and_then(|browser| browser.main_frame()).is_some_and(|frame| {

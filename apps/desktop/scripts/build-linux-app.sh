@@ -55,6 +55,10 @@ fi
 # into CEF_PATH. Honor an explicit location so WSL builds can keep the CEF
 # archive on the Linux filesystem, where unpacking can preserve timestamps.
 export CEF_PATH="${CEF_PATH:-$GPUI_DIR/build/cef-cache}"
+# shellcheck source=cef-distribution.sh
+source "$SCRIPT_DIR/cef-distribution.sh"
+ghostex_prepare_versioned_cef_path "$CEF_PATH" >/dev/null
+CEF_RUST_TARGET="$(uname -m)-unknown-linux-gnu"
 
 # 1) Sidebar bundle (same steps as the macOS script).
 (
@@ -77,13 +81,9 @@ export CEF_PATH="${CEF_PATH:-$GPUI_DIR/build/cef-cache}"
 # sit directly in $CEF_PATH/<cef-version>/cef_linux_<arch>/ with no Release/
 # or Resources/ subdirectories, alongside SDK-only build support
 # (CMakeLists.txt, cmake/, include/, libcef_dll/, archive.json).
-CEF_PAYLOAD=""
-while IFS= read -r candidate; do
-	CEF_PAYLOAD="$(dirname "$candidate")"
-	break
-done < <(find "$CEF_PATH" -type f -name libcef.so 2>/dev/null)
-if [[ -z "$CEF_PAYLOAD" ]]; then
-	echo "cef-rs did not produce libcef.so under $CEF_PATH" >&2
+CEF_PAYLOAD="$(ghostex_cef_distribution_dir "$CEF_PATH" "$CEF_RUST_TARGET")"
+if [[ ! -f "$CEF_PAYLOAD/libcef.so" ]]; then
+	echo "cef-rs did not produce libcef.so under $CEF_PAYLOAD" >&2
 	exit 1
 fi
 if [[ ! -f "$CEF_PAYLOAD/icudtl.dat" ]]; then

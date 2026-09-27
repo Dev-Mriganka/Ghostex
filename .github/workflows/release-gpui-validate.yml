@@ -87,7 +87,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 60
     env:
-      CEF_PATH: ${{ github.workspace }}\gpui\build\cef-cache
+      CEF_PATH: ${{ github.workspace }}\apps\desktop\build\cef-cache
       ZIG_GLOBAL_CACHE_DIR: ${{ github.workspace }}\build\zig-global-cache
     steps:
       - uses: actions/checkout@v6

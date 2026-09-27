@@ -940,7 +940,7 @@ dependencies = [
 
 [[package]]
 name = "cef"
-version = "148.4.0+148.0.10"
+version = "154.1.0+154.0.26"
 dependencies = [
  "cef-dll-sys",
  "libloading 0.9.0",
@@ -950,9 +950,10 @@ dependencies = [
 
 [[package]]
 name = "cef-dll-sys"
-version = "148.4.0+148.0.10"
+version = "154.1.0+154.0.26"
 dependencies = [
  "anyhow",
+ "cc",
  "cmake",
  "download-cef",
  "serde_json",
@@ -1786,7 +1787,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "download-cef"
-version = "2.3.2"
+version = "3.0.0"
 dependencies = [
  "bzip2",
  "clap",

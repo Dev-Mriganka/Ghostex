@@ -985,7 +985,7 @@ stage_cef_framework_if_changed() {
 		--value "cef-framework-stage-v1" \
 		--value "arch=$GHOSTEX_MACOS_ARCH" \
 		--value "libcef=$(path_identity "$CEF_FRAMEWORK/Chromium Embedded Framework")" \
-		--path "$CEF_CACHE_DIR/archive.json" \
+		--path "$CEF_DISTRIBUTION_DIR/archive.json" \
 		--path "$CEF_FRAMEWORK/Resources/Info.plist")"
 	if cache_matches "cef-framework-staged" "$framework_digest" \
 		"$target_dir/Chromium Embedded Framework" \
@@ -1212,6 +1212,10 @@ esac
 
 CEF_CACHE_DIR="$GPUI_DIR/build/cef-cache"
 export CEF_PATH="$CEF_CACHE_DIR"
+# shellcheck source=cef-distribution.sh
+source "$SCRIPT_DIR/cef-distribution.sh"
+ghostex_prepare_versioned_cef_path "$CEF_CACHE_DIR" >/dev/null
+CEF_DISTRIBUTION_DIR="$(ghostex_cef_distribution_dir "$CEF_CACHE_DIR" "$RUST_TARGET_ARCH-apple-darwin")"
 BUILD_CACHE_DIR="${GHOSTEX_BUILD_CACHE_DIR:-$REPO_ROOT/build/$GHOSTEX_MACOS_ARCH/build-cache}"
 # shellcheck source=build-cache.sh
 source "$SCRIPT_DIR/build-cache.sh"
@@ -1252,9 +1256,9 @@ else
 	/bin/bash "$SCRIPT_DIR/build-macos-rust.sh"
 fi
 
-CEF_FRAMEWORK="$(find "$CEF_CACHE_DIR" -path '*/Chromium Embedded Framework.framework' -type d -print -quit)"
-if [[ -z "$CEF_FRAMEWORK" || ! -d "$CEF_FRAMEWORK" ]]; then
-	echo "cef-rs did not produce a Chromium Embedded Framework under $CEF_CACHE_DIR" >&2
+CEF_FRAMEWORK="$CEF_DISTRIBUTION_DIR/Chromium Embedded Framework.framework"
+if [[ ! -d "$CEF_FRAMEWORK" ]]; then
+	echo "cef-rs did not produce a Chromium Embedded Framework under $CEF_DISTRIBUTION_DIR" >&2
 	exit 1
 fi
 

@@ -202,6 +202,10 @@ WSL_ZMX_CURRENT_PREFIX="$WSL_GXSERVER_CARGO_OUTPUT_ROOT/zmx-current"
 WSL_ZMX_CACHE_DIR="${GHOSTEX_WINDOWS_WSL_ZMX_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/ghostex/zmx-build-cache/$WSL_ZIG_TARGET}"
 ZIG_CACHE="${GHOSTEX_WINDOWS_ZIG_CACHE_DIR:-$GPUI_DIR/build/zig-global-cache-windows}"
 mkdir -p "$CEF_CACHE" "$CARGO_OUTPUT_ROOT" "$WSL_GXSERVER_CARGO_OUTPUT_ROOT" "$WSL_ZMX_CURRENT_PREFIX" "$WSL_ZMX_CACHE_DIR" "$ZIG_CACHE"
+# shellcheck source=cef-distribution.sh
+source "$SCRIPT_DIR/cef-distribution.sh"
+ghostex_prepare_versioned_cef_path "$CEF_CACHE" >/dev/null
+CEF_DISTRIBUTION_DIR="$(ghostex_cef_distribution_dir "$CEF_CACHE" "$RUST_TARGET")"
 
 # Windows Bun keeps the large Vite module graph on native NTFS. Running Linux
 # Node against this /mnt/c checkout serializes more than ten thousand small-file
@@ -376,9 +380,9 @@ EOF
 report_build_phase "Building the bundled WSL gxserver and zmx runtime..."
 build_current_wsl_gxserver
 
-CEF_RELEASE="$(dirname "$(find "$CEF_CACHE" -type f -iname libcef.dll -print -quit)")"
+CEF_RELEASE="$(dirname "$(find "$CEF_DISTRIBUTION_DIR" -type f -iname libcef.dll -print -quit 2>/dev/null)")"
 if [[ -z "$CEF_RELEASE" || ! -f "$CEF_RELEASE/libcef.dll" ]]; then
-	echo "cef-rs did not produce libcef.dll under $CEF_CACHE" >&2
+	echo "cef-rs did not produce libcef.dll under $CEF_DISTRIBUTION_DIR" >&2
 	exit 1
 fi
 CEF_RESOURCES="$CEF_RELEASE"

@@ -13,8 +13,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GPUI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # cef-dll-sys resolves its CEF distribution from CEF_PATH. The bundle packager
-# stages the framework from this same cache, so the two must agree.
+# stages the framework from this same cache, so the two must agree: both use
+# the pinned build's versioned folder (see cef-distribution.sh).
 export CEF_PATH="$GPUI_DIR/build/cef-cache"
+# shellcheck source=cef-distribution.sh
+source "$SCRIPT_DIR/cef-distribution.sh"
+ghostex_prepare_versioned_cef_path "$CEF_PATH" >/dev/null
 
 # CDXC:Build 2026-09-04 WHY:
 # `--bins` also compiled the three smoke/demo binaries and the Windows

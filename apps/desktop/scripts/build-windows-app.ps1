@@ -74,6 +74,17 @@ if ($BuildPhase -notin @("all", "compile", "stage")) {
 # script downloads the CEF binary distribution into CEF_PATH.
 $CefCacheDir = Join-Path $GpuiDir "build/cef-cache"
 $env:CEF_PATH = $CefCacheDir
+# cef-dll-sys uses CEF_PATH/<CEF build>/ only when that folder exists and
+# otherwise accepts an older distribution sitting in CEF_PATH, so create the
+# pinned build's folder first and stage only from it (see cef-distribution.sh).
+$CefRsManifest = Join-Path $RepoRoot ".dependencies/cef-rs/Cargo.toml"
+$CefBuildMatch = Select-String -Path $CefRsManifest -Pattern '^version = "[^"+]*\+([^"]+)"$' |
+    Select-Object -First 1
+if (-not $CefBuildMatch) {
+    throw "Could not read the pinned CEF build from $CefRsManifest"
+}
+$CefVersionedDir = Join-Path $CefCacheDir $CefBuildMatch.Matches[0].Groups[1].Value
+New-Item -ItemType Directory -Force -Path $CefVersionedDir | Out-Null
 $env:ZIG_GLOBAL_CACHE_DIR = Join-Path $RepoRoot "build/zig-global-cache"
 New-Item -ItemType Directory -Force -Path $env:ZIG_GLOBAL_CACHE_DIR | Out-Null
 
@@ -145,10 +156,10 @@ if ($BuildPhase -eq "compile") {
 
 # 3) Locate the extracted CEF distribution. cef-dll-sys may export either a
 # flat Windows payload or the upstream Release/ + Resources/ layout.
-$LibCef = Get-ChildItem -Path $CefCacheDir -Recurse -File -Filter "libcef.dll" |
+$LibCef = Get-ChildItem -Path $CefVersionedDir -Recurse -File -Filter "libcef.dll" |
     Select-Object -First 1
 if (-not $LibCef) {
-    throw "cef-rs did not produce libcef.dll under $CefCacheDir"
+    throw "cef-rs did not produce libcef.dll under $CefVersionedDir"
 }
 $CefRelease = $LibCef.Directory
 $CefResources = $CefRelease.FullName
