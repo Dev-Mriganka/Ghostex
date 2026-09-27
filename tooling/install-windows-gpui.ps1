@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$StagedAppPath,
 
+    [string]$InstallDir,
+
     [switch]$Elevated
 )
 
@@ -19,7 +21,25 @@ if (-not (Test-Path -LiteralPath $StagedExecutable -PathType Leaf)) {
     throw "The staged Ghostex executable is missing: $StagedExecutable"
 }
 
-if (-not (Test-IsAdministrator)) {
+$WindowsProgramFilesRoot = $env:ProgramW6432
+if (-not $WindowsProgramFilesRoot) {
+    $WindowsProgramFilesRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
+}
+if (-not $WindowsProgramFilesRoot) {
+    throw "Windows did not report its Program Files directory."
+}
+$DefaultInstallDir = Join-Path $WindowsProgramFilesRoot "Ghostex"
+if (-not $InstallDir) { $InstallDir = $DefaultInstallDir }
+$InstallDir = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\')
+$MachineInstall = [string]::Equals($InstallDir, $DefaultInstallDir, [StringComparison]::OrdinalIgnoreCase)
+if ($InstallDir -eq [IO.Path]::GetPathRoot($InstallDir).TrimEnd('\') -or
+    $InstallDir -eq $StagedAppPath.TrimEnd('\') -or
+    $StagedAppPath.StartsWith($InstallDir + '\', [StringComparison]::OrdinalIgnoreCase) -or
+    $InstallDir.StartsWith($StagedAppPath.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw "The install directory must be separate from the staged app and cannot be a drive root: $InstallDir"
+}
+
+if ($MachineInstall -and -not (Test-IsAdministrator)) {
     if ($Elevated) {
         throw "Ghostex installation requires administrator access."
     }
@@ -32,11 +52,14 @@ if (-not (Test-IsAdministrator)) {
         "`"$PSCommandPath`""
         "-StagedAppPath"
         "`"$StagedAppPath`""
+        "-InstallDir"
+        "`"$InstallDir`""
         "-Elevated"
     )
     $Installer = Start-Process `
         -FilePath "powershell.exe" `
         -Verb RunAs `
+        -WindowStyle Hidden `
         -ArgumentList $Arguments `
         -Wait `
         -PassThru
@@ -46,14 +69,6 @@ if (-not (Test-IsAdministrator)) {
     exit 0
 }
 
-$ProgramFiles = $env:ProgramW6432
-if (-not $ProgramFiles) {
-    $ProgramFiles = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)
-}
-if (-not $ProgramFiles) {
-    throw "Windows did not report its Program Files directory."
-}
-$InstallDir = Join-Path $ProgramFiles "Ghostex"
 $InstalledExecutable = Join-Path $InstallDir "Ghostex.exe"
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -147,9 +162,10 @@ if (Test-Path -LiteralPath $StagedWmx -PathType Leaf) {
     }
 }
 
-$ProgramsDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonPrograms)
+$ProgramsFolder = if ($MachineInstall) { [Environment+SpecialFolder]::CommonPrograms } else { [Environment+SpecialFolder]::Programs }
+$ProgramsDir = [Environment]::GetFolderPath($ProgramsFolder)
 if (-not $ProgramsDir) {
-    throw "Windows did not report its all-users Start Menu directory."
+    throw "Windows did not report its Start Menu directory."
 }
 $ShortcutDir = Join-Path $ProgramsDir "Ghostex"
 $ShortcutPath = Join-Path $ShortcutDir "Ghostex.lnk"

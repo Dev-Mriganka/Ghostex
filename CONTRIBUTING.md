@@ -50,7 +50,15 @@ is not required. Set `GHOSTEX_ZIG` to use an existing Zig 0.16.0 executable.
 
 `start` initializes missing desktop submodules at their pinned revisions and preserves
 existing checkouts. It checks the build tools before downloading the WSL runtime components.
-There is no `dev` script; use `start` for the desktop or `start:web` for the browser build.
+`dev` is an alias for `start`; use `start:web` for the browser build.
+
+Windows normally installs the build in `C:\Program Files\Ghostex`. To keep a development
+installation inside the checkout, set `$env:INSTALL_DIR = "$PWD\build\local"` before
+`bun start`. The app will run from `build/local/Ghostex`, with a current-user Start Menu
+shortcut. Keep this directory separate from `apps/desktop/build/windows/Ghostex`, which
+is the staging output replaced by the next build. To persist the choice for Bun commands,
+put `INSTALL_DIR=D:/Ghostex/build/local` (using your checkout path) in an untracked
+`.env.local` and exclude that file in `.git/info/exclude`.
 
 Windows builds also prepare the native Code editor. A clean editor checkout can reuse its
 published component when an authenticated GitHub CLI is available. To build it from source, initialize
