@@ -319,6 +319,11 @@ impl CefSurface {
         ))
     }
 
+    /// Gives the page a frame before its window first paints; painting places it from then on.
+    pub(crate) fn set_initial_bounds(&self, bounds: Bounds<Pixels>, scale_factor: f32) {
+        self.browser.set_bounds(bounds, scale_factor);
+    }
+
     pub(crate) fn set_visible(&mut self, visible: bool) {
         if visible && !self.visible && crate::app::panel_motion::view_panel_would_slide_open() {
             self.browser

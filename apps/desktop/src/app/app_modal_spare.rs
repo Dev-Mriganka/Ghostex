@@ -83,7 +83,8 @@ impl GhostexGpuiApp {
                 window_size,
             ))),
             app_id: gpui_platform_window_app_id(),
-            focus: false,
+            // CDXC:AppModal 2026-09-27 WHY: On Windows `focus: false` makes GPUI create the popup with WS_EX_NOACTIVATE, so once another app was in front a click on the promoted Settings window never brought Ghostex forward and typing went to the other app until the main window was clicked. A hidden window takes no activation anyway, and macOS and Linux read `focus` only when the window is shown at creation.
+            focus: true,
             icon: gpui_platform_window_icon(),
             show: false,
             is_resizable: modal.is_resizable(),

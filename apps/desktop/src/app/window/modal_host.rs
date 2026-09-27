@@ -171,6 +171,13 @@ impl GpuiAppModalHostWindow {
         })
         .ok();
         let initial_window_size = modal.window_size_for_open(&open_message);
+        // CDXC:AppModal 2026-09-27 WHY: A CEF page is created 1×1 and only gets its frame when the window paints, but the warm spare stays hidden while Settings renders into it, so the page laid out in a 14px viewport. The Strength slider's track collapsed to zero width there, and Base UI measures an edge-aligned thumb only when it mounts or its value changes, so the thumb and fill stayed hidden after the window grew. The page gets the window's full frame from the start instead.
+        if let Some(surface) = &surface {
+            surface.read(cx).set_initial_bounds(
+                gpui::Bounds::new(gpui::Point::default(), initial_window_size),
+                window.scale_factor(),
+            );
+        }
         let pending_messages = if uses_react_modal_host {
             vec![open_message]
         } else {
