@@ -54,6 +54,10 @@ if ($RunCompile) {
     if ($LASTEXITCODE -ne 0) { throw "wmx reference preparation failed" }
 }
 
+# CDXC:Release 2026-09-27 WHY: 10.4.0 run 36301375274 stopped in create-deterministic-tar.sh because the inherited environment reached 29,263 bytes (PATH, the runner's OIDC and runtime tokens, the VS dev shell's saved PATH), over its 28,000-byte guard against CreateProcess's 32K limit. Nothing this script starts requests an OIDC token (attestation is its own workflow step with a fresh environment), so the OIDC request token is dropped here; ACTIONS_RUNTIME_TOKEN stays because sccache's GitHub cache needs it. This file is a Windows-only release input, so the fix could land mid-release without rebuilding the macOS and Linux packages that were already live.
+Remove-Item Env:ACTIONS_ID_TOKEN_REQUEST_TOKEN -ErrorAction SilentlyContinue
+Remove-Item Env:ACTIONS_ID_TOKEN_REQUEST_URL -ErrorAction SilentlyContinue
+
 $env:GHOSTEX_WINDOWS_ARCH = $Arch
 $env:GHOSTEX_GPUI_MARKETING_VERSION = $Version
 $env:GHOSTEX_ON_DEMAND_ASSETS = "1"
