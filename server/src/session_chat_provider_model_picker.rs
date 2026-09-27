@@ -97,7 +97,164 @@ fn cursor_parameters(screen: &str, label: &str) -> Option<Vec<ParameterRow>> {
     (!rows.is_empty()).then_some(rows)
 }
 
+/// Whether the input box holds exactly `command`. A plain capture cannot tell Hermes' italic
+/// placeholder from typed text, so the other readings compare against the command instead.
+fn hermes_input_is(composer_agent: &str, screen: &str, command: &str) -> bool {
+    session_chat_composer_input(composer_agent, screen)
+        .is_some_and(|input| collapse_spaces(&input.text) == command)
+}
+
+/// Whether the status bar names `model`.
+fn hermes_shows_model(screen: &str, model: &str) -> bool {
+    detect_session_chat_selection(SessionChatOptionAgent::Hermes, screen).is_some_and(|selection| {
+        selection.model.is_some_and(|shown| {
+            crate::session_chat_hermes_status::hermes_status_bar_shows(&shown.value, model)
+        })
+    })
+}
+
+/// The command left the input box and the status bar names the requested model.
+fn hermes_applied(
+    composer_agent: &str,
+    screen: &str,
+    plan: &CodexPickerPlan,
+    command: &str,
+) -> bool {
+    !hermes_input_is(composer_agent, screen, command) && hermes_shows_model(screen, &plan.model)
+}
+
+/// What Hermes printed in answer to a `/model` command.
+#[derive(Debug, PartialEq)]
+enum HermesModelReply {
+    /// `✓ Model switched: <model>`.
+    Switched,
+    /// `✗ <reason>`.
+    Refused(String),
+    /// `Model switch cancelled.`: its expensive-model question was answered Cancel.
+    Cancelled,
+}
+
+/// Every answer to a `/model` command on screen, oldest first.
+fn hermes_model_replies(screen: &str) -> Vec<HermesModelReply> {
+    screen_lines(screen)
+        .into_iter()
+        .filter_map(|line| {
+            if line.starts_with("\u{2713} Model switched:") {
+                Some(HermesModelReply::Switched)
+            } else if let Some(reason) = line.strip_prefix('\u{2717}') {
+                Some(HermesModelReply::Refused(reason.trim().to_string()))
+            } else if line == "Model switch cancelled." {
+                Some(HermesModelReply::Cancelled)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 impl PickerDriver<'_> {
+    /// CDXC:AgentProviders 2026-09-27 WHY:
+    /// Hermes' status bar never shows the reasoning effort, so an effort-only change cannot be recognised as already applied and the command is always typed. It counts once Hermes answers it: the first `✓ Model switched`, `✗ <reason>` or `Model switch cancelled.` line past the answers already on screen. The status bar alone is not proof, because a same-model pick leaves it unchanged while Hermes can still refuse the command or hold it behind its expensive-model question (verified in Hermes Agent v0.21.4); it only counts for a new model once older answers have scrolled out of the capture. Delivery is verified before Enter, so a switch with no answer within the step is final instead of retried: retyping the same command cannot change Hermes' answer.
+    async fn drive_hermes(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
+        if !plan.effort.is_empty()
+            && !crate::session_chat_hermes_status::HERMES_PICKER_EFFORTS
+                .contains(&plan.effort.as_str())
+        {
+            return Err(invalid_params(
+                "Hermes' model picker offers low, medium and high.",
+            ));
+        }
+        let mut command = format!("/model {}", plan.model);
+        if let Some(provider) = &plan.hermes_provider {
+            command.push_str(&format!(" --provider {provider}"));
+        }
+        if !plan.effort.is_empty() {
+            command.push_str(&format!(" --reasoning {}", plan.effort));
+        }
+        // The composer table spells the agent `hermes-agent`.
+        let composer_agent =
+            crate::agents::identity::normalize_agent_id(Some(&plan.provider)).unwrap_or_default();
+        let screen = capture_session_terminal_text_vt(self.zmx_name)
+            .await
+            .ok_or_else(|| session_not_running("Waiting for the agent's terminal."))?;
+        if (self.cancelled)()
+            || detect_session_chat_composer_readiness(Some(&plan.provider), &screen, None).state
+                != SessionChatComposerState::Ready
+        {
+            return Err(agent_busy(
+                "Waiting for Hermes to accept the model command.",
+            ));
+        }
+        // A VT capture, so the italic placeholder reads as empty.
+        if !session_chat_composer_input(&composer_agent, &screen)
+            .is_some_and(|input| input.is_empty())
+        {
+            return Err(agent_busy(
+                "Waiting for the terminal input to be sent or cleared.",
+            ));
+        }
+        let result = async {
+            self.write(&build_session_chat_paste_bytes(&command))
+                .await?;
+            // Read off the screen that shows the command typed, the last one before Enter.
+            let (replies_before, model_was_shown) = self
+                .wait_for("type model command", |screen| {
+                    hermes_input_is(&composer_agent, screen, &command).then(|| {
+                        (
+                            hermes_model_replies(screen).len(),
+                            hermes_shows_model(screen, &plan.model),
+                        )
+                    })
+                })
+                .await?;
+            self.write(CODEX_SUBMIT).await?;
+            let outcome = self
+                .wait_for("applied model", |screen| {
+                    match hermes_model_replies(screen).into_iter().nth(replies_before) {
+                        Some(HermesModelReply::Switched) => Some(Ok(())),
+                        Some(HermesModelReply::Refused(reason)) => Some(Err(reason)),
+                        Some(HermesModelReply::Cancelled) => {
+                            Some(Err("the switch was cancelled in its terminal.".to_string()))
+                        }
+                        None => (!model_was_shown
+                            && hermes_applied(&composer_agent, screen, plan, &command))
+                        .then_some(Ok(())),
+                    }
+                })
+                .await;
+            match outcome {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(reason)) => Err(unsupported_selection(format!(
+                    "Hermes did not switch to {}: {reason}",
+                    plan.model
+                ))),
+                Err(error) if error.code == "timeout" => Err(unsupported_selection(format!(
+                    "Hermes did not switch to {}. Check its terminal for a question or an error.",
+                    plan.model
+                ))),
+                Err(error) => Err(error),
+            }
+        }
+        .await;
+        if result.is_err() && !(self.cancelled)() {
+            if let Some(screen) = self.capture().await {
+                if hermes_input_is(&composer_agent, &screen, &command) {
+                    // Hermes' verified clear: one Ctrl+C, only while a draft is on screen.
+                    let _ = crate::session_chat_send::clear_session_chat_composer(
+                        self.project_id,
+                        self.session_id,
+                        self.zmx_name,
+                        self.source,
+                        &plan.provider,
+                        self.cancelled,
+                    )
+                    .await;
+                }
+            }
+        }
+        result
+    }
+
     async fn drive_provider(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
         let row = crate::agent_model_catalog::catalog_model(&plan.provider, &plan.model)
             .ok_or_else(|| invalid_params("The model is not in this server's catalog."))?;
@@ -291,7 +448,11 @@ pub(crate) async fn run_provider_model_picker_job(
         source,
         cancelled,
     };
-    let outcome = driver.drive_provider(&plan).await;
+    let outcome = if plan.provider == "hermes" {
+        driver.drive_hermes(&plan).await
+    } else {
+        driver.drive_provider(&plan).await
+    };
     if let Err(error) = &outcome {
         log_picker(
             LogLevel::Error,

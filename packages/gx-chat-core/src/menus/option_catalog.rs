@@ -313,6 +313,10 @@ enum CatalogOptions {
         catalog: Box<AgentModelCatalog>,
     },
     OpenCode { agent: Box<CatalogAgent>, catalog: Box<AgentModelCatalog> },
+    Hermes {
+        agent: Box<CatalogAgent>,
+        catalog: Box<AgentModelCatalog>,
+    },
     /// Read-only mirrors: the same list whatever the model is.
     Fixed(Vec<OptionDescriptor>),
 }
@@ -379,6 +383,12 @@ impl SessionOptionCatalog {
                 mode.choices = Some(vec![OptionChoice {value:"build".into(), label:"Build".into(), ..Default::default()}, OptionChoice {value:"plan".into(), label:"Plan".into(), ..Default::default()}]);
                 options.push(mode);
                 options
+            }
+            CatalogOptions::Hermes { agent, catalog } => {
+                let mut effort =
+                    reasoning_effort_picker(catalog, &agent.efforts_for_model(model_value));
+                effort.default_value = agent.default_effort.clone();
+                vec![effort]
             }
             CatalogOptions::Fixed(descriptors) => descriptors.clone(),
         }
@@ -783,9 +793,32 @@ fn handoff(
     descriptor
 }
 
-/// Hermes names its model in the leading segment of its terminal statusline and owns model
-/// selection in its interactive /model picker, so the pill is the same read-only terminal mirror
-/// used for Grok and Pi. Its statusline never names a reasoning effort, so there is no effort pill.
+/// A Hermes profile's own lineup, which gxserver reads from the profile and sends with the
+/// session (`modelCatalog`, `session_chat_hermes_status.rs`): the default model, then the models
+/// its sessions used. A pick goes through the daemon's queue like every quick-picker agent's, and
+/// gxserver types `/model <name> --reasoning <level>`. The effort starts on the level gxserver
+/// sends as the default (the session's starting level, else the profile's), because Hermes never
+/// shows the one it runs.
+fn build_hermes_catalog(catalog: &AgentModelCatalog, agent: &CatalogAgent) -> SessionOptionCatalog {
+    let mut model = OptionDescriptor::new(
+        "model",
+        "Model",
+        OptionCategory::Model,
+        OptionDispatch::ModelPicker,
+    );
+    model.choices = Some(model_choices(agent));
+    SessionOptionCatalog {
+        model,
+        model_icon: "hermes-agent".to_string(),
+        options: CatalogOptions::Hermes {
+            agent: Box::new(agent.clone()),
+            catalog: Box::new(catalog.clone()),
+        },
+    }
+}
+
+/// Until gxserver has read the profile's lineup (the hooks have not recorded the session yet), the
+/// pill mirrors the model Hermes names in its statusline and hands the change to the terminal.
 fn hermes_catalog() -> SessionOptionCatalog {
     SessionOptionCatalog {
         model: handoff(
@@ -850,7 +883,12 @@ pub fn session_option_catalog(
         "cursor" | "cursor-cli" => ("cursor", build_cursor_catalog),
         "grok" | "grok-build" => ("grok", build_grok_catalog),
         "antigravity" | "antigravity-cli" => ("antigravity", build_antigravity_catalog),
-        "hermes" | "hermes-agent" => return Some(hermes_catalog()),
+        "hermes" | "hermes-agent" => {
+            return Some(match catalog.agents.get("hermes") {
+                Some(agent) => build_hermes_catalog(catalog, agent),
+                None => hermes_catalog(),
+            });
+        }
         "omp" => return Some(omp_catalog()),
         "pi" => return Some(pi_catalog()),
         _ => return None,

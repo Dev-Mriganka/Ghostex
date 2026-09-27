@@ -16,9 +16,8 @@ use crate::menus::picker::input::{
 };
 use crate::menus::picker::model_picker::{
     model_picker_choose_effort, model_picker_choose_model, model_picker_layout,
-    model_picker_next_effort_index, model_picker_supports_session_scope, ModelPickerProvider,
-    ModelPickerRequest, ModelPickerSelection, ModelSelectionScope, PaneSize,
-    MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON,
+    model_picker_next_effort_index, model_picker_scope_reason, model_picker_supports_session_scope,
+    ModelPickerProvider, ModelPickerRequest, ModelPickerSelection, ModelSelectionScope, PaneSize,
 };
 
 /// How long the rail stays pinned after a pointer pick.
@@ -376,7 +375,7 @@ impl ModelPickerState {
         if !self.session_scope {
             object.insert(
                 "scopeReason".into(),
-                json!(MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON),
+                json!(model_picker_scope_reason(self.request.provider)),
             );
         }
         object.insert(

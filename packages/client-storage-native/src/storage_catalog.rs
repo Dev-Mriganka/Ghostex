@@ -140,6 +140,12 @@ pub const CATALOG: &[CatalogStore] = &[
         Local,
     ),
     store(
+        "hermesContext",
+        "ghostex.chat.context-details.hermes.v1",
+        false,
+        Local,
+    ),
+    store(
         "notices",
         "ghostex.sessionChat.noticeDismissed.",
         true,

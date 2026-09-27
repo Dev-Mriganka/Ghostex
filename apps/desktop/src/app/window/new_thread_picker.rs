@@ -36,7 +36,7 @@ pub(crate) const NEW_THREAD_PICKER_MAX_AGENT_ROWS: usize = 12;
 pub(crate) const NEW_THREAD_PICKER_CHROME_HEIGHT: f32 = 165.0;
 
 /// `.quick-access-surface`: Inter at 14px over 20px.
-const PICKER_FONT: &str = "Inter Variable";
+const PICKER_FONT: &str = crate::ui_fonts::UI_FONT;
 const ROW_TEXT_SIZE: f32 = 14.0;
 const ROW_LINE_HEIGHT: f32 = 20.0;
 const SCROLLBAR_WIDTH: f32 = 5.0;

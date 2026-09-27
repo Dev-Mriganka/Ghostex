@@ -1,6 +1,7 @@
 /*
 Hermes Agent has no per-session transcript file: every conversation lives in
-the `messages` table of `~/.hermes/state.db` (rollback-journal SQLite, written
+the `messages` table of its session store (`~/.hermes/state.db`, or
+`profiles/<name>/state.db` for a named profile; rollback-journal SQLite, written
 row-by-row as the turn progresses, with monotonic AUTOINCREMENT ids). The chat
 pipeline is built around tailing an append-only jsonl file, so this module
 materializes one: each Hermes session's active rows are mirrored into
@@ -24,6 +25,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use rusqlite::{Connection, OpenFlags};
 use serde_json::{json, Value};
@@ -41,8 +43,65 @@ pub(crate) fn is_safe_hermes_session_id(session_id: &str) -> bool {
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
 }
 
-pub(crate) fn hermes_state_db_path() -> PathBuf {
-    configured_agent_directory("HERMES_HOME", ".hermes").join("state.db")
+pub(crate) fn hermes_home() -> PathBuf {
+    configured_agent_directory("HERMES_HOME", ".hermes")
+}
+
+/// Every Hermes session store: the default profile's, then each named profile's.
+pub(crate) fn hermes_state_db_paths(hermes_home: &Path) -> Vec<PathBuf> {
+    let mut profile_paths = fs::read_dir(hermes_home.join("profiles"))
+        .map(|entries| {
+            entries
+                .flatten()
+                .map(|entry| entry.path().join("state.db"))
+                .filter(|path| path.is_file())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    profile_paths.sort();
+    let mut paths = vec![hermes_home.join("state.db")];
+    paths.extend(profile_paths);
+    paths
+}
+
+/// Where each session id was found, or `None` with when it was last looked for in vain.
+static SESSION_STORES: Mutex<Option<HashMap<String, (Option<PathBuf>, Instant)>>> =
+    Mutex::new(None);
+
+/// How long a session id no store holds yet is answered with the root store without a rescan.
+const SESSION_STORE_MISS_TTL: Duration = Duration::from_secs(1);
+
+/// CDXC:Bots 2026-09-26 WHY:
+/// Each Hermes profile keeps its sessions in its own `profiles/<name>/state.db`, so a `hermes -p harry` session never reaches the root store. The store is found by session id, not parsed from the launch command, because chat reads arrive with only the id; ids are unique across profiles, and a hit is cached because a session never moves. A miss is cached for a second: Hermes writes the row only on the first turn, and until then the title, detect and follower passes would each rescan every store several times a second.
+pub(crate) fn hermes_state_db_path(hermes_home: &Path, session_id: &str) -> PathBuf {
+    let cached = SESSION_STORES
+        .lock()
+        .ok()
+        .and_then(|stores| stores.as_ref()?.get(session_id).cloned());
+    match cached {
+        Some((Some(path), _)) if path.is_file() => return path,
+        Some((None, looked_at)) if looked_at.elapsed() < SESSION_STORE_MISS_TTL => {
+            return hermes_home.join("state.db");
+        }
+        _ => {}
+    }
+    let found = hermes_state_db_paths(hermes_home).into_iter().find(|path| {
+        open_read_only_state_db(path).is_some_and(|connection| {
+            connection
+                .query_row(
+                    "SELECT 1 FROM sessions WHERE id = ?1",
+                    rusqlite::params![session_id],
+                    |_| Ok(()),
+                )
+                .is_ok()
+        })
+    });
+    if let Ok(mut stores) = SESSION_STORES.lock() {
+        stores
+            .get_or_insert_with(HashMap::new)
+            .insert(session_id.to_string(), (found.clone(), Instant::now()));
+    }
+    found.unwrap_or_else(|| hermes_home.join("state.db"))
 }
 
 fn hermes_mirror_dir() -> PathBuf {
@@ -113,13 +172,16 @@ fn hermes_row_json_line(row: &HermesMessageRow) -> String {
     line
 }
 
-fn open_hermes_state_db() -> Option<Connection> {
-    let db_path = hermes_state_db_path();
+fn open_hermes_state_db(session_id: &str) -> Option<Connection> {
+    open_read_only_state_db(&hermes_state_db_path(&hermes_home(), session_id))
+}
+
+pub(crate) fn open_read_only_state_db(db_path: &Path) -> Option<Connection> {
     if !db_path.is_file() {
         return None;
     }
     let connection = Connection::open_with_flags(
-        &db_path,
+        db_path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
     .ok()?;
@@ -144,11 +206,14 @@ pub(crate) struct HermesSessionTitle {
 }
 
 /// The current title for one session, or `None` while it has no name yet.
-pub(crate) fn read_hermes_session_title(session_id: &str) -> Option<HermesSessionTitle> {
+pub(crate) fn read_hermes_session_title(
+    state_db_path: &Path,
+    session_id: &str,
+) -> Option<HermesSessionTitle> {
     if !is_safe_hermes_session_id(session_id) {
         return None;
     }
-    let connection = open_hermes_state_db()?;
+    let connection = open_read_only_state_db(state_db_path)?;
     let (title, title_source) = connection
         .query_row(
             "SELECT title, title_source FROM sessions WHERE id = ?1",
@@ -204,7 +269,7 @@ fn sync_hermes_transcript_mirror(session_id: &str) -> Option<PathBuf> {
         return None;
     }
     let mirror_path = hermes_mirror_dir().join(format!("{session_id}.jsonl"));
-    let connection = open_hermes_state_db()?;
+    let connection = open_hermes_state_db(session_id)?;
     let (active_count, max_row_id) = connection
         .query_row(
             "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM messages \
@@ -285,5 +350,50 @@ pub(crate) fn resolve_hermes_chat_transcript_path(session_id: &str) -> Option<Pa
 pub(crate) fn sync_hermes_transcript_mirror_for_path(mirror_path: &Path) {
     if let Some(session_id) = mirror_path.file_stem().and_then(|stem| stem.to_str()) {
         sync_hermes_transcript_mirror(session_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_hermes_store(db_path: &Path, session_ids: &[&str]) {
+        fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+        let connection = Connection::open(db_path).unwrap();
+        connection
+            .execute("CREATE TABLE sessions (id TEXT PRIMARY KEY)", [])
+            .unwrap();
+        for session_id in session_ids {
+            connection
+                .execute(
+                    "INSERT INTO sessions (id) VALUES (?1)",
+                    rusqlite::params![session_id],
+                )
+                .unwrap();
+        }
+    }
+
+    #[test]
+    fn profile_sessions_resolve_to_their_profile_store() {
+        let hermes_home = tempfile::tempdir().unwrap();
+        let home = hermes_home.path();
+        let plain_session = "20260926_100000_a1a1a1";
+        let harry_session = "20260926_100001_b2b2b2";
+        write_hermes_store(&home.join("state.db"), &[plain_session]);
+        write_hermes_store(&home.join("profiles/dobby/state.db"), &[]);
+        write_hermes_store(&home.join("profiles/harry/state.db"), &[harry_session]);
+
+        assert_eq!(
+            hermes_state_db_path(home, harry_session),
+            home.join("profiles/harry/state.db")
+        );
+        assert_eq!(
+            hermes_state_db_path(home, plain_session),
+            home.join("state.db")
+        );
+        assert_eq!(
+            hermes_state_db_path(home, "20260926_100002_c3c3c3"),
+            home.join("state.db")
+        );
     }
 }

@@ -36,6 +36,7 @@ mod terminal_scrollbar_reveal;
 mod terminal_surface_host;
 mod terminal_surface_lifecycle;
 mod terminal_wheel;
+mod ui_fonts;
 mod windows_terminal_backend;
 #[cfg(target_os = "windows")]
 mod windows_updater;
@@ -248,6 +249,7 @@ fn main() {
         #[cfg(target_os = "windows")]
         cef::register_windows_shutdown(cx);
         gpui_component::init(cx);
+        ui_fonts::register(cx);
         apply_gpui_component_theme(cx);
         #[cfg(target_os = "macos")]
         {

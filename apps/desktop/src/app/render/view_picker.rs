@@ -201,7 +201,7 @@ impl GhostexGpuiApp {
             .items_center()
             .p(px(24.0))
             .bg(glass_clear(project_editor_shell_background_color()))
-            .font_family("Inter Variable")
+            .font_family(crate::ui_fonts::UI_FONT)
             .text_color(titlebar_text_color())
             .on_mouse_down(
                 MouseButton::Left,

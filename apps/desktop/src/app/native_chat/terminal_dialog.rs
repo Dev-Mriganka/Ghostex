@@ -119,7 +119,7 @@ impl NativeChatView {
                     .rounded(px(8.0 * p.scale))
                     .p(px(12.0 * p.scale))
                     .bg(p.border.opacity(0.3))
-                    .font_family("Menlo")
+                    .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                     .text_size(px(12.0 * p.scale))
                     .child(text(dialog, "body"))
                     .into_any_element(),

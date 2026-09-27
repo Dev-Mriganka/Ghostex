@@ -28,6 +28,7 @@ use crate::menus::context::status::{ContextDetailStatus, ContextDetailsAgent};
 pub const CONTEXT_PREFERENCES_STORE_CLAUDE: &str = "claudeContext";
 pub const CONTEXT_PREFERENCES_STORE_CODEX: &str = "codexContext";
 pub const CONTEXT_PREFERENCES_STORE_CURSOR: &str = "cursorContext";
+pub const CONTEXT_PREFERENCES_STORE_HERMES: &str = "hermesContext";
 
 /// The record for one agent.
 pub fn context_preferences_key(agent: ContextDetailsAgent) -> StorageKey {
@@ -36,6 +37,7 @@ pub fn context_preferences_key(agent: ContextDetailsAgent) -> StorageKey {
             ContextDetailsAgent::Claude => CONTEXT_PREFERENCES_STORE_CLAUDE,
             ContextDetailsAgent::Codex => CONTEXT_PREFERENCES_STORE_CODEX,
             ContextDetailsAgent::Cursor => CONTEXT_PREFERENCES_STORE_CURSOR,
+            ContextDetailsAgent::Hermes => CONTEXT_PREFERENCES_STORE_HERMES,
         }
         .to_string(),
         suffix: String::new(),
@@ -177,6 +179,10 @@ fn normalize_order(
 /// reasoning effort by default, in the status line or More details, because the chat box already
 /// shows both; its status line is Context used, Branch and Lines changed (2026-09-24, superseding
 /// Context used and Context tokens).
+///
+/// CDXC:AgentProviders 2026-09-26 DECISION:
+/// User (Bots mockup, screen 08): a Hermes status line reads context, cost, tokens and session
+/// time; the model stays out because the chat box already shows it.
 pub fn default_preferences(agent: ContextDetailsAgent) -> ContextDetailsPreferences {
     let (shown, starred): (&[(&str, bool)], &[&str]) = match agent {
         ContextDetailsAgent::Claude => (
@@ -213,6 +219,7 @@ pub fn default_preferences(agent: ContextDetailsAgent) -> ContextDetailsPreferen
             ],
             &["contextUsed", "branch", "lines"],
         ),
+        ContextDetailsAgent::Hermes => (&[], &["contextUsed", "costUsd", "tokens", "sessionTime"]),
     };
     ContextDetailsPreferences {
         shown: shown
