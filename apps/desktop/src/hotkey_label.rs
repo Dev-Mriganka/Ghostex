@@ -33,10 +33,11 @@ pub(crate) fn terminal_overlay_hotkey_chord_label(chord: &str) -> String {
                 "left" | "arrowleft" => "←".to_string(),
                 "tab" => "Tab".to_string(),
                 "enter" | "return" => "Enter".to_string(),
+                "escape" | "esc" => "Esc".to_string(),
                 "ß" if has_option_modifier => "S".to_string(),
                 value if value.len() == 1 => value.to_uppercase(),
                 value if value.starts_with('f') => value.to_uppercase(),
-                value => value.to_string(),
+                value => capitalize_key_name(value),
             }
         } else {
             match part.as_str() {
@@ -51,10 +52,11 @@ pub(crate) fn terminal_overlay_hotkey_chord_label(chord: &str) -> String {
                 "left" | "arrowleft" => "←".to_string(),
                 "tab" => "Tab".to_string(),
                 "enter" | "return" => "Enter".to_string(),
+                "escape" | "esc" => "Esc".to_string(),
                 "ß" if has_option_modifier => "S".to_string(),
                 value if value.len() == 1 => value.to_uppercase(),
                 value if value.starts_with('f') => value.to_uppercase(),
-                value => value.to_string(),
+                value => capitalize_key_name(value),
             }
         };
         if labels.last() != Some(&label) {
@@ -62,4 +64,14 @@ pub(crate) fn terminal_overlay_hotkey_chord_label(chord: &str) -> String {
         }
     }
     labels.join(if cfg!(target_os = "macos") { "" } else { "+" })
+}
+
+/// Named keys (`space`, `backspace`) read with a capital first letter, as in
+/// packages/shared/hotkey-label.ts.
+fn capitalize_key_name(value: &str) -> String {
+    let mut characters = value.chars();
+    match characters.next() {
+        Some(first) => first.to_uppercase().chain(characters).collect(),
+        None => String::new(),
+    }
 }

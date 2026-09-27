@@ -19,8 +19,10 @@ export type ghostexHotkeyActionId =
   | 'openSettings'
   | 'openHotkeys'
   | 'openCommandsPanel'
+  | 'openCommandsPanelSecondKey'
   | 'openExtensions'
   | 'openGhostexHelp'
+  | 'openFileInFiles'
   | 'popOutPane'
   | 'promptEditor'
   | 'reloadSession'
@@ -128,6 +130,7 @@ export type ghostexHotkeyAction =
   | { id: ghostexHotkeyActionId; kind: 'openCommandsPanel' }
   | { id: ghostexHotkeyActionId; kind: 'openExtensions' }
   | { id: ghostexHotkeyActionId; kind: 'openGhostexHelp' }
+  | { id: ghostexHotkeyActionId; kind: 'openFileInFiles' }
   | { id: ghostexHotkeyActionId; kind: 'openDocsFoldersSettings' }
   | { id: ghostexHotkeyActionId; kind: 'openSettings' }
   | { id: ghostexHotkeyActionId; kind: 'openFindPrompts' }
@@ -179,9 +182,10 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
   },
   {
     action: { id: 'focusChatComposer', kind: 'focusedChatAction' },
-    defaultKey: 'shift+escape',
+    defaultKey: '',
     description: 'Move the keyboard to the chat box of the chat session you are in.',
     id: 'focusChatComposer',
+    retiredDefaultKeys: ['shift+escape'],
     title: 'Focus Chat Box',
   },
   {
@@ -204,12 +208,13 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
     action: { id: 'toggleChatSummaryMode', kind: 'focusedChatAction' },
     /**
      * CDXC:SessionChat 2026-09-26 DECISION:
-     * User: Summary mode gets a hotkey, shown in its toolbar tooltip: Cmd+Ctrl+S on Mac. They asked for Ctrl+Alt+S on Windows and Linux, but that is Delayed Actions there, so it is Ctrl+Alt+Shift+S, the React chat's old Summary key.
-     * SEE-ALSO: apps/desktop/src/app/hotkeys.rs (`gpui_platform_hotkey_for_action`), apps/desktop/src/app/native_chat/composer.rs (`host_button` tooltip).
+     * User: Summary mode gets a hotkey, shown in its toolbar tooltip. On 2026-09-27 the user moved the Mac default to Option+Ctrl+S (it was Cmd+Ctrl+S, now retired). They asked for Ctrl+Alt+S on Windows and Linux, but that is Delayed Actions there, so it is Ctrl+Alt+Shift+S, the React chat's old Summary key.
+     * SEE-ALSO: apps/desktop/src/app/hotkeys.rs (`gpui_platform_hotkey_for_action`, `gpui_migrated_hotkey_for_action`), apps/desktop/src/app/native_chat/composer.rs (`host_button` tooltip).
      */
-    defaultKey: 'cmd+ctrl+s',
+    defaultKey: 'ctrl+alt+s',
     description: 'Turn Summary mode on or off in the chat session you are in.',
     id: 'toggleChatSummaryMode',
+    retiredDefaultKeys: ['cmd+ctrl+s'],
     title: 'Toggle Summary Mode',
     windowsLinuxDefaultKey: 'cmd+alt+shift+s',
   },
@@ -218,7 +223,7 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
     /**
      * CDXC:Hotkeys 2026-09-25 DECISION:
      * User: Cmd+Shift+O starts a new session and Cmd+N shows the agent picker, Cmd+T always opens a new browser tab, and Fork Session is Cmd+Ctrl+Shift+F (Ctrl+Alt+Shift+F on Windows and Linux), matching the ChatGPT and Codex apps. New Terminal stays on Cmd+Shift+T. This supersedes the 2026-09-24 layout (Cmd+T new chat, swapped by the default interface, picker on Cmd+Option+T).
-     * The same day the user took more ChatGPT/Codex keys: Cmd+/ opens Hotkeys (was Cmd+.), Cmd+Shift+Backspace closes the focused session (Cmd+W stays), Cmd+J opens the Commands panel on Mac only (F12 keeps working everywhere; no Ctrl+J on Windows and Linux), Rename is Cmd+R on Mac and Ctrl+Shift+R on Windows and Linux because Ctrl+R belongs to the terminal, Reload Session has no default, Cmd+Shift+A also sleeps the focused session (Option+Shift+S stays), Cmd+Option+Shift+O opens Quick Access on recent projects, and in chat Shift+Esc focuses the chat box, Cmd+Shift+; copies the last code block and Cmd+Shift+C (Mac only) copies the last reply.
+     * The same day the user took more ChatGPT/Codex keys: Cmd+/ opens Hotkeys (was Cmd+.), Cmd+Shift+Backspace closes the focused session (Cmd+W stays), Cmd+J opens the Commands panel on Mac only (F12 keeps working everywhere; no Ctrl+J on Windows and Linux), Rename is Cmd+R on Mac and Ctrl+Shift+R on Windows and Linux because Ctrl+R belongs to the terminal, Reload Session has no default, Cmd+Shift+A also sleeps the focused session (Option+Shift+S stays), Cmd+Option+Shift+O opens Quick Access on recent projects, and in chat Cmd+Shift+; copies the last code block and Cmd+Shift+C (Mac only) copies the last reply.
      * SEE-ALSO: apps/desktop/src/app/hotkeys.rs (`GPUI_DEFAULT_GHOSTEX_HOTKEYS`, `gpui_migrated_hotkey_for_action`), apps/desktop/src/terminal_element.rs (`terminal_overlay_hotkey_label`).
      */
     defaultKey: 'cmd+shift+o',
@@ -296,6 +301,10 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
   },
   {
     action: { id: 'openCommandsPanel', kind: 'openCommandsPanel' },
+    /**
+     * CDXC:Hotkeys 2026-09-27 DECISION:
+     * User: Cmd+J, Shift+Esc and F12 all open the Commands panel, with one or two of them settable in Settings > Hotkeys. Cmd+J (F12 on Windows and Linux) is this row, Shift+Esc is the Second Key row, and F12 stays a fixed shortcut. This takes Shift+Esc from Focus Chat Box, which now has no default.
+     */
     defaultKey: 'cmd+j',
     description:
       'Open the project command terminal panel (F12 always works too). When the pane is already focused, hide it; press again to show it.',
@@ -303,6 +312,13 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
     retiredDefaultKeys: ['f12'],
     title: 'Open Commands Panel',
     windowsLinuxDefaultKey: 'f12',
+  },
+  {
+    action: { id: 'openCommandsPanelSecondKey', kind: 'openCommandsPanel' },
+    defaultKey: 'shift+escape',
+    description: 'A second key that opens or hides the Commands panel, like Open Commands Panel.',
+    id: 'openCommandsPanelSecondKey',
+    title: 'Open Commands Panel (Second Key)',
   },
   {
     action: { id: 'openSettings', kind: 'openSettings' },
@@ -328,6 +344,18 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
     description: 'Open the Ghostex Help menu: sample questions an agent can answer and settings it can change for you.',
     id: 'openGhostexHelp',
     title: 'Ask Ghostex Help',
+  },
+  {
+    action: { id: 'openFileInFiles', kind: 'openFileInFiles' },
+    /**
+     * CDXC:Docs 2026-09-27 DECISION:
+     * User: an "Open file" hotkey and button let you type or paste the path of any file to view it in the Files view. The key is unassigned until the user picks one: the Cmd+Shift+O / Ctrl+Shift+O they asked for is New Agent Session's (CDXC:Hotkeys 2026-09-25 DECISION).
+     */
+    defaultKey: '',
+    description:
+      'Open the Files view with its search box ready: type a file name, or paste the path of any file on this computer, and press Enter.',
+    id: 'openFileInFiles',
+    title: 'Open File',
   },
   {
     action: { id: 'openHotkeys', kind: 'openHotkeys' },
@@ -416,7 +444,7 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
       ['switchSourceView', 'source', 'alt+2', 'Code'],
       ['switchGitHubView', 'github', 'alt+3', 'Browser'],
       ['switchKanbanView', 'kanban', 'alt+4', 'Kanban'],
-      ['switchManageView', 'manage', 'alt+5', 'Docs'],
+      ['switchManageView', 'manage', 'alt+5', 'Files'],
       ['switchAutomateView', 'automate', '', 'Automate'],
       ['switchTerminalView', 'terminal', '', 'Terminal'],
     ] as const
@@ -436,7 +464,7 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
      *
      * CDXC:Docs 2026-06-28-06:24:
      * The switchManageView id and "manage" view enum remain compatibility
-     * handles, but Settings and command labels should call the feature Docs.
+     * handles, but Settings and command labels call the feature Files (Docs until CDXC:Docs 2026-09-27).
      */
     defaultKey: '',
     retiredDefaultKeys: defaultKey ? [defaultKey] : [],
@@ -658,7 +686,7 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
   {
     /**
      * CDXC:Hotkeys 2026-09-05 DECISION:
-     * User: Option+Shift+D moves the current thread into a right-hand split, like the sidebar session menu's Split Right action.
+     * User: Option+Shift+D moves the current thread into a right-hand split, (the sidebar session menu's Split Right item was removed on 2026-09-27; this shortcut stays).
      */
     action: { focusedPaneAction: 'splitSessionRight', id: 'splitSessionRight', kind: 'focusedPaneAction' },
     defaultKey: 'alt+shift+d',

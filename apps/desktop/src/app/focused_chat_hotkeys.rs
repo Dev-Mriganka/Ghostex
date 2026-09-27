@@ -11,32 +11,13 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) -> bool {
-        let session_id = self.focused_agents_or_companion_shell_session_id();
-        let chat_mode =
-            session_id.is_some_and(|session| self.agents_chat_mode_sessions.contains(&session));
-        let view = session_id
-            .filter(|_| chat_mode)
-            .and_then(|session| self.native_chat_views.get(&session).cloned());
-        let composer_focused = view.as_ref().is_some_and(|view| {
-            view.read(cx)
-                .input
-                .as_ref()
-                .is_some_and(|input| input.read(cx).focus_handle(cx).is_focused(window))
-        });
-        support_logs::append(
-            support_logs::GpuiSupportLog::TerminalFocus,
-            "gpui.focusedChatHotkey",
-            serde_json::json!({
-                "actionId": action_id,
-                "shellFocus": format!("{:?}", self.shell_focus),
-                "agentsWorkspaceVisible": self.agents_workspace_visible(),
-                "sessionId": session_id.map(|session| session.0),
-                "chatMode": chat_mode,
-                "hasChatView": view.is_some(),
-                "composerAlreadyFocused": composer_focused,
-            }),
-        );
-        let Some(view) = view else {
+        let Some(session_id) = self.focused_agents_or_companion_shell_session_id() else {
+            return false;
+        };
+        if !self.agents_chat_mode_sessions.contains(&session_id) {
+            return false;
+        }
+        let Some(view) = self.native_chat_views.get(&session_id).cloned() else {
             return false;
         };
         match action_id {

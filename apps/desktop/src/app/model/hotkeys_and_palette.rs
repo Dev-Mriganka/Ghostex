@@ -183,7 +183,9 @@ pub(crate) fn gpui_focused_pane_hotkey_action(
     */
     match action_id {
         "createSession" => Some(GpuiFocusedPaneHotkeyAction::CreateSession),
-        "openCommandsPanel" => Some(GpuiFocusedPaneHotkeyAction::OpenCommandsPanel),
+        "openCommandsPanel" | "openCommandsPanelSecondKey" => {
+            Some(GpuiFocusedPaneHotkeyAction::OpenCommandsPanel)
+        }
         "openBrowserPane" => Some(GpuiFocusedPaneHotkeyAction::OpenBrowserPane),
         "splitSessionRight" => Some(GpuiFocusedPaneHotkeyAction::SplitSessionRight),
         "splitMore" => Some(GpuiFocusedPaneHotkeyAction::SplitRight),
@@ -234,6 +236,7 @@ pub(crate) fn gpui_source_workarea_allowed_configured_hotkey_action_id(action_id
                 | "navigateHistoryBack"
                 | "navigateHistoryForward"
                 | "openCommandsPanel"
+                | "openCommandsPanelSecondKey"
                 | "openNotifications"
                 | "toggleViewPanel"
         )

@@ -30,6 +30,10 @@ function formatSidebarHotkeyChord(chord: string, platform: ghostexHotkeyPlatform
     .join(separator);
 }
 
+/** CDXC:Hotkeys 2026-09-27 DECISION:
+ * User: named keys read like the menus, `Esc` for escape and a capitalized first letter for the rest (`Space`, `Backspace`), instead of the stored lowercase name.
+ * SEE-ALSO: apps/desktop/src/hotkey_label.rs and packages/gx-core/src/quick_access/text.rs format the same labels.
+ */
 function formatSidebarHotkeyPart(part: string, platform: ghostexHotkeyPlatform, hasPrimaryModifier: boolean): string {
   if (platform !== 'mac') {
     switch (part) {
@@ -66,10 +70,12 @@ function formatSidebarHotkeyPart(part: string, platform: ghostexHotkeyPlatform, 
       return 'Tab';
     case 'enter':
       return 'Enter';
+    case 'escape':
+      return 'Esc';
     default:
-      if (/^f\d+$/u.test(part)) {
+      if (/^f\d+$/u.test(part) || part.length === 1) {
         return part.toUpperCase();
       }
-      return part.length === 1 ? part.toUpperCase() : part;
+      return `${part.charAt(0).toUpperCase()}${part.slice(1)}`;
   }
 }

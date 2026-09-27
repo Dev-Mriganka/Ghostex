@@ -217,6 +217,7 @@ fn format_hotkey_part(part: &str, platform: HotkeyPlatform, has_primary: bool) -
         "left" => "←".to_string(),
         "tab" => "Tab".to_string(),
         "enter" => "Enter".to_string(),
+        "escape" => "Esc".to_string(),
         _ => {
             let is_function_key = part.len() >= 2
                 && part.starts_with('f')
@@ -224,7 +225,11 @@ fn format_hotkey_part(part: &str, platform: HotkeyPlatform, has_primary: bool) -
             if is_function_key || utf16_len(part) == 1 {
                 part.to_uppercase()
             } else {
-                part.to_string()
+                let mut characters = part.chars();
+                characters
+                    .next()
+                    .map(|first| first.to_uppercase().chain(characters).collect())
+                    .unwrap_or_default()
             }
         }
     }

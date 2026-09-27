@@ -88,7 +88,9 @@ pub(crate) fn gpui_migrated_hotkey_for_action<'a>(
         "forkSession" => &["ctrl+shift+f", "cmd+alt+f"],
         "openHotkeys" => &["cmd+."],
         "openCommandsPanel" => &["f12"],
+        "focusChatComposer" => &["shift+escape"],
         "reloadSession" => &["ctrl+shift+r", "cmd+alt+r"],
+        "toggleChatSummaryMode" => &["cmd+ctrl+s"],
         _ => &[],
     };
     if retired_new_session_keys
@@ -168,7 +170,7 @@ pub(crate) fn gpui_platform_hotkey_for_action<'a>(action_id: &str, key: &'a str)
             "openCommandsPanel" => Some(("cmd+j", "f12")),
             "copyLastChatReply" => Some(("cmd+shift+c", "")),
             // Ctrl+Alt+S is Delayed Actions on Windows and Linux.
-            "toggleChatSummaryMode" => Some(("cmd+ctrl+s", "cmd+alt+shift+s")),
+            "toggleChatSummaryMode" => Some(("ctrl+alt+s", "cmd+alt+shift+s")),
             "popOutPane" => Some(("ctrl+shift+o", "cmd+alt+o")),
             // CDXC:Navigation 2026-08-19: same Mac-Control substitution
             // as the Jump to Project entries below, mirroring the
@@ -326,9 +328,11 @@ pub(crate) const GPUI_DEFAULT_GHOSTEX_HOTKEYS: &[(&str, &str)] = &[
     ("openProjectSearchPalette", "cmd+alt+shift+o"),
     ("openNewThreadPalette", "cmd+n"),
     ("openCommandsPanel", "cmd+j"),
+    ("openCommandsPanelSecondKey", "shift+escape"),
     ("openSettings", "cmd+,"),
     ("openExtensions", ""),
     ("openGhostexHelp", ""),
+    ("openFileInFiles", ""),
     ("openHotkeys", "cmd+/"),
     ("toggleSidebarCollapsed", "cmd+b"),
     ("toggleViewPanel", "cmd+alt+b"),
@@ -378,10 +382,10 @@ pub(crate) const GPUI_DEFAULT_GHOSTEX_HOTKEYS: &[(&str, &str)] = &[
     page key and capture it in terminals.
     */
     ("scrollChatToBottom", "ctrl+shift+down"),
-    ("focusChatComposer", "shift+escape"),
+    ("focusChatComposer", ""),
     ("copyLastChatCodeBlock", "cmd+shift+;"),
     ("copyLastChatReply", "cmd+shift+c"),
-    ("toggleChatSummaryMode", "cmd+ctrl+s"),
+    ("toggleChatSummaryMode", "ctrl+alt+s"),
     ("forkSession", "cmd+ctrl+shift+f"),
     ("reloadSession", ""),
     ("sleepFocusedSession", "cmd+shift+a"),
@@ -706,7 +710,7 @@ pub(crate) fn gpui_keyboard_owner_allows_hotkey(
     // The picker handler resolves the actual chat pane; sidebar and shell responders must not swallow this command.
     if matches!(
         action_id,
-        "openExtensions" | "openGhostexHelp" | "openModelPicker"
+        "openExtensions" | "openGhostexHelp" | "openModelPicker" | "openFileInFiles"
     ) {
         return true;
     }

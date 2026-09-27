@@ -31,10 +31,12 @@ export function HotkeyRecorderField({
   const [reservedHotkey, setReservedHotkey] = useState('');
   const normalizedHotkey = normalizeHotkeyText(hotkey);
   const normalizedOriginalHotkey = normalizeHotkeyText(originalHotkey);
-  const originalHotkeyLabel = formatSidebarHotkeyLabel(normalizedOriginalHotkey) || 'Unassigned';
+  const originalHotkeyLabel = formatSidebarHotkeyLabel(normalizedOriginalHotkey);
+  const originalHotkeyDescription = originalHotkeyLabel || 'Unassigned';
   const isModified = normalizedHotkey !== normalizedOriginalHotkey;
   const recordingLabel = reservedHotkey ? `${formatSidebarHotkeyLabel(reservedHotkey)} is reserved` : 'Press Shortcut';
   const label = isRecording ? recordingLabel : formatSidebarHotkeyLabel(normalizedHotkey);
+  const showsChord = !isRecording && Boolean(label);
 
   useEffect(() => {
     if (!isRecording) {
@@ -91,9 +93,12 @@ export function HotkeyRecorderField({
       data-recording={isRecording ? 'true' : undefined}
       className='group/hotkey-recorder relative w-full'
     >
+      {/** CDXC:Hotkeys 2026-09-27 DECISION:
+       * User: Settings hotkeys must look like the shortcuts in the app's menus, and an unassigned hotkey shows just `-`. Chords use the UI font with the menu shortcut's wide tracking, not the monospace font, whose fallback drew ⇧ smaller than the key beside it.
+       */}
       <Button
         aria-invalid={ariaInvalid}
-        className={cn('h-8 w-full justify-start overflow-hidden px-3 pr-9 font-mono text-[13px]', className)}
+        className={cn('h-8 w-full justify-start overflow-hidden px-3 pr-9 text-[13px]', className)}
         id={id}
         onClick={() => {
           setIsRecording((recording) => !recording);
@@ -101,15 +106,18 @@ export function HotkeyRecorderField({
         type='button'
         variant='outline'
       >
-        <span className='truncate'>{label || 'Unassigned'}</span>
+        <span className={cn('truncate', showsChord && 'tracking-widest')}>{label || '-'}</span>
       </Button>
       {isModified || normalizedHotkey ? (
         <div className='pointer-events-none absolute top-1/2 right-1.5 z-10 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-focus-within/hotkey-recorder:pointer-events-auto group-focus-within/hotkey-recorder:opacity-100 group-hover/hotkey-recorder:pointer-events-auto group-hover/hotkey-recorder:opacity-100'>
           {isModified ? (
-            <AppTooltip content={`Reset to ${originalHotkeyLabel}`}>
+            <AppTooltip content={`Reset to ${originalHotkeyDescription}`}>
               <Button
-                aria-label={`Reset hotkey to ${originalHotkeyLabel}`}
-                className='h-6 rounded-none border border-border bg-background/95 px-2 font-mono text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground'
+                aria-label={`Reset hotkey to ${originalHotkeyDescription}`}
+                className={cn(
+                  'h-6 rounded-none border border-border bg-background/95 px-2 text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground',
+                  normalizedOriginalHotkey && 'tracking-widest'
+                )}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
@@ -119,7 +127,7 @@ export function HotkeyRecorderField({
                 type='button'
                 variant='outline'
               >
-                {originalHotkeyLabel}
+                {originalHotkeyLabel || '-'}
               </Button>
             </AppTooltip>
           ) : null}

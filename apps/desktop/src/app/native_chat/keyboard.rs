@@ -324,7 +324,9 @@ impl NativeChatView {
             let position = if primary {
                 Some(0)
             } else {
-                notice["secondaryChoice"].as_u64().map(|index| index as usize)
+                notice["secondaryChoice"]
+                    .as_u64()
+                    .map(|index| index as usize)
             };
             let choice = notice["choices"]
                 .as_array()
@@ -399,7 +401,7 @@ impl NativeChatView {
             cx.stop_propagation();
             window.prevent_default();
         } else if key.key == "escape" && !key.modifiers.shift {
-            // Shift+Esc is Focus Chat Box (chat_hotkeys.rs), never an interrupt.
+            // Shift+Esc opens the Commands panel (openCommandsPanelSecondKey), never an interrupt.
             if this.maximized_window.is_some() {
                 this.close_maximized(cx);
             } else {

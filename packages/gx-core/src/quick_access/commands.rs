@@ -390,6 +390,8 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
                 && definition.id != "openSessionSearchPalette"
                 && definition.id != "openProjectSearchPalette"
                 && definition.id != "openExtensions"
+                // The same command as Open Commands Panel, under its second key.
+                && definition.id != "openCommandsPanelSecondKey"
                 && definition.kind != "runActionSlot"
                 && definition.kind != "chatAction"
                 && !PANE_ACTION_COMMAND_IDS.contains(&definition.id)
