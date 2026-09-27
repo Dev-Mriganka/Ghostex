@@ -32,7 +32,9 @@ use crate::keys::{MachineId, ProjectKey, SessionKey};
 
 use crate::sidebar_ui::SidebarUiIntent;
 
-use super::inputs::{SectionId, SidebarInputs, SidebarUiState, LOCAL_MACHINE_ID};
+use super::inputs::{
+    effective_sidebar_mode, SectionId, SidebarInputs, SidebarMode, SidebarUiState, LOCAL_MACHINE_ID,
+};
 use super::model::SidebarViewModel;
 use super::spaces::{resolve_selected_space, space_for_group, SpacesState};
 use super::tags::matches_tag_filters;
@@ -49,6 +51,9 @@ pub struct SidebarRevealPlan {
     pub group_id: String,
     /// The id the group's own UI state is keyed by.
     pub storage_id: String,
+    /// The sidebar mode that lists the group, when it is not the one showing: a bot row is only
+    /// in Bots mode's list and a project row only in Projects mode's.
+    pub select_mode: Option<SidebarMode>,
     /// The Space that shows the group, when it is not the one the section is filtered by.
     pub select_space: Option<String>,
     /// The Space the revealed row is remembered under, and the section that memory is keyed by.
@@ -84,6 +89,10 @@ impl SidebarRevealPlan {
             intents.push(SidebarUiIntent::SelectMachine {
                 machine_id: machine_id.clone(),
             });
+        }
+        // The mode next, before the Space, because picking a Space also leaves Bots mode.
+        if let Some(mode) = self.select_mode {
+            intents.push(SidebarUiIntent::SetSidebarMode { mode });
         }
         // The Space next: it decides which groups the section draws at all, which is what the
         // TypeScript does by running `rememberNativeSidebarFocus` before everything else.
@@ -157,19 +166,28 @@ pub fn reveal_plan(
     });
     let inputs = switched.as_ref().unwrap_or(inputs);
     let parking = inputs.settings.enable_session_parking;
+    // A bot row is only in Bots mode's list and a project row only in Projects mode's, so the
+    // row's kind names the mode the reveal has to be in. Bots switched off draws no bot row at all.
+    let row_mode = match row_is_bot(core, sidebar_session_id) {
+        true if !inputs.settings.bots_enabled => return None,
+        true => SidebarMode::Bots,
+        false => SidebarMode::Projects,
+    };
+    let select_mode =
+        (row_mode != effective_sidebar_mode(&inputs.settings, &inputs.ui)).then_some(row_mode);
     // One clone, reused for both questions a rebuild can answer.
     let mut probe: Option<SidebarInputs> = None;
     let mut built: Option<SidebarView> = None;
-    // The drawn list is the OTHER machine's when the tab moves, so it is not asked at all.
-    let drawn = select_machine
-        .is_none()
+    // The drawn list is the OTHER machine's, or the other mode's, when the reveal moves either, so
+    // it is not asked at all.
+    let drawn = (select_machine.is_none() && select_mode.is_none())
         .then(|| locate(view, sidebar_session_id, parking, now_ms))
         .flatten();
     let found = match drawn {
         Some(found) => found,
         None => {
             // Nothing filtering: no Space, no Show Hidden, no tags. The row is then wherever it is.
-            let probe = probe.insert(unfiltered(inputs));
+            let probe = probe.insert(unfiltered(inputs, row_mode));
             let list = built.insert(SidebarViewModel::build_from_scratch(core, probe, now_ms));
             locate(list, sidebar_session_id, parking, now_ms)?
         }
@@ -235,6 +253,7 @@ pub fn reveal_plan(
             },
         ),
         select_machine,
+        select_mode,
         group_id: found.group_id.clone(),
         storage_id: found.storage_id.clone(),
         expand_list: false,
@@ -246,7 +265,7 @@ pub fn reveal_plan(
     // the compact list cut it. Only a list with that heading open tells the two apart.
     let probe = match probe.as_mut() {
         Some(probe) => probe,
-        None => probe.insert(unfiltered(inputs)),
+        None => probe.insert(unfiltered(inputs, row_mode)),
     };
     // With the filters the user will still have afterwards, which is not always none:
     // `applyNativeSidebarReveal` works the compact list out after it has decided whether to clear
@@ -270,9 +289,11 @@ pub fn reveal_plan(
     Some(plan)
 }
 
-/// The inputs with everything that hides a row lifted: the Space, Show Hidden and the tag filters.
-pub(crate) fn unfiltered(inputs: &SidebarInputs) -> SidebarInputs {
+/// The inputs with everything that hides a row lifted: the Space, Show Hidden and the tag filters,
+/// drawing the list of `mode`.
+pub(crate) fn unfiltered(inputs: &SidebarInputs, mode: SidebarMode) -> SidebarInputs {
     let mut probe = inputs.clone();
+    probe.ui.collapse.sidebar_mode = mode;
     probe.ui.show_hidden = true;
     probe.ui.selected_tag_filters.clear();
     // Not by clearing the section's Space: an absent selection resolves to the section's FIRST
@@ -316,7 +337,12 @@ pub fn space_for_focused_row(
     // Spaces off is the whole answer, and it is the common case: `describeNativeSidebarMachine`
     // reads no Spaces state at all then, so neither the follow nor the memory has anything to say
     // and nothing below runs.
-    if !inputs.settings.sidebar_spaces_enabled {
+    // A bot belongs to no Space, and Bots mode draws none, so neither has a Space to follow or
+    // remember; asking a build would only find that out the slow way.
+    if !inputs.settings.sidebar_spaces_enabled
+        || effective_sidebar_mode(&inputs.settings, &inputs.ui) == SidebarMode::Bots
+        || row_is_bot(core, sidebar_session_id)
+    {
         return None;
     }
     let (moved, other_machine) = inputs_for_row_machine(core, inputs, sidebar_session_id);
@@ -329,7 +355,7 @@ pub fn space_for_focused_row(
     let space_id = match drawn {
         Some(group) => space_of_group(core, inputs, group, group.collection_id.as_deref())?,
         None => {
-            let unfiltered_inputs = unfiltered(inputs);
+            let unfiltered_inputs = unfiltered(inputs, SidebarMode::Projects);
             let built = SidebarViewModel::build_from_scratch(core, &unfiltered_inputs, now_ms);
             let group = find_group(&built, sidebar_session_id)?;
             space_of_group(core, inputs, group, group.collection_id.as_deref())?
@@ -369,6 +395,16 @@ fn inputs_for_row_machine(
     let mut moved = inputs.clone();
     moved.ui.selected_machine_id = machine_id;
     (Some(moved), true)
+}
+
+/// Whether the row belongs to a bot project, read off the daemon's project row.
+fn row_is_bot(core: &Core, sidebar_session_id: &str) -> bool {
+    SessionKey::parse_sidebar_session_id(sidebar_session_id).is_some_and(|key| {
+        core.presentation()
+            .loaded(&key.machine)
+            .and_then(|loaded| loaded.project(&key.project_id))
+            .is_some_and(|project| project.bot_profile.is_some())
+    })
 }
 
 fn find_group<'a>(view: &'a SidebarView, sidebar_session_id: &str) -> Option<&'a GroupView> {
@@ -441,7 +477,13 @@ fn space_of_group(
     group: &GroupView,
     collection_id: Option<&str>,
 ) -> Option<String> {
-    if !inputs.settings.sidebar_spaces_enabled {
+    // A bot belongs to no Space, so revealing one neither moves nor remembers a Space.
+    let is_bot = group
+        .core
+        .project_context
+        .as_ref()
+        .is_some_and(|project| project.bot_profile.is_some());
+    if !inputs.settings.sidebar_spaces_enabled || is_bot {
         return None;
     }
     let machine = machine_key(&inputs.ui.selected_machine_id);

@@ -23,6 +23,8 @@ pub(crate) struct GpuiSidebarNativeProjectPathActionMessage {
     /// Only `openRemoteSessionTerminal` carries it; the remote twin of
     /// `GpuiSidebarWorkspaceTerminalFocusMessage::keep_view`.
     pub(crate) keep_view: bool,
+    /// Only `openWorkspaceProjectInTarget` carries it: the id of one visible Open In target.
+    pub(crate) target_id: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,6 +34,7 @@ pub(crate) enum GpuiSidebarNativeProjectPathAction {
     CopyWorkspaceProjectPath,
     OpenWorkspaceProjectInFinder,
     OpenWorkspaceProjectInIde,
+    OpenWorkspaceProjectInTarget,
     OpenActiveWorkspaceProjectInFinder,
     OpenActiveWorkspaceProjectInVscode,
     OpenActiveWorkspaceProjectInZed,
@@ -57,6 +60,7 @@ impl GpuiSidebarNativeProjectPathAction {
             "copyWorkspaceProjectPath" => Some(Self::CopyWorkspaceProjectPath),
             "openWorkspaceProjectInFinder" => Some(Self::OpenWorkspaceProjectInFinder),
             "openWorkspaceProjectInIde" => Some(Self::OpenWorkspaceProjectInIde),
+            "openWorkspaceProjectInTarget" => Some(Self::OpenWorkspaceProjectInTarget),
             "openActiveWorkspaceProjectInFinder" => Some(Self::OpenActiveWorkspaceProjectInFinder),
             "openActiveWorkspaceProjectInVscode" => Some(Self::OpenActiveWorkspaceProjectInVscode),
             "openActiveWorkspaceProjectInZed" => Some(Self::OpenActiveWorkspaceProjectInZed),

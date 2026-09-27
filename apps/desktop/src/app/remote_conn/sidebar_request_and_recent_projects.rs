@@ -49,6 +49,7 @@ impl GhostexGpuiApp {
                     preferred_interface: GpuiPreferredAgentInterface::Terminal,
                     project_id,
                     keep_view: false,
+                    target_id: None,
                 },
                 cx,
             );
@@ -70,6 +71,7 @@ impl GhostexGpuiApp {
             preferred_interface: GpuiPreferredAgentInterface::Terminal,
             project_id,
             keep_view: false,
+            target_id: None,
         };
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {

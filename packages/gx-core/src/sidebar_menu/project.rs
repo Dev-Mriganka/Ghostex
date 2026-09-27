@@ -9,6 +9,7 @@ use crate::sidebar_view::view::SessionView;
 
 use super::commands::{MenuCommand, message};
 use super::group::MenuGroup;
+use super::host::MenuOpenTarget;
 use super::item::MenuItem;
 use super::membership::project_membership_menu;
 
@@ -23,9 +24,16 @@ pub struct ProjectMenuInput<'a> {
     pub spaces: Option<&'a SpacesState>,
     /// The project ids the user hid from the list.
     pub hidden_group: bool,
+    pub open_targets: &'a [MenuOpenTarget],
 }
 
 /// `createNativeProjectMenu`.
+///
+/// CDXC:Bots 2026-09-27 DECISION:
+/// User: a bot's menu gains "Open in ›" with the header Open In button's targets, opening the profile folder.
+/// It has no project group or Space rows, because bots belong to no Space and Bots lists them flat, so those rows did nothing.
+/// Every other project's menu stays as it was.
+/// Supersedes the 2026-09-26 decision, which kept the group and Space rows on a bot.
 pub fn project_menu(input: &ProjectMenuInput<'_>) -> Vec<MenuItem> {
     let group = input.group;
     let group_id = group.group_id;
@@ -87,6 +95,26 @@ pub fn project_menu(input: &ProjectMenuInput<'_>) -> Vec<MenuItem> {
             MenuCommand::command(message::open_project_in_finder(group_id)),
         ),
     ];
+    if project.bot_profile.is_some() && !group.is_remote && !input.open_targets.is_empty() {
+        menu.push(MenuItem::submenu(
+            "Open in",
+            "external-link",
+            input
+                .open_targets
+                .iter()
+                .map(|target| {
+                    MenuItem::row(
+                        &target.label,
+                        &target.icon,
+                        MenuCommand::command(message::open_project_in_target(
+                            group_id,
+                            &target.target_id,
+                        )),
+                    )
+                })
+                .collect(),
+        ));
+    }
     if project.worktree.is_some() {
         menu.push(MenuItem::row(
             "Rename Worktree",
@@ -120,13 +148,15 @@ pub fn project_menu(input: &ProjectMenuInput<'_>) -> Vec<MenuItem> {
             MenuCommand::command(message::copy_project_remote_url(remote_url)),
         ));
     }
-    menu.extend(project_membership_menu(
-        group_id,
-        Some(project.project_id.as_str()),
-        input.collection_id,
-        input.collections,
-        input.spaces,
-    ));
+    if project.bot_profile.is_none() {
+        menu.extend(project_membership_menu(
+            group_id,
+            Some(project.project_id.as_str()),
+            input.collection_id,
+            input.collections,
+            input.spaces,
+        ));
+    }
     menu.push(MenuItem::separator());
     if group.can_create_session_group {
         menu.push(MenuItem::row(

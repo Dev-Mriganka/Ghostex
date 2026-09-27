@@ -120,29 +120,30 @@ pub(crate) fn uninstall_marked_yaml_hook(
     definition: &HookDefinition,
     config_paths: Vec<PathBuf>,
 ) -> Result<Vec<String>, DomainStateError> {
-    let Some(config_path) = config_paths.into_iter().next() else {
-        return Ok(Vec::new());
-    };
-    // Withdraw the recorded approvals together with the hook entries they
-    // covered, even when the marked block itself is already gone.
-    if definition.agent_id == "hermes-agent" {
-        update_hermes_shell_hook_allowlist(&config_path, None)?;
-    }
     let begin_marker = format!("# ghostex hooks {} begin", definition.agent_id);
     let end_marker = format!("# ghostex hooks {} end", definition.agent_id);
-    let current_text = read_file_text(&config_path);
-    let normalized_text = current_text.replace("\r\n", "\n");
-    let lines = normalized_text
-        .split('\n')
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
-    let next_lines = without_marked_block(&lines, &begin_marker, &end_marker);
-    let next_text = format!("{}\n", next_lines.join("\n").trim_end_matches('\n'));
-    if current_text == next_text {
-        return Ok(Vec::new());
+    let mut removed_paths = Vec::new();
+    for config_path in config_paths {
+        // Withdraw the recorded approvals together with the hook entries they
+        // covered, even when the marked block itself is already gone.
+        if definition.agent_id == "hermes-agent" {
+            update_hermes_shell_hook_allowlist(&config_path, None)?;
+        }
+        let current_text = read_file_text(&config_path);
+        let normalized_text = current_text.replace("\r\n", "\n");
+        let lines = normalized_text
+            .split('\n')
+            .map(ToString::to_string)
+            .collect::<Vec<_>>();
+        let next_lines = without_marked_block(&lines, &begin_marker, &end_marker);
+        let next_text = format!("{}\n", next_lines.join("\n").trim_end_matches('\n'));
+        if current_text == next_text {
+            continue;
+        }
+        fs::write(&config_path, next_text).map_err(io_error)?;
+        removed_paths.push(path_string(&config_path));
     }
-    fs::write(&config_path, next_text).map_err(io_error)?;
-    Ok(vec![path_string(&config_path)])
+    Ok(removed_paths)
 }
 
 fn uninstall_opencode_hook(hook_paths: &HookPaths) -> Result<Vec<String>, DomainStateError> {
@@ -412,19 +413,24 @@ pub(crate) fn inspect_agent_hook_installation(
                     .any(|inspection| inspection.ghostex_hook_present),
             }
         }
+        // Every Hermes profile config must carry the hooks for the install to
+        // count as current; the single-file providers reduce to their one file.
         HookFormat::MarkedYaml | HookFormat::TomlMarked => {
-            let text = config_paths
-                .first()
-                .map(|path| read_file_text(path))
-                .unwrap_or_default();
             let marker = format!("ghostex hooks {} begin", definition.agent_id);
-            let current =
-                text.contains(&marker) && text.contains(&path_string(&hook_paths.notify_hook_path));
+            let notify_hook_path = path_string(&hook_paths.notify_hook_path);
+            let texts = config_paths
+                .iter()
+                .map(|path| read_file_text(path))
+                .collect::<Vec<_>>();
+            let current = !texts.is_empty()
+                && texts
+                    .iter()
+                    .all(|text| text.contains(&marker) && text.contains(&notify_hook_path));
             HookInspection {
                 current_hook_installed: current,
-                ghostex_hook_present: current
-                    || text.contains(&marker)
-                    || text_contains_ghostex_owned_hook_command(&text),
+                ghostex_hook_present: texts.iter().any(|text| {
+                    text.contains(&marker) || text_contains_ghostex_owned_hook_command(text)
+                }),
             }
         }
         HookFormat::Antigravity => {
@@ -780,11 +786,7 @@ pub(crate) fn install_agent_hook(
             Ok(vec![path_string(config_path)])
         }
         HookFormat::MarkedYaml | HookFormat::TomlMarked => {
-            let Some(config_path) = config_paths.first() else {
-                return Ok(Vec::new());
-            };
-            install_marked_yaml_hook(config_path, definition.agent_id, &command)?;
-            Ok(vec![path_string(config_path)])
+            install_marked_yaml_hooks(&config_paths, definition.agent_id, &command)
         }
         HookFormat::Antigravity
         | HookFormat::RootFlatJson
@@ -883,15 +885,11 @@ pub(crate) fn repair_agent_hook_paths(
             }
             Ok(repaired_paths)
         }
-        HookFormat::MarkedYaml | HookFormat::TomlMarked => {
-            let command = command_for_agent(definition, &hook_paths.notify_hook_path);
-            let mut repaired_paths = Vec::new();
-            for config_path in config_paths {
-                install_marked_yaml_hook(&config_path, definition.agent_id, &command)?;
-                repaired_paths.push(path_string(&config_path));
-            }
-            Ok(repaired_paths)
-        }
+        HookFormat::MarkedYaml | HookFormat::TomlMarked => install_marked_yaml_hooks(
+            &config_paths,
+            definition.agent_id,
+            &command_for_agent(definition, &hook_paths.notify_hook_path),
+        ),
         HookFormat::Antigravity
         | HookFormat::RootFlatJson
         | HookFormat::FlatJson
@@ -1175,6 +1173,19 @@ fn group_contains_hook_command(group: &Value, command: &str) -> bool {
 
 fn is_hook_command(value: &Value, command: &str) -> bool {
     value.get("command").and_then(Value::as_str) == Some(command)
+}
+
+fn install_marked_yaml_hooks(
+    config_paths: &[PathBuf],
+    agent_id: &str,
+    command: &str,
+) -> Result<Vec<String>, DomainStateError> {
+    let mut installed_paths = Vec::new();
+    for config_path in config_paths {
+        install_marked_yaml_hook(config_path, agent_id, command)?;
+        installed_paths.push(path_string(config_path));
+    }
+    Ok(installed_paths)
 }
 
 fn install_marked_yaml_hook(

@@ -29,6 +29,10 @@ pub struct SidebarView {
     pub machines: Vec<MachineTabView>,
     pub spaces_enabled: bool,
     pub spaces: Vec<SpaceView>,
+    /// The Bots extension is on, so the renderer draws the Hermes button.
+    pub bots_enabled: bool,
+    /// The list shows the Hermes bots rather than the projects.
+    pub bots_mode: bool,
     /// Every group of the machine that is drawn, in order.
     pub groups: Vec<GroupView>,
     pub collections: Vec<CollectionView>,
@@ -129,6 +133,10 @@ pub struct ProjectContextView {
     /// read the same here, because the one reader (the project menu's Copy Remote URL) tests it
     /// for truthiness.
     pub git_remote_origin_url: Option<String>,
+    /// The Hermes profile this project is the bot of; absent for every ordinary project.
+    pub bot_profile: Option<String>,
+    /// Whether that bot's Hermes gateway runs (the row's dot); false for every ordinary project.
+    pub bot_gateway_running: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

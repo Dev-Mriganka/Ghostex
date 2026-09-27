@@ -43,6 +43,10 @@ pub enum SidebarUiIntent {
         section_key: String,
         space_id: String,
     },
+    /// Show the user's projects or the Hermes bots. The Hermes button's toggle.
+    SetSidebarMode {
+        mode: crate::sidebar_view::SidebarMode,
+    },
     /// Switch the machine tab.
     SelectMachine {
         machine_id: String,

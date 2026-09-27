@@ -306,6 +306,7 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'storybookViewTabHidden',
       DEFAULT_ghostex_SETTINGS.storybookViewTabHidden
     ),
+    botsHidden: readBoolean(source, 'botsHidden', DEFAULT_ghostex_SETTINGS.botsHidden),
     tipsAndTricksTitlebarButtonHidden: readBoolean(
       source,
       'tipsAndTricksTitlebarButtonHidden',

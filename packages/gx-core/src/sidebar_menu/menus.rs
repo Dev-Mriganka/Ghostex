@@ -244,6 +244,7 @@ impl<'a> SidebarMenus<'a> {
                 .group_ids
                 .iter()
                 .any(|group_id| *group_id == group.core.group_id),
+            open_targets: &self.host.open_targets,
         })
     }
 

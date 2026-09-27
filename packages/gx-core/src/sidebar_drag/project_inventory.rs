@@ -232,7 +232,9 @@ pub(crate) fn project_section(
         parent_project_id: None,
         is_chat_collection: true,
     }];
-    for project_id in &meta.project_order {
+    // Bots after the code projects, as the stored order holds them: each mode drags within its
+    // own run, and the order it writes keeps the other mode's rows.
+    for project_id in meta.grouped_project_ids() {
         let project = ProjectKey {
             machine: machine.clone(),
             project_id: project_id.clone(),

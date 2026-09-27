@@ -18,6 +18,28 @@ use super::{
 use crate::GhostexGpuiApp;
 use crate::app::helpers::*;
 
+/// The fill and outline of a selected Space-row tile.
+///
+/// CDXC:Spaces 2026-09-21 DECISION:
+/// User: the selected Space's grey box looked bad in light mode, make it nicer. In light mode it is
+/// a raised white tile (white fill, hairline outline, small shadow); dark mode keeps its translucent
+/// fill.
+pub(super) fn space_tile_selected_colors(
+    appearance: &SidebarAppearance,
+) -> (gpui::Hsla, gpui::Hsla) {
+    if appearance.light {
+        (
+            appearance.selected,
+            appearance.selected_outline.opacity(0.14 / 0.12),
+        )
+    } else {
+        (
+            appearance.foreground.opacity(0.12),
+            appearance.foreground.opacity(0.16),
+        )
+    }
+}
+
 impl GhostexGpuiApp {
     pub(crate) fn render_native_sidebar_selectors(
         &self,
@@ -26,8 +48,14 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) -> AnyElement {
         let scale = appearance.scale;
-        // Space buttons have a fixed 28px face and 4px gap in both renderers.
-        let capacity = (((self.sidebar_width / scale - 13.0) + 4.0) / 32.0)
+        // Space buttons have a fixed 28px face and 4px gap in both renderers. The Hermes slot and
+        // its hairline take one Space's room plus the hairline's at the end of the row.
+        let bots_room = if snapshot.bots_enabled {
+            32.0 + super::bots::BOTS_SPACE_SLOT_DIVIDER_WIDTH
+        } else {
+            0.0
+        };
+        let capacity = (((self.sidebar_width / scale - 13.0) + 4.0 - bots_room) / 32.0)
             .floor()
             .max(2.0) as usize;
         let user_spaces: Vec<_> = snapshot
@@ -74,7 +102,8 @@ impl GhostexGpuiApp {
                         if !items.is_empty() { items.push(json!({"separator": true})); }
                         items.push(json!({"label": "New Space", "icon": "plus", "command": {"type": "editSpace"}}));
                         Self::show_native_sidebar_menu(&json!(items), event.position(), scale, window, cx);
-                    }))))))
+                    }))))
+                .when(snapshot.bots_enabled, |row| row.child(self.render_native_sidebar_bots_space_slot(snapshot.bots_mode, appearance, cx)))))
             .into_any_element()
     }
 
@@ -100,23 +129,7 @@ impl GhostexGpuiApp {
             .map(rgb)
             .map(gpui::Hsla::from)
             .unwrap_or(appearance.foreground);
-        /*
-        CDXC:Spaces 2026-09-21 DECISION:
-        User: the selected Space's grey box looked bad in light mode, make it nicer. In light mode it
-        is a raised white tile (white fill, hairline outline, small shadow); dark mode keeps its
-        translucent fill.
-        */
-        let (selected_background, selected_outline) = if appearance.light {
-            (
-                appearance.selected,
-                appearance.selected_outline.opacity(0.14 / 0.12),
-            )
-        } else {
-            (
-                appearance.foreground.opacity(0.12),
-                appearance.foreground.opacity(0.16),
-            )
-        };
+        let (selected_background, selected_outline) = space_tile_selected_colors(appearance);
         let dragged = SidebarDrag {
             kind: "space",
             id: id.clone(),

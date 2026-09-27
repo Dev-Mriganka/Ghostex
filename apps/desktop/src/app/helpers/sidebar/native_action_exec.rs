@@ -50,6 +50,7 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
             "filePath",
             "preferredInterface",
             "keepView",
+            "targetId",
         ]
         .contains(&key.as_str())
     }) {
@@ -100,6 +101,18 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
     {
         return Err(());
     }
+    // CDXC:Bots 2026-09-26 WHY:
+    // A bot row's Open in names its target by id only.
+    // The id is looked up in this app's own Settings before anything runs, so the page still sends no command, app name or path.
+    let target_id = gpui_trimmed_json_string_field(object, "targetId")
+        .filter(|target_id| target_id.chars().count() <= GPUI_PROJECT_CONTRACT_STRING_MAX_CHARS)
+        .map(str::to_string);
+    let opens_in_target =
+        action == GpuiSidebarNativeProjectPathAction::OpenWorkspaceProjectInTarget;
+    if object.contains_key("targetId") != opens_in_target || opens_in_target != target_id.is_some()
+    {
+        return Err(());
+    }
     let project_id = object
         .get("projectId")
         .and_then(serde_json::Value::as_str)
@@ -118,6 +131,7 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
         preferred_interface,
         project_id,
         keep_view,
+        target_id,
     })
 }
 
@@ -298,6 +312,14 @@ pub(crate) fn execute_gpui_sidebar_native_project_path_action(
     } else {
         gpui_gxserver_workspace_project_path_by_id(&message.project_id)?
     };
+    if let Some(target_id) = message.target_id.as_deref() {
+        let target = gpui_visible_open_targets_from_current_settings()
+            .into_iter()
+            .find(|target| target.id == target_id)
+            .ok_or_else(|| "That Open In target is no longer available.".to_string())?;
+        return gpui_launch_open_target(&target, &path)
+            .map(|_| GpuiSidebarNativeProjectPathActionResult::Opened);
+    }
     if message.action.copies_path() {
         return Ok(GpuiSidebarNativeProjectPathActionResult::Copied(
             gpui_path_string(&path),

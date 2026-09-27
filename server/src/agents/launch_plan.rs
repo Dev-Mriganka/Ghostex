@@ -414,6 +414,9 @@ pub(crate) fn resolve_project_agent_config(
     launch_settings: Option<&Map<String, Value>>,
 ) -> Map<String, Value> {
     let normalized_agent_id = agent_id.trim().to_ascii_lowercase();
+    if let Some(bot) = crate::bot_projects::bot_agent_config(project, agent_id) {
+        return bot;
+    }
     if let Some(agent) = project
         .get("customAgents")
         .and_then(Value::as_array)

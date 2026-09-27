@@ -378,6 +378,8 @@ export type ghostexSettings = {
   posthogViewTabHidden: boolean;
   customWebsiteViewTabHidden: boolean;
   projectWebsiteViews: ProjectWebsiteSettings;
+  /** The Bots sidebar mode (one row per Hermes profile), inverted like every Official switch. */
+  botsHidden: boolean;
   /**
    * Quick-access switches affect only the matching right-side titlebar button.
    * The menus and commands remain available through their other entry points.

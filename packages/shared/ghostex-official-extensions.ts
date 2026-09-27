@@ -30,6 +30,7 @@ type BooleanGhostexSettingsKey = {
 export type GhostexOfficialExtensionSettingsKey = Extract<
   BooleanGhostexSettingsKey,
   | 'automateViewTabHidden'
+  | 'botsHidden'
   | 'browserViewTabHidden'
   | 'codeViewTabHidden'
   | 'devServersTitlebarButtonHidden'
@@ -49,7 +50,7 @@ export type GhostexOfficialExtensionSettingsKey = Extract<
 >;
 
 /** Where an official entry appears in the app once it is enabled. */
-export type GhostexOfficialExtensionPlacement = 'view' | 'titlebar-button';
+export type GhostexOfficialExtensionPlacement = 'view' | 'titlebar-button' | 'sidebar';
 
 /**
  * CDXC:Extensions 2026-09-24 DECISION:
@@ -76,6 +77,7 @@ export const GHOSTEX_OFFICIAL_EXTENSION_CATEGORIES: readonly {
 export type GhostexOfficialExtensionId =
   | ProjectWebsiteId
   | 'automate'
+  | 'bots'
   | 'browser'
   | 'code'
   | 'devServers'
@@ -102,6 +104,8 @@ export type GhostexOfficialExtension = {
   description: string;
   id: GhostexOfficialExtensionId;
   placement: GhostexOfficialExtensionPlacement;
+  /** The agent CLI (an `agent-cli-catalog.json` id) that must be installed for the entry to be offered at all. */
+  requiresAgentCli?: string;
   settingsKey: GhostexOfficialExtensionSettingsKey;
   title: string;
 };
@@ -156,6 +160,21 @@ export const GHOSTEX_OFFICIAL_EXTENSIONS: readonly GhostexOfficialExtension[] = 
     placement: 'view',
     settingsKey: 'automateViewTabHidden',
     title: 'Automate',
+  },
+  /**
+   * CDXC:Bots 2026-09-26 DECISION:
+   * User: Bots is an Official extension in Planning and automation, off by default, and offered only on a computer where the Hermes CLI is installed.
+   */
+  {
+    appWide: true,
+    description:
+      'Swap the sidebar to your Hermes agents: one row each, with a new session one click away. Needs the Hermes CLI.',
+    category: 'planning',
+    id: 'bots',
+    placement: 'sidebar',
+    requiresAgentCli: 'hermes-agent',
+    settingsKey: 'botsHidden',
+    title: 'Bots',
   },
   {
     description: 'Browse your project’s notes, plans, and reference files together in one focused reading space.',

@@ -18,7 +18,7 @@ use serde_json::{json, Map, Value};
 
 use crate::keys::encode_uri_component;
 use crate::sidebar_view::{
-    SectionCollapse, SidebarCollapseState, SidebarHiddenItems, LOCAL_MACHINE_ID,
+    SectionCollapse, SidebarCollapseState, SidebarHiddenItems, SidebarMode, LOCAL_MACHINE_ID,
     MAX_RECENT_SPACE_SESSION_IDS,
 };
 
@@ -125,6 +125,7 @@ pub fn collapse_into_storage(state: &SidebarCollapseState, existing: Option<&str
         "recentSessionIdsBySpace".to_string(),
         recent_sessions_into_storage(&state.recent_sessions_by_space),
     );
+    write_sidebar_mode(&mut object, state.sidebar_mode);
     // The one field this state does not own travels untouched: normalizing it here would be this
     // writer quietly editing another writer's value, and the reader on either side already
     // normalizes what it finds. A first write spells out the default a reader would otherwise
@@ -209,6 +210,27 @@ fn normalize_collapse_state(state: Option<&Value>) -> SidebarCollapseState {
             state.get("selectedSpaceIdBySectionKey"),
         ),
         recent_sessions_by_space: normalize_recent_sessions(state.get("recentSessionIdsBySpace")),
+        sidebar_mode: state
+            .get(SIDEBAR_MODE_KEY)
+            .and_then(Value::as_str)
+            .and_then(SidebarMode::parse)
+            .unwrap_or_default(),
+    }
+}
+
+/// Where the collapse envelope keeps the sidebar mode, beside `selectedSpaceIdBySectionKey`.
+const SIDEBAR_MODE_KEY: &str = "sidebarMode";
+
+/// Projects is the absent key, so an envelope of a user who never opened Bots is byte-identical to
+/// the one a build without Bots writes.
+pub(super) fn write_sidebar_mode(object: &mut Map<String, Value>, mode: SidebarMode) {
+    match mode {
+        SidebarMode::Projects => {
+            object.remove(SIDEBAR_MODE_KEY);
+        }
+        SidebarMode::Bots => {
+            object.insert(SIDEBAR_MODE_KEY.to_string(), Value::from("bots"));
+        }
     }
 }
 

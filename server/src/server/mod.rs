@@ -191,6 +191,7 @@ pub mod presentation_delta;
 mod project_docs_http;
 pub mod project_paths;
 mod session_auto_sleep_sweep;
+mod bot_sync;
 pub mod session_state_sync;
 pub mod telemetry_http;
 pub mod telemetry_tasks;
@@ -582,6 +583,7 @@ pub async fn run_gxserver_foreground(
     let _ = crate::session_chat_queue::recover_session_chat_queue_after_restart(&paths);
     crate::accounts::recovery::start(state.clone());
     session_auto_sleep_sweep::start_session_auto_sleep_sweep(state.clone());
+    bot_sync::start_bot_project_sync(state.clone());
     close_after_done_runtime::start_close_after_done_runtime(state.clone());
     /*
     CDXC:SessionChat 2026-08-21:
@@ -1254,6 +1256,18 @@ async fn route_http(
                         "projectAdded",
                     )?;
                     Ok(json!({ "project": project }))
+                },
+            )
+        }
+        "/api/syncBotProjects" => {
+            let bot_state = state.clone();
+            handle_domain_http(
+                &state,
+                endpoint.path,
+                request_id,
+                &body_json,
+                move |repository, db, _, _| {
+                    bot_sync::sync_and_publish_bot_projects(&bot_state, db, repository)
                 },
             )
         }

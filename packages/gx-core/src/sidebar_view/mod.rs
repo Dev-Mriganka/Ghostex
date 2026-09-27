@@ -45,8 +45,8 @@ pub use collections::{Collection, CollectionsState};
 pub use inputs::{
     BrowserTabInput, CloseAfterDoneInput, DelayedSendInput, MachineTabInput, ProjectDiffStats,
     SectionCollapse, SectionId, SessionSortMode, SidebarCollapseState, SidebarHiddenItems,
-    SidebarHostInputs, SidebarInputs, SidebarSettings, SidebarUiState, UnavailableState,
-    LOCAL_MACHINE_ID, MACHINE_STATE_CONNECTED, MAX_RECENT_SPACE_SESSION_IDS,
+    SidebarHostInputs, SidebarInputs, SidebarMode, SidebarSettings, SidebarUiState,
+    UnavailableState, LOCAL_MACHINE_ID, MACHINE_STATE_CONNECTED, MAX_RECENT_SPACE_SESSION_IDS,
 };
 pub use model::{SidebarUpdateWork, SidebarViewModel};
 pub use ordering::session_is_snoozed;

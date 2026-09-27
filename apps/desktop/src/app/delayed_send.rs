@@ -3456,6 +3456,7 @@ impl GhostexGpuiApp {
                                                 session_id.as_str(),
                                             ),
                                             keep_view: false,
+                                            target_id: None,
                                         },
                                         cx,
                                     );

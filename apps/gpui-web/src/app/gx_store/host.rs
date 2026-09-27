@@ -267,6 +267,8 @@ impl GhostexGpuiApp {
             ),
             keep_awake_minutes: None,
             machine_connected: true,
+            // A page cannot launch an app, so a bot's menu offers no Open in.
+            open_targets: Vec::new(),
         };
         store.sidebar_list.last_inputs.host.project_diff_stats = store
             .runtime_facts

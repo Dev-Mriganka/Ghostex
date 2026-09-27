@@ -88,6 +88,22 @@ impl GhostexGpuiApp {
         );
     }
 
+    /// A bot's Edit SOUL and Edit config open in the Code view, which the page does not draw.
+    pub(crate) fn open_bot_file_in_code_view(
+        &mut self,
+        _group_id: String,
+        _project_path: std::path::PathBuf,
+        _file_path: std::path::PathBuf,
+        cx: &mut Context<Self>,
+    ) {
+        self.dispatch_gpui_workspace_action_toast(
+            "info",
+            "Not available in the browser",
+            "Editing a bot's files needs the Ghostex app.",
+            cx,
+        );
+    }
+
     /// Runs `f` with the page's window, the way the desktop defers into its main window.
     pub(crate) fn defer_in_main_window(
         &self,

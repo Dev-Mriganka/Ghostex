@@ -24,6 +24,14 @@ pub struct HeaderCommand {
     pub show_on_project_row: bool,
 }
 
+/// One Open In target (an editor, the file manager), as the header Open In button lists it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct MenuOpenTarget {
+    pub target_id: String,
+    pub label: String,
+    pub icon: String,
+}
+
 /// Everything the menus read that is neither the store nor the settings.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MenuHost {
@@ -39,6 +47,9 @@ pub struct MenuHost {
     pub keep_awake_minutes: Option<i64>,
     /// The selected machine tab is reachable: always true for the local daemon.
     pub machine_connected: bool,
+    /// The visible Open In targets, in the header Open In button's order. Empty where the host
+    /// cannot launch an app.
+    pub open_targets: Vec<MenuOpenTarget>,
 }
 
 impl MenuHost {

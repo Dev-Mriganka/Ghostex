@@ -98,6 +98,11 @@ impl GhostexGpuiApp {
             "selectSpace" => Some(SidebarUiIntent::SelectSpace {
                 space_id: text("spaceId")?,
             }),
+            "setSidebarMode" => Some(SidebarUiIntent::SetSidebarMode {
+                mode: ghostex_gx_core::SidebarMode::parse(
+                    command.get("mode").and_then(Value::as_str)?,
+                )?,
+            }),
             "toggleTagFilter" => Some(SidebarUiIntent::ToggleTagFilter { tag: text("tag")? }),
             "sidebarAction" if command["action"] == "showHidden" => {
                 Some(SidebarUiIntent::ToggleShowHidden)

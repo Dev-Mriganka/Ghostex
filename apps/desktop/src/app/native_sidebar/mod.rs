@@ -1,6 +1,7 @@
 pub(crate) mod actions;
 mod agent_launcher_menu;
 pub(crate) mod appearance;
+mod bots;
 mod collections;
 mod decorations;
 mod disclosure;

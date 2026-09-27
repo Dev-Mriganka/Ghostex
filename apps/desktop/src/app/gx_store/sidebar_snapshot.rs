@@ -397,6 +397,8 @@ pub(super) fn snapshot_from_view(
             )
             .collect(),
         spaces_enabled: view.spaces_enabled,
+        bots_enabled: view.bots_enabled,
+        bots_mode: view.bots_mode,
         collections,
         order: view
             .order
@@ -599,6 +601,12 @@ fn project_context(group: &GroupView) -> Option<Value> {
             },
         }),
     );
+    if context.bot_profile.is_some() {
+        object.insert(
+            "botGatewayRunning".to_string(),
+            Value::Bool(context.bot_gateway_running),
+        );
+    }
     Some(Value::Object(object))
 }
 

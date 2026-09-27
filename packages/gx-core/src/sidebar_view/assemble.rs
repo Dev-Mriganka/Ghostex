@@ -8,7 +8,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::collections::{CollectionItem, CollectionsState, project_sidebar_collections};
 use super::groups::{GroupBuild, GroupKind, GroupPlan, group_summary};
-use super::inputs::{LOCAL_MACHINE_ID, SidebarHostInputs, SidebarSettings, SidebarUiState};
+use super::inputs::{
+    LOCAL_MACHINE_ID, SidebarHostInputs, SidebarMode, SidebarSettings, SidebarUiState,
+    effective_sidebar_mode,
+};
 use super::projects::ProjectMeta;
 use super::spaces::{
     OTHER_SPACE_ICON, OTHER_SPACE_ID, OTHER_SPACE_LABEL, SpaceSelection, SpacesState,
@@ -51,6 +54,8 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         .collect();
     // Both are asked once per group per Space, so the lookup is a map rather than a scan.
     let mut projects_by_group: BTreeMap<&str, (&str, Option<&str>)> = BTreeMap::new();
+    // The bot groups, which only Bots mode draws and no Space shows or counts.
+    let mut bot_groups: BTreeSet<&str> = BTreeSet::new();
     for plan in input.plans {
         if let Some(project) = &plan.project {
             projects_by_group.insert(
@@ -63,6 +68,9 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
                         .map(|worktree| worktree.parent_project_id.as_str()),
                 ),
             );
+            if project.bot_profile.is_some() {
+                bot_groups.insert(plan.group_id.as_str());
+            }
         }
     }
     let project_of_group = |group_id: &str| -> Option<String> {
@@ -81,6 +89,8 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         &project_of_group,
         &parent_project_of_group,
     );
+    let bots_mode = effective_sidebar_mode(input.settings, input.ui) == SidebarMode::Bots;
+    let is_bot_group = |group_id: &str| bot_groups.contains(group_id);
 
     // A section has a Space row only when the setting is on and its daemon published a Space
     // document at all; an older daemon has no Spaces and is never filtered.
@@ -100,7 +110,11 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
                 .map(String::as_str),
         )
     });
+    // Bots belong to no Space: a Space only ever shows and counts projects.
     let shows_group = |selection: &SpaceSelection, group_id: &str| -> bool {
+        if is_bot_group(group_id) {
+            return false;
+        }
         let project = projects_by_group.get(group_id).copied();
         selection_shows_project(
             selection,
@@ -121,7 +135,7 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
             .is_some_and(GroupBuild::contains_focused_session)
     });
     let active_space_id = match (&selection, active_group_id) {
-        (Some(selection), Some(group_id)) => {
+        (Some(selection), Some(group_id)) if !is_bot_group(group_id) => {
             let project_id = project_of_group(group_id);
             Some(space_for_group(
                 &spaces_state,
@@ -190,7 +204,8 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
                     }
                 }
             }
-            row.selected = selection.space_id() == row.id;
+            // The Hermes button is the selected slot while Bots is showing.
+            row.selected = !bots_mode && selection.space_id() == row.id;
             row.contains_active_session = active_space_id.as_deref() == Some(row.id.as_str());
             row.working_count = working_count;
             row.attention_count = attention_count;
@@ -207,7 +222,10 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         let Some(build) = input.builds.get(&plan.group_id) else {
             continue;
         };
-        if let Some(selection) = &selection {
+        if is_bot_group(&plan.group_id) != bots_mode {
+            continue;
+        }
+        if let Some(selection) = selection.as_ref().filter(|_| !bots_mode) {
             if !shows_group(selection, &plan.group_id) {
                 continue;
             }
@@ -232,12 +250,23 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         .collect();
     let mut collections: Vec<CollectionView> = Vec::new();
     let mut order: Vec<OrderItem> = Vec::new();
-    for item in project_sidebar_collections(
-        &rendered_ids,
-        &input.collections,
-        &project_of_group,
-        &parent_project_of_group,
-    ) {
+    // Collections group projects; the bots are one flat list.
+    let collection_items = if bots_mode {
+        rendered_ids
+            .iter()
+            .map(|group_id| CollectionItem::Project {
+                group_id: group_id.clone(),
+            })
+            .collect()
+    } else {
+        project_sidebar_collections(
+            &rendered_ids,
+            &input.collections,
+            &project_of_group,
+            &parent_project_of_group,
+        )
+    };
+    for item in collection_items {
         match item {
             CollectionItem::Project { group_id } => order.push(OrderItem {
                 kind: OrderKind::Project,
@@ -351,17 +380,28 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         scroll_scope: format!(
             "{}|{}",
             input.ui.selected_machine_id,
-            selection
-                .as_ref()
-                .map_or("all", |selection| selection.space_id())
+            match &selection {
+                _ if bots_mode => "bots",
+                Some(selection) => selection.space_id(),
+                None => "all",
+            }
         ),
         machine: machine_summary,
         spaces_enabled: selection.is_some(),
         spaces,
+        bots_enabled: input.settings.bots_enabled,
+        bots_mode,
         groups,
         collections,
         order,
-        empty_state: empty_state(&input, selection.as_ref()),
+        empty_state: if bots_mode {
+            EmptyState {
+                copy: "No Hermes profiles found.".to_string(),
+                ..EmptyState::default()
+            }
+        } else {
+            empty_state(&input, selection.as_ref())
+        },
     }
 }
 

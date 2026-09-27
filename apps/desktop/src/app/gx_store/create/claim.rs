@@ -67,6 +67,11 @@ impl GhostexGpuiApp {
         if self.gx_store_run_group_command(command, message, cx) {
             return true;
         }
+        // A bot's Edit SOUL and Edit config (bot.rs).
+        if message.get("type").and_then(Value::as_str) == Some("openBotFile") {
+            self.gx_store_open_bot_file_message(message, cx);
+            return true;
+        }
         // Close Project carries the successor the store names from the list it draws
         // (sidebar_close_project.rs).
         if message.get("type").and_then(Value::as_str) == Some("closeWorkspaceProjectForGroup") {
@@ -87,6 +92,10 @@ impl GhostexGpuiApp {
         // The host message door also made the launched agent the launcher's highlighted one.
         if message.get("type").and_then(Value::as_str) == Some("runSidebarAgent") {
             self.gx_store_run_sidebar_agent_message(message, cx);
+            return true;
+        }
+        if message.get("type").and_then(Value::as_str) == Some("runSidebarBot") {
+            self.gx_store_run_sidebar_bot_message(message, cx);
             return true;
         }
         self.gx_store_answer_create_message(message, cx)

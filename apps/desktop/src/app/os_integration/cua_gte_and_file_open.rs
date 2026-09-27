@@ -322,6 +322,41 @@ impl GhostexGpuiApp {
         .detach();
     }
 
+    /// A bot's Edit SOUL or Edit config (gx_store/create/bot.rs): the file opens in the Code view
+    /// of the bot's own project. The view is switched only once the bot is the active project
+    /// (`land_pending_source_file_open_on_source_mode`: now when it already is, else when the
+    /// focus below lands), so no Code view starts for the project that was active before.
+    pub(crate) fn open_bot_file_in_code_view(
+        &mut self,
+        group_id: String,
+        project_path: std::path::PathBuf,
+        file_path: std::path::PathBuf,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        // The Customize switch, not the active project's availability: that is the previous
+        // project's until the focus lands.
+        if gpui_titlebar_mode_hidden_from_settings(TitlebarMode::Source) {
+            self.copy_path_for_disabled_project_workarea(&file_path.to_string_lossy(), "Code", cx);
+            return;
+        }
+        self.pending_source_file_open = Some(PendingSourceFileOpen {
+            column: None,
+            file_path,
+            line: None,
+            origin: PendingSourceFileOpenOrigin::SessionChat,
+            project_path,
+            remote_target: None,
+            remote_working_directory: None,
+        });
+        self.dispatch_native_sidebar_command(
+            serde_json::json!({ "type": "focusGroup", "groupId": group_id }),
+            cx,
+        );
+        self.defer_in_main_window(cx, |this, window, cx| {
+            this.land_pending_source_file_open_on_source_mode(window, cx);
+        });
+    }
+
     pub(crate) fn open_gpui_agents_hub_file_in_built_in_editor(
         &mut self,
         command: &serde_json::Map<String, serde_json::Value>,
