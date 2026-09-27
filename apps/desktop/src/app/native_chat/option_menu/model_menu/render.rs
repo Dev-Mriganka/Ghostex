@@ -250,7 +250,7 @@ impl ChatOptionMenuPanel {
                         .py(px(1.0 * scale))
                         .rounded(px(5.0 * scale))
                         .bg(palette.ink(0.05))
-                        .font_family("Menlo")
+                        .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                         .text_size(px(10.0 * scale))
                         .text_color(palette.muted)
                         .child(format!("⌥{slot}")),

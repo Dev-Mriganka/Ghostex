@@ -70,7 +70,7 @@ impl NativeChatView {
                     .overflow_y_scroll()
                     .px(px(12.0 * s))
                     .py(px(8.0 * s))
-                    .font_family("Menlo")
+                    .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                     .text_size(px(11.0 * s))
                     .line_height(px(16.0 * s))
                     .text_color(p.foreground)

@@ -42,7 +42,7 @@ impl RowDragPreview {
             .items_center()
             .w(self.width)
             .min_w_0()
-            .font_family(".SystemUIFont")
+            .font_family(crate::ui_fonts::UI_FONT)
             .font_weight(FontWeight::LIGHT)
             .text_size(px(15.55 * scale))
             .text_color(appearance.foreground);

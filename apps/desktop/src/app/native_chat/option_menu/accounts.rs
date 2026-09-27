@@ -485,7 +485,7 @@ fn identity(value: &Value, appearance: &ChatAppearance) -> AnyElement {
             div()
                 .flex()
                 .flex_col()
-                .font_family("Menlo")
+                .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                 .text_size(px(10.0 * s))
                 .line_height(px(13.0 * s))
                 .children(figures.into_iter().enumerate().map(|(index, figure)| {

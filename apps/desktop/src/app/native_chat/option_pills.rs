@@ -116,7 +116,7 @@ fn pill(
                 .child(logo.absolute().size_full().opacity(0.3))
                 .child(
                     div()
-                        .font_family("Menlo")
+                        .font_family(crate::app::native_chat::fonts::CHAT_MONO)
                         .font_weight(gpui::FontWeight::SEMIBOLD)
                         .text_size(px(9.9 * scale))
                         .line_height(px(9.9 * scale))

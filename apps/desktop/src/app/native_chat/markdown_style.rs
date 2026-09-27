@@ -157,7 +157,7 @@ fn swatch_ring() -> gpui::Hsla {
 fn inline_code(p: &ChatAppearance) -> InlineCodeStyle {
     let visual = &VISUAL.inline_code;
     InlineCodeStyle {
-        font_family: "Menlo".into(),
+        font_family: super::fonts::CHAT_MONO.into(),
         font_scale: visual.font_scale,
         padding_x: px(visual.padding_x * p.scale),
         padding_y: px(visual.padding_y * p.scale),
