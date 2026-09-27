@@ -307,7 +307,20 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
     let active = cfg!(any(target_os = "macos", target_os = "windows"))
         && wanted
         && !system_reduces_transparency();
+    WINDOW_GLASS_SYSTEM_BLOCKED.store(
+        cfg!(any(target_os = "macos", target_os = "windows")) && system_reduces_transparency(),
+        Ordering::Relaxed,
+    );
     WINDOW_GLASS_ACTIVE.swap(active, Ordering::Relaxed) != active
+}
+
+/// The system switch that turns transparency off, as of the last `refresh_window_glass`.
+static WINDOW_GLASS_SYSTEM_BLOCKED: AtomicBool = AtomicBool::new(false);
+
+/// Whether the system's own switch (Reduce Transparency on macOS, Transparency effects off on
+/// Windows) is keeping the window opaque, so Settings can say why the glass shows nothing.
+pub(crate) fn window_glass_blocked_by_system() -> bool {
+    WINDOW_GLASS_SYSTEM_BLOCKED.load(Ordering::Relaxed)
 }
 
 #[cfg(target_os = "macos")]

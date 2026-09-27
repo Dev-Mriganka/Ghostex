@@ -280,6 +280,19 @@ export function windowGlassRestartNote(): string {
 }
 
 /**
+ * The sentence that follows the Enable transparency description: why the window stays opaque when the system's own
+ * switch blocks glass (it always wins), otherwise the Windows restart note.
+ */
+export function windowGlassStatusNote(blockedBySystem: boolean): string {
+  if (!blockedBySystem) {
+    return windowGlassRestartNote();
+  }
+  return detectghostexHotkeyPlatform() === 'windows'
+    ? ' Transparency effects is off in Windows Settings > Personalization > Colors, so the window stays opaque. Turn it on there, then restart Ghostex.'
+    : ' Reduce transparency is on in System Settings > Accessibility > Display, so the window stays opaque until you turn it off.';
+}
+
+/**
  * CDXC:Theming 2026-09-25 DECISION:
  * User: "I don't like the low, medium, high contrast. I feel this doesn't represent what's happening to the colors, so you can say more. You can switch it between more colorful and less colorful". Background contrast becomes Colourfulness, five steps from Subtle to Vivid: lower contrast makes the chrome lighter and lets more of the theme colour show, higher makes it deeper and nearly neutral. Each step sets the sidebar and work area contrast together (Subtle +4, Soft 0 = the shipped default, Balanced -4, Rich -8, Vivid -12 points); More colour options can set the two areas apart. Supersedes the 2026-09-23 Background contrast (Lowest to Highest).
  */

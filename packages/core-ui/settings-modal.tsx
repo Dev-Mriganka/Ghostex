@@ -359,6 +359,8 @@ export type SettingsModalProps = {
   appIconState?: SidebarAppIconStateMessage;
   /** Hosts without a native App Icon subsystem hide the section entirely. */
   appIconPickerUnavailable?: boolean;
+  /** The system's own transparency switch is keeping the window opaque. */
+  windowGlassBlockedBySystem?: boolean;
   /**
    * Retained for the hosts that still pass sidebar Portless state; Settings no
    * longer renders Portless controls (see docs/2026-09-03/mobile-setup plan §5.12).
@@ -437,6 +439,7 @@ export function SettingsModal({
   // CDXC:Icons 2026-06-25-21:50: Prop-driven App Icon state replaces direct host-event listeners.
   appIconState,
   appIconPickerUnavailable = false,
+  windowGlassBlockedBySystem = false,
 }: SettingsModalProps) {
   const isFirstLaunchSetup = presentation === 'firstLaunchSetup';
   const normalizedInitialSettings = normalizeghostexSettings(settings);
@@ -2798,6 +2801,7 @@ export function SettingsModal({
                       chooseWindowGlassImageFile={chooseWindowGlassImageFile}
                       chooseWindowGlassVideoFile={chooseWindowGlassVideoFile}
                       windowGlassVideoError={windowGlassVideoError}
+                      windowGlassBlockedBySystem={windowGlassBlockedBySystem}
                       draft={draft}
                       getSettingModificationProps={getSettingModificationProps}
                       nativeFilePickerAvailable={nativeFilePickerAvailable}
