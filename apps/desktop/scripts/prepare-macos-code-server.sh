@@ -14,18 +14,24 @@ code_server_node_distribution_arch() {
 
 code_server_node_distribution_sha256() {
 	local distribution_arch="$1"
-	if [[ "$CODE_SERVER_APP_NODE_VERSION" == "24.18.1" ]]; then
-		case "$distribution_arch" in
-		arm64)
-			printf '1d60b703fe5d7e7072489be8187f430f1a095a658c31e5e1e281331a5873fac3\n'
-			return 0
-			;;
-		x64)
-			printf 'f892c7895720f40d3750bde24f3554242d36f23602b5167b5b73ec4d13938aef\n'
-			return 0
-			;;
-		esac
-	fi
+	case "$CODE_SERVER_APP_NODE_VERSION:$distribution_arch" in
+	24.20.0:arm64)
+		printf 'b7bf7707070b950ba1ec5f1af3bb6de0f2b1962c5033973d94068ab021ef3014\n'
+		return 0
+		;;
+	24.20.0:x64)
+		printf '26fc30891004603d094eed11de5efcd03bbd2efbc35c177fc72648d5d7a7701b\n'
+		return 0
+		;;
+	24.18.1:arm64)
+		printf '1d60b703fe5d7e7072489be8187f430f1a095a658c31e5e1e281331a5873fac3\n'
+		return 0
+		;;
+	24.18.1:x64)
+		printf 'f892c7895720f40d3750bde24f3554242d36f23602b5167b5b73ec4d13938aef\n'
+		return 0
+		;;
+	esac
 	echo "Unsupported code-server Node distribution: v$CODE_SERVER_APP_NODE_VERSION darwin-$distribution_arch" >&2
 	echo "Update code_server_node_distribution_sha256 before changing code-server/.node-version." >&2
 	return 1
