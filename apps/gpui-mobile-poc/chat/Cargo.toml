@@ -12,8 +12,15 @@ crate-type = ["rlib"]
 
 [dependencies]
 gpui.workspace = true
-# The grammars colour a transcript's fenced code (the CDXC:SessionChat note on this line in apps/desktop/Cargo.toml).
-gpui-component = { path = "../../../.dependencies/gpui-component/crates/component", features = ["tree-sitter-languages"] }
+# CDXC:Mobile 2026-09-27 DECISION: the phone colours fenced code for a small set of languages only: Bash, Rust, TypeScript, JavaScript, Python, JSON (the base `tree-sitter` feature) and diff. User: "9c", picking that set over all 35 desktop grammars (about 36 MB of parse tables in the phone library) or none. A fence in any other language draws as plain monospaced text, which is how the phone showed every code block before. The desktop keeps every grammar (the CDXC:SessionChat note on its gpui-component line).
+gpui-component = { path = "../../../.dependencies/gpui-component/crates/component", features = [
+    "tree-sitter-bash",
+    "tree-sitter-diff",
+    "tree-sitter-javascript",
+    "tree-sitter-python",
+    "tree-sitter-rust",
+    "tree-sitter-typescript",
+] }
 gpui-component-assets = { package = "gpui-kit-assets", path = "../../../.dependencies/gpui-component/crates/assets" }
 # `debug-embed`: a phone cannot read the repository at run time, so a debug build carries its files too.
 rust-embed = { version = "8.7.2", features = ["debug-embed", "include-exclude"] }

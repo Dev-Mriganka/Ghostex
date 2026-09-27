@@ -73,10 +73,10 @@ gxserver URL and token (gitignored, bundled into the APK: development only) and 
 - **Child windows.** The image viewer, table preview, menus and the rewind dialog open separate
   windows on the desktop; the phone platform has one surface, so these need in-surface overlays or
   React Native sheets.
-- **Size.** The arm64 library is 95 MB (27 MB gzipped; the APK stores it uncompressed): about 36 MB
-  of tree-sitter grammars (a phone-sized set of 19 languages saves 14 MB) and about 10 MB of
-  embedded fonts (the Nerd Font mono faces), plus 14 MB of symbol names kept for readable
-  backtraces.
+- **Size.** The arm64 library is 62 MB (24 MB gzipped; the APK, which stores it uncompressed, is
+  84 MB). Code colouring is limited to Bash, Rust, TypeScript, JavaScript, Python, JSON and diff
+  (a user decision; all 35 desktop grammars made it 95 MB). About 10 MB is embedded fonts (the
+  Nerd Font mono faces) and 14 MB is symbol names kept for readable backtraces.
 - **Accessibility.** GPUI's AccessKit tree is not bridged to TalkBack or VoiceOver yet.
 - **minSdk 26** for the library (the real app is at 24).
 - **Emulator GPU.** This Mac's emulator runs GLES only; nothing has run on a real phone's Vulkan
