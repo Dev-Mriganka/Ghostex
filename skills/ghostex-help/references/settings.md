@@ -20,7 +20,7 @@ How to use this file:
 - **When switching to a Space** `sidebarSpaceSwitchBehavior` (one of restore | keep; default restore): Reopen the session you last had open in a Space when you switch to it, in the view its project was in. Requires Spaces. Option labels: restore = Restore the Space's projects, keep = Don't switch projects.
 - **Follow the active session's Space** `sidebarSpaceFollowActiveSession` (boolean, default false): Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward or Search by Prompt. Requires Spaces.
 - **Keep the previous project live for** `projectSwitchKeepAliveMinutes` (number 0 to 60 default 10): After you switch to another project or Space, keep the terminals, chats, and view that were open in the previous project running for this many minutes so switching back is instant. 0 releases them right away.
-- **Sidebar visibility memory** `sidebarVisibilityMemory` (one of shared | perView; default shared) [advanced]: Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Docs, Kanban, Automate). Option labels: shared = Same in every view, perView = Remembered per view.
+- **Sidebar visibility memory** `sidebarVisibilityMemory` (one of shared | perView; default shared) [advanced]: Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Files, Kanban, Automate). Option labels: shared = Same in every view, perView = Remembered per view.
 - **Show project icons** `showProjectIcons` (boolean, default true) [advanced]: Show project artwork or a square with the project’s first letter beside project names.
 - **Hide agent icon until hover** `hideSessionAgentIconUntilHover` (boolean, default false) [advanced]: Hide session agent icons until a session row is hovered.
 - **Hide browser favicon until hover** `hideBrowserFaviconUntilHover` (boolean, default false) [advanced]: Hide browser page favicons until a session row is hovered.
@@ -30,7 +30,7 @@ How to use this file:
 - **Show Menu Bar Session Indicators** `hideMenuBarSessionStatusIndicators` (boolean, default false): Show the menu bar session status badges.
 - **Collapse animation speed** `sidebarCollapseAnimationDurationMs` (number 0 to 1000 step 100 default 400): Set how quickly sidebar sections, groups, and projects expand or collapse, and how quickly the floating sidebar and Agents Panel slide in from the window edge. Set to 0 for no animation.
 - **Panel animations** `panelAnimationSpeed` (one of off | slow | normal | fast; default normal): Set how fast the sidebar, the side panel, the Agents Panel and the bottom or right panel slide open and closed: Off, Slow, Normal or Fast. Reduce Motion in your computer settings always turns it off. Option labels: off = Off, slow = Slow, normal = Normal, fast = Fast.
-- **Close side panel with its last tab** `closeSidePanelWithLastTab` (boolean, default false): Close the side panel when you close its last tab, instead of showing the Open a view picker.
+- **Close side panel with its last tab** `closeSidePanelWithLastTab` (boolean, default true) [advanced]: Close the side panel when you close its last tab, instead of showing the Open a view picker.
 - **Tooltip Delay** `sidebarTooltipDelayMs` (number 0 to 2000 step 100 default 600): Set how long sidebar hover labels wait before appearing. Set to 0 to show them immediately.
 - **Default Width** `sidebarDefaultWidthPx` (number 150 to 520 default 275) [advanced]: Width restored when double-clicking the sidebar resize handle.
 - **Command Pane Default Height** `commandsPanelDefaultHeightPx` (number 40 to 600 default 125) [advanced]: Height used when opening the command pane and when double-clicking its top resize rail.
@@ -63,7 +63,7 @@ How to use this file:
 - **Transcript width** `sessionChatTranscriptWidthPercent` (number 50 to 100 step 5 default 75): Set the centered transcript width without changing the prompt composer.
 - **Show file edit previews** `sessionChatFileEditPreviews` (boolean, default false): Show the first seven code lines in each file edit. Turn off to show only the path and change counts.
 - **Keep chat box expanded while scrolling** `sessionChatKeepComposerExpanded` (boolean, default false): Keep the desktop chat box at full size while you scroll the transcript instead of shrinking it as you scroll up and growing it back at the end.
-- **Simple mode** `sessionChatSimpleMode` (boolean, default false): Simplify all chats: hide tool command previews and group file edits behind an expandable file count.
+- **Simple mode** `sessionChatSimpleMode` (boolean, default true): Simplify all chats: hide tool command previews and group file edits behind an expandable file count.
 - **Verbose mode** `sessionChatVerboseMode` (boolean, default false): Expand thinking blocks to show their tool calls by default. Each chat can override it from its composer.
 ### Tools
 
@@ -81,8 +81,11 @@ How to use this file:
 - **Show untracked lines without tracked changes** `showUntrackedProjectDiffWhenNoTrackedChanges` (boolean, default false) [advanced]: When tracked git diff is +0 -0, show untracked line counts in project headers (Starship-style prompts ignore untracked lines).
 #### File opening
 
-- **Markdown files** `markdownFileOpenView` (one of docs | code; default docs): Choose whether Markdown links from agent chat open in Docs or Code. Option labels: docs = Docs, code = Code.
-- **HTML files** `htmlFileOpenView` (one of docs | code; default docs): Choose whether HTML links from agent chat open in Docs or Code. Option labels: docs = Docs, code = Code.
+- **Markdown files** `markdownFileOpenView` (one of docs | code; default docs): Choose whether Markdown links from agent chat open in Files or Code. Option labels: docs = Files, code = Code.
+- **HTML files** `htmlFileOpenView` (one of docs | code; default docs): Choose whether HTML links from agent chat open in Files or Code. Option labels: docs = Files, code = Code.
+- **Images** `imageFileOpenTarget` (one of files | system-app; default files): Choose whether pictures and SVGs linked in agent chat or the terminal open in Files or the system app. Option labels: files = Files, system-app = System App.
+- **Videos** `videoFileOpenTarget` (one of files | system-app; default files): Choose whether videos linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .mp4 and .mov, always open in the system app. Option labels: files = Files, system-app = System App.
+- **Audio** `audioFileOpenTarget` (one of files | system-app; default files): Choose whether audio files linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .m4a, always open in the system app. Option labels: files = Files, system-app = System App.
 ### Terminal
 
 #### Terminal
@@ -236,7 +239,7 @@ How to use this file:
 
 ### Debug controls
 
-- **Show debug UI controls** `debuggingMode` (boolean, default false): Show diagnostic logs, and Copy Resume and Copy Attach in session menus.
+- **Show debug UI controls** `debuggingMode` (boolean, default false): Show diagnostic logs.
 - **Diagnostic logs** `diagnosticLogging` (structured value; change it in Settings, not with `ghostex settings set`): Pick the areas to log while you reproduce an issue, and when logging turns off. Warnings, errors, and crashes are always captured.
 ## About (tab `about`)
 
@@ -299,7 +302,7 @@ How to use this file:
 - **Hide Browser view** `browserViewTabHidden` (boolean, default false): Stop offering the Browser view, so it is missing from the view panel tab strip, its + menu and the view picker.
 - **Hide Kanban view** `kanbanViewTabHidden` (boolean, default false): Stop offering the Kanban view, so it is missing from the view panel tab strip, its + menu and the view picker.
 - **Hide Automate view** `automateViewTabHidden` (boolean, default false): Stop offering the Automate view, so it is missing from the view panel tab strip, its + menu and the view picker.
-- **Hide Docs view** `docsViewTabHidden` (boolean, default false): Stop offering the Docs view, so it is missing from the view panel tab strip, its + menu and the view picker.
+- **Hide Files view** `docsViewTabHidden` (boolean, default false): Stop offering the Files view, so it is missing from the view panel tab strip, its + menu and the view picker.
 - **Hide Linear view** `linearViewTabHidden` (boolean, default false): Hide the Linear view from the view picker and tab menus.
 - **Hide Jira view** `jiraViewTabHidden` (boolean, default false): Hide the Jira view from the view picker and tab menus.
 - **Hide GitHub view** `githubViewTabHidden` (boolean, default false): Hide the automatic repository view from the view picker and tab menus.
@@ -337,7 +340,7 @@ How to use this file:
 - **Browser** `browser` (Settings UI row without a settings key; use `ghostex settings open`): Open websites alongside your project and keep useful pages organized without leaving Ghostex.
 - **Kanban** `kanban` (Settings UI row without a settings key; use `ghostex settings open`): Plan upcoming work and track task progress at a glance.
 - **Automate** `automate` (Settings UI row without a settings key; use `ghostex settings open`): Turn repeatable project routines into simple workflows you can run whenever you need them.
-- **Docs** `docs` (Settings UI row without a settings key; use `ghostex settings open`): Browse your project’s notes, plans, and reference files together in one focused reading space.
+- **Files** `docs` (Settings UI row without a settings key; use `ghostex settings open`): Browse your project’s notes, plans, and reference files together in one focused reading space.
 - **Terminal** `terminal` (Settings UI row without a settings key; use `ghostex settings open`): A command terminal beside your sessions, with its own tabs and splits, that works like the Commands pane but lives in the view panel.
 - **Tips & Tricks** `tips` (Settings UI row without a settings key; use `ghostex settings open`): A panel of short tips for getting more out of Ghostex, opened from the ⋯ menu.
 - **Notifications** `notifications` (Settings UI row without a settings key; use `ghostex settings open`): A bell in the sidebar's top row that lists what your agents finished or need from you.
@@ -406,23 +409,23 @@ How to use this file:
 - **File and link handler status** `handlerStatus` (Settings UI row without a settings key; use `ghostex settings open`): Check system registration for editor defaults, script runner, and ghostex:// links.
 ## Projects (tab `projects`)
 
-### Docs
+### Files
 
-- **Docs folders** `docsFolders` (Settings UI row without a settings key; use `ghostex settings open`): Comma-separated project-relative folders to scan recursively in Docs.
-- **Additional docs folders** `manageAdditionalDocsFolders` (text, default (empty)): Extra folders (one per line) the Docs view lists in every project.
+- **Docs folders** `docsFolders` (Settings UI row without a settings key; use `ghostex settings open`): Comma-separated project-relative folders to scan recursively in the Files view.
+- **Additional docs folders** `manageAdditionalDocsFolders` (text, default (empty)): Extra folders (one per line) the Files view lists in every project.
 ### Global Defaults
 
 - **Global worktree command** `globalWorktreeCommand` (text, default (empty)): Worktree command every project uses unless it sets its own.
 - **Global ticket key** `globalTicketKey` (Settings UI row without a settings key; use `ghostex settings open`): Ticket key every project uses unless it sets its own.
 - **Global Beads directory** `globalBeadsDirectory` (text, default (empty)): Beads directory every project uses unless it sets its own.
-- **Global Docs directory** `globalDocsDirectory` (text, default (empty)): Extra folder Docs shows in every project, alongside that project's own docs.
+- **Global Docs directory** `globalDocsDirectory` (text, default (empty)): Extra folder the Files view shows in every project, alongside that project's own docs.
 - **Global ticket key** `globalBeadsDisplayKey` (text, default (empty)): Default ticket key prefix shown on Kanban cards when a project has none.
 ### Project settings
 
 - **Worktree command** `worktreeCommand` (Settings UI row without a settings key; use `ghostex settings open`): Runs in the new worktree folder before the project is added (useful for .envs, installing dependencies, etc.).
 - **Ticket key** `ticketKey` (Settings UI row without a settings key; use `ghostex settings open`): Three-letter prefix used for Linear-style ticket numbers on the Project board.
 - **Beads directory** `beadsDirectory` (Settings UI row without a settings key; use `ghostex settings open`): Absolute path the Project board reads its Beads workspace (.beads) from.
-- **Docs directory** `docsDirectory` (Settings UI row without a settings key; use `ghostex settings open`): Extra folder this project's Docs surface shows, in addition to its own docs.
+- **Docs directory** `docsDirectory` (Settings UI row without a settings key; use `ghostex settings open`): Extra folder this project's Files view shows, in addition to its own docs.
 ### Portless
 
 - **Portless** `portlessEnabled` (boolean, default false): Route project dev servers through named local addresses instead of raw ports.

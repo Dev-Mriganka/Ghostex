@@ -118,7 +118,7 @@
     {
       "key": "sidebarVisibilityMemory",
       "title": "Sidebar visibility memory",
-      "subtitle": "Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Docs, Kanban, Automate).",
+      "subtitle": "Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Files, Kanban, Automate).",
       "tab": "settings",
       "tabTitle": "General",
       "group": "sidebar",
@@ -304,7 +304,8 @@
       "section": "sidebar",
       "sectionTitle": "Sidebar",
       "type": "boolean",
-      "default": false,
+      "default": true,
+      "advanced": true,
       "agentWritable": true
     },
     {
@@ -959,7 +960,7 @@
       "section": "chat",
       "sectionTitle": "Chat",
       "type": "boolean",
-      "default": false,
+      "default": true,
       "agentWritable": true
     },
     {
@@ -1086,7 +1087,7 @@
     {
       "key": "markdownFileOpenView",
       "title": "Markdown files",
-      "subtitle": "Choose whether Markdown links from agent chat open in Docs or Code.",
+      "subtitle": "Choose whether Markdown links from agent chat open in Files or Code.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "tools",
@@ -1097,7 +1098,7 @@
       "default": "docs",
       "options": [
         {
-          "label": "Docs",
+          "label": "Files",
           "value": "docs"
         },
         {
@@ -1110,7 +1111,7 @@
     {
       "key": "htmlFileOpenView",
       "title": "HTML files",
-      "subtitle": "Choose whether HTML links from agent chat open in Docs or Code.",
+      "subtitle": "Choose whether HTML links from agent chat open in Files or Code.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "tools",
@@ -1121,12 +1122,84 @@
       "default": "docs",
       "options": [
         {
-          "label": "Docs",
+          "label": "Files",
           "value": "docs"
         },
         {
           "label": "Code",
           "value": "code"
+        }
+      ],
+      "agentWritable": true
+    },
+    {
+      "key": "imageFileOpenTarget",
+      "title": "Images",
+      "subtitle": "Choose whether pictures and SVGs linked in agent chat or the terminal open in Files or the system app.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "tools",
+      "groupTitle": "Tools",
+      "section": "fileOpening",
+      "sectionTitle": "File opening",
+      "type": "enum",
+      "default": "files",
+      "options": [
+        {
+          "label": "Files",
+          "value": "files"
+        },
+        {
+          "label": "System App",
+          "value": "system-app"
+        }
+      ],
+      "agentWritable": true
+    },
+    {
+      "key": "videoFileOpenTarget",
+      "title": "Videos",
+      "subtitle": "Choose whether videos linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .mp4 and .mov, always open in the system app.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "tools",
+      "groupTitle": "Tools",
+      "section": "fileOpening",
+      "sectionTitle": "File opening",
+      "type": "enum",
+      "default": "files",
+      "options": [
+        {
+          "label": "Files",
+          "value": "files"
+        },
+        {
+          "label": "System App",
+          "value": "system-app"
+        }
+      ],
+      "agentWritable": true
+    },
+    {
+      "key": "audioFileOpenTarget",
+      "title": "Audio",
+      "subtitle": "Choose whether audio files linked in agent chat or the terminal play in Files or open in the system app. Formats Files cannot play, such as .m4a, always open in the system app.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "tools",
+      "groupTitle": "Tools",
+      "section": "fileOpening",
+      "sectionTitle": "File opening",
+      "type": "enum",
+      "default": "files",
+      "options": [
+        {
+          "label": "Files",
+          "value": "files"
+        },
+        {
+          "label": "System App",
+          "value": "system-app"
         }
       ],
       "agentWritable": true
@@ -2803,10 +2876,10 @@
       "type": "json",
       "default": {
         "scrollChatToBottom": "ctrl+shift+down",
-        "focusChatComposer": "shift+escape",
+        "focusChatComposer": "",
         "copyLastChatCodeBlock": "cmd+shift+;",
         "copyLastChatReply": "cmd+shift+c",
-        "toggleChatSummaryMode": "cmd+ctrl+s",
+        "toggleChatSummaryMode": "ctrl+alt+s",
         "createAgentSession": "cmd+shift+o",
         "createSession": "cmd+shift+t",
         "openCommandPalette": "cmd+shift+p",
@@ -2814,9 +2887,11 @@
         "openProjectSearchPalette": "cmd+alt+shift+o",
         "openNewThreadPalette": "cmd+n",
         "openCommandsPanel": "cmd+j",
+        "openCommandsPanelSecondKey": "shift+escape",
         "openSettings": "cmd+,",
         "openExtensions": "",
         "openGhostexHelp": "",
+        "openFileInFiles": "",
         "openHotkeys": "cmd+/",
         "toggleSidebarCollapsed": "cmd+b",
         "toggleViewPanel": "cmd+alt+b",
@@ -7700,7 +7775,7 @@
     {
       "key": "debuggingMode",
       "title": "Show debug UI controls",
-      "subtitle": "Show diagnostic logs, and Copy Resume and Copy Attach in session menus.",
+      "subtitle": "Show diagnostic logs.",
       "tab": "debugging",
       "tabTitle": "Debugging",
       "section": "controls",
@@ -8453,8 +8528,8 @@
     },
     {
       "key": "docsViewTabHidden",
-      "title": "Hide Docs view",
-      "subtitle": "Stop offering the Docs view, so it is missing from the view panel tab strip, its + menu and the view picker.",
+      "title": "Hide Files view",
+      "subtitle": "Stop offering the Files view, so it is missing from the view panel tab strip, its + menu and the view picker.",
       "tab": "extensions",
       "tabTitle": "Extensions",
       "section": "viewOrder",
@@ -8871,7 +8946,7 @@
     },
     {
       "key": "docs",
-      "title": "Docs",
+      "title": "Files",
       "subtitle": "Browse your project’s notes, plans, and reference files together in one focused reading space.",
       "tab": "extensions",
       "tabTitle": "Extensions",
@@ -9408,22 +9483,22 @@
     {
       "key": "docsFolders",
       "title": "Docs folders",
-      "subtitle": "Comma-separated project-relative folders to scan recursively in Docs.",
+      "subtitle": "Comma-separated project-relative folders to scan recursively in the Files view.",
       "tab": "projects",
       "tabTitle": "Projects",
       "section": "docs",
-      "sectionTitle": "Docs",
+      "sectionTitle": "Files",
       "type": "ui",
       "agentWritable": false
     },
     {
       "key": "manageAdditionalDocsFolders",
       "title": "Additional docs folders",
-      "subtitle": "Extra folders (one per line) the Docs view lists in every project.",
+      "subtitle": "Extra folders (one per line) the Files view lists in every project.",
       "tab": "projects",
       "tabTitle": "Projects",
       "section": "docs",
-      "sectionTitle": "Docs",
+      "sectionTitle": "Files",
       "type": "string",
       "default": "",
       "agentWritable": true
@@ -9466,7 +9541,7 @@
     {
       "key": "globalDocsDirectory",
       "title": "Global Docs directory",
-      "subtitle": "Extra folder Docs shows in every project, alongside that project's own docs.",
+      "subtitle": "Extra folder the Files view shows in every project, alongside that project's own docs.",
       "tab": "projects",
       "tabTitle": "Projects",
       "section": "globalDefaults",
@@ -9523,7 +9598,7 @@
     {
       "key": "docsDirectory",
       "title": "Docs directory",
-      "subtitle": "Extra folder this project's Docs surface shows, in addition to its own docs.",
+      "subtitle": "Extra folder this project's Files view shows, in addition to its own docs.",
       "tab": "projects",
       "tabTitle": "Projects",
       "section": "projectSettings",
@@ -9857,7 +9932,10 @@
       "id": "focusChatComposer",
       "title": "Focus Chat Box",
       "description": "Move the keyboard to the chat box of the chat session you are in.",
-      "defaultKey": "shift+escape"
+      "defaultKey": "",
+      "retiredDefaultKeys": [
+        "shift+escape"
+      ]
     },
     {
       "id": "copyLastChatCodeBlock",
@@ -9875,8 +9953,11 @@
       "id": "toggleChatSummaryMode",
       "title": "Toggle Summary Mode",
       "description": "Turn Summary mode on or off in the chat session you are in.",
-      "defaultKey": "cmd+ctrl+s",
-      "windowsLinuxDefaultKey": "cmd+alt+shift+s"
+      "defaultKey": "ctrl+alt+s",
+      "windowsLinuxDefaultKey": "cmd+alt+shift+s",
+      "retiredDefaultKeys": [
+        "cmd+ctrl+s"
+      ]
     },
     {
       "id": "createAgentSession",
@@ -9939,6 +10020,12 @@
       ]
     },
     {
+      "id": "openCommandsPanelSecondKey",
+      "title": "Open Commands Panel (Second Key)",
+      "description": "A second key that opens or hides the Commands panel, like Open Commands Panel.",
+      "defaultKey": "shift+escape"
+    },
+    {
       "id": "openSettings",
       "title": "Open Settings",
       "description": "Open app settings.",
@@ -9954,6 +10041,12 @@
       "id": "openGhostexHelp",
       "title": "Ask Ghostex Help",
       "description": "Open the Ghostex Help menu: sample questions an agent can answer and settings it can change for you.",
+      "defaultKey": ""
+    },
+    {
+      "id": "openFileInFiles",
+      "title": "Open File",
+      "description": "Open the Files view with its search box ready: type a file name, or paste the path of any file on this computer, and press Enter.",
       "defaultKey": ""
     },
     {
@@ -10044,8 +10137,8 @@
     },
     {
       "id": "switchManageView",
-      "title": "Switch to Docs",
-      "description": "Switch to Docs view.",
+      "title": "Switch to Files",
+      "description": "Switch to Files view.",
       "defaultKey": "",
       "retiredDefaultKeys": [
         "alt+5"

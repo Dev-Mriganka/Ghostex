@@ -303,8 +303,8 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
   docsViewTabHidden: {
     ...viewRows,
     subtitle:
-      'Stop offering the Docs view, so it is missing from the view panel tab strip, its + menu and the view picker.',
-    title: 'Hide Docs view',
+      'Stop offering the Files view, so it is missing from the view panel tab strip, its + menu and the view picker.',
+    title: 'Hide Files view',
   },
   linearViewTabHidden: {
     ...viewRows,
@@ -324,37 +324,44 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
   sentryViewTabHidden: {
     ...viewRows,
     title: 'Hide Sentry view',
-    subtitle: 'Enable Sentry in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable Sentry in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   figmaViewTabHidden: {
     ...viewRows,
     title: 'Hide Figma view',
-    subtitle: 'Enable Figma in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable Figma in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   vercelViewTabHidden: {
     ...viewRows,
     title: 'Hide Vercel view',
-    subtitle: 'Enable Vercel in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable Vercel in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   supabaseViewTabHidden: {
     ...viewRows,
     title: 'Hide Supabase view',
-    subtitle: 'Enable Supabase in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable Supabase in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   githubActionsViewTabHidden: {
     ...viewRows,
     title: 'Hide GitHub Actions view',
-    subtitle: 'Enable GitHub Actions in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable GitHub Actions in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   posthogViewTabHidden: {
     ...viewRows,
     title: 'Hide PostHog view',
-    subtitle: 'Enable PostHog in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable PostHog in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   customWebsiteViewTabHidden: {
     ...viewRows,
     title: 'Hide Custom Website view',
-    subtitle: 'Enable Custom Website in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
+    subtitle:
+      'Enable Custom Website in Settings > Extensions, then choose its home URL when opening the view. Disabled by default.',
   },
   storybookViewTabHidden: {
     ...viewRows,
@@ -430,8 +437,8 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
   manageAdditionalDocsFolders: {
     ...PROJECTS_TAB,
     section: 'docs',
-    sectionTitle: 'Docs',
-    subtitle: 'Extra folders (one per line) the Docs view lists in every project.',
+    sectionTitle: 'Files',
+    subtitle: 'Extra folders (one per line) the Files view lists in every project.',
     title: 'Additional docs folders',
   },
   globalBeadsDisplayKey: {

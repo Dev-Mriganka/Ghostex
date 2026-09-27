@@ -7,10 +7,10 @@ Default bindings are listed for macOS (`cmd`) with the Windows/Linux default whe
 | Action | Default | Windows/Linux | What it does | Id |
 | --- | --- | --- | --- | --- |
 | Scroll Chat to Bottom | `ctrl+shift+down` | `cmd+shift+down` | Scroll chat to the bottom, including while typing in the composer. | `scrollChatToBottom` |
-| Focus Chat Box | `shift+escape` |  | Move the keyboard to the chat box of the chat session you are in. | `focusChatComposer` |
+| Focus Chat Box | unassigned |  | Move the keyboard to the chat box of the chat session you are in. | `focusChatComposer` |
 | Copy Last Code Block | `cmd+shift+;` |  | Copy the last code block the agent wrote in the chat session you are in. | `copyLastChatCodeBlock` |
 | Copy Last Reply | `cmd+shift+c` |  | Copy the agent's last reply in the chat session you are in. | `copyLastChatReply` |
-| Toggle Summary Mode | `cmd+ctrl+s` | `cmd+alt+shift+s` | Turn Summary mode on or off in the chat session you are in. | `toggleChatSummaryMode` |
+| Toggle Summary Mode | `ctrl+alt+s` | `cmd+alt+shift+s` | Turn Summary mode on or off in the chat session you are in. | `toggleChatSummaryMode` |
 | New Agent Session | `cmd+shift+o` |  | Start your last-used agent in the active project, in your default interface. | `createAgentSession` |
 | New Terminal | `cmd+shift+t` |  | Create a terminal session. | `createSession` |
 | Open Quick Access: Commands | `cmd+shift+p` |  | Open Ghostex Quick Access on Commands. | `openCommandPalette` |
@@ -18,9 +18,11 @@ Default bindings are listed for macOS (`cmd`) with the Windows/Linux default whe
 | Open Quick Access: Recent Projects | `cmd+alt+shift+o` |  | Open Ghostex Quick Access on Recent Projects. | `openProjectSearchPalette` |
 | New Thread in Active Project | `cmd+n` |  | Pick an agent, Browser, or Terminal to start in the active project. | `openNewThreadPalette` |
 | Open Commands Panel | `cmd+j` | `f12` | Open the project command terminal panel (F12 always works too). When the pane is already focused, hide it; press again to show it. | `openCommandsPanel` |
+| Open Commands Panel (Second Key) | `shift+escape` |  | A second key that opens or hides the Commands panel, like Open Commands Panel. | `openCommandsPanelSecondKey` |
 | Open Settings | `cmd+,` |  | Open app settings. | `openSettings` |
 | Open Extensions | unassigned |  | Open the Extensions page in Settings to manage built-in features and installed extensions. | `openExtensions` |
 | Ask Ghostex Help | unassigned |  | Open the Ghostex Help menu: sample questions an agent can answer and settings it can change for you. | `openGhostexHelp` |
+| Open File | unassigned |  | Open the Files view with its search box ready: type a file name, or paste the path of any file on this computer, and press Enter. | `openFileInFiles` |
 | Hotkeys | `cmd+/` |  | Open app hotkeys. | `openHotkeys` |
 | Toggle Sidebar | `cmd+b` |  | Collapse or expand the sidebar. | `toggleSidebarCollapsed` |
 | Toggle View Panel | `cmd+alt+b` |  | Open or close the view panel beside your sessions. | `toggleViewPanel` |
@@ -32,7 +34,7 @@ Default bindings are listed for macOS (`cmd`) with the Windows/Linux default whe
 | Switch to Code | unassigned |  | Switch to Code view. | `switchSourceView` |
 | Switch to Browser | unassigned |  | Switch to Browser view. | `switchGitHubView` |
 | Switch to Kanban | unassigned |  | Switch to Kanban view. | `switchKanbanView` |
-| Switch to Docs | unassigned |  | Switch to Docs view. | `switchManageView` |
+| Switch to Files | unassigned |  | Switch to Files view. | `switchManageView` |
 | Switch to Automate | unassigned |  | Switch to Automate view. | `switchAutomateView` |
 | Switch to Terminal | unassigned |  | Switch to Terminal view. | `switchTerminalView` |
 | Switch to View Tab 1 | `alt+1` |  | Open tab 1 in the view panel's tab strip. | `switchTitlebarView1` |

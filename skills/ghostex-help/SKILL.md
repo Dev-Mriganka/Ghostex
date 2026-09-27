@@ -94,7 +94,7 @@ they ask for one.
 - Never edit `native-sidebar-settings.json`, the Ghostty config, or any other
   Ghostex file directly. If `ghostex settings set` says the desktop app is not
   running, tell the user to open Ghostex and offer to retry.
-- Use the app's own names: Agents, Code, Browser, Kanban, Automate, and Docs
+- Use the app's own names: Agents, Code, Browser, Kanban, Automate, and Files
   are the titlebar views; Quick Access is Cmd+Shift+P; Session Chat is the chat
   view of a terminal session. Say "computer", not "Mac", unless the feature is
   macOS-only.

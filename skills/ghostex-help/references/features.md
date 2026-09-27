@@ -70,12 +70,12 @@ install the new package the same way you installed Ghostex.
 **Open a view** is the picker the panel shows when nothing is open in it. It
 lists every view you can open here: the built-in views first, then your own views
 and extensions. Press a view's letter to open it (C for Code, B for Browser, K for
-Kanban, U for Automate, D for Docs, T for Terminal) while the picker is in front. Views you hid
+Kanban, U for Automate, D for Files, T for Terminal) while the picker is in front. Views you hid
 for this project are not in the list; **Manage views and where they appear…** at
 the bottom opens their settings, and **Hidden here** on the `+` menu brings one
-back. Closing the panel's last tab brings the picker back; to close the whole
-panel instead, turn on **Close side panel with its last tab** in Settings >
-Sidebar (`closeSidePanelWithLastTab`, off by default).
+back. Closing the panel's last tab closes the whole panel; to bring the picker
+back instead, turn off **Close side panel with its last tab** in Settings >
+Sidebar with Show Advanced on (`closeSidePanelWithLastTab`, on by default).
 
 Right-click a view tab to choose where that view appears and what happens to it.
 **Reload** refreshes the clicked view, **Sleep** unloads it while keeping its tab (Code also stops its editor
@@ -97,8 +97,8 @@ view from the strip.
   the session that was there, and a session already on screen in another pane
   is focused there instead. To split, drag a session row from the sidebar onto
   the left, right, top or bottom edge of a pane (terminal or Session Chat); drop
-  it in the middle of a pane to show it there instead. You can also
-  use Advanced > Split Right in the session's menu. While the screen is split,
+  it in the middle of a pane to show it there instead. You can also press
+  Option+Shift+D to move the focused session into a pane on the right. While the screen is split,
   the focused pane has a small bar along its top: click it for Close Pane (the
   sessions keep running) and Merge All Panes, or drag it to move that session
   onto another pane's edge (a new split) or its middle (it takes that pane's
@@ -147,8 +147,8 @@ view from the strip.
   the Annotate toolbar opens inside that frame so the content itself can be
   selected. Copying or sending annotations clears them afterwards by default;
   the toolbar's own settings panel (Clear on copy/send) turns that off.
-  HTML files in Docs use the same Agentation overlay via Annotate. Markdown
-  files use Docs selection comments instead (see Docs below).
+  HTML files in the Files view use the same Agentation overlay via Annotate.
+  Markdown files use Files selection comments instead (see Files below).
 - **Linear and Jira**: open either view from the **+** menu. Paste the workspace,
   project, team, or board URL you want as its home. Ghostex identifies the workspace
   from the address and preserves the full URL, including filters. Previously used
@@ -189,7 +189,7 @@ view from the strip.
 - **Kanban**: the project board backed by the Beads `bd` CLI (see Project
   board).
 - **Automate**: scheduled and triggered agent runs (see Automations).
-- **Docs**: Markdown, HTML, and Excalidraw files from the project's docs
+- **Files**: Markdown, HTML, and Excalidraw files from the project's docs
   folders, with a markdown editor and an annotation system that sends notes
   back to the agent. Select text in a Markdown file to comment on it, mark it
   Looks good, Clarify, or Needs tests, or mark it Remove this (the X button, or
@@ -201,24 +201,24 @@ view from the strip.
   sidebar for the active project: into its chat composer when the chat is
   showing, or into the agent's terminal when its input box is available. The
   Send button reads Send plus the count, or Copy plus the count when notes
-  will go to the clipboard, and is icon-only on a narrow Docs pane; the
+  will go to the clipboard, and is icon-only on a narrow Files pane; the
   tooltip names the session it will land in. When no agent session is
   selected, the agent's input box is busy, or Ghostex cannot tell for that
   agent, the feedback is copied to the clipboard instead and a toast says so.
-  Sending leaves Docs on screen. Sent notes stay visible with a Sent mark;
+  Sending leaves Files on screen. Sent notes stay visible with a Sent mark;
   Send offers the new notes first and, once everything has been sent, sends
   all of them again, and the Review menu offers Resend all. With notes in
   several files, the Review menu sends the new notes across all files as one
   message. Notes stay until you clear them with Clear. In a chat, the Reply by Annotating button below an
-  agent reply (between Copy message and Save to md) opens that reply in Docs so
+  agent reply (between Copy message and Save to md) opens that reply in Files so
   it can be annotated the same way, with the feedback going back to that
   session. Folders appear as they load, and search fills in while
   Updating files is shown. Expand a folder to load it sooner; a loading or error
-  marker means its contents have not been confirmed yet. Use Refresh in the Docs
+  marker means its contents have not been confirmed yet. Use Refresh in the Files
   sidebar menu to check for changes immediately. The button at the sidebar's
   window edge hides the files list; the same button in the corner brings it
   back, and hovering it, or the last few pixels along that edge, peeks the list
-  without pinning it. Hidden or pinned is remembered. When the Docs view is narrower than 800px the list opens as a
+  without pinning it. Hidden or pinned is remembered. When the Files view is narrower than 800px the list opens as a
   temporary drawer over the document and closes when you open a file, press
   Escape, or click outside it. Cmd+F, or Ctrl+F on Windows and Linux, opens the
   search: inside a Markdown document it shows Find and Replace with the caret
@@ -231,7 +231,7 @@ view from the strip.
   a tab for Sleep and Close scopes, and Actions can run in it. A project has one
   Terminal view; opening it creates its first Command Terminal, closing its last
   tab closes the view, and its terminals keep running and come back when you
-  reopen it. It does not replace the Commands pane: Cmd+J (Mac), F12 and the header's command
+  reopen it. It does not replace the Commands pane: Cmd+J (Mac), Shift+Esc, F12 and the header's command
   terminal toggle still open that pane, and both can be open at once.
 
 Related settings: `terminalViewWidthMode`, `webLinkOpenTarget`,
@@ -288,7 +288,7 @@ attention-session counts in extra-bold text near the bottom of each icon, includ
 the selected Space.
 Switching to a Space brings back what you last had open there: the session you
 last used in that Space, in the view its project was in (Agents, Code, Browser,
-Kanban, Automate, or Docs). If that session was closed, the one before it is
+Kanban, Automate, or Files). If that session was closed, the one before it is
 used; a Space you have never used opens its first project. Choose "Don't switch
 projects" to make a Space switch change only the sidebar filter
 (`sidebarSpaceSwitchBehavior`). "Follow the active session's Space"
@@ -306,7 +306,7 @@ in the background for the "Keep the previous project live for" number of minutes
 (`projectSwitchKeepAliveMinutes`, default 10, 0 to 60), so switching back is
 instant. Set it to 0 to release them as soon as you leave.
 Starting a new agent from the sidebar launcher or New Thread picker keeps your
-current view open, including Code, Browser, Kanban, Automate, and Docs. Select
+current view open, including Code, Browser, Kanban, Automate, and Files. Select
 Agents when you want to open the new agent there.
 Opening a view puts it beside your sessions rather than over them: the whole grid of
 terminal panes and chats stays on the left, the view takes the right half, and a
@@ -345,7 +345,7 @@ where they are while you open, change and close views.
   settings, panels always open and close instantly (`panelAnimationSpeed`).
 - Pane width: agent panes have a minimum resize width of 388px, and so does the
   Agents Panel when a view is open beside it. In the desktop app, an open Code,
-  Browser, Kanban, Automate, or Docs view has a minimum width of 455px.
+  Browser, Kanban, Automate, or Files view has a minimum width of 455px.
 - Presets: Settings > General > Sidebar > Preset switches groups of card
   details at once; the individual rows below it are marked Advanced.
 - Timed Delayed Send: open **Delayed Send** from an agent's right-click menu
@@ -465,7 +465,8 @@ Related settings: everything under General > Sidebar, `agentManagerZoomPercent`
 ## Commands pane
 
 The Commands pane holds command terminals below the workspace, or on its right
-when Command Pane Side is set to Right. Open it with Cmd+J on Mac or F12 anywhere. The **Terminal** view
+when Command Pane Side is set to Right. Open it with Cmd+J (Mac), Shift+Esc or F12; Settings > Hotkeys can
+change the first two (Open Commands Panel and its Second Key). The **Terminal** view
 (see Views) is the same kind of terminal opened as a tab of the view panel
 instead; it has its own tabs and does not affect the Commands pane. Auto-minimize Commands
 pane is on by default: after you move focus elsewhere and leave the pointer
@@ -530,7 +531,7 @@ when you open it.
   last-active time on the right; awake sessions show a stronger timestamp. Use `ghostex sleep|wake <selector>` to
   sleep or wake a session.
 - A sleeping session wakes when you ask for it. Clicking its row in the
-  sidebar or Split Right wakes it. Selecting its tab, opening its project, or
+  sidebar wakes it. Selecting its tab, opening its project, or
   coming back to a project after restarting Ghostex shows a small bar with
   its name and a Resume button instead; click anywhere in the pane or press a key to
   wake the session. With
@@ -584,6 +585,10 @@ Session Chat renders the same agent session as a chat GUI: composer with
 image paste and Ctrl+G rich prompt editor, a prompt queue that sends when the
 agent stops, transcript with thinking, tool, and edit cards, subagent
 transcripts, question and approval cards, rewind, and a note per session.
+Type `@` in the chat box to mention a project file and `$` to pick one of the
+agent's skills. A picked skill shows as a pill in the way that agent invokes
+skills: `/skill-name` for Claude Code, which Claude receives as its slash
+command, and `$skill-name` for Codex.
 Use the paperclip to attach images, files, or folders. On Linux, choose
 **Images or files…** or **Folders…** before selecting items in the system picker;
 the terminal's attachment action offers the same choices.
@@ -591,10 +596,10 @@ Hover a message to show its actions and the time it was sent in a row below
 it: Copy message, Reply by Annotating, and Save to md under an agent's final
 reply; Rewind to here, Save prompt, and Copy message under your own messages.
 Hover the time to see the full date. When the session you are in shows its
-chat, Shift+Esc moves the keyboard to its chat box from anywhere in the window,
-Cmd+Shift+; copies the last code block the agent wrote, and Cmd+Shift+C copies
-the agent's last reply (Mac only; on Windows and Linux Ctrl+Shift+C stays
-terminal copy).
+chat, Cmd+Shift+; copies the last code block the agent wrote and Cmd+Shift+C
+copies the agent's last reply (Mac only; on Windows and Linux Ctrl+Shift+C stays
+terminal copy). Focus Chat Box, which moves the keyboard to the chat box from
+anywhere in the window, has no default key; set one in Settings > Hotkeys.
 The chat box edits like VS Code: Up on the first line jumps to the start and
 Down on the last line to the end, Option+Up/Down moves the current line,
 Option+Shift+Up/Down duplicates it, Cmd+Shift+K deletes it, Cmd+L selects it,
@@ -788,17 +793,17 @@ with added lines in green and removed lines in red. Each file defaults to one
 collapsed row with its path and green/red change counts. Enable Show file edit
 previews in Settings > Chat to show the first seven code lines by default.
 Long paths truncate from the start, keeping the filename visible. Click anywhere
-on the path or filename to open it in Editor or Docs, just like a file reference
+on the path or filename to open it in Editor or Files, just like a file reference
 pill. Local folder links in desktop chat open your system file explorer; remote
 folder links open in this computer's Code view so you can browse the remote files.
 File reference pills in the composer also open with one click using the same
-Code/Docs preferences as transcript links. Double-click a composer pill to edit
+Code/Files preferences as transcript links. Double-click a composer pill to edit
 its reference text. Right-click a file reference or file-change path for Open in
-Code, Open in Docs (Markdown, HTML, and Excalidraw), Copy Path, or the location row.
+Code, Open in Files (Markdown, HTML, and Excalidraw), Copy Path, or the location row.
 In chat the location row names what the path is (Open File Location, Open Folder
 Location, Open Image Location, Open Video Location); elsewhere it reads Open File/Folder
 Location. It appears directly below the path-copy actions
-in chat, Git changed files, and Docs menus, and opens
+in chat, Git changed files, and Files menus, and opens
 the location in the machine’s file manager. It requires a local desktop path.
 Videos, audio files, and PDFs added to a chat are labelled Video #1, Audio #1, or PDF #1,
 and clicking one (or choosing Open Video from its menu) opens it in the system's default
@@ -807,7 +812,7 @@ Right-click an opened chat image preview to close it. Click the picture itself t
 through three zoom levels, the last one showing it pixel for pixel, and once more to return
 it to the fitted size; the cursor shows whether the next click still zooms. Each step keeps the
 spot you clicked under the pointer, and dragging a zoomed picture moves it around.
-Disabled Code and Docs views are omitted from the menu.
+Disabled Code and Files views are omitted from the menu.
 Hosts without an editor copy the path on click.
 Click the card background, circle, or change counts to expand or collapse the full diff.
 Only clicks directly on the path or filename open the file. The
@@ -816,24 +821,27 @@ also toggle the diff. After expanding or collapsing, the header stays visible;
 chat scrolls to it if needed. This covers Claude's Write and Edit tools and Codex's apply_patch
 changes.
 
-Simple mode in More actions or Settings > Chat applies to every chat. Tool groups
+More actions > View holds the chat's display modes: Simple, Verbose and Summary.
+Each one is its own switch, and the View row names the ones that are on.
+
+Simple mode (More actions > View, or Settings > Chat) applies to every chat. Tool groups
 without a message above them collapse to a tool-call count, and tool rows hide
 command previews; expand a tool to inspect its full input and result. File edits
 collapse under "Edited 1 file" or "Edited X files", counting each path once; expand
 the row to see the usual file and diff cards. The menu and Settings use the same
-toggle (`sessionChatSimpleMode`, off by default).
+toggle (`sessionChatSimpleMode`, on by default).
 
 Summary mode folds each turn down to your prompt and an "Agent reply" row; the
 newest reply stays open, and older ones open with a click. The row holds every
 reply the agent gave to that prompt, including the ones it wrote after a
 background task finished.
 Summary mode has its own button between More actions and Session note when the
-chat toolbar has room. In a narrow chat, find it under More actions instead.
+chat toolbar has room, and is always under More actions > View.
 The button highlights when Summary mode is on; its tooltip shows the Toggle Summary
 Mode shortcut (Cmd+Ctrl+S on macOS, Ctrl+Alt+Shift+S on Windows and Linux), which
 switches it from anywhere in that chat and can be changed in Settings > Hotkeys.
 As space gets tighter, toolbar buttons move into More actions one at a time:
-Summary mode, Session note, Stash prompt, Attach, Maximize, then Terminal View.
+Summary mode (under View), Session note, Stash prompt, Attach, Maximize, then Terminal View.
 If the context ring still does not fit beside the model, it moves into Model
 settings at the top of More actions; the model pill shortens instead of moving.
 Controls return as space opens up; More actions and Send or Stop stay visible.
@@ -1268,7 +1276,7 @@ sessions, so any client can control agents on any machine.
   path and query, instead of the phone's external browser.
   To read a project's docs on the phone, long-press the project and choose
   Docs, or choose Docs from a session's ⋯ menu. It lists the project's Markdown
-  and HTML files from the same folders the desktop Docs view shows, with search
+  and HTML files from the same folders the desktop Files view shows, with search
   and the most recently changed files on top. Files open in a reader on the
   phone, and Reload picks up an agent's latest edit. HTML pages include the
   Agentation annotation tool (the pen button hides it); its copy button puts
@@ -1469,7 +1477,7 @@ docs directory), `hideProjectHeaderDiffStats`,
   runs. Its five panels cover: the agents found on this computer, with
   Install buttons for Claude Code, Codex and Cursor Agent, an Install guide
   that installs any other supported agent, the Ghostex helper (agent hooks)
-  and Computer Use; which views to show (Browser and Docs are on by default
+  and Computer Use; which views to show (Browser and Files are on by default
   on a first run) and the browser skill; phone pairing and notifications;
   and the first project folder with the default agent and session view,
   next to the look: Appearance, the theme colour squares (Dark and Light tabs),
@@ -1516,7 +1524,7 @@ in the order you decide: 1 what shows behind the glass, 2 the pictures or videos
 3 their position, then Fine-tune the tints and Use transparency (Dark only,
 Always, or Never). With Dark only, light mode stays opaque, so the light-mode
 picture, video and tints are hidden until Always is picked.
-Docs, Kanban, the browser, and the code editor stay opaque. Turning on Reduce
+Files, Kanban, the browser, and the code editor stay opaque. Turning on Reduce
 transparency in the macOS accessibility settings, or turning off Transparency effects
 in Windows Settings > Personalization > Colors, always makes the window opaque. On
 Windows, turning glass on takes effect the next time Ghostex starts, and the corners of
@@ -1528,8 +1536,7 @@ prevents sleep while agents work.
 Advanced holds Enable Experimental Features. The separate Debugging page sits
 above About and appears in the Settings sidebar only while Show Advanced is on
 (a Settings search still finds it). It starts with Show debug UI controls.
-Enable that switch to add Copy Resume and Copy Attach to session menus and to
-see Diagnostic logs. Diagnostic logs has one switch per area (terminals,
+Enable that switch to see Diagnostic logs. Diagnostic logs has one switch per area (terminals,
 sidebar, chat, modals, board, remote machines, agent activity, prompt editor,
 app lifecycle, server requests) and one Turn logs off after choice (15 min,
 1 hour, or Never) shared by all of them; warnings, errors, and crashes are
@@ -1553,8 +1560,8 @@ Related settings: `sidebarTheme`, `darkThemePreset`, `lightThemePreset`,
 terminalViewWidthMode match-chat`.
 - "How do I annotate a Browser page or Markdown file": Browser pages use
   Agentation in the Browser toolbar (see Views, Browser). Markdown files use
-  Docs: select text to comment or mark Looks good, Clarify, or Needs tests,
-  then Send to the last-clicked session (see Views, Docs).
+  Files: select text to comment or mark Looks good, Clarify, or Needs tests,
+  then Send to the last-clicked session (see Views, Files).
 - "Use Ghostex from my phone or another computer": see Remote machines, web,
   and mobile, then `ghostex settings open --tab remote`.
 - "Run an agent on a schedule": see Automations; open the Automate view or
