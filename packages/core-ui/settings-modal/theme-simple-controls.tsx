@@ -254,22 +254,20 @@ export function ColourfulnessPreview({ scheme, settings }: { scheme: ThemeScheme
 }
 
 /**
- * Window glass is drawn by the macOS and Windows apps, so surfaces that can hide the switch elsewhere ask here.
- *
- * CDXC:Theming 2026-09-25 DECISION:
- * User: "let's enable transparency on windows please also if possible. like it works on mac exactly." The glass
- * controls show on macOS and Windows. Glass shows (Wallpaper only, Custom image) stays macOS-only because only the
- * macOS window backend can draw a picture behind the glass, and on Windows turning glass on takes effect at the next
- * launch (see `note_main_window_background` in apps/desktop/src/app/helpers/window_glass.rs).
+ * CDXC:Theming 2026-09-27 DECISION:
+ * User: unhide every transparency setting on Linux and match macOS on Wayland and X11.
+ * Supersedes the Linux exclusion in the 2026-09-25 Windows rollout. Linux and macOS implement
+ * pictures and Live; Windows retains its desktop blur and restart requirement.
  */
 export function windowGlassAvailable(): boolean {
   const platform = detectghostexHotkeyPlatform();
-  return platform === 'mac' || platform === 'windows';
+  return platform === 'mac' || platform === 'windows' || platform === 'linux';
 }
 
-/** Whether the glass can show the wallpaper or a chosen picture instead of what is behind the window (macOS). */
+/** Backends that implement wallpaper, pictures, and Live behind the shared glass tints. */
 export function windowGlassPicturesAvailable(): boolean {
-  return detectghostexHotkeyPlatform() === 'mac';
+  const platform = detectghostexHotkeyPlatform();
+  return platform === 'mac' || platform === 'linux';
 }
 
 /** A sentence for glass controls on Windows, where turning glass on waits for the next launch. */

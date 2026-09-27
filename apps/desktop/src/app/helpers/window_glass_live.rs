@@ -1,5 +1,5 @@
 //! Live glass: an animated style the window's glass draws in place of a picture or video, painted
-//! in the current theme's colours (the GPUI macOS window draws it, `window_live.rs`).
+//! in the current theme's colours (Metal on macOS, WGPU on Linux).
 
 use std::sync::atomic::Ordering;
 
