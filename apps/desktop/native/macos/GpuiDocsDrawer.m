@@ -4,6 +4,8 @@
 #import <objc/runtime.h>
 #import <stdbool.h>
 
+void GhostexGpuiShowChildWindowAboveParent(NSWindow *child, NSWindow *parent);
+
 // CDXC:Docs 2026-09-25 DECISION:
 // User: "the animation when the files list shows is not smooth like the sessions list". The Docs
 // view's floating files list slides the way the floating sessions sidebar does
@@ -186,7 +188,7 @@ void GhostexGpuiDocsDrawerShow(void *drawerView, void *mainView, double x, doubl
       if (slideSeconds > 0) [state setHeld:YES];
       state.progress = 0;
       [state layout];
-      [window orderFront:nil];
+      GhostexGpuiShowChildWindowAboveParent(window, parent);
       // Present the list now, in this transaction, so the first frame of the slide already shows
       // it; GPUI would otherwise draw only once the window's display link starts, after the
       // system reports the window visible, which can be the whole slide later. The caller has

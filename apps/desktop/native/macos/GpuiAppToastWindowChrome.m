@@ -274,6 +274,28 @@ void GhostexGpuiPrepareCopiedIndicatorWindow(void *nativeView) {
   }
 }
 
+// CDXC:AppModal 2026-09-27 WHY:
+// Shows `child` attached directly above `parent` without `orderFront:`. On an attached child that
+// call brings the parent's whole group forward, so a main-window tooltip, menu or panel that
+// appeared while an app modal was open (Saved Prompts, reached by a right-click whose pointer then
+// rested on the button's tooltip) raised the main window over the modal and the modal looked
+// closed. Re-attaching keeps the child above the parent's other child windows, as `orderFront:` did.
+// SEE-ALSO: GpuiSidebarReveal.m and GpuiDocsDrawer.m show their panels through this too.
+void GhostexGpuiShowChildWindowAboveParent(NSWindow *child, NSWindow *parent) {
+  if (child == nil) {
+    return;
+  }
+  if (parent == nil || parent == child) {
+    [child orderFront:nil];
+    return;
+  }
+  if (child.parentWindow != nil) {
+    [child.parentWindow removeChildWindow:child];
+  }
+  [parent addChildWindow:child ordered:NSWindowAbove];
+  [child orderWindow:NSWindowAbove relativeTo:parent.windowNumber];
+}
+
 // CDXC:Theming 2026-09-25 WHY:
 // Under window glass the app's menus and tooltips draw in small frosted child windows, and only
 // one of each kind is up at a time, so each kind keeps one window and hides it between uses:
@@ -300,11 +322,8 @@ void GhostexGpuiSetFrostedChildWindowVisible(void *childNativeView,
         mainNativeView == NULL ? nil : ((__bridge NSView *)mainNativeView).window;
     if (mainWindow != nil && mainWindow != child) {
       child.level = mainWindow.level;
-      if (child.parentWindow != mainWindow) {
-        [mainWindow addChildWindow:child ordered:NSWindowAbove];
-      }
     }
-    [child orderFront:nil];
+    GhostexGpuiShowChildWindowAboveParent(child, mainWindow);
   }
 }
 

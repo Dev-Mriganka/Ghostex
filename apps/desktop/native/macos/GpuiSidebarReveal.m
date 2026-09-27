@@ -6,6 +6,7 @@
 #import <stdint.h>
 
 void GhostexGpuiCEFRefreshSidebarPointerInside(void);
+void GhostexGpuiShowChildWindowAboveParent(NSWindow *child, NSWindow *parent);
 
 // CDXC:Sidebar 2026-09-09 DECISION:
 // User: the collapsed sessions sidebar should slide in fluidly from the left edge on hover and use the same animation in reverse when the pointer leaves.
@@ -103,7 +104,7 @@ static double GhostexGpuiRevealEaseOut(double t) {
     [self setContentSizeHeld:YES];
   }
   [self layoutReveal];
-  [self.panel orderFront:nil];
+  GhostexGpuiShowChildWindowAboveParent(self.panel, self.panel.parentWindow);
   if (!self.companion) GhostexGpuiCEFRefreshSidebarPointerInside();
   [self animateTo:1];
 }
@@ -287,7 +288,7 @@ bool GhostexGpuiSidebarRevealUpdate(void *sidebarPtr, void *rootPtr,
       state.revealTarget = 1;
       state.revealProgress = 1;
       [state layoutReveal];
-      [state.panel orderFront:nil];
+      GhostexGpuiShowChildWindowAboveParent(state.panel, parent);
       GhostexGpuiCEFRefreshSidebarPointerInside();
     } else {
       [state animateIn];
@@ -397,7 +398,7 @@ static bool GhostexGpuiNativeRevealUpdate(void *rootPtr, void *popupPtr, bool en
       state.revealTarget = 1;
       state.revealProgress = 1;
       [state layoutReveal];
-      [state.panel orderFront:nil];
+      GhostexGpuiShowChildWindowAboveParent(state.panel, parent);
     } else {
       [state animateIn];
     }
