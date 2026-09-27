@@ -1590,7 +1590,7 @@
     {
       "key": "terminalCopyOnSelect",
       "title": "Copy on select",
-      "subtitle": "Copy selected terminal text automatically.",
+      "subtitle": "Copy selected terminal text automatically. On macOS both options also copy to the system clipboard.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "terminal",
@@ -1605,7 +1605,7 @@
           "value": "false"
         },
         {
-          "label": "Selection clipboard",
+          "label": "Copy to clipboard",
           "value": "true"
         },
         {

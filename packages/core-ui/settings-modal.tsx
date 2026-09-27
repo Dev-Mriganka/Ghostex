@@ -55,7 +55,6 @@ import {
   MAX_TERMINAL_VIEW_WIDTH_PERCENT,
   MAX_PROJECT_SESSION_LIST_COLLAPSED_COUNT,
   GHOSTTY_CONFIRM_CLOSE_SURFACE_OPTIONS,
-  GHOSTTY_COPY_ON_SELECT_OPTIONS,
   GHOSTTY_SCROLLBAR_OPTIONS,
   KEEP_AWAKE_DURATION_OPTIONS,
   MIN_TERMINAL_PANE_PADDING_PX,
@@ -172,6 +171,8 @@ import {
   SettingsSidebarPage,
 } from './settings-modal/types';
 import {
+  COPY_ON_SELECT_DESCRIPTION,
+  COPY_ON_SELECT_OPTIONS,
   IS_WINDOWS_HOST,
   PASTE_PREVIEWABLE_IMAGES_DESCRIPTION,
   getMainSettingsGroupSearch,
@@ -2259,11 +2260,11 @@ export function SettingsModal({
                             ) : null}
                             {mainSettingVisible(settingsSearch.terminalBehavior, 'terminalCopyOnSelect') ? (
                               <SelectField
-                                description='Copy selected terminal text automatically.'
+                                description={COPY_ON_SELECT_DESCRIPTION}
                                 label='Copy on select'
                                 {...getSettingModificationProps('terminalCopyOnSelect')}
                                 onChange={(value) => updateDraft('terminalCopyOnSelect', value as GhosttyCopyOnSelect)}
-                                options={GHOSTTY_COPY_ON_SELECT_OPTIONS}
+                                options={COPY_ON_SELECT_OPTIONS}
                                 value={draft.terminalCopyOnSelect}
                               />
                             ) : null}

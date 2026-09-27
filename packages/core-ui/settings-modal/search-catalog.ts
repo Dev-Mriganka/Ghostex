@@ -17,6 +17,7 @@ import {
   PANEL_ANIMATION_SPEED_OPTIONS,
   COMMANDS_PANEL_AUTO_MINIMIZE_DELAY_OPTIONS,
   GHOSTTY_CONFIRM_CLOSE_SURFACE_OPTIONS,
+  GHOSTTY_COPY_ON_SELECT_MAC_OPTIONS,
   GHOSTTY_COPY_ON_SELECT_OPTIONS,
   GHOSTTY_SCROLLBAR_OPTIONS,
   GHOSTTY_THEME_SETTING_OPTIONS,
@@ -47,6 +48,13 @@ import {
 } from './types';
 
 export const IS_WINDOWS_HOST = typeof navigator !== 'undefined' && /Windows/iu.test(navigator.userAgent);
+export const IS_MAC_HOST = typeof navigator !== 'undefined' && /Macintosh|Mac OS X/iu.test(navigator.userAgent);
+
+/** Copy on select's options as this host's terminal applies them (see `GHOSTTY_COPY_ON_SELECT_MAC_OPTIONS`). */
+export const COPY_ON_SELECT_OPTIONS = IS_MAC_HOST ? GHOSTTY_COPY_ON_SELECT_MAC_OPTIONS : GHOSTTY_COPY_ON_SELECT_OPTIONS;
+export const COPY_ON_SELECT_DESCRIPTION = IS_MAC_HOST
+  ? 'Copy selected terminal text automatically. On macOS both options also copy to the system clipboard.'
+  : 'Copy selected terminal text automatically.';
 
 export const PASTE_PREVIEWABLE_IMAGES_DESCRIPTION = `Paste clipboard images as previewable Markdown links with ${formatSidebarHotkeyLabel('cmd+v')}. Hold ${formatSidebarHotkeyLabel('cmd')} over the linked path to preview it in the terminal, and see the same image preview in the ${formatSidebarHotkeyLabel('ctrl+g')} Rich Prompt Editor.`;
 
@@ -971,8 +979,8 @@ export function getSettingsSearchSectionDefinitions() {
         },
         {
           key: 'terminalCopyOnSelect',
-          options: GHOSTTY_COPY_ON_SELECT_OPTIONS,
-          subtitle: 'Copy selected terminal text automatically.',
+          options: COPY_ON_SELECT_OPTIONS,
+          subtitle: COPY_ON_SELECT_DESCRIPTION,
           title: 'Copy on select',
         },
         {

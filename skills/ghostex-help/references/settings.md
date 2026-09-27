@@ -114,7 +114,7 @@ How to use this file:
 #### Terminal Behavior
 
 - **Scrollback limit** `terminalScrollbackLimitMb` (number default 15) [advanced]: Set scrollback memory per terminal surface.
-- **Copy on select** `terminalCopyOnSelect` (one of false | true | clipboard; default false) [advanced]: Copy selected terminal text automatically. Option labels: false = Off, true = Selection clipboard, clipboard = System and selection clipboard.
+- **Copy on select** `terminalCopyOnSelect` (one of false | true | clipboard; default false) [advanced]: Copy selected terminal text automatically. On macOS both options also copy to the system clipboard. Option labels: false = Off, true = Copy to clipboard, clipboard = System and selection clipboard.
 - **Confirm close** `terminalConfirmCloseSurface` (one of true | always | false; default true) [advanced]: Confirm before closing terminal surfaces. Option labels: true = Smart confirmation, always = Always confirm, false = Do not confirm.
 - **Trim trailing spaces on copy** `terminalClipboardTrimTrailingSpaces` (boolean, default true) [advanced]: Trim trailing whitespace when copying terminal text.
 - **Paste protection** `terminalClipboardPasteProtection` (boolean, default true) [advanced]: Ask before pasting text Ghostty considers unsafe.

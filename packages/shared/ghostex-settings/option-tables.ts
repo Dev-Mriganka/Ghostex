@@ -341,6 +341,18 @@ export const GHOSTTY_COPY_ON_SELECT_OPTIONS: ReadonlyArray<{
   { label: 'System and selection clipboard', value: 'clipboard' },
 ];
 
+/**
+ * CDXC:Clipboard 2026-09-27 DECISION: User accepted Ghostty 1.4's macOS behaviour ("accept it and relabel the option on macOS"): Ghostty now reads the legacy `true` as `clipboard` on macOS, so "Selection clipboard" also copies to the system clipboard there. macOS shows the value by what it does; Linux and Windows keep the table above, where `true` still means the selection clipboard only.
+ */
+export const GHOSTTY_COPY_ON_SELECT_MAC_OPTIONS: ReadonlyArray<{
+  label: string;
+  value: GhosttyCopyOnSelect;
+}> = [
+  { label: 'Off', value: 'false' },
+  { label: 'Copy to clipboard', value: 'true' },
+  { label: 'System and selection clipboard', value: 'clipboard' },
+];
+
 export const GHOSTTY_CONFIRM_CLOSE_SURFACE_OPTIONS: ReadonlyArray<{
   label: string;
   value: GhosttyConfirmCloseSurface;
