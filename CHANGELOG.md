@@ -21,6 +21,7 @@
 - **Approval cards ask about the tool that is waiting** ("Allow this edit?"), Codex 0.157's command approval shows as a real approval card, and a turn the agent wrote no reply to shows what ended it.
 - **A rewind stays rewound** even when Ghostex restarts before your next prompt.
 - **Zoomed chat images keep the spot you clicked under the pointer,** and you can drag a zoomed picture around.
+- **The chat box always shows its blinking caret when it has focus,** including in pop-up windows and after switching back to it.
 - **The phone's chat gets side questions, Claude's panels, Side chat and the View menu too.** Update the app to get them.
 
 ### 🤖 Models and Hermes
