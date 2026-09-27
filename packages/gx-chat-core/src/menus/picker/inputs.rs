@@ -44,15 +44,25 @@ pub fn menu_inputs(state: &ChatState, context: &ChatContext) -> MenuInputs {
         .map(|catalog| catalog.model_icon.clone());
     MenuInputs {
         menu: model_menu_context(state, &options),
-        catalogs: model_menu_catalogs(state),
+        catalogs: model_menu_catalogs(state, options.model_provider),
         agent_icon,
     }
 }
 
-/// `sessionChatSessionOptionCatalog(provider)` for each of the five providers.
-fn model_menu_catalogs(state: &ChatState) -> ModelMenuCatalogs {
+/// `sessionChatSessionOptionCatalog(provider)` for each provider in [`MODEL_MENU_PROVIDERS`].
+///
+/// CDXC:AgentProviders 2026-09-26 DECISION:
+/// User (Bots mockup 08): a Hermes chat's model pill opens a picker "with one tab for this bot",
+/// named after it, listing the bot's default model plus the models its sessions have used. Other
+/// agents' tabs stay out of it, and the Hermes tab only exists in a Hermes chat, whose core alone
+/// holds the profile's lineup.
+fn model_menu_catalogs(state: &ChatState, session_provider: Option<&str>) -> ModelMenuCatalogs {
+    let hermes = ModelPickerProvider::Hermes.as_str();
     let mut catalogs = ModelMenuCatalogs::new();
     for provider in MODEL_MENU_PROVIDERS {
+        if session_provider == Some(hermes) && provider != ModelPickerProvider::Hermes {
+            continue;
+        }
         let Some(catalog) =
             session_option_catalog(&state.menus.model_catalog, Some(provider.as_str()))
         else {
@@ -72,6 +82,16 @@ fn model_menu_catalogs(state: &ChatState) -> ModelMenuCatalogs {
                         description: choice.description.clone(),
                     })
                     .collect(),
+                agent_name: if provider == ModelPickerProvider::Hermes {
+                    state
+                        .menus
+                        .model_catalog
+                        .agents
+                        .get(hermes)
+                        .map(|agent| agent.name.clone())
+                } else {
+                    None
+                },
             },
         );
     }

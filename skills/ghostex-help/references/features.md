@@ -653,9 +653,10 @@ box; hover the status line and click the pen after its last item to open
 Context details. Claude
 Code starts with Account, Model limit, 5h limit, 7d limit, and Repository
 starred; Codex starts with Account email, 7d limit, 7d reset, and Account
-resets; Cursor starts with Context used, Branch, and Lines changed. Reset to
-recommended returns to these. The status line and More details are available
-for Claude Code, Codex, and Cursor chats.
+resets; Cursor starts with Context used, Branch, and Lines changed; Hermes
+starts with Context used, Cost, Tokens, and Session time. Reset to recommended
+returns to these. The status line and More details are available for Claude
+Code, Codex, Cursor, and Hermes chats.
 Items without a value are hidden until their data is available again;
 your starred selections stay saved. Wrapped rows are centered and balanced where
 space allows, with separators only between items on the same row.
@@ -866,14 +867,26 @@ Clicking a model or a reasoning level applies it to this session and saves it as
 the agent's default for new sessions. Right-clicking applies it to this session
 only and leaves the saved default alone, so new sessions still start where they
 did before; waking the session later brings it back on the model you chose.
-Session-only picks work for Claude only: other agents' own model pickers always
-save the choice as the default.
+Right-click session-only picks work for Claude and OpenCode: other agents' own
+model pickers always save the choice as the default, except Hermes, whose picks
+never change a default (below).
+
+In a Hermes chat the picker has one tab, named after the bot (for example Harry):
+the bot's default model first, then the other models its sessions have used, most
+used first. Picking a model or a reasoning level (Low, Medium, or High) types
+Hermes' own `/model <model> --reasoning <level>` into the session, with
+`--provider` added for a model from another provider. Every Hermes
+pick applies to that session only and never changes the bot's config. If Hermes
+refuses the model, the picker shows its reason. A new Hermes chat gets the
+picker once its first message is sent; until then the pill shows the model with
+Change it in the CLI, and you switch by typing `/model` in the terminal.
 
 On the phone, tapping the model pill opens the same picker as a sheet, without
 keyboard shortcuts. Tap a model to highlight it; its reasoning levels appear under
 it, and tapping one sets the level. Then tap Use in this session, or Save as
 default to also make it the agent's default for new sessions (agents other than
-Claude show a single Apply button, since their pickers always save the default).
+Claude show a single Apply button, which saves the default; in a Hermes chat it
+applies to this session only).
 Tap the info icon on the highlighted model to read what it is for. The bottom
 buttons work as on the computer; long-press one (Claude only) to apply the change
 to this session alone. In a session that has started, the phone's picker shows
@@ -989,8 +1002,12 @@ line under the chat box. Every row holds one value, for example Cost, Session
 time, and API time, or 5h limit, 7d limit, Model limit (such as Fable), 5h
 reset, and 7d reset, read from the session's saved account, or from the agent
 itself when the session has no account.
-Claude Code, Codex, and Cursor keep separate choices. Copying settings between them
-is temporarily hidden in this dialog.
+Hermes chats offer Context used, Cost, Tokens, Session time, and Model, read
+from Hermes itself; Hermes reports no 5h or 7d limits. A Hermes chat also names
+the bot it talks to (for example Harry) before the model, and a chat with the
+default Hermes profile reads Hermes.
+Claude Code, Codex, Cursor, and Hermes keep separate choices. Copying settings
+between them is temporarily hidden in this dialog.
 
 Related settings: `hideAccountEmails`, `preferredAgentInterface`, `sessionChatTheme`,
 `sessionChatFontFamily`, `sessionChatCustomTranscriptWidthEnabled`,

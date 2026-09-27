@@ -14,7 +14,7 @@ use crate::menus::picker::model_menu::{
     ModelMenuRow, ModelMenuView, MODEL_MENU_FAVORITES_TAB, MODEL_MENU_SEARCH_PLACEHOLDER,
 };
 use crate::menus::picker::model_picker::{
-    model_picker_supports_session_scope, ModelPickerProvider,
+    model_picker_scope_reason, model_picker_supports_session_scope, ModelPickerProvider,
     MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON,
 };
 use crate::menus::picker::traits::{
@@ -263,7 +263,9 @@ pub fn model_menu_projection(
         "scopeHint": if session_scope {
             "Click saves as default · Right-click applies to this session only"
         } else {
-            MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON
+            context
+                .provider
+                .map_or(MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON, model_picker_scope_reason)
         },
     })
 }

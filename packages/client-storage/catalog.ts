@@ -185,6 +185,13 @@ export const storageCatalog = Object.freeze({
     'ghostex.chat.context-details.cursor.v1',
     objectCodec
   ),
+  hermesContext: define(
+    'hermesContext',
+    'Hermes context display',
+    'packages/gx-chat-core/src/menus/context/preferences.rs',
+    'ghostex.chat.context-details.hermes.v1',
+    objectCodec
+  ),
   notices: define(
     'notices',
     'Dismissed chat notices',

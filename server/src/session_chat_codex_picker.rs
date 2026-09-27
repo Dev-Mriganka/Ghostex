@@ -325,6 +325,8 @@ struct CodexPickerPlan {
     /// Apply the pick to this session without saving the agent's default. Claude only.
     session_only: bool,
     claude_statusline: Option<(std::path::PathBuf, String)>,
+    /// Hermes only: the `--provider` a model from another provider needs.
+    hermes_provider: Option<String>,
 }
 
 struct CodexPickerJob {
@@ -1449,7 +1451,7 @@ pub(crate) async fn select_session_chat_model(
     }
     if !matches!(
         agent.as_deref(),
-        Some("codex" | "claude" | "cursor" | "grok" | "antigravity")
+        Some("codex" | "claude" | "cursor" | "grok" | "antigravity" | "hermes")
     ) {
         return Err(DomainStateError {
             code: "unsupportedAgent",
@@ -1491,6 +1493,18 @@ pub(crate) async fn select_session_chat_model(
             "A model change is already running for this session.",
         ));
     };
+    // Reads the profile's session store and config, so it stays off the async workers.
+    let hermes_provider = if agent.as_deref() == Some("hermes") {
+        let (session, model) = (target.session.clone(), model.clone());
+        tokio::task::spawn_blocking(move || {
+            crate::session_chat_hermes_status::hermes_switch_provider(&session, &model)
+        })
+        .await
+        .ok()
+        .flatten()
+    } else {
+        None
+    };
     let job_id = register_job(CodexPickerPlan {
         provider: agent.clone().unwrap_or_default(),
         model: model.clone(),
@@ -1499,6 +1513,7 @@ pub(crate) async fn select_session_chat_model(
         session_only,
         claude_statusline: crate::server::read_runtime_text(&target.session, "agentSessionId")
             .map(|id| (state.paths.app_state_dir.join("agent-hooks"), id)),
+        hermes_provider,
     });
     let send = execute_session_chat_send(
         &target.project_id,

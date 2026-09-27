@@ -208,6 +208,9 @@ pub struct SessionChatDetectedSelection {
     /// What Cursor handed its statusline command plus the checkout's git state
     /// (`session_chat_cursor_status.rs`), camelCase and absent-when-absent.
     pub cursor_status: Option<Value>,
+    /// What the Hermes session's own row in its session store reports
+    /// (`session_chat_hermes_status.rs`), camelCase and absent-when-absent.
+    pub hermes_status: Option<Value>,
     /// Session-local provider inventory supplied by agents with a model API.
     pub model_catalog: Option<Value>,
 }
@@ -288,6 +291,9 @@ impl SessionChatDetectedOptions {
         }
         if let Some(status) = self.selection.cursor_status.as_ref() {
             map.insert("cursorStatus".to_string(), status.clone());
+        }
+        if let Some(status) = self.selection.hermes_status.as_ref() {
+            map.insert("hermesStatus".to_string(), status.clone());
         }
         if let Some(catalog) = &self.selection.model_catalog {
             map.insert("modelCatalog".into(), catalog.clone());
@@ -1106,6 +1112,7 @@ fn match_grok_segment(segment: &str) -> Option<SessionChatDetectedSelection> {
         claude_status: None,
         codex_status: None,
         cursor_status: None,
+        hermes_status: None,
         model_catalog: None,
     })
 }
@@ -1204,6 +1211,7 @@ fn match_antigravity_statusline(line: &str) -> Option<SessionChatDetectedSelecti
         claude_status: None,
         codex_status: None,
         cursor_status: None,
+        hermes_status: None,
         model_catalog: None,
     })
 }
@@ -1278,6 +1286,7 @@ fn match_pi_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
         claude_status: None,
         codex_status: None,
         cursor_status: None,
+        hermes_status: None,
         model_catalog: None,
     })
 }
@@ -1328,6 +1337,7 @@ fn match_omp_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
         claude_status: None,
         codex_status: None,
         cursor_status: None,
+        hermes_status: None,
         model_catalog: None,
     })
 }
@@ -1335,20 +1345,56 @@ fn match_omp_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
 // ---------------------------------------------------------------------------
 // Hermes grammar
 //   ⚕ grok-4.6 │ ctx -- │ [░░░░░░░░░░] -- │ 34s │ ⏲ 0s
+//   ☤ gpt-6-sol │ ~26.2K/900K pinned │ [█░░░░░░░░░] ~3% │ ◎ 99.3% │ 42m │ ⏱ 12s
 //
 // The model is the first `│` segment: one single-glyph marker, then the id
-// (measured 2026-08-29, Hermes Agent v0.20.4). The `⏲ …` timer segment plus
-// the segment count keep prose from matching; the context segment cannot
-// anchor anything because it changes shape after the first exchange (`ctx --`
-// becomes `26.2K/900K`). No reasoning effort is drawn anywhere on screen.
+// (measured 2026-08-29, Hermes Agent v0.20.4), keeping the variant tag of an
+// id Hermes resolved to (`claude-opus-5-5[1m]`). The timer segment (`⏲` idle,
+// `⏱` while a turn runs) plus the segment count keep prose from matching; the
+// context segment cannot anchor anything because it changes shape after the
+// first exchange (`ctx --` becomes `26.2K/900K`). No reasoning effort is drawn
+// anywhere on screen.
 // ---------------------------------------------------------------------------
+
+/// CDXC:AgentScreenDetection 2026-09-26 WHY:
+/// Hermes reports context use only on screen: `USED/WINDOW` (a leading `~` marks an estimate, a trailing `pinned` a fixed window) and the bar's rounded `N%`, which the meter shows as Hermes prints it.
+fn hermes_context_usage(segments: &[&str]) -> Option<SessionChatContextUsage> {
+    let (used_tokens, window_size) = segments
+        .iter()
+        .find_map(|segment| {
+            let segment = segment.trim_start_matches('~');
+            let (used, window) = segment
+                .strip_suffix(" pinned")
+                .unwrap_or(segment)
+                .split_once('/')?;
+            Some((cursor_token_count(used)?, cursor_token_count(window)?))
+        })
+        .unzip();
+    let used_percentage = segments.iter().find_map(|segment| {
+        let (bar, percent) = segment.rsplit_once(' ')?;
+        if !bar.starts_with('[') || !bar.ends_with(']') {
+            return None;
+        }
+        percent
+            .trim_start_matches('~')
+            .strip_suffix('%')?
+            .parse()
+            .ok()
+    });
+    let usage = SessionChatContextUsage {
+        used_percentage,
+        used_tokens,
+        window_size,
+    };
+    (!usage.is_empty()).then_some(usage)
+}
 
 fn match_hermes_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
     let segments: Vec<&str> = line.split('\u{2502}').map(str::trim).collect();
     if segments.len() < 4
         || !segments[1..]
             .iter()
-            .any(|segment| segment.starts_with('\u{23f2}'))
+            .any(|segment| segment.starts_with(['\u{23f2}', '\u{23f1}']))
     {
         return None;
     }
@@ -1361,7 +1407,9 @@ fn match_hermes_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
             .chars()
             .next()
             .is_some_and(|ch| ch.is_ascii_alphanumeric())
-        || !is_pi_family_model_id(model)
+        || !is_pi_family_model_id(crate::session_chat_hermes_status::hermes_untagged_model(
+            model,
+        ))
     {
         return None;
     }
@@ -1371,16 +1419,8 @@ fn match_hermes_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
             label: model.to_string(),
             source: SessionChatOptionEvidence::Terminal,
         }),
-        effort: None,
-        mode: None,
-        context_window: None,
-        terminal_status_line: None,
-        fast: None,
-        context_usage: None,
-        claude_status: None,
-        codex_status: None,
-        cursor_status: None,
-        model_catalog: None,
+        context_usage: hermes_context_usage(&segments[1..]),
+        ..SessionChatDetectedSelection::default()
     })
 }
 
@@ -1726,6 +1766,7 @@ fn detect_session_chat_transcript_selection(
                     claude_status: None,
                     codex_status: None,
                     cursor_status: None,
+                    hermes_status: None,
                     model_catalog: None,
                 }
             }
@@ -1830,6 +1871,7 @@ fn read_session_chat_statusline_selection(
         claude_status: claude_statusline_status_value(payload),
         codex_status: None,
         cursor_status: None,
+        hermes_status: None,
         model_catalog: None,
     };
     // CDXC:AgentProviders 2026-09-09 WHY:
@@ -2130,6 +2172,12 @@ fn overlay_session_chat_option_selection(
     if layer.cursor_status.is_some() {
         merged.cursor_status = layer.cursor_status;
     }
+    if layer.hermes_status.is_some() {
+        merged.hermes_status = layer.hermes_status;
+    }
+    if layer.model_catalog.is_some() {
+        merged.model_catalog = layer.model_catalog;
+    }
 }
 
 /// Precedence, lowest first: transcript (a turn behind), statusline payload
@@ -2157,7 +2205,8 @@ fn merge_session_chat_option_selections(
         || merged.mode.is_some()
         || merged.context_usage.is_some()
         || merged.claude_status.is_some()
-        || merged.cursor_status.is_some())
+        || merged.cursor_status.is_some()
+        || merged.hermes_status.is_some())
     .then_some(merged)
 }
 
@@ -2238,6 +2287,11 @@ pub fn detect_session_chat_terminal_state(
                 hook_state_directory,
                 project_id,
                 session_id,
+            )
+        }
+        Some(SessionChatOptionAgent::Hermes) => {
+            crate::session_chat_hermes_status::read_hermes_status_selection(
+                repository, project_id, session_id,
             )
         }
         _ => None,
@@ -2330,6 +2384,10 @@ pub fn detect_session_chat_terminal_state(
         );
     }
     let options = merge_session_chat_option_selections(transcript, statusline, terminal)
+        .map(|mut selection| {
+            crate::session_chat_hermes_status::restore_hermes_model_id(&mut selection);
+            selection
+        })
         .map(SessionChatDetectedOptions::new);
     // A usage limit an account switch is hiding must not veto the composer either: after the switch the resumed CLI repaints the previous login's limit, and the continuation dot and the user's sends have to reach the new login.
     let composer = match screen {
@@ -2652,6 +2710,50 @@ mod tests {
     }
 
     #[test]
+    fn detects_hermes_context_from_its_statusline() {
+        // Captured from `hermes -p harry` (2026-09-26) after one exchange.
+        let text = concat!(
+            "\u{2624} gpt-6-sol-900k \u{2502} 24.1K/872K \u{2502} [\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}] 3% \u{2502} ",
+            "\u{25f7} 2.7s \u{2502} \u{2191} 2 t/s \u{2502} 13s \u{2502} \u{23f2} 3s \u{2502} \u{2713} 1s          \u{2500} OK\n",
+        );
+        let selection = detect_session_chat_selection(SessionChatOptionAgent::Hermes, text)
+            .expect("hermes statusline detected");
+        assert_eq!(selection.model.as_ref().unwrap().value, "gpt-6-sol-900k");
+        assert_eq!(
+            selection.context_usage,
+            Some(SessionChatContextUsage {
+                used_percentage: Some(3),
+                used_tokens: Some(24_100),
+                window_size: Some(872_000),
+            })
+        );
+        // A running turn draws the live timer glyph; an estimate and a pinned window mark the figure.
+        let marked = text
+            .replace('\u{23f2}', "\u{23f1}")
+            .replace("24.1K/872K", "~24.1K/872K pinned")
+            .replace("] 3%", "] ~3%");
+        assert_eq!(
+            detect_session_chat_selection(SessionChatOptionAgent::Hermes, &marked)
+                .and_then(|marked| marked.context_usage),
+            selection.context_usage
+        );
+        let fresh = detect_session_chat_selection(
+            SessionChatOptionAgent::Hermes,
+            "\u{2624} gpt-6-sol-900k \u{2502} ctx -- \u{2502} [\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}\u{2591}] -- \u{2502} 2s \u{2502} \u{23f2} 0s\n",
+        )
+        .expect("fresh hermes statusline detected");
+        assert_eq!(fresh.context_usage, None);
+        // A model Hermes resolved to its 1M variant keeps the tag Hermes shows.
+        let tagged = text.replace("gpt-6-sol-900k", "claude-opus-5-5[1m]");
+        assert_eq!(
+            detect_session_chat_selection(SessionChatOptionAgent::Hermes, &tagged)
+                .and_then(|tagged| tagged.model)
+                .map(|model| model.value),
+            Some("claude-opus-5-5[1m]".to_string())
+        );
+    }
+
+    #[test]
     fn detects_every_cursor_effort_spelling() {
         for (label, value) in [
             ("Low", "low"),
@@ -2845,6 +2947,7 @@ mod tests {
             claude_status: None,
             codex_status: None,
             cursor_status: None,
+            hermes_status: None,
             model_catalog: None,
         };
         let terminal = claude("Ctx Used: 1% | Opus 4.8").unwrap();
@@ -2900,6 +3003,7 @@ mod tests {
                 claude_status: None,
                 codex_status: None,
                 cursor_status: None,
+                hermes_status: None,
                 model_catalog: None,
             },
             detected_at: "2026-08-01T12:00:00.000Z".to_string(),

@@ -41,6 +41,7 @@ pub fn model_picker_provider(icon: Option<&str>) -> Option<ModelPickerProvider> 
         "grok-build" | "grok" => Some(ModelPickerProvider::Grok),
         "antigravity-cli" | "antigravity" => Some(ModelPickerProvider::Antigravity),
         "opencode" => Some(ModelPickerProvider::OpenCode),
+        "hermes-agent" => Some(ModelPickerProvider::Hermes),
         _ => None,
     }
 }

@@ -165,7 +165,7 @@ pub(crate) fn validate_selection(
     };
     if !matches!(
         provider,
-        "codex" | "claude" | "cursor" | "grok" | "antigravity" | "opencode"
+        "codex" | "claude" | "cursor" | "grok" | "antigravity" | "opencode" | "hermes"
     ) || !token(model)
         || (!effort.is_empty() && !token(effort))
     {
