@@ -245,6 +245,7 @@ pub(crate) fn gpui_app_modal_sidebar_state_message_from_gxserver_hydrate(
             "viewMode": "grid",
             "visibleCount": 1,
             "visibleSlotLabels": [],
+            "windowGlassBlockedBySystem": window_glass_blocked_by_system(),
         },
         "pinnedPrompts": pinned_prompts,
         "previousSessions": [],

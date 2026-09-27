@@ -1599,6 +1599,9 @@ function AppModalHost() {
   const appIconPickerUnavailable = useSidebarStore(
     (state) => state.hud.appIconPickerUnavailable === true,
   );
+  const windowGlassBlockedBySystem = useSidebarStore(
+    (state) => state.hud.windowGlassBlockedBySystem === true,
+  );
   const revision = useSidebarStore((state) => state.revision);
   const agents = useSidebarStore((state) => state.hud.agents);
   const commands = useSidebarStore((state) => state.hud.commands);
@@ -2807,6 +2810,7 @@ function AppModalHost() {
         agentHookStatus={agentHookStatus}
         agentHookStatusLoading={agentHookStatusLoading}
         appIconPickerUnavailable={appIconPickerUnavailable}
+        windowGlassBlockedBySystem={windowGlassBlockedBySystem}
         automateIsExperimental={window.__ghostex_APP_MODAL_HOST_ID__ !== "gpui"}
         initialSection={settingsInitialSection}
         initialSidebarTagsAction={settingsInitialSidebarTagsAction}

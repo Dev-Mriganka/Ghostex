@@ -70,7 +70,7 @@ import {
   windowGlassAvailable,
   windowGlassForTransparency,
   windowGlassPicturesAvailable,
-  windowGlassRestartNote,
+  windowGlassStatusNote,
   type ThemeScheme,
 } from '../theme-simple-controls';
 import { APP_ICON_CONTROLS_VISIBLE } from '../search-catalog';
@@ -163,6 +163,7 @@ export function ThemeSettingsTab({
   updateDraft,
   updateDraftDebounced,
   updateDraftMany,
+  windowGlassBlockedBySystem,
   windowGlassVideoError,
 }: {
   appIconError?: string;
@@ -187,6 +188,8 @@ export function ThemeSettingsTab({
   updateDraftDebounced: UpdateDraft;
   /** Saves several settings in one change, for the friendly controls that drive the deeper ones. */
   updateDraftMany: (patch: Partial<ghostexSettings>) => void;
+  /** The system's own transparency switch is keeping the window opaque. */
+  windowGlassBlockedBySystem: boolean;
   /** Why the last picked glass video file was refused, for its appearance's row. */
   windowGlassVideoError?: { appearance: 'dark' | 'light'; message: string };
 }) {
@@ -561,7 +564,7 @@ export function ThemeSettingsTab({
             {visible('windowGlass') ? (
               <ToggleField
                 checked={glassOn}
-                description={`Let your desktop show softly through the window.${windowGlassRestartNote()}`}
+                description={`Let your desktop show softly through the window.${windowGlassStatusNote(windowGlassBlockedBySystem)}`}
                 label='Enable transparency'
                 {...getSettingModificationProps('windowGlass')}
                 advanced={false}
@@ -839,7 +842,7 @@ export function ThemeSettingsTab({
                 ) : null}
                 {visible('windowGlass') ? (
                   <SettingRow
-                    description={`Dark only keeps light mode opaque.${windowGlassRestartNote()}`}
+                    description={`Dark only keeps light mode opaque.${windowGlassStatusNote(windowGlassBlockedBySystem)}`}
                     htmlFor={useTransparencyId}
                     label='Use transparency'
                     {...getSettingModificationProps('windowGlass')}

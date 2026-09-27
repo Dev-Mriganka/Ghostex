@@ -1018,6 +1018,12 @@ export type SidebarHudState = {
   visibleCount: VisibleSessionCount;
   visibleSlotLabels: string[];
   viewMode: TerminalViewMode;
+  /**
+   * The system's own switch (Reduce Transparency on macOS, Transparency effects
+   * off on Windows) is keeping the window opaque, so Settings says why turning
+   * transparency on shows nothing. Absent means not blocked.
+   */
+  windowGlassBlockedBySystem?: boolean;
 };
 
 export type SidebarHydrateMessage = {
