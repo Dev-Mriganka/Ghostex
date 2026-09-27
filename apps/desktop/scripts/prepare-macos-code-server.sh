@@ -286,6 +286,11 @@ code_server_node_payload_digest() {
 		--path "$CODE_SERVER_ROOT/tsconfig.json"
 }
 
+# CDXC:CodeEditor 2026-09-27 WHY: VS Code's remote (server) dependencies include native modules (@vscode/spdlog, @vscode/native-watchdog, @parcel/watcher, @vscode/fs-copyfile) that only exist after their npm install scripts compile them. A user-level `ignore-scripts=true` in ~/.npmrc wins over VS Code's `remote/.npmrc`, which does not set it, so local builds shipped without them: the editor's file watcher crashed and extension-host logging was off. The VS Code install turns scripts on for itself, and this compiled module is the proof an install (or a staged payload) is complete.
+code_server_native_module_marker() {
+	printf '%s\n' "node_modules/@vscode/spdlog/build/Release/spdlog.node"
+}
+
 ensure_code_server_payload() {
 	local vscode_target="$1"
 	local vscode_release_root="$CODE_SERVER_ROOT/lib/vscode-reh-web-$vscode_target"
@@ -319,16 +324,17 @@ ensure_code_server_payload() {
 	payload_digest="$(code_server_vscode_payload_digest "$vscode_target" "$node_identity" "$npm_version" "$package_version" "$commit")"
 	payload_cache_key="code-server-vscode-payload-$GHOSTEX_MACOS_ARCH"
 	# CDXC:CodeEditor 2026-06-09-17:06: Embedded VS Code search depends on @vscode/ripgrep/bin/rg. Rebuild the generated REH web payload when code-server packaging inputs change, server-main.js is missing, or ripgrep is missing/wrong-arch so `bun run start` and release builds cannot reuse a stale payload that opens but fails search.
-	if ! cache_matches "$payload_cache_key" "$payload_digest" "$vscode_release_root/out/server-main.js" "$vscode_ripgrep_bin" ||
+	if ! cache_matches "$payload_cache_key" "$payload_digest" "$vscode_release_root/out/server-main.js" "$vscode_ripgrep_bin" "$vscode_release_root/$(code_server_native_module_marker)" ||
 		! binary_supports_macos_arch "$vscode_ripgrep_bin" "$GHOSTEX_MACOS_ARCH"; then
 		(
 			cd "$CODE_SERVER_ROOT/lib/vscode"
 			# CDXC:CodeEditor 2026-09-14 WHY:
 			# A submodule update can leave node_modules from the previous VS Code revision, failing gulp on newly required packages.
 			# VS Code's install state covers its root, build, remote, and extension dependencies as well as the Node version.
-			if ! "$CODE_SERVER_NODE_BIN" --input-type=module -e 'import { isUpToDate } from "./build/npm/installStateHash.ts"; process.exit(isUpToDate() ? 0 : 1)'; then
+			if ! "$CODE_SERVER_NODE_BIN" --input-type=module -e 'import { isUpToDate } from "./build/npm/installStateHash.ts"; process.exit(isUpToDate() ? 0 : 1)' ||
+				[[ ! -f "remote/$(code_server_native_module_marker)" ]]; then
 				echo "Installing VS Code dependencies from the current lockfiles..."
-				env PATH="$CODE_SERVER_NODE_DIR:$PATH" "$CODE_SERVER_NPM_BIN" ci --no-audit --no-fund
+				env PATH="$CODE_SERVER_NODE_DIR:$PATH" npm_config_ignore_scripts=false "$CODE_SERVER_NPM_BIN" ci --no-audit --no-fund
 			fi
 		)
 		(
@@ -385,7 +391,7 @@ package_code_server_if_needed() {
 		--path "$CODE_SERVER_ROOT/.node-version" \
 		--path "$CODE_SERVER_ROOT/src/browser")"
 	# CDXC:CodeEditor 2026-06-08-12:17: The app bundle must contain a self-contained code-server runtime at Web/code-server and the single shared Node executable at Web/code-server/lib/node. Missing code-server resources are build failures instead of installed-user Node prompts.
-	if cache_matches "code-server-package-$GHOSTEX_MACOS_ARCH" "$package_digest" "$target_dir/out/node/entry.js" "$target_dir/lib/vscode/out/server-main.js" "$target_dir/lib/vscode/node_modules/@vscode/ripgrep/bin/rg" "$target_dir/lib/node" "$target_dir/node_modules" "$expected_node_pty_prebuild" &&
+	if cache_matches "code-server-package-$GHOSTEX_MACOS_ARCH" "$package_digest" "$target_dir/out/node/entry.js" "$target_dir/lib/vscode/out/server-main.js" "$target_dir/lib/vscode/node_modules/@vscode/ripgrep/bin/rg" "$target_dir/lib/node" "$target_dir/node_modules" "$expected_node_pty_prebuild" "$target_dir/lib/vscode/$(code_server_native_module_marker)" &&
 		node_pty_prebuilds_match_arch "$target_dir" &&
 		binary_supports_macos_arch "$target_dir/lib/node" "$GHOSTEX_MACOS_ARCH" &&
 		binary_supports_macos_arch "$target_dir/lib/vscode/node_modules/@vscode/ripgrep/bin/rg" "$GHOSTEX_MACOS_ARCH"; then
