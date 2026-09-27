@@ -12,7 +12,9 @@ use ghostex_gx_protocol::{ChatBlock, ChatMessage, ChatRole};
 
 use crate::transcript::foreign::STREAMING_ID;
 use crate::transcript::jsstr::js_trim;
-use crate::transcript::noise::{is_command_output_turn, is_command_turn, suppressed_turn_label};
+use crate::transcript::noise::{
+    is_command_output_turn, is_command_turn, is_hidden_message, suppressed_turn_label,
+};
 
 /// One finished user turn: the prompt, the work under it, and the reply that settled it.
 #[derive(Clone, Debug, PartialEq)]
@@ -64,6 +66,12 @@ fn is_accepted_user_prompt(message: &ChatMessage) -> bool {
     message.role == ChatRole::User && !message.queued && suppressed_turn_label(message).is_none()
 }
 
+/// A row that opens a summary-mode turn: a prompt the agent took, or a slash command the reader
+/// sent. A row the list never shows opens nothing.
+pub fn opens_turn(message: &ChatMessage) -> bool {
+    (is_accepted_user_prompt(message) || is_command_turn(message)) && !is_hidden_message(message)
+}
+
 /// One compact row per genuine user prompt, paired with its settled final reply.
 pub fn summary_mode_turns(
     messages: &[ChatMessage],
@@ -75,7 +83,7 @@ pub fn summary_mode_turns(
         // A held prompt (agent-CLI queue row, mid-turn send echo) has not started its own response
         // yet: it stays inside the working turn's activeWork instead of opening a turn whose reply
         // would never come.
-        if is_accepted_user_prompt(message) || is_command_turn(message) {
+        if opens_turn(message) {
             turns.push(SummaryModeTurn {
                 active: false,
                 active_work: Vec::new(),
@@ -101,6 +109,8 @@ pub fn summary_mode_turns(
             .filter(|row| {
                 is_command_output_turn(row)
                     || suppressed_turn_label(row).as_deref() == Some("Interrupted")
+                    // A side question stays in view in summary mode too.
+                    || crate::transcript::side_question::is_side_question_message(row)
             })
             .cloned()
             .collect();

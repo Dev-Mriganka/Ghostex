@@ -187,6 +187,7 @@ impl Render for ContextEditorWindow {
                             .bordered(false)
                             .focus_bordered(false)
                             .placeholder_color(p.muted.opacity(0.6))
+                            .caret_color(p.foreground)
                             .w_full()
                             .text_size(px(13.0 * s)),
                     ),

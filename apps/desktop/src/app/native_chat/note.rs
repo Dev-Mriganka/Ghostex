@@ -117,6 +117,7 @@ impl NativeChatView {
                     Textarea::new(&input)
                         .appearance(false)
                         .bordered(false)
+                        .caret_color(p.foreground)
                         .text_size(px(13.0 * s)),
                 )
                 .capture_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {

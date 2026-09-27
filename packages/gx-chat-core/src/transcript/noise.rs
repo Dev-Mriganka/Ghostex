@@ -633,6 +633,12 @@ pub fn classify_suppressed_turn(message: &ChatMessage) -> Option<SuppressedTurn>
     if message.role != ChatRole::User && message.role != ChatRole::System {
         return None;
     }
+    // A `/btw` pair folded into one row (side_question.rs): a harness row, never a turn of its own.
+    if crate::transcript::side_question::is_side_question_message(message) {
+        return Some(SuppressedTurn::Collapsed {
+            label: crate::transcript::side_question::SIDE_QUESTION_LABEL.to_string(),
+        });
+    }
     if message.blocks.iter().any(|block| {
         matches!(
             block,

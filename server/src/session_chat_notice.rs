@@ -420,6 +420,17 @@ impl SessionChatTerminalNotice {
             identity.push('\u{1f}');
             identity.push_str(&json!(lock).to_string());
         }
+        // The dialog id is the plain panel's hash, which a side answer read whole does not change.
+        if let Some(side_question) = self
+            .dialog
+            .as_ref()
+            .and_then(|dialog| dialog.side_question.as_ref())
+        {
+            identity.push('\u{1f}');
+            identity.push_str(&crate::session_chat_claude_panel::side_answer_fingerprint(
+                side_question,
+            ));
+        }
         identity
     }
 
@@ -1883,7 +1894,9 @@ pub fn classify_session_chat_terminal_notice(
         if let Some(dialog) = crate::session_chat_claude_dialog::detect_claude_dialog(screen_text) {
             // CDXC:AgentProviders 2026-09-22 WHY:
             // Claude's limit-choice panel used to mask the quota error as a generic question, so automatic account switching never started. Keep its controls for manual use while exposing its actual recovery cause.
-            if crate::session_chat_composer::is_claude_usage_limit_dialog(screen_text) {
+            if crate::session_chat_composer::is_claude_usage_limit_dialog(screen_text)
+                || crate::session_chat_claude_dialog::is_claude_usage_limit_chooser(&dialog)
+            {
                 let mut notice = dialog
                     .into_notice(SESSION_CHAT_NOTICE_USAGE_LIMIT)
                     .with_input_blocking(true);

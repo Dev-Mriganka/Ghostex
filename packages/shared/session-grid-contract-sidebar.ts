@@ -2203,32 +2203,6 @@ export type SidebarToExtensionMessage =
     }
   | {
       /**
-       * CDXC:RemoteMachines 2026-06-02-23:22:
-       * Remote Add Project uses a path-aware directory picker, but every
-       * browse request is machine-scoped. Native must route it to that
-       * machine's gxserver after SSH reconnect/token setup instead of exposing
-       * local filesystem browsing for remote machines.
-       */
-      partialPath: string;
-      remoteMachineId: string;
-      requestId: string;
-      type: 'browseRemoteProjectDirectories';
-    }
-  | {
-      /**
-       * CDXC:RemoteMachines 2026-06-03-00:18:
-       * Adding a remote project is not the local Add Project command. Carry the
-       * remote machine id with the selected path so native can add the project
-       * through that machine's gxserver and later render it under that machine's
-       * sidebar section.
-       */
-      path: string;
-      remoteMachineId: string;
-      requestId: string;
-      type: 'addRemoteProjectPath';
-    }
-  | {
-      /**
        * CDXC:AddProject 2026-07-30:
        * Every server round trip the shared add-project dialog performs travels
        * on this one request. `machineId` is the whole routing vocabulary — the

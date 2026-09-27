@@ -265,7 +265,9 @@ fn fontdb() -> Arc<resvg::usvg::fontdb::Database> {
     .clone()
 }
 
-fn render_mermaid(source: &str, light: bool) -> Option<Rendered> {
+/// Mermaid source to SVG in the Docs look: a transparent background and Inter, the dark or light
+/// theme. The app's diagram popup (window/mermaid_diagram_modal.rs) draws the same SVG.
+pub(crate) fn mermaid_svg(source: &str, light: bool) -> Result<String, String> {
     let mut theme = if light {
         mermaid_rs_renderer::Theme::modern()
     } else {
@@ -277,26 +279,53 @@ fn render_mermaid(source: &str, light: bool) -> Option<Rendered> {
         theme,
         ..Default::default()
     };
-    let svg = mermaid_rs_renderer::render_with_options(source, options).ok()?;
+    mermaid_rs_renderer::render_with_options(source, options).map_err(|error| error.to_string())
+}
+
+fn render_mermaid(source: &str, light: bool) -> Option<Rendered> {
+    let svg = mermaid_svg(source, light).ok()?;
     rasterize_svg(&svg, MAX_DIAGRAM_WIDTH)
 }
 
-/// SVG to straight-alpha BGRA at 2x for crisp display, scaled down to fit `max_width` logical px.
-fn rasterize_svg(svg: &str, max_width: f32) -> Option<Rendered> {
+fn svg_tree(svg: &str) -> Option<resvg::usvg::Tree> {
     let options = resvg::usvg::Options {
         fontdb: fontdb(),
         ..Default::default()
     };
-    let tree = resvg::usvg::Tree::from_str(svg, &options).ok()?;
+    resvg::usvg::Tree::from_str(svg, &options).ok()
+}
+
+/// SVG to straight-alpha BGRA at 2x for crisp display, scaled down to fit `max_width` logical px.
+fn rasterize_svg(svg: &str, max_width: f32) -> Option<Rendered> {
+    let tree = svg_tree(svg)?;
     let natural = tree.size();
     let fit = (max_width / natural.width()).min(1.0);
     let (logical_w, logical_h) = (natural.width() * fit, natural.height() * fit);
-    let scale = fit * RASTER_DPR;
+    Some((
+        rasterize_tree(&tree, fit * RASTER_DPR)?,
+        logical_w,
+        logical_h,
+    ))
+}
+
+/// An SVG's own size in logical px; `None` when it does not parse.
+pub(crate) fn svg_natural_size(svg: &str) -> Option<(f32, f32)> {
+    let size = svg_tree(svg)?.size();
+    Some((size.width(), size.height()))
+}
+
+/// The SVG drawn at `scale` device pixels per SVG unit, up or down.
+pub(crate) fn rasterize_svg_scaled(svg: &str, scale: f32) -> Option<Arc<RenderImage>> {
+    rasterize_tree(&svg_tree(svg)?, scale)
+}
+
+fn rasterize_tree(tree: &resvg::usvg::Tree, scale: f32) -> Option<Arc<RenderImage>> {
+    let natural = tree.size();
     let width = (natural.width() * scale).ceil().max(1.0) as u32;
     let height = (natural.height() * scale).ceil().max(1.0) as u32;
     let mut pixmap = resvg::tiny_skia::Pixmap::new(width, height)?;
     resvg::render(
-        &tree,
+        tree,
         resvg::tiny_skia::Transform::from_scale(scale, scale),
         &mut pixmap.as_mut(),
     );
@@ -306,11 +335,7 @@ fn rasterize_svg(svg: &str, max_width: f32) -> Option<Rendered> {
         bgra.extend_from_slice(&[color.blue(), color.green(), color.red(), color.alpha()]);
     }
     let buffer = RgbaImage::from_raw(width, height, bgra)?;
-    Some((
-        Arc::new(RenderImage::new(vec![Frame::new(buffer)])),
-        logical_w,
-        logical_h,
-    ))
+    Some(Arc::new(RenderImage::new(vec![Frame::new(buffer)])))
 }
 
 fn decode_image(path: &str, bytes: &[u8]) -> Option<Arc<RenderImage>> {

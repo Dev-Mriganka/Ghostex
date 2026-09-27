@@ -1,6 +1,6 @@
 use crate::app::helpers::{
-    gpui_session_chat_background_rgb, gpui_session_chat_uses_light_theme,
-    sidebar_titlebar_pack_rgb, sidebar_titlebar_rgb_channels,
+    gpui_session_chat_uses_light_theme, sidebar_titlebar_pack_rgb, sidebar_titlebar_rgb_channels,
+    work_area_background_for_variant,
 };
 use gpui::{Hsla, rgb};
 
@@ -105,13 +105,23 @@ impl ChatAppearance {
 
     pub(crate) fn current(state: &serde_json::Value) -> Self {
         let snapshot = crate::shared_settings::shared_sidebar_settings_snapshot();
+        Self::resolve(state, gpui_session_chat_uses_light_theme(snapshot.object()))
+    }
+
+    /// The chat's look in one appearance, for chat content drawn outside a chat: the app's
+    /// Markdown table popup follows the app's appearance, which can differ from the chat theme.
+    pub(crate) fn for_variant(light: bool) -> Self {
+        Self::resolve(&serde_json::Value::Null, light)
+    }
+
+    fn resolve(state: &serde_json::Value, light: bool) -> Self {
+        let snapshot = crate::shared_settings::shared_sidebar_settings_snapshot();
         let settings = snapshot.object();
-        let light = gpui_session_chat_uses_light_theme(settings);
         let color = |dark, light_color| rgb(if light { light_color } else { dark }).into();
         let enabled = |name| settings.get(name).and_then(serde_json::Value::as_bool) == Some(true);
         // The transcript and its cards share one backing tone derived from the chat's own theme
         // variant (the chat may be dark while the app is light), see session_chat_background_for_chrome.
-        let background_rgb = gpui_session_chat_background_rgb(settings);
+        let background_rgb = work_area_background_for_variant(settings, light);
         let background: Hsla = rgb(background_rgb).into();
         /*
         CDXC:Theming 2026-09-22 DECISION:

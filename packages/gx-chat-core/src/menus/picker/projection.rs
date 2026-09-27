@@ -29,8 +29,6 @@ pub struct ModelMenuContext {
     pub provider: Option<ModelPickerProvider>,
     /// The catalog's model descriptor id, which is what a pick dispatches against.
     pub model_id: Option<String>,
-    /// `catalog.model.defaultValue`.
-    pub model_default: Option<String>,
     /// The pill's own label when no entry matches.
     pub model_label: Option<String>,
     /// The visible option descriptors, Shift+Tab mode cycler already removed, resolved against
@@ -95,15 +93,11 @@ pub fn model_menu_pick(
 ) -> ModelMenuPick {
     if Some(row.entry.provider) == context.provider {
         return ModelMenuPick::Select {
-            value: model_menu_pick_value(
-                &row.entry,
-                context.model_value.as_deref(),
-                context.model_default.as_deref(),
-            ),
+            value: model_menu_pick_value(&row.entry, context.model_value.as_deref()),
             effort,
         };
     }
-    let model = model_menu_pick_value(&row.entry, None, None);
+    let model = model_menu_pick_value(&row.entry, None);
     let effort = effort
         .unwrap_or_else(|| effort_for(row.entry.provider, &model, context.effort_value.as_deref()));
     ModelMenuPick::Handoff {

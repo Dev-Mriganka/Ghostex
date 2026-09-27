@@ -25,10 +25,8 @@ import type {
   AddProjectRepositoryInfo,
   AddProjectSourceControlDiscovery,
 } from "@/packages/core-ui/add-project-modal/types";
-import type { AgentConfigDraft } from "@/packages/core-ui/agent-config-modal";
 import type { StashedPromptsScope } from "@/packages/core-ui/stashed-prompts-modal";
 import type { PortlessSetupModalMode } from "@/packages/core-ui/portless-setup-modal";
-import type { BrowserHistoryTarget } from "@/packages/core-ui/browser-history-modal";
 import { gpuiBootstrapRemoteSetupRpc } from "@/packages/core-ui/remote-setup-modal/gxserver-rpc";
 import type { RemoteFilesystemBrowseResult } from "@/packages/core-ui/remote-project-picker/remote-filesystem";
 import type {
@@ -41,7 +39,6 @@ import type { UpdateAvailableModalState } from "@/packages/core-ui/update-availa
 import {
   areLazyModalsSettled,
   lazyModal,
-  lazyRenderedModal,
   useLazyModalsSettled,
 } from "./lazy-modal";
 import {
@@ -105,10 +102,6 @@ const AddProjectModal = lazyModal(
     (await import("@/packages/core-ui/add-project-modal/add-project-modal"))
       .AddProjectModal,
 );
-const AgentConfigModal = lazyModal(
-  async () =>
-    (await import("@/packages/core-ui/agent-config-modal")).AgentConfigModal,
-);
 const AgentHooksRequiredModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/agent-hooks-required-modal"))
@@ -122,11 +115,6 @@ const DelayedSendModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/delayed-send-modal")).DelayedSendModal,
 );
-const FirstUserMessageModal = lazyModal(
-  async () =>
-    (await import("@/packages/core-ui/first-user-message-modal"))
-      .FirstUserMessageModal,
-);
 const StashedPromptsModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/stashed-prompts-modal"))
@@ -136,11 +124,6 @@ const PortlessSetupModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/portless-setup-modal"))
       .PortlessSetupModal,
-);
-const BrowserHistoryModal = lazyRenderedModal(
-  async () =>
-    (await import("@/packages/core-ui/browser-history-modal"))
-      .BrowserHistoryModal,
 );
 const PreviousSessionsModal = lazyModal(
   async () =>
@@ -160,12 +143,6 @@ const RemoteGxserverInstallModal = lazyModal(
 const RemoteSetupModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/remote-setup-modal")).RemoteSetupModal,
-);
-const RemoteProjectPickerModal = lazyModal(
-  async () =>
-    (
-      await import("@/packages/core-ui/remote-project-picker/remote-project-picker-modal")
-    ).RemoteProjectPickerModal,
 );
 const SettingsModal = lazyModal(
   async () => (await import("@/packages/core-ui/settings-modal")).SettingsModal,
@@ -187,21 +164,6 @@ const SessionRenameModal = lazyModal(
 const SpaceEditorModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/space-editor-modal")).SpaceEditorModal,
-);
-const MermaidDiagramModal = lazyRenderedModal(
-  async () =>
-    (await import("@/packages/core-ui/mermaid/mermaid-diagram"))
-      .MermaidDiagramModal,
-);
-const SessionChatTableModal = lazyRenderedModal(
-  async () =>
-    (await import("@/packages/core-ui/chat/session-chat-markdown"))
-      .SessionChatTableModal,
-);
-const WatchGhostexVideoModal = lazyModal(
-  async () =>
-    (await import("@/packages/core-ui/watch-ghostex-video-modal"))
-      .WatchGhostexVideoModal,
 );
 const UpdateAvailableModal = lazyModal(
   async () =>
@@ -232,16 +194,6 @@ const AgentsHubModal = lazyModal(
   async () =>
     (await import("@/packages/core-ui/agents-hub-modal")).AgentsHubModal,
 );
-const DiscoverGhostexModal = lazyModal(
-  async () =>
-    (await import("@/packages/core-ui/discover-ghostex-modal"))
-      .DiscoverGhostexModal,
-);
-const FirstLaunchSetupModal = lazyModal(
-  async () =>
-    (await import("@/packages/core-ui/first-launch-setup-modal"))
-      .FirstLaunchSetupModal,
-);
 const OnboardingModal = lazyModal(
   async () => (await import("@/packages/core-ui/onboarding")).OnboardingModal,
 );
@@ -258,18 +210,13 @@ const clientStorage = storageScope(["commitAgent", "renameAgent"]);
 
 type AppModalKind =
   | "addProject"
-  | "agentConfig"
   | "agentHooksRequired"
   | "agentsHub"
   | "commandPalette"
   | "configureActions"
   | "configureAgents"
   | "delayedSend"
-  | "discoverGhostex"
   | "exportTranscriptResult"
-  | "watchGhostexVideo"
-  | "mermaidDiagram"
-  | "markdownTable"
   | "hotkeys"
   | "missingProjectFolder"
   | "gitCommit"
@@ -279,11 +226,8 @@ type AppModalKind =
   | "openTargets"
   | "portlessSetup"
   | "previousSessions"
-  | "browserHistory"
   | "recentProjects"
-  | "firstUserMessage"
   | "remoteGxserverInstall"
-  | "remoteProjectPicker"
   | "remoteSetup"
   | "renameSession"
   | "sessionNote"
@@ -291,9 +235,7 @@ type AppModalKind =
   | "sidebarSpaceEditor"
   | "stashedPrompts"
   | "worktree"
-  | "tipsAndTricks"
   | "updateAvailable"
-  | "firstLaunchSetup"
   | "onboarding";
 
 /*
@@ -317,16 +259,13 @@ const GPUI_APP_MODAL_HOST_ID = "gpui";
 const ONE_SHOT_NATIVE_FIT_HEIGHT_MODAL_SELECTORS: Partial<
   Record<AppModalKind, string>
 > = {
-  agentConfig: ".agent-config-modal-shadcn",
   agentHooksRequired: ".agent-hooks-required-modal",
   delayedSend: ".delayed-send-modal-shadcn",
   deleteWorktree: ".worktree-delete-modal-shadcn",
   exportTranscriptResult: ".export-transcript-modal-shadcn",
-  firstUserMessage: ".first-user-message-modal",
   missingProjectFolder: ".missing-project-folder-modal",
   portlessSetup: ".portless-setup-modal-shadcn",
   remoteGxserverInstall: ".remote-gxserver-install-modal",
-  remoteProjectPicker: ".remote-project-picker-dialog",
   remoteSetup: ".remote-setup-modal",
   renameSession: ".session-rename-modal-shadcn",
   renameWorktree: ".worktree-rename-modal-shadcn",
@@ -344,7 +283,6 @@ const ONE_SHOT_NATIVE_FIT_HEIGHT_MODAL_SELECTORS: Partial<
  */
 const ONE_SHOT_NATIVE_FIT_HEIGHT_TOP_OFFSET_MODALS = new Set<AppModalKind>([
   "previousSessions",
-  "remoteProjectPicker",
 ]);
 
 function oneShotNativeFitHeightSelector(
@@ -443,7 +381,6 @@ type AppModalHostMessage =
   | {
       paneId?: number;
       runtimeKey?: number;
-      agentDraft?: AgentConfigDraft;
       agentIcon?: SidebarAgentIcon;
       agentId?: string;
       agentName?: string;
@@ -518,7 +455,6 @@ type AppModalHostMessage =
       spaceIcon?: string;
       spaceId?: string;
       spaceName?: string;
-      showFirstLaunchSetupOnClose?: boolean;
       threadId?: string;
       title?: string;
       notesMarkdown?: string;
@@ -547,20 +483,6 @@ type AppModalHostMessage =
       preview?: unknown;
       requestId: string;
       type: "repositoryClonePreviewResult";
-    }
-  | {
-      error?: string;
-      ok: boolean;
-      requestId: string;
-      result?: RemoteFilesystemBrowseResult;
-      type: "remoteProjectDirectoryBrowseResult";
-    }
-  | {
-      error?: string;
-      ok: boolean;
-      projectPath?: string;
-      requestId: string;
-      type: "remoteProjectAddResult";
     }
   | {
       /*
@@ -686,17 +608,6 @@ const PROMPT_AGENT_MODAL_STORAGE_KEYS: Record<PromptAgentModalKey, string> = {
   renameSession: "ghostex.promptAgent.renameSession",
 };
 
-type FirstUserMessageModalState = {
-  message: string;
-  title?: string;
-};
-
-type RemoteProjectPickerState = {
-  initialQuery?: string;
-  remoteMachineId: string;
-  remoteMachineName: string;
-};
-
 /*
  * CDXC:AddProject 2026-07-30:
  * The add-project dialog resolves its own machine list through the host, so the
@@ -803,10 +714,6 @@ function isEditableAppModalContextMenuTarget(
 
   return target.closest(APP_MODAL_CONTEXT_MENU_EDITABLE_SELECTOR) !== null;
 }
-
-type ConfigModalState = {
-  agentDraft?: AgentConfigDraft;
-};
 
 type AgentHooksRequiredModalState = {
   agentId: string;
@@ -943,17 +850,13 @@ function isSettingsModalKind(modal: AppModalKind | undefined): boolean {
 }
 
 /**
- * CDXC:Onboarding 2026-09-11 SEE-ALSO:
- * `onboarding` (the new five-panel modal) and `firstLaunchSetup` (the older modal, kept under its own id) share every
- * first-launch host rule: sidebar hydration before render, CLI/agent status requests, and completion on close.
- * The native twin of this predicate is the `FirstLaunchSetup | Onboarding` matching in apps/desktop/src/app/modals.rs.
+ * CDXC:Onboarding 2026-09-27 SEE-ALSO:
+ * The first-launch host rules (sidebar hydration before render, CLI/agent status requests, completion on close) apply
+ * to `onboarding`; the older setup modal that shared them was deleted on 2026-09-27.
+ * The native twin of this predicate is the `Onboarding` matching in apps/desktop/src/app/modals.rs.
  */
 function isFirstLaunchSetupModalKind(modal: AppModalKind | undefined): boolean {
-  return (
-    modal === "firstLaunchSetup" ||
-    modal === "tipsAndTricks" ||
-    modal === "onboarding"
-  );
+  return modal === "onboarding";
 }
 
 function shouldApplySidebarStateBeforeModalOpen(
@@ -1047,10 +950,6 @@ function resolvePromptAgentModalSelection(
     commandAgents.find((agent) => agent.agentId === defaultAgentId)?.agentId ??
     commandAgents[0]?.agentId
   );
-}
-
-function createRemoteProjectRequestId(kind: "add" | "browse"): string {
-  return `remote-project-${kind}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 const FIRST_LAUNCH_SKILL_INSTALL_TIMEOUT_MS = 150_000;
@@ -1216,86 +1115,6 @@ function requestFirstLaunchCreateProjectSession(
       );
       reject(error);
     }
-  });
-}
-
-function waitForRemoteProjectDirectoryBrowseResult(
-  requestId: string,
-): Promise<RemoteFilesystemBrowseResult> {
-  return new Promise((resolve, reject) => {
-    let timeoutId = 0;
-    const handleMessage = (event: Event) => {
-      const message = (event as CustomEvent<AppModalHostMessage>).detail;
-      if (
-        !message ||
-        typeof message !== "object" ||
-        message.type !== "remoteProjectDirectoryBrowseResult" ||
-        message.requestId !== requestId
-      ) {
-        return;
-      }
-      window.clearTimeout(timeoutId);
-      window.removeEventListener(
-        "ghostex-app-modal-host-message",
-        handleMessage,
-      );
-      if (!message.ok || !isRemoteFilesystemBrowseResult(message.result)) {
-        reject(new Error(message.error || "Remote directory browse failed."));
-        return;
-      }
-      resolve(message.result);
-    };
-
-    window.addEventListener("ghostex-app-modal-host-message", handleMessage);
-    timeoutId = window.setTimeout(() => {
-      window.removeEventListener(
-        "ghostex-app-modal-host-message",
-        handleMessage,
-      );
-      reject(new Error("Remote directory browse timed out."));
-    }, 15_000);
-  });
-}
-
-function waitForRemoteProjectAddResult(requestId: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let timeoutId = 0;
-    const handleMessage = (event: Event) => {
-      const message = (event as CustomEvent<AppModalHostMessage>).detail;
-      if (
-        !message ||
-        typeof message !== "object" ||
-        message.type !== "remoteProjectAddResult" ||
-        message.requestId !== requestId
-      ) {
-        return;
-      }
-      window.clearTimeout(timeoutId);
-      window.removeEventListener(
-        "ghostex-app-modal-host-message",
-        handleMessage,
-      );
-      if (!message.ok) {
-        reject(new Error(message.error || "Remote project add failed."));
-        return;
-      }
-      resolve();
-    };
-
-    window.addEventListener("ghostex-app-modal-host-message", handleMessage);
-    /*
-     * CDXC:AddProject 2026-07-30:
-     * A remote add right after a reconnect has been measured at ~19s, so the
-     * old 20s waiter routinely declared failure for adds that then landed on
-     * the machine. This waiter now matches the host's own 60s add budget.
-     */
-    timeoutId = window.setTimeout(() => {
-      window.removeEventListener(
-        "ghostex-app-modal-host-message",
-        handleMessage,
-      );
-      reject(new Error("Remote project add timed out."));
-    }, ADD_PROJECT_DIALOG_ADD_TIMEOUT_MS);
   });
 }
 
@@ -1602,17 +1421,12 @@ function AppModalHost() {
     agentSyncApplyResult,
     agentSyncPlan,
     agentSyncReport,
-    config,
     delayedSend,
-    firstUserMessage,
     gitCommit,
     gitFileDiff,
-    mermaidSource,
-    tableSource,
     worktreeDelete,
     worktreeRename,
     missingProjectFolder,
-    browserHistory,
     previousSessionsInitialProjectId,
     previousSessionsInitialScope,
     previousSessionsOpenRequestSequence,
@@ -1624,7 +1438,6 @@ function AppModalHost() {
     completeFirstLaunchSetup,
     recentProjects,
     remoteGxserverInstall,
-    remoteProjectPicker,
     renameSession,
     sessionNote,
     sidebarSpaceEditor,
@@ -1734,8 +1547,8 @@ function AppModalHost() {
   }, [isOnboardingModal]);
   useEffect(() => {
     /*
-     * The native folder dialog answers `pickFirstLaunchProjectFolder` with this host message. The new
-     * onboarding takes the path as a prop (FirstLaunchSetupModal listens for the event itself).
+     * The native folder dialog answers `pickFirstLaunchProjectFolder` with this host message, and the
+     * onboarding takes the path as a prop.
      */
     if (!isOnboardingModal) {
       return;
@@ -1766,7 +1579,7 @@ function AppModalHost() {
     };
   }, [isOnboardingModal]);
   useEffect(() => {
-    // FirstLaunchSetupModal requests agent detection from inside the component; OnboardingModal only exposes a rescan.
+    // OnboardingModal only exposes a rescan, so the host requests agent detection when it opens.
     if (!isOnboardingModal || agentHookStatus || agentHookStatusLoading) {
       return;
     }
@@ -1864,18 +1677,13 @@ function AppModalHost() {
     activeModal,
     addProject,
     agentHooksRequired,
-    config,
     delayedSend,
-    firstUserMessage,
     gitCommit,
     gitFileDiff,
-    mermaidSource,
-    tableSource,
     worktreeDelete,
     worktreeRename,
     missingProjectFolder,
     remoteGxserverInstall,
-    remoteProjectPicker,
     recentProjects,
     renameSession,
     sessionNote,
@@ -2361,9 +2169,6 @@ function AppModalHost() {
 
   return (
     <>
-      {activeModal === "browserHistory" && browserHistory && (
-        <BrowserHistoryModal target={browserHistory} onClose={closeModal} />
-      )}
       <PreviousSessionsModal
         initialProjectId={previousSessionsInitialProjectId}
         initialScope={previousSessionsInitialScope}
@@ -2414,14 +2219,6 @@ function AppModalHost() {
         projectId={stashedPrompts?.projectId}
         sessionId={stashedPrompts?.sessionId}
         vscode={vscode}
-      />
-      <FirstUserMessageModal
-        isOpen={
-          activeModal === "firstUserMessage" && firstUserMessage !== undefined
-        }
-        message={firstUserMessage?.message ?? ""}
-        onClose={closeModal}
-        title={firstUserMessage?.title}
       />
       <AgentHooksRequiredModal
         agentName={agentHooksRequired?.agentName ?? "this agent"}
@@ -2517,41 +2314,6 @@ function AppModalHost() {
         tailscaleEnabled={
           (settings ?? DEFAULT_ghostex_SETTINGS).remoteTailscaleEnabled
         }
-      />
-      <RemoteProjectPickerModal
-        initialQuery={remoteProjectPicker?.initialQuery}
-        isOpen={
-          activeModal === "remoteProjectPicker" &&
-          remoteProjectPicker !== undefined
-        }
-        machineName={remoteProjectPicker?.remoteMachineName ?? "Remote"}
-        onAddProject={async (path) => {
-          if (!remoteProjectPicker) {
-            return;
-          }
-          const requestId = createRemoteProjectRequestId("add");
-          vscode.postMessage({
-            path,
-            remoteMachineId: remoteProjectPicker.remoteMachineId,
-            requestId,
-            type: "addRemoteProjectPath",
-          });
-          await waitForRemoteProjectAddResult(requestId);
-        }}
-        onBrowse={async (input) => {
-          if (!remoteProjectPicker) {
-            return null;
-          }
-          const requestId = createRemoteProjectRequestId("browse");
-          vscode.postMessage({
-            partialPath: input.partialPath,
-            remoteMachineId: remoteProjectPicker.remoteMachineId,
-            requestId,
-            type: "browseRemoteProjectDirectories",
-          });
-          return waitForRemoteProjectDirectoryBrowseResult(requestId);
-        }}
-        onClose={closeModal}
       />
       {/*
        * CDXC:AddProject 2026-07-30:
@@ -3223,125 +2985,6 @@ function AppModalHost() {
         // CDXC:Icons 2026-06-25-21:50: Prop-driven App Icon state for Settings (mirrors osIntegrationStatus).
         appIconState={appIconState}
       />
-      <DiscoverGhostexModal
-        isOpen={activeModal === "discoverGhostex"}
-        onClose={closeModal}
-        theme={theme}
-      />
-      {activeModal === "markdownTable" && tableSource !== undefined && (
-        <SessionChatTableModal source={tableSource} onClose={closeModal} />
-      )}
-      {activeModal === "mermaidDiagram" && mermaidSource !== undefined && (
-        <MermaidDiagramModal source={mermaidSource} onClose={closeModal} />
-      )}
-      <WatchGhostexVideoModal
-        isOpen={activeModal === "watchGhostexVideo"}
-        onClose={closeModal}
-        theme={theme}
-      />
-      <FirstLaunchSetupModal
-        agentHookStatus={agentHookStatus}
-        agentHookStatusLoading={agentHookStatusLoading}
-        ghostexCliStatus={ghostexCliStatus}
-        ghostexCliStatusLoading={ghostexCliStatusLoading}
-        hasProjects={projectSettingsProjects.length > 0}
-        isOpen={isFirstLaunchSetupRenderable && activeModal !== "onboarding"}
-        onChange={(nextSettings) => {
-          vscode.postMessage({
-            settings: nextSettings,
-            source: "firstLaunch:preferences",
-            type: "updateSettings",
-          });
-        }}
-        onClose={completeFirstLaunchSetup}
-        onInstallAgentHooks={(agentIds) => {
-          setAgentHookStatusLoading(true);
-          vscode.postMessage({ agentIds, type: "installAgentHooks" });
-        }}
-        onInstallGhostexCli={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installGhostexCli" });
-        }}
-        onInstallBrowserControl={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installBrowserControl" });
-        }}
-        onInstallBrowserUseSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installBrowserUseSkill" });
-        }}
-        onInstallComputerUseSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installComputerUseSkill" });
-        }}
-        onInstallCliSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installCliSkill" });
-        }}
-        onInstallAgentsOrchestrationSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installAgentsOrchestrationSkill" });
-        }}
-        onInstallManageBeadsSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installManageBeadsSkill" });
-        }}
-        onInstallGenerateTitleSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installGenerateTitleSkill" });
-        }}
-        onInstallMoveCodexSessionSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installMoveCodexSessionSkill" });
-        }}
-        onInstallHelpSkill={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installHelpSkill" });
-        }}
-        onInstallSelectedSkills={requestFirstLaunchInstallSelectedSkills}
-        onUninstallBundledAgentSkill={(skillId) => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ skillId, type: "uninstallBundledAgentSkill" });
-        }}
-        onInstallCuaDriver={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "installCuaDriver" });
-        }}
-        onOpenAccessibilityPreferences={() => {
-          vscode.postMessage({ type: "openAccessibilityPreferences" });
-        }}
-        onOpenScreenRecordingPreferences={() => {
-          vscode.postMessage({ type: "openScreenRecordingPreferences" });
-        }}
-        onPickProjectFolder={() => {
-          vscode.postMessage({ type: "pickFirstLaunchProjectFolder" });
-        }}
-        onFinishFirstLaunch={({ agentId, path }) => {
-          /*
-          CDXC:Onboarding 2026-08-24:
-          Add 1st project registers the folder chosen by the footer action and
-          starts the first session in it. Rust forwards this to the sidebar
-          runtime over the workspaceFolderPicked chain, which owns project
-          registration + focus.
-          */
-          void requestFirstLaunchCreateProjectSession(agentId, path).catch(
-            (error: unknown) => {
-              logAppModalError("FirstLaunchSetup:createProjectSession", error);
-            },
-          );
-        }}
-        onRequestAgentHookStatus={(agentIds) => {
-          setAgentHookStatusLoading(true);
-          vscode.postMessage({ agentIds, type: "requestAgentHookStatus" });
-        }}
-        onRequestGhostexCliStatus={() => {
-          setGhostexCliStatusLoading(true);
-          vscode.postMessage({ type: "requestGhostexCliStatus" });
-        }}
-        settings={settings}
-        theme={theme}
-        vscode={vscode}
-      />
       <OnboardingModal
         agentHookStatus={agentHookStatus}
         agents={onboardingAgents}
@@ -3377,8 +3020,8 @@ function AppModalHost() {
         }}
         onInstallComputerUse={() => {
           /*
-           * Same order as FirstLaunchSetupModal's skill install: Cua Driver first when it is missing,
-           * then the Computer Use skill through the acknowledged settings-action request.
+           * Cua Driver first when it is missing, then the Computer Use skill through the acknowledged
+           * settings-action request.
            */
           setOnboardingComputerUseInstallRequested(true);
           setGhostexCliStatusLoading(true);
@@ -3624,25 +3267,6 @@ function AppModalHost() {
         stage={exportTranscriptResult?.stage ?? { stage: "options" }}
         targetAgentId={exportTranscriptResult?.targetAgentId}
       />
-      <AgentConfigModal
-        draft={config.agentDraft ?? createEmptyAgentDraft()}
-        isOpen={
-          activeModal === "agentConfig" && config.agentDraft !== undefined
-        }
-        onCancel={closeModal}
-        onSave={(draft) => {
-          vscode.postMessage({
-            acceptAllMode: draft.acceptAllMode,
-            agentId: draft.agentId,
-            command: draft.command,
-            icon: draft.icon,
-            name: draft.name,
-            type: "saveSidebarAgent",
-          });
-          closeModal();
-        }}
-        theme={theme}
-      />
       {/*
        * CDXC:AppModal 2026-05-21-12:21:
        * Native/sidebar status feedback should appear as dark Ghostex toasts,
@@ -3700,14 +3324,9 @@ function useModalStateFromNative() {
   const [agentSyncPlan, setAgentSyncPlan] = useState<AgentSyncPlanMessage>();
   const [agentSyncApplyResult, setAgentSyncApplyResult] =
     useState<AgentSyncApplyResultMessage>();
-  const [config, setConfig] = useState<ConfigModalState>({});
   const [delayedSend, setDelayedSend] = useState<DelayedSendModalState>();
-  const [firstUserMessage, setFirstUserMessage] =
-    useState<FirstUserMessageModalState>();
   const [gitCommit, setGitCommit] = useState<GitCommitModalDraft>();
   const [gitFileDiff, setGitFileDiff] = useState<GitFileDiffModalDraft>();
-  const [mermaidSource, setMermaidSource] = useState<string>();
-  const [tableSource, setTableSource] = useState<string>();
   const [worktreeDelete, setWorktreeDelete] =
     useState<WorktreeDeleteModalDraft>();
   const [worktreeRename, setWorktreeRename] =
@@ -3716,8 +3335,6 @@ function useModalStateFromNative() {
     useState<MissingProjectFolderModalState>();
   const [remoteGxserverInstall, setRemoteGxserverInstall] =
     useState<RemoteGxserverInstallState>();
-  const [remoteProjectPicker, setRemoteProjectPicker] =
-    useState<RemoteProjectPickerState>();
   const [addProject, setAddProject] = useState<AddProjectModalState>();
   const [onboardingFirstRun, setOnboardingFirstRun] = useState(false);
   const [recentProjects, setRecentProjects] =
@@ -3736,7 +3353,6 @@ function useModalStateFromNative() {
     useState<UpdateAvailableModalState>();
   const [agentHookStatus, setAgentHookStatus] =
     useState<AgentHookStatusMessage>();
-  const [browserHistory, setBrowserHistory] = useState<BrowserHistoryTarget>();
   const [
     previousSessionsInitialProjectId,
     setPreviousSessionsInitialProjectId,
@@ -3789,19 +3405,15 @@ function useModalStateFromNative() {
 
   const clearActiveModalState = useCallback(() => {
     setActiveModal(undefined);
-    setBrowserHistory(undefined);
     setActiveModalRequestId(undefined);
     setAgentHooksRequired(undefined);
-    setConfig({});
     setDelayedSend(undefined);
-    setFirstUserMessage(undefined);
     setGitCommit(undefined);
     setGitFileDiff(undefined);
     setWorktreeDelete(undefined);
     setWorktreeRename(undefined);
     setMissingProjectFolder(undefined);
     setRemoteGxserverInstall(undefined);
-    setRemoteProjectPicker(undefined);
     setAddProject(undefined);
     setRecentProjects(undefined);
     setRenameSession(undefined);
@@ -4133,11 +3745,8 @@ function useModalStateFromNative() {
               projectName: message.projectName,
               projectPath: message.projectPath,
             });
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4155,11 +3764,8 @@ function useModalStateFromNative() {
                   : undefined,
               sessionId: message.sessionId,
             });
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
             setWorktreeDelete(undefined);
@@ -4206,34 +3812,8 @@ function useModalStateFromNative() {
                 ? { spaceName: message.spaceName }
                 : {}),
             });
-            setConfig({});
-            setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
-            setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
-            setRenameSession(undefined);
-            setWorktree(undefined);
-            setPortlessSetup(undefined);
-            setWorktreeDelete(undefined);
-            setWorktreeRename(undefined);
-          } else if (message.modal === "firstUserMessage") {
-            if (
-              typeof message.message !== "string" ||
-              !message.message.trim()
-            ) {
-              throw new Error(
-                "First message modal request is missing message text.",
-              );
-            }
-            setFirstUserMessage({
-              message: message.message,
-              title:
-                typeof message.title === "string" ? message.title : undefined,
-            });
-            setConfig({});
             setDelayedSend(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4261,45 +3841,7 @@ function useModalStateFromNative() {
               remoteMachineId: message.remoteMachineId,
               remoteMachineName: message.remoteMachineName,
             });
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
-            setRemoteProjectPicker(undefined);
-            setRenameSession(undefined);
-            setWorktree(undefined);
-            setPortlessSetup(undefined);
-            setWorktreeDelete(undefined);
-            setWorktreeRename(undefined);
-          } else if (message.modal === "remoteProjectPicker") {
-            if (
-              typeof message.remoteMachineId !== "string" ||
-              !message.remoteMachineId.trim() ||
-              typeof message.remoteMachineName !== "string" ||
-              !message.remoteMachineName.trim()
-            ) {
-              throw new Error(
-                "Remote project picker request is missing machine details.",
-              );
-            }
-            /*
-             * CDXC:RemoteMachines 2026-06-03-00:18:
-             * Remote machine Add Project opens in the full-window modal host
-             * with the selected machine carried as immutable request state.
-             * Directory browsing remains machine-scoped through native so the
-             * picker cannot accidentally browse local folders.
-             */
-            setRemoteProjectPicker({
-              initialQuery:
-                typeof message.initialQuery === "string"
-                  ? message.initialQuery
-                  : undefined,
-              remoteMachineId: message.remoteMachineId,
-              remoteMachineName: message.remoteMachineName,
-            });
-            setConfig({});
-            setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
-            setRemoteGxserverInstall(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4339,10 +3881,7 @@ function useModalStateFromNative() {
               title:
                 typeof message.title === "string" ? message.title : undefined,
             });
-            setConfig({});
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4371,11 +3910,8 @@ function useModalStateFromNative() {
                   ? message.remoteMachineName
                   : undefined,
             });
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setGitCommit(undefined);
             setPortlessSetup(undefined);
@@ -4399,11 +3935,8 @@ function useModalStateFromNative() {
               mode: message.mode,
               protocol: message.protocol,
             });
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setGitCommit(undefined);
@@ -4417,11 +3950,8 @@ function useModalStateFromNative() {
             }
             setWorktreeDelete(message.worktreeDeleteDraft);
             setWorktreeRename(undefined);
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4434,11 +3964,8 @@ function useModalStateFromNative() {
             }
             setWorktreeRename(message.worktreeRenameDraft);
             setWorktreeDelete(undefined);
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4451,10 +3978,7 @@ function useModalStateFromNative() {
             }
             setGitCommit(message.gitCommitDraft);
             setGitFileDiff(undefined);
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4468,36 +3992,9 @@ function useModalStateFromNative() {
             }
             setGitFileDiff(message.gitFileDiff);
             return;
-          } else if (message.modal === "mermaidDiagram") {
-            if (typeof message.source !== "string")
-              throw new Error("Missing Mermaid diagram source.");
-            setMermaidSource(message.source);
-          } else if (message.modal === "markdownTable") {
-            if (typeof message.source !== "string")
-              throw new Error("Missing table source.");
-            setTableSource(message.source);
-          } else if (message.modal === "agentConfig") {
-            if (!message.agentDraft) {
-              throw new Error(
-                "Agent config modal request is missing agentDraft.",
-              );
-            }
-            setConfig({ agentDraft: message.agentDraft });
-            setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
-            setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
-            setRenameSession(undefined);
-            setWorktree(undefined);
-            setPortlessSetup(undefined);
-            setWorktreeDelete(undefined);
-            setWorktreeRename(undefined);
           } else {
-            setConfig({});
             setDelayedSend(undefined);
-            setFirstUserMessage(undefined);
             setRemoteGxserverInstall(undefined);
-            setRemoteProjectPicker(undefined);
             setRenameSession(undefined);
             setWorktree(undefined);
             setPortlessSetup(undefined);
@@ -4575,16 +4072,6 @@ function useModalStateFromNative() {
             setSettingsInitialViewScopeKey(undefined);
             setSettingsInitialSearchQuery(undefined);
             setSettingsInitialTabOverride(undefined);
-          }
-          if (
-            message.modal === "browserHistory" &&
-            typeof message.paneId === "number" &&
-            typeof message.runtimeKey === "number"
-          ) {
-            setBrowserHistory({
-              paneId: message.paneId,
-              runtimeKey: message.runtimeKey,
-            });
           }
           if (message.modal === "previousSessions") {
             setPreviousSessionsInitialProjectId(message.initialProjectId);
@@ -4889,17 +4376,12 @@ function useModalStateFromNative() {
     agentSyncApplyResult,
     agentSyncPlan,
     agentSyncReport,
-    config,
     delayedSend,
-    firstUserMessage,
     gitCommit,
     gitFileDiff,
-    mermaidSource,
-    tableSource,
     worktreeDelete,
     worktreeRename,
     missingProjectFolder,
-    browserHistory,
     previousSessionsInitialProjectId,
     previousSessionsInitialScope,
     previousSessionsOpenRequestSequence,
@@ -4910,7 +4392,6 @@ function useModalStateFromNative() {
     closeModal,
     completeFirstLaunchSetup,
     recentProjects,
-    remoteProjectPicker,
     renameSession,
     sessionNote,
     sidebarSpaceEditor,
@@ -5153,29 +4634,17 @@ function isAgentSyncApplyResultMessage(
   );
 }
 
-function createEmptyAgentDraft(): AgentConfigDraft {
-  return {
-    command: "",
-    name: "",
-  };
-}
-
 function isModalRenderable({
   activeModal,
   addProject,
   agentHooksRequired,
-  config,
   delayedSend,
-  firstUserMessage,
   gitCommit,
   gitFileDiff,
-  mermaidSource,
-  tableSource,
   worktreeDelete,
   worktreeRename,
   missingProjectFolder,
   recentProjects,
-  remoteProjectPicker,
   remoteGxserverInstall,
   renameSession,
   sessionNote,
@@ -5190,18 +4659,13 @@ function isModalRenderable({
   activeModal: AppModalKind | undefined;
   addProject: AddProjectModalState | undefined;
   agentHooksRequired: AgentHooksRequiredModalState | undefined;
-  config: ConfigModalState;
   delayedSend: DelayedSendModalState | undefined;
-  firstUserMessage: FirstUserMessageModalState | undefined;
   gitCommit: GitCommitModalDraft | undefined;
   gitFileDiff: GitFileDiffModalDraft | undefined;
-  mermaidSource: string | undefined;
-  tableSource: string | undefined;
   worktreeDelete: WorktreeDeleteModalDraft | undefined;
   worktreeRename: WorktreeRenameModalDraft | undefined;
   missingProjectFolder: MissingProjectFolderModalState | undefined;
   recentProjects: RecentProjectsModalState | undefined;
-  remoteProjectPicker: RemoteProjectPickerState | undefined;
   remoteGxserverInstall: RemoteGxserverInstallState | undefined;
   renameSession: RenameSessionModalState | undefined;
   sessionNote: SessionNoteModalState | undefined;
@@ -5218,8 +4682,6 @@ function isModalRenderable({
       return false;
     case "addProject":
       return addProject !== undefined;
-    case "agentConfig":
-      return config.agentDraft !== undefined;
     case "agentHooksRequired":
       return agentHooksRequired !== undefined;
     case "agentsHub":
@@ -5227,16 +4689,10 @@ function isModalRenderable({
       return true;
     case "delayedSend":
       return delayedSend !== undefined;
-    case "firstUserMessage":
-      return firstUserMessage !== undefined;
     case "gitCommit":
       return gitCommit !== undefined;
     case "gitFileDiff":
       return gitFileDiff !== undefined;
-    case "markdownTable":
-      return tableSource !== undefined;
-    case "mermaidDiagram":
-      return mermaidSource !== undefined;
     case "missingProjectFolder":
       return missingProjectFolder !== undefined;
     case "deleteWorktree":
@@ -5245,8 +4701,6 @@ function isModalRenderable({
       return worktreeRename !== undefined;
     case "recentProjects":
       return recentProjects !== undefined;
-    case "remoteProjectPicker":
-      return remoteProjectPicker !== undefined;
     case "remoteGxserverInstall":
       return remoteGxserverInstall !== undefined;
     case "renameSession":
@@ -5271,13 +4725,8 @@ function isModalRenderable({
       return worktree !== undefined;
     case "portlessSetup":
       return portlessSetup !== undefined;
-    case "browserHistory":
     case "previousSessions":
-    case "discoverGhostex":
     case "remoteSetup":
-    case "watchGhostexVideo":
-    case "tipsAndTricks":
-    case "firstLaunchSetup":
     case "onboarding":
       return true;
   }

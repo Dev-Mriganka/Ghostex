@@ -35,6 +35,40 @@ impl NativeChatView {
         )
     }
 
+    /// The width a `choice_row` needs to show `label` and its shortcut badge on one line without
+    /// cutting it: the borders, the 12px sides, the label, and the 12px gap plus badge.
+    pub(super) fn choice_row_width(
+        label: &str,
+        shortcut: Option<&str>,
+        p: &ChatAppearance,
+        window: &gpui::Window,
+    ) -> f32 {
+        let s = p.scale;
+        let measure = |text: &str, family: &str, size: f32, weight: gpui::FontWeight| {
+            let text = text.replace('\n', " ");
+            let mut style = window.text_style();
+            style.font_family = family.to_owned().into();
+            style.font_weight = weight;
+            window
+                .text_system()
+                .shape_line(
+                    text.clone().into(),
+                    px(size),
+                    &[style.to_run(text.len())],
+                    None,
+                )
+                .width
+                .as_f32()
+        };
+        let label = measure(label, &p.font, 14.0 * s, gpui::FontWeight::NORMAL);
+        let badge = shortcut.map_or(0.0, |shortcut| {
+            let text = measure(shortcut, "Menlo", 13.0 * s, gpui::FontWeight::MEDIUM);
+            12.0 * s + (text + 8.0 * s + 2.0).max(20.0 * s)
+        });
+        // One extra pixel absorbs rounding between this shaping and the painted line.
+        2.0 + 24.0 * s + label + badge + 1.0
+    }
+
     /// `single_line` keeps the label on one line, cut with an ellipsis, and shows the whole label
     /// in a hover tooltip.
     pub(super) fn choice_row(

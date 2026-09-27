@@ -24,6 +24,12 @@ pub struct TerminalDialog {
     pub input: Option<String>,
     pub input_value: String,
     pub actions: Vec<String>,
+    /// Claude's `/btw` panel read with its styling (session_chat_claude_panel.rs).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub side_question: Option<serde_json::Value>,
+    /// A Settings-style panel's tabs, headings, tables and meters (session_chat_claude_panel.rs).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks: Option<Vec<serde_json::Value>>,
 }
 
 /// CDXC:AgentScreenDetection 2026-09-26 WHY: a line that only tells the terminal user which key does what ("shift+tab to approve with this feedback", "ctrl+g to edit in Prompt-editor · <plan file>") has no meaning in the chat card, whose rows and input are the controls.

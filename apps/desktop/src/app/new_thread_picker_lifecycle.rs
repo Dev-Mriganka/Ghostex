@@ -364,6 +364,7 @@ impl GhostexGpuiApp {
     pub(crate) fn close_gpui_new_thread_picker(&mut self, cx: &mut gpui::Context<Self>) {
         self.new_thread_picker_visible = false;
         self.remove_gpui_new_thread_picker_window(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
         self.ensure_gpui_new_thread_picker_preloaded(cx);
     }
 
@@ -375,6 +376,7 @@ impl GhostexGpuiApp {
         self.new_thread_picker_visible = false;
         self.new_thread_picker_window = None;
         self.new_thread_picker = None;
+        self.restore_keyboard_focus_after_app_modal(cx);
         let app = cx.entity();
         cx.defer(move |cx| {
             app.update(cx, |app, cx| {

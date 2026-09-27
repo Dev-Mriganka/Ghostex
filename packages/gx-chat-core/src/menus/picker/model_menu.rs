@@ -325,11 +325,14 @@ pub fn model_menu_rows(
     current: &ModelMenuCurrent,
 ) -> Vec<ModelMenuRow> {
     let favorites_tab = tab == ModelMenuTabId::Favorites;
+    // A row's star is saved under its own value, or under its 1M twin's, which is where a model
+    // starred while it came in 1M only (Opus 5.5 before 2026-09-27) keeps it.
     let is_favorite = |entry: &ModelMenuEntry| {
-        favorites.contains(&model_menu_favorite_key(
-            entry.provider.as_str(),
-            &entry.value,
-        ))
+        std::iter::once(&entry.value)
+            .chain(entry.variants.iter().map(|variant| &variant.value))
+            .any(|value| {
+                favorites.contains(&model_menu_favorite_key(entry.provider.as_str(), value))
+            })
     };
     let pool: Vec<&ModelMenuEntry> = if favorites_tab {
         MODEL_MENU_PROVIDERS
@@ -412,16 +415,31 @@ pub fn model_menu_empty_text(tab: ModelMenuTabId, query: &str) -> String {
     }
 }
 
-/// `modelMenuPickValue`: the value a row is picked with, which is the context window in use when
-/// the row offers it, else the catalog's default twin.
-pub fn model_menu_pick_value(
-    entry: &ModelMenuEntry,
-    current_model: Option<&str>,
-    default_value: Option<&str>,
-) -> String {
-    if entry.variants.is_empty() {
-        return entry.value.clone();
-    }
+/// Whether a model value is the long-context twin of another (`opus[1m]`).
+pub(crate) fn is_long_context_value(value: &str) -> bool {
+    value.ends_with(LONG_CONTEXT_SUFFIX)
+}
+
+/// The standard-context twin a long-context value folds into (`opus[1m]` is `opus`).
+pub(crate) fn standard_context_value(value: &str) -> Option<&str> {
+    value.strip_suffix(LONG_CONTEXT_SUFFIX)
+}
+
+/// The long-context twin of a value (`opus` is `opus[1m]`), whether or not the catalog has it.
+pub(crate) fn long_context_value(value: &str) -> String {
+    format!("{value}{LONG_CONTEXT_SUFFIX}")
+}
+
+/// `modelMenuPickValue`: the value a row is picked with.
+///
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: "when user switches to opus we need to always default to 1M since it's just plain
+/// better". Moving to a model that comes in 200K and 1M from any other model, or from another
+/// agent, starts it on 1M; picking it again while the session already runs it at 200K keeps
+/// 200K, so a deliberate 200K choice is only undone through the Context Window button. This
+/// supersedes carrying the previous model's window over and falling back to the catalog default.
+/// SEE-ALSO: `create_model_picker_request` in request.rs (the quick picker's card).
+pub fn model_menu_pick_value(entry: &ModelMenuEntry, current_model: Option<&str>) -> String {
     if let Some(current) = current_model {
         if entry
             .variants
@@ -431,19 +449,9 @@ pub fn model_menu_pick_value(
             return current.to_string();
         }
     }
-    let long = entry
-        .variants
-        .iter()
-        .find(|variant| variant.value.ends_with(LONG_CONTEXT_SUFFIX));
-    if let (Some(long), Some(current)) = (long, current_model) {
-        if current.ends_with(LONG_CONTEXT_SUFFIX) {
-            return long.value.clone();
-        }
-    }
     entry
         .variants
         .iter()
-        .find(|variant| Some(variant.value.as_str()) == default_value)
-        .map(|variant| variant.value.clone())
-        .unwrap_or_else(|| entry.value.clone())
+        .find(|variant| is_long_context_value(&variant.value))
+        .map_or_else(|| entry.value.clone(), |variant| variant.value.clone())
 }

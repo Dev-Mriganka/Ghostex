@@ -184,6 +184,9 @@ impl NativeChatView {
                             // up once the pointer has left the tile's bounds for it.
                             .invisible()
                             .group_hover(TILE_GROUP, |style| style.visible())
+                            // GPUI hovers every hitbox under the pointer, so over the tile's
+                            // corner a click also reached the tile and opened the viewer.
+                            .block_mouse_except_scroll()
                             .absolute()
                             .top(px(-5.0 * s))
                             .right(px(-5.0 * s))
@@ -196,7 +199,15 @@ impl NativeChatView {
                             .border_1()
                             .border_color(p.input_border)
                             .bg(p.card_background)
-                            .hover(|style| style.visible().bg(p.border))
+                            /*
+                            CDXC:SessionChat 2026-09-27 DECISION:
+                            User: a hovered remove button has a grayish background, never a transparent one. The palette's `border` and `card_background` are see-through washes under window glass, so the gray is the muted tone mixed into the opaque chat background.
+                            */
+                            .hover(|style| {
+                                style
+                                    .visible()
+                                    .bg(p.background.blend(p.muted.opacity(0.35)))
+                            })
                             .child(
                                 gpui::svg()
                                     .path("titlebar/x.svg")

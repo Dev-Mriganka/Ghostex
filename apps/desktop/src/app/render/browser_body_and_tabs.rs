@@ -46,7 +46,9 @@ impl GhostexGpuiApp {
             .min_w_0()
             .min_h_0()
             .overflow_hidden()
-            .bg(chrome_color(0x000000, 0xffffff))
+            // Under window glass an empty or loading page shows the pane's glass; a loaded page
+            // covers it with its own solid view.
+            .bg(glass_clear(chrome_color(0x000000, 0xffffff).into()))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
@@ -122,7 +124,7 @@ impl GhostexGpuiApp {
                 pane_id.0
             ))
             .size_full()
-            .bg(chrome_color(0x000000, 0xffffff))
+            .bg(glass_clear(chrome_color(0x000000, 0xffffff).into()))
             .into_any_element()
     }
 
@@ -144,8 +146,8 @@ impl GhostexGpuiApp {
             .items_center()
             .justify_center()
             .border_1()
-            .border_color(chrome_color(0x1f1f1f, 0xffffff))
-            .bg(chrome_color(0x000000, 0xffffff))
+            .border_color(glass_divider(chrome_color(0x1f1f1f, 0xffffff).into()))
+            .bg(glass_clear(chrome_color(0x000000, 0xffffff).into()))
             .px(px(32.0))
             .child(
                 v_flex()

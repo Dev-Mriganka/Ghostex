@@ -50,6 +50,7 @@ impl NativeChatView {
         self.save_markdown_window.opening = true;
         let pane = self.bounds.get();
         let parent = self.child_window_parent(cx);
+        let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let chat = cx.entity();
         cx.defer(move |cx| {
             let result = main.update(cx, |_, window, cx| {
@@ -66,12 +67,13 @@ impl NativeChatView {
                 window_bounds: Some(WindowBounds::Windowed(bounds)), display_id,
                 app_id: crate::gpui_platform_window_app_id(), icon: crate::gpui_platform_window_icon(),
                 focus: true, show: true, is_resizable: false, is_minimizable: false, is_movable: false, titlebar: None,
-                window_background: gpui::WindowBackgroundAppearance::Transparent,
+                window_background: super::super::child_window::pane_dialog_window_background(glass),
                 ..Default::default()
             }, {
                 let chat = chat.clone();
                 move |window, cx| {
                     super::platform::prepare(window);
+                    super::super::child_window::prepare_pane_dialog_window(window, glass);
                     crate::app::window::attach_gpui_app_modal_window_to_main_window(window, parent);
                     let view = cx.new(|cx| {
                         let mut subscriptions = vec![cx.observe(&chat, |_, _, cx| cx.notify())];

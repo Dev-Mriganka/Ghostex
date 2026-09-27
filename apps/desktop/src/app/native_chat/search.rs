@@ -225,7 +225,8 @@ impl NativeChatView {
                                     .p_0()
                                     .text_size(px(13.0 * s))
                                     .text_color(p.primary)
-                                    .placeholder_color(p.muted.opacity(0.6)),
+                                    .placeholder_color(p.muted.opacity(0.6))
+                                    .caret_color(p.foreground),
                             ),
                         )
                         .when(!label.is_empty(), |this| {

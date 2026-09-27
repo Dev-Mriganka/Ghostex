@@ -734,8 +734,6 @@ impl GhostexGpuiApp {
         window here, so the later `completeFirstLaunchSetup` message finds
         Settings as the live modal and is ignored. Count the switch itself as
         finishing setup, otherwise onboarding reappears on the next launch.
-        Scoped to the Onboarding modal; the old FirstLaunchSetup (kept in the
-        tree under its own id) keeps its previous behaviour unchanged.
         */
         if modal != GpuiAppModalKind::Onboarding
             && self.gpui_app_modal_current_modal(cx) == Some(GpuiAppModalKind::Onboarding)
@@ -932,11 +930,7 @@ impl GhostexGpuiApp {
                         main_window_native_view,
                     );
                 }
-                if matches!(
-                    modal,
-                    GpuiAppModalKind::FirstLaunchSetup | GpuiAppModalKind::Onboarding
-                ) && !sidebar_has_projects
-                {
+                if modal == GpuiAppModalKind::Onboarding && !sidebar_has_projects {
                     /*
                     First-launch setup is required until the sidebar has a
                     project. Reject native close controls and Cmd-W while it
@@ -1097,10 +1091,7 @@ impl GhostexGpuiApp {
         let closed_modal = handle
             .update(cx, |host, _window, _cx| host.current_modal)
             .ok();
-        if matches!(
-            closed_modal,
-            Some(GpuiAppModalKind::FirstLaunchSetup) | Some(GpuiAppModalKind::Onboarding)
-        ) {
+        if closed_modal == Some(GpuiAppModalKind::Onboarding) {
             // Native close is only allowed once the sidebar has a project, so
             // leaving through the window chrome counts as finishing setup.
             self.complete_first_launch_setup();
@@ -1110,7 +1101,7 @@ impl GhostexGpuiApp {
         self.app_modal_window_id.set(None);
         self.app_modal_open_attempt_id = self.app_modal_open_attempt_id.wrapping_add(1);
         self.app_modal_ready_retry_used = false;
-        self.restore_gpui_app_modal_command_return_focus_if_needed(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
         self.resume_deferred_gpui_portless_setup_prompt(cx);
         if closed_modal == Some(GpuiAppModalKind::ExportTranscriptResult) {
             self.pending_export_transcript_reveal_path = None;
@@ -1139,9 +1130,9 @@ impl GhostexGpuiApp {
         // (packages/core-ui/onboarding), the same one the Tips dropdown's "Setup" button and the Quick
         // Access "Setup" command open (titlebar/settings_and_action_state.rs, delayed_send.rs). Only this
         // path adds `"firstRun": true` to the open message: the user decided only the first run ever
-        // applies Browser + Docs as the enabled views, never a reopen from Tips > Setup. The old
-        // FirstLaunchSetup modal stays in the tree, reachable by its `firstLaunchSetup` id ("keep the old
-        // one there might come back to it"), and nothing opens it by default.
+        // applies Browser + Docs as the enabled views, never a reopen from Tips > Setup. The older
+        // first-launch setup modal was deleted on 2026-09-27 (user: "delete old setup one not new one
+        // that's active"), superseding the earlier "keep the old one there" note.
         let modal = GpuiAppModalKind::Onboarding;
         let mut open_message = modal.open_message();
         open_message["firstRun"] = serde_json::Value::Bool(true);
@@ -1165,7 +1156,7 @@ impl GhostexGpuiApp {
             self.clear_lost_gpui_app_modal_window_handle();
             return;
         }
-        self.restore_gpui_app_modal_command_return_focus_if_needed(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
         /*
         CDXC:Portless 2026-08-18:
         A modal dismissed from React takes the window handle here instead of
@@ -1176,24 +1167,28 @@ impl GhostexGpuiApp {
         self.schedule_gpui_app_modal_spare_preload(cx);
     }
 
-    pub(crate) fn restore_gpui_app_modal_command_return_focus_if_needed(
-        &mut self,
-        cx: &mut gpui::Context<Self>,
-    ) -> bool {
-        let Some(target) = self.app_modal_command_return_focus_target.take() else {
-            return false;
-        };
-        if !restore_command_pane_app_modal_return_focus(&mut self.command_pane, target) {
-            return false;
+    /// Gives the keyboard back to the pane that had it once a modal window goes away. Every modal close path ends here: the React modal host, the native modals, Quick Access and the new-thread picker.
+    ///
+    /// CDXC:FocusRouting 2026-09-26 DECISION:
+    /// User: whenever a modal is shown on top of the app, the focus goes back to the last pane that had it when the modal goes away.
+    /// A modal never changes shell focus, so shell focus still names that pane; the keyboard handoff re-focuses whatever it holds (terminal, chat composer, browser page, docs page), because the click that opened the modal (the sidebar, a header button) can have moved the physical focus elsewhere.
+    /// A command terminal captured at open time wins, and a handoff the modal's own action already requested (Quick Access opening a session, a picker launching an agent) is left to run instead of being replaced.
+    pub(crate) fn restore_keyboard_focus_after_app_modal(&mut self, cx: &mut gpui::Context<Self>) {
+        if let Some(target) = self.app_modal_command_return_focus_target.take()
+            && restore_command_pane_app_modal_return_focus(&mut self.command_pane, target)
+        {
+            self.focus_command_pane(cx);
+            self.scroll_command_group_active_tab(target.group_id);
+            self.scroll_focused_command_active_tab();
+            self.persist_shell_layout_state();
+            self.refresh_sidebar_command_pane_sessions_if_changed(cx);
+            cx.notify();
+            return;
         }
-
-        self.focus_command_pane(cx);
-        self.scroll_command_group_active_tab(target.group_id);
-        self.scroll_focused_command_active_tab();
-        self.persist_shell_layout_state();
-        self.refresh_sidebar_command_pane_sessions_if_changed(cx);
-        cx.notify();
-        true
+        if self.pending_keyboard_handoff.is_none() {
+            self.request_keyboard_handoff_for_shell_focus(cx);
+            self.pending_keyboard_handoff_returns_from_modal = true;
+        }
     }
 
     pub(crate) fn sync_gpui_ghostty_config_file_after_settings_save(

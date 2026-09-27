@@ -1013,17 +1013,6 @@ html:has(body.app-modal-host-native-window-body) {
  * stays here.
  */
 
-/*
- * CDXC:Sessions 2026-06-30-16:08:
- * First Message is measured once for a native fit-height child window, so the
- * textarea's own minimum height defines the dialog instead of a percentage of
- * the WebView viewport.
- */
-.first-user-message-textarea {
-  min-height: 220px;
-  resize: none;
-}
-
 .hotkeys-modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -3109,34 +3098,6 @@ html:has(body.app-modal-host-native-window-body) {
   flex: 0 0 auto;
 }
 
-.add-repository-modal-shadcn {
-  /**
-   * CDXC:AddProject 2026-05-29-11:45:
-   * Clone Repository copies Rename Session's compact modal chrome, with a
-   * slightly wider body for the folder picker row and inline clone errors.
-   *
-   * CDXC:AddProject 2026-06-24-10:35:
-   * Clone Repository must keep repository, folder, new-folder, branch, option,
-   * and inline error rows in normal vertical flow. It reuses Rename Session
-   * chrome, but its multi-field form must not inherit Rename Session's
-   * first-field flex growth because that can collapse the repository field and
-   * overlap the following folder label when validation text is visible.
-   */
-  max-width: min(560px, calc(100vw - 2rem));
-}
-
-.app-modal-host-native-window-body .add-repository-modal-shadcn .session-rename-field-group {
-  overflow-y: visible;
-}
-
-.app-modal-host-native-window-body
-  .add-repository-modal-shadcn
-  .session-rename-field-group
-  > [data-slot='field']:first-child {
-  flex: 0 0 auto;
-  min-height: auto;
-}
-
 .worktree-create-modal-shadcn {
   /*
    * CDXC:Worktrees 2026-06-12-11:10:
@@ -3712,117 +3673,6 @@ html:has(body.app-modal-host-native-window-body) {
 
 .session-rename-field-group {
   gap: 16px;
-}
-
-.add-repository-folder-row {
-  align-items: center;
-  display: flex;
-  gap: 10px;
-}
-
-.add-repository-folder-row [data-slot='input'] {
-  min-width: 0;
-}
-
-.add-repository-options-row {
-  /*
-   * CDXC:AddProject 2026-06-01-10:28:
-   * Clone scope controls should be visible together in one row under the folder
-   * chooser, unchecked by default, without competing with the primary Clone &
-   * Add action. Keep the layout compact and allow labels to shrink before they
-   * can push the modal wider than its shell.
-   */
-  align-items: center;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.add-repository-option {
-  align-items: center;
-  color: color-mix(in srgb, var(--foreground) 88%, var(--muted-foreground) 12%);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 13px;
-  gap: 7px;
-  line-height: 1.35;
-  min-width: 0;
-}
-
-.add-repository-option-checkbox {
-  appearance: none;
-  background: color-mix(in srgb, var(--input) 30%, transparent);
-  border: 1px solid var(--input);
-  border-radius: 0;
-  flex: none;
-  height: 16px;
-  margin: 0;
-  position: relative;
-  width: 16px;
-}
-
-.add-repository-option-checkbox:checked {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-
-.add-repository-option-checkbox:checked::after {
-  border: solid var(--primary-foreground);
-  border-width: 0 2px 2px 0;
-  content: '';
-  height: 8px;
-  left: 5px;
-  position: absolute;
-  top: 2px;
-  transform: rotate(45deg);
-  width: 4px;
-}
-
-.add-repository-option-checkbox:disabled {
-  opacity: 0.55;
-}
-
-.add-repository-option-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.add-repository-option-info {
-  align-items: center;
-  color: color-mix(in srgb, var(--muted-foreground) 82%, var(--foreground) 18%);
-  cursor: help;
-  display: inline-flex;
-  flex: none;
-  justify-content: center;
-}
-
-.add-repository-option-info:hover,
-.add-repository-option-info:focus-visible {
-  color: var(--foreground);
-}
-
-.add-repository-error {
-  background: color-mix(in srgb, var(--destructive) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--destructive) 38%, transparent);
-  border-radius: 0;
-  color: color-mix(in srgb, var(--destructive) 82%, var(--foreground) 18%);
-  font-size: 13px;
-  line-height: 1.45;
-  padding: 10px 12px;
-  white-space: pre-wrap;
-}
-
-.add-repository-warning {
-  background: color-mix(in srgb, #f59e0b 13%, transparent);
-  border: 1px solid color-mix(in srgb, #f59e0b 42%, transparent);
-  border-radius: 0;
-  color: color-mix(in srgb, #fbbf24 78%, var(--foreground) 22%);
-  font-size: 13px;
-  line-height: 1.45;
-  padding: 10px 12px;
-  white-space: pre-wrap;
 }
 
 .session-rename-modal-shadcn [data-slot='textarea'] {
@@ -5321,35 +5171,6 @@ and error text instead of the muted description tone.
 }
 
 /*
- * CDXC:RemoteMachines 2026-06-24-21:09:
- * Worktree Add Project should sit at the top of the native child window instead
- * of vertically centering in the available panel. Keep the command surface inset
- * equally from the top, left, and right, and give the path input visible inline
- * text padding while preserving its existing action-button reserve.
- */
-.remote-project-picker-dialog {
-  --remote-project-picker-window-inset: 12px;
-  --remote-project-picker-input-inline-padding: 12px;
-  max-width: calc(
-    100% - var(--remote-project-picker-window-inset) - var(--remote-project-picker-window-inset)
-  ) !important;
-  top: var(--remote-project-picker-window-inset) !important;
-  translate: -50% 0 !important;
-  width: min(
-    42rem,
-    calc(100% - var(--remote-project-picker-window-inset) - var(--remote-project-picker-window-inset))
-  ) !important;
-}
-
-.remote-project-picker-dialog .remote-project-picker-input[data-slot='command-input'] {
-  padding-left: var(--remote-project-picker-input-inline-padding);
-}
-
-.remote-project-picker-dialog .remote-project-picker-input[data-slot='command-input']:not(.pr-20):not(.pr-36) {
-  padding-right: var(--remote-project-picker-input-inline-padding);
-}
-
-/*
  * CDXC:AppModal 2026-07-01-01:19:
  * Compact native child-window modals are measured once before AppKit presents
  * them, so user edits after open must not grow the React shell beyond the
@@ -5373,18 +5194,8 @@ and error text instead of the muted description tone.
   resize: none;
 }
 
-.app-modal-host-native-window-body[data-app-modal-fit-height='true'] .first-user-message-textarea {
-  height: min(320px, 48vh);
-  max-height: min(320px, 48vh);
-  overflow-y: auto;
-  resize: none;
-}
-
 .app-modal-host-native-window-body[data-app-modal-fit-height='true']
   .worktree-create-modal-shadcn
-  .session-rename-field-group,
-.app-modal-host-native-window-body[data-app-modal-fit-height='true']
-  .add-repository-modal-shadcn
   .session-rename-field-group,
 .app-modal-host-native-window-body[data-app-modal-fit-height='true']
   .agent-config-modal-shadcn
@@ -5393,13 +5204,6 @@ and error text instead of the muted description tone.
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 2px;
-}
-
-.app-modal-host-native-window-body[data-app-modal-fit-height='true'] .add-repository-error,
-.app-modal-host-native-window-body[data-app-modal-fit-height='true'] .add-repository-warning {
-  max-height: min(160px, 24vh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .app-modal-host-native-window-body[data-app-modal-fit-height='true'] .previous-sessions-modal-body,
@@ -5413,12 +5217,6 @@ and error text instead of the muted description tone.
 
 .app-modal-host-native-window-body[data-app-modal-fit-height='true'] .previous-sessions-modal-body {
   max-height: min(476px, calc(100vh - 92px));
-}
-
-.app-modal-host-native-window-body[data-app-modal-fit-height='true']
-  .remote-project-picker-dialog
-  [data-slot='command-list'] {
-  max-height: min(28rem, calc(100vh - 72px)) !important;
 }
 
 /*
@@ -5509,7 +5307,6 @@ and error text instead of the muted description tone.
 .app-modal-host-native-window-body[data-app-modal-fixed-window='true'] .confirm-modal,
 .app-modal-host-native-window-body[data-app-modal-fixed-window='true'] .session-rename-modal-shadcn,
 .app-modal-host-native-window-body[data-app-modal-fixed-window='true'] .worktree-create-modal-shadcn,
-.app-modal-host-native-window-body[data-app-modal-fixed-window='true'] .add-repository-modal-shadcn,
 .app-modal-host-native-window-body[data-app-modal-fixed-window='true'] .agent-config-modal-shadcn {
   max-height: 100vh;
   overflow-y: auto;
@@ -5523,9 +5320,7 @@ and error text instead of the muted description tone.
  * Message viewer, which is sized by the fit-height rule above.
  */
 .app-modal-host-native-window-body[data-app-modal-fixed-window='true']
-  [data-slot='textarea']:not(.git-commit-modal-textarea):not(.ghostex-stashed-prompt-editor-textarea):not(
-    .first-user-message-textarea
-  ) {
+  [data-slot='textarea']:not(.git-commit-modal-textarea):not(.ghostex-stashed-prompt-editor-textarea) {
   max-height: min(220px, 42vh);
   overflow-y: auto;
   resize: none;

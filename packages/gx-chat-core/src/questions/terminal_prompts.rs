@@ -64,11 +64,38 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
     User: always show the exit action at the bottom beside the other buttons for /usage and similar
     agent dialogs, so leaving them never requires switching to the terminal.
     */
-    let visible_actions = dialog
-        .actions
-        .iter()
-        .filter(|action| dialog.input.as_deref() != Some("text") || action.as_str() != "confirm");
-    let cancel_label = if dialog.footer.to_lowercase().contains("esc to clear") {
+    let side_question = dialog
+        .side_question
+        .as_ref()
+        .map(side_question_presentation);
+    let blocks = dialog.blocks.as_deref().unwrap_or_default();
+    let tab_strip = blocks.iter().find(|block| block["type"] == "tabs");
+    let visible_actions = dialog.actions.iter().filter(|action| {
+        let action = action.as_str();
+        if dialog.input.as_deref() == Some("text") && action == "confirm" {
+            return false;
+        }
+        // The side question card offers exactly what its panel's hint line does: fork and close.
+        if let Some(card) = &side_question {
+            return action == "cancel" || (action == "fork" && card["canFork"] == true);
+        }
+        // Tabs are clicked directly, and a tab page with nothing to move through drops the arrows.
+        if !blocks.is_empty() {
+            if tab_strip.is_some() && matches!(action, "left" | "right") {
+                return false;
+            }
+            if dialog.input.is_none()
+                && !dialog.footer.contains("↑/↓")
+                && matches!(action, "up" | "down")
+            {
+                return false;
+            }
+        }
+        true
+    });
+    let cancel_label = if side_question.is_some() || !blocks.is_empty() {
+        "Close"
+    } else if dialog.footer.to_lowercase().contains("esc to clear") {
         "Clear / Back"
     } else if dialog.footer.contains("go back") {
         "Back"
@@ -81,6 +108,8 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
         .map(|action| {
             let label = if action == "cancel" {
                 cancel_label.to_string()
+            } else if action == "fork" {
+                "Fork".to_string()
             } else if action == "confirm" && dialog.footer.contains("set as default") {
                 "Set as default".to_string()
             } else {
@@ -97,6 +126,27 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
         "cancelLabel": cancel_label,
         "actions": actions,
         "copy": terminal_dialog_copy(dialog),
+        "sideQuestion": side_question,
+        "blocks": (!blocks.is_empty()).then_some(blocks),
+        "title": tab_strip.and_then(|strip| strip["title"].as_str()),
+    })
+}
+
+/// The side question card: the question, the answer as Markdown for the renderer and as the raw
+/// text Copy puts on the clipboard, and whether Claude is still answering.
+fn side_question_presentation(side_question: &Value) -> Value {
+    let answer = side_question["answer"].as_str().unwrap_or_default();
+    let complete = side_question["complete"] == true;
+    let markdown = crate::transcript::native_markdown::native_markdown(answer, false);
+    json!({
+        "question": side_question["question"],
+        "questionTruncated": side_question["questionTruncated"] == true,
+        "answer": answer,
+        "answerReferences": crate::transcript::markdown_links::markdown_references(&markdown),
+        "answerMarkdown": markdown,
+        "answering": side_question["answering"] == true,
+        "complete": complete,
+        "canFork": complete && side_question["canFork"] == true,
     })
 }
 

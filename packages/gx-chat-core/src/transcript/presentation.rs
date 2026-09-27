@@ -198,6 +198,10 @@ pub fn project_message(
         Value::Array(images.iter().map(image_source).collect()),
     );
     projected.insert("suppressed".to_string(), suppressed);
+    projected.insert(
+        "sideQuestion".to_string(),
+        crate::transcript::side_question::side_question_presentation(message),
+    );
     /* The expanded subagent-message card renders its body as Markdown, so it needs the same marks
     and reference links the turn's own body gets; the collapsed clamp keeps the raw text React
     clamps. */

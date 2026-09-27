@@ -632,6 +632,23 @@ pub(crate) fn glass_clear(color: Hsla) -> Hsla {
     }
 }
 
+/// A card that sits on a page's glass (a placeholder's card, badge or button), under window glass:
+/// the same flat ink wash as the paused view card (`view_card_frame`), so it reads as a lighter
+/// pane on the glass instead of a solid slab. `strength` scales the wash for raised controls on the
+/// card. The opaque window keeps the given colour.
+pub(crate) fn glass_card(color: Hsla, strength: f32) -> Hsla {
+    if window_glass_active() {
+        let base = if chrome_uses_light_appearance() {
+            0.04
+        } else {
+            0.06
+        };
+        Hsla::from(chrome_ink()).opacity(base * strength)
+    } else {
+        color
+    }
+}
+
 /// CDXC:Theming 2026-09-23 DECISION:
 /// User picked "23a": under window glass the divider lines stay, but as faint see-through 1px lines like the chat composer's border (the chrome ink at 8%), instead of solid dark or light grey lines that read as grooves cut into the glass. Pane borders, resize rails, the sidebar edge and the command pane's edges all take it; focus and attention outlines and the resize hover highlight keep their colours. The opaque window keeps the given colour.
 pub(crate) fn glass_divider(color: Hsla) -> Hsla {

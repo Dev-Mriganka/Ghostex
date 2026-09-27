@@ -250,6 +250,8 @@ fn main() {
         cef::register_windows_shutdown(cx);
         gpui_component::init(cx);
         ui_fonts::register(cx);
+        crate::app::window::frosted_host::register_frosted_tooltip_root_plugin(cx);
+        crate::app::window::modal_popover_host::install_frosted_modal_popover_host();
         apply_gpui_component_theme(cx);
         #[cfg(target_os = "macos")]
         {
@@ -532,6 +534,7 @@ fn main() {
                             */
                             #[cfg(target_os = "macos")]
                             cef::refresh_sidebar_pointer_inside();
+                            app.close_native_app_modal_clicked_away(cx);
                         }
                     })
                     .detach();

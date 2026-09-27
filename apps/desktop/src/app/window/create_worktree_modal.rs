@@ -1238,6 +1238,9 @@ impl GpuiCreateWorktreeModalWindow {
 
     fn render_menu(&self, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
         let p = self.palette;
+        if !self.agent_select.open {
+            hide_hosted_modal_popover(AGENT_MENU_ID, window, cx);
+        }
         match self.open_menu()? {
             OpenMenu::Existing => {
                 let (rows, _) = self.visible_existing_rows(cx);
@@ -1271,7 +1274,32 @@ impl GpuiCreateWorktreeModalWindow {
                     cx,
                 )
             }
-            OpenMenu::Agent => self.render_agent_menu(cx),
+            OpenMenu::Agent => {
+                // Under window glass the list draws in a frosted window of its own (see
+                // `hosted_modal_select_menu`); otherwise inside the dialog, over its trigger.
+                let items = self
+                    .command_agents()
+                    .iter()
+                    .map(|agent| agent.name.clone())
+                    .collect::<Vec<_>>();
+                if let Some(trigger) = self.agent_select.trigger_bounds.get()
+                    && let Some(menu) = hosted_modal_select_menu(
+                        &p,
+                        &self.agent_select,
+                        AGENT_MENU_ID,
+                        &items,
+                        self.selected_agent_index(),
+                        trigger,
+                        |this: &mut Self, index, window, cx| this.choose_agent(index, window, cx),
+                        |this: &mut Self, window, cx| this.dismiss_menus(window, cx),
+                        window,
+                        cx,
+                    )
+                {
+                    return Some(menu);
+                }
+                self.render_agent_menu(cx)
+            }
         }
     }
 
@@ -1375,6 +1403,9 @@ impl GpuiCreateWorktreeModalWindow {
         )
     }
 }
+
+/// The agent dropdown's popover id.
+const AGENT_MENU_ID: &str = "create-worktree-agent-menu";
 
 impl Render for GpuiCreateWorktreeModalWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

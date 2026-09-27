@@ -184,13 +184,8 @@ impl GhostexGpuiApp {
 }
 
 impl GhostexGpuiApp {
-    /// The page has no command pane to give focus back to.
-    pub(crate) fn restore_gpui_app_modal_command_return_focus_if_needed(
-        &mut self,
-        _cx: &mut Context<Self>,
-    ) -> bool {
-        false
-    }
+    /// The page has one pane and no keyboard handoff to re-run; the page keeps its own focus when Quick Access closes.
+    pub(crate) fn restore_keyboard_focus_after_app_modal(&mut self, _cx: &mut Context<Self>) {}
 
     /// Open In needs a folder on this computer; the page has none.
     pub(crate) fn active_project_open_in_path(&self) -> Option<std::path::PathBuf> {

@@ -1,7 +1,7 @@
 {
   "_readme": "Do not edit blind. docs/important/agent-model-catalog.md explains the schema, how every Ghostex client loads this file from GitHub (with the bundled copy as the offline source), how to publish a change, and how to re-collect models, efforts and fast mode from the agent CLIs' own /model pickers.",
   "schemaVersion": 1,
-  "updatedAt": "2026-09-26T19:53:59Z",
+  "updatedAt": "2026-09-27T02:05:18Z",
   "effortLabels": {
     "none": "None",
     "minimal": "Minimal",
@@ -16,7 +16,7 @@
   "agents": {
     "claude": {
       "name": "Claude Code",
-      "cliVersion": "2.1.283",
+      "cliVersion": "2.1.282",
       "modelCommand": "/model <value>",
       "effortCommand": "/effort <value>",
       "efforts": ["low", "medium", "high", "xhigh", "max", "ultracode"],
@@ -36,18 +36,19 @@
           "fastMode": false
         },
         {
+          "value": "opus",
+          "label": "Opus 5.5",
+          "description": "Best for everyday, complex tasks",
+          "fastMode": true,
+          "quickPickerHidden": true,
+          "notes": "The 200K twin of opus[1m]. The model menu folds the two into one Opus 5.5 row with a 200K / 1M Context Window choice, and the quick picker shows the opus[1m] card only (it keeps a session already on 200K there)."
+        },
+        {
           "value": "opus[1m]",
           "label": "Opus 5.5",
           "pickerLabel": "Opus (1M context)",
           "description": "Best for everyday, complex tasks, with a 1M-token context window",
           "default": true,
-          "fastMode": true
-        },
-        {
-          "value": "opus",
-          "label": "Opus 5.5",
-          "description": "Most capable for ambitious work",
-          "quickPickerHidden": true,
           "fastMode": true
         },
         {
@@ -67,7 +68,7 @@
           "notes": "The /model picker shows its effort row for every model, but Haiku 4.5 has no effort tiers, so none are offered."
         }
       ],
-      "notes": "Re-read from the 2.1.283 /model picker on 2026-09-26: Default (recommended), Opus 5.5, Fable 5.1, Sonnet 5, Haiku 4.5, then older versions (Opus 5, Fable 5, Opus 4.8, 4.7, 4.6, Sonnet 4.6). Its Opus 5.5 row is the 200K `opus`, and no row offers 1M any more: `opus[1m]` is reachable only through `claude --model opus[1m]` or `/model opus[1m]`, which saves it as the default. The catalog keeps `opus[1m]` as the default row and lists `opus` as its hidden twin, so the menu shows one Opus 5.5 row with a 200K/1M Context Window choice and a session on either size can change its effort (user decision 2026-09-26). The older versions are not listed. Quick picker cards use the full versioned labels (no quickPickerLabel): the user asked that Claude models always show their version in the quick picker and the composer."
+      "notes": "Re-read from the 2.1.282 /model picker on 2026-09-27: Default (recommended) / Opus 5.5 (200K), Fable 5.1, Sonnet 5, Haiku 4.5, then older models (Opus 5, Fable 5, Opus 4.8, 4.7, 4.6, Sonnet 4.6) and Opus (1M context). Opus 5.5 is listed twice, `opus` (200K) and `opus[1m]` (1M), which the model menu folds into one row with a Context Window choice; picking Opus 5.5 from another model starts on 1M. The older models are not listed, and neither are sonnet[1m] and fable[1m], which `claude --model` accepts but the picker never offers. Quick picker cards use the full versioned labels (no quickPickerLabel): the user asked that Claude models always show their version in the quick picker and the composer."
     },
     "codex": {
       "name": "Codex CLI",

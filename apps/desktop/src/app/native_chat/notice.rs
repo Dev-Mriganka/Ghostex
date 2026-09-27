@@ -46,13 +46,20 @@ impl NativeChatView {
                 .as_array()
                 .is_some_and(Vec::is_empty)
         {
+            if notice["dialog"]["presentation"]["sideQuestion"].is_object() {
+                self.terminal_dialog_input = None;
+                return Some(self.side_question_card(notice, p, window, cx));
+            }
             let (body, actions) = self.render_terminal_dialog(&notice["dialog"], p, window, cx);
             let copy_title = text(&notice["dialog"]["presentation"]["copy"], "title");
+            let panel_title = text(&notice["dialog"]["presentation"], "title");
             return Some(self.status_card(
-                if copy_title.is_empty() {
-                    text(&notice["dialog"], "title")
-                } else {
+                if !copy_title.is_empty() {
                     copy_title
+                } else if !panel_title.is_empty() {
+                    panel_title
+                } else {
+                    text(&notice["dialog"], "title")
                 },
                 "titlebar/terminal-2.svg",
                 body,
@@ -83,12 +90,12 @@ impl NativeChatView {
             } else {
                 choices.len()
             };
-            let secondary = notice["secondaryChoice"]
-                .as_u64()
-                .map(|index| index as usize);
-            for (index, choice) in choices.iter().take(count).enumerate() {
-                let shortcut = if self.snapshot["showShortcutLabels"] != false {
-                    if index == 0 {
+            let secondary = notice["secondaryChoice"].as_u64().map(|index| index as usize);
+            let shortcuts: Vec<Option<String>> = (0..count.min(choices.len()))
+                .map(|index| {
+                    if self.snapshot["showShortcutLabels"] == false {
+                        None
+                    } else if index == 0 {
                         Some(
                             if cfg!(target_os = "macos") {
                                 "⌘Enter"
@@ -102,9 +109,33 @@ impl NativeChatView {
                     } else {
                         None
                     }
-                } else {
-                    None
-                };
+                })
+                .collect();
+            /*
+            CDXC:SessionChat 2026-09-27 DECISION:
+            User: when a notice card's choices do not fit side by side, "make buttons appear full width and on top of each other", for every card like the model switch confirmation.
+            Each collapsed button starts at the width the widest label needs on one line and the row wraps, so the buttons share the row in equal halves only when every label fits whole, and otherwise stack full width; only a label wider than the whole card is still cut with an ellipsis.
+            SEE-ALSO: apps/mobile/app/src/chat/native/cards/NoticeCard.tsx
+            */
+            let basis = collapsed.then(|| {
+                choices
+                    .iter()
+                    .take(count)
+                    .zip(&shortcuts)
+                    .map(|(choice, shortcut)| {
+                        Self::choice_row_width(
+                            &text(choice, "collapsedLabel"),
+                            shortcut.as_deref(),
+                            p,
+                            window,
+                        )
+                    })
+                    .fold(0.0_f32, f32::max)
+            });
+            if collapsed {
+                rows = rows.flex_wrap();
+            }
+            for (choice, shortcut) in choices.iter().take(count).zip(shortcuts) {
                 // CDXC:SessionChat 2026-09-26 DECISION:
                 // User: a notice card's choice must never wrap onto 2 lines; truncate it with "..." and show the whole label on hover.
                 // SEE-ALSO: apps/mobile/app/src/chat/native/cards/NoticeCard.tsx, where pressing and holding the choice stands in for hover.
@@ -124,7 +155,7 @@ impl NativeChatView {
                 rows = rows.child(
                     div()
                         .min_w_0()
-                        .when(collapsed, |row| row.flex_1())
+                        .when_some(basis, |row, basis| row.flex_grow(1.0).flex_basis(px(basis)))
                         .child(row),
                 );
             }
@@ -341,6 +372,7 @@ impl NativeChatView {
             )
             .child(
                 div()
+                    .min_w_0()
                     .flex_1()
                     .text_color(p.foreground)
                     .child(text(notice, "title")),
@@ -372,7 +404,8 @@ impl NativeChatView {
                             })
                             .size(px(14.0 * p.scale))
                             .mt(px(4.0 * p.scale))
-                            .text_color(p.muted),
+                            .text_color(p.muted)
+                            .flex_shrink_0(),
                     )
                     .on_click(cx.listener(move |this, _, _, cx| {
                         if !this.expanded.remove(&key) {

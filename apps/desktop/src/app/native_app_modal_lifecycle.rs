@@ -13,8 +13,23 @@ use crate::app::window::*;
 use crate::*;
 use gpui::{AnyEntity, WindowHandle};
 use gpui_component::Root;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+
+/// Native dialogs that close when the user clicks back into the main window.
+///
+/// CDXC:AppModal 2026-09-27 DECISION:
+/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Those three run in the React modal host, which keeps its current behaviour.
+/// Only dialogs where closing is a plain cancel of a short action are listed. Dialogs that hold typed work (Session Note, Delayed Send, Add Worktree, the space editor), run a flow (Remote Setup, gxserver install, Portless setup), cancel a running export when closed (Export Transcript) or open on their own and need an answer (Update Available, Missing Project Folder, Agent Hooks Required) stay open. Quick Access, the new-thread picker, Browser History and the Markdown and Mermaid viewers already close when they lose focus.
+/// "Clicking away" means the main window becoming key again; switching to another app (to copy a name or a token) never closes a dialog.
+fn native_app_modal_closes_when_clicked_away(kind: GpuiAppModalKind) -> bool {
+    matches!(
+        kind,
+        GpuiAppModalKind::RenameSession
+            | GpuiAppModalKind::RenameWorktree
+            | GpuiAppModalKind::DeleteWorktree
+    )
+}
 
 pub(crate) struct NativeAppModal {
     pub(crate) kind: GpuiAppModalKind,
@@ -80,6 +95,8 @@ impl GhostexGpuiApp {
         };
         let view_slot: Rc<RefCell<Option<AnyEntity>>> = Rc::new(RefCell::new(None));
         let view_out = view_slot.clone();
+        let was_key = Rc::new(Cell::new(false));
+        self.native_app_modal_was_key = was_key.clone();
         let window_border = self.gpui_native_modal_palette().window_border();
         let window = cx
             .open_window(options, move |window, cx| {
@@ -93,7 +110,16 @@ impl GhostexGpuiApp {
                 window.activate_window();
                 let view = build(window, cx);
                 *view_out.borrow_mut() = Some(view.clone().into_any());
-                cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
+                cx.new(|cx| {
+                    // The modal opens activated from a spawned task, and a dialog opened from a context menu can see the main window turn key for a moment first; only a dialog that has been key closes on click-away.
+                    cx.observe_window_activation(window, move |_, window, _| {
+                        if window.is_window_active() {
+                            was_key.set(true);
+                        }
+                    })
+                    .detach();
+                    Root::new(view, window, cx).bg(gpui::transparent_black())
+                })
             })
             .ok();
         let view = view_slot.borrow_mut().take();
@@ -101,6 +127,17 @@ impl GhostexGpuiApp {
             (Some(window), Some(view)) => Some(NativeAppModal { kind, window, view }),
             _ => None,
         };
+    }
+
+    /// The main window became key again: a click landed back in it while a native dialog was open.
+    pub(crate) fn close_native_app_modal_clicked_away(&mut self, cx: &mut gpui::Context<Self>) {
+        if self
+            .native_app_modal_kind()
+            .is_some_and(native_app_modal_closes_when_clicked_away)
+            && self.native_app_modal_was_key.get()
+        {
+            self.close_native_app_modal_from_bridge(cx);
+        }
     }
 
     pub(crate) fn native_app_modal_kind(&self) -> Option<GpuiAppModalKind> {
@@ -172,6 +209,19 @@ impl GhostexGpuiApp {
             | GpuiAppModalKind::PreviousSessions
             | GpuiAppModalKind::StashedPrompts => {
                 self.open_gpui_quick_access_modal(kind, open_message, cx);
+            }
+            // CDXC:AppModal 2026-09-27 DECISION:
+            // User: "i want the easier to move to gpui ones to actually be switched now" (Browser History, the
+            // Markdown table popup and the Mermaid diagram popup; Settings and Agents Hub stay React for later).
+            // Their React dialogs were deleted, so these kinds must not fall back to the modal host.
+            GpuiAppModalKind::BrowserHistory => {
+                self.open_gpui_browser_history_modal(open_message, cx);
+            }
+            GpuiAppModalKind::MarkdownTable => {
+                self.open_gpui_markdown_table_modal(open_message, cx);
+            }
+            GpuiAppModalKind::MermaidDiagram => {
+                self.open_gpui_mermaid_diagram_modal(open_message, cx);
             }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.
             _ => return false,
@@ -261,7 +311,7 @@ impl GhostexGpuiApp {
     }
 
     /// Drops the handle after a native modal removed its own window and gives
-    /// the command pane its focus back, the way the React host's close does.
+    /// the last focused pane its keyboard back, the way the React host's close does.
     pub(crate) fn release_native_app_modal_window(
         &mut self,
         kind: GpuiAppModalKind,
@@ -271,14 +321,14 @@ impl GhostexGpuiApp {
             return;
         }
         self.native_app_modal = None;
-        self.restore_gpui_app_modal_command_return_focus_if_needed(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
         self.resume_deferred_gpui_portless_setup_prompt(cx);
     }
 
     /// The app's `close` bridge message (`close_app_modal_from_bridge`, sent by the
     /// store; the sidebar runtime sent it until 2026-09-25) for a modal that is native
     /// now (a relocated project folder, a finished flow): remove the window and
-    /// give the command pane its focus back like the React host's close did.
+    /// give the last focused pane its keyboard back like the React host's close did.
     pub(crate) fn close_native_app_modal_from_bridge(
         &mut self,
         cx: &mut gpui::Context<Self>,
@@ -289,7 +339,7 @@ impl GhostexGpuiApp {
         let return_focus_target = self.app_modal_command_return_focus_target;
         self.remove_native_app_modal_window(cx);
         self.app_modal_command_return_focus_target = return_focus_target;
-        self.restore_gpui_app_modal_command_return_focus_if_needed(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
         self.resume_deferred_gpui_portless_setup_prompt(cx);
         true
     }

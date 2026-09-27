@@ -232,11 +232,15 @@ fn canonical_chord(chord: &str) -> Result<String, String> {
         };
         present[index] = true;
     }
-    let printable = key.chars().count() == 1 || key == "space";
-    let only_shift = present == [false, false, false, true];
-    if printable && (present == [false; 4] || only_shift) {
+    // Mirrors `gpui_keystroke_from_shared_hotkey`: only Escape and F1-F24 bind without Cmd, Ctrl or Alt.
+    let non_typing_key = key == "escape"
+        || key
+            .strip_prefix('f')
+            .and_then(|number| number.parse::<u8>().ok())
+            .is_some_and(|number| (1..=24).contains(&number));
+    if !non_typing_key && !present[..3].contains(&true) {
         return Err(format!(
-            "\"{chord}\" would stop that key from typing; add cmd, ctrl or alt"
+            "\"{chord}\" needs cmd, ctrl or alt; only escape and f1-f24 can go without"
         ));
     }
     let mut parts: Vec<&str> = MODIFIER_ORDER

@@ -51,6 +51,7 @@ impl GhostexGpuiApp {
             }),
         );
         self.pending_keyboard_handoff = Some(request);
+        self.pending_keyboard_handoff_returns_from_modal = false;
     }
 
     /// Ask for the keyboard to follow the current shell focus. The occupant is resolved when the handoff runs, not now, so a pane that is still mounting or a chat page that is still loading is waited for rather than skipped.
@@ -361,6 +362,17 @@ impl GhostexGpuiApp {
         ShellKeyboardOwner::TerminalMounting
     }
 
+    /// Whether a GPUI text field of the main window's own chrome holds the keyboard.
+    fn main_window_text_field_owns_focus(&self, window: &Window, cx: &gpui::App) -> bool {
+        self.native_sidebar_input_owns_focus(window, cx)
+            || self.terminal_search_input_owns_keyboard_focus(window, cx)
+            || self.browser_find_input_owns_keyboard_focus(window, cx)
+            || self
+                .browser_address_inputs
+                .values()
+                .any(|input| input.read(cx).focus_handle(cx).is_focused(window))
+    }
+
     /// The render-time handoff. Runs once per request: it is dropped when shell focus moved or the requested tab is no longer in front, kept while the occupant is still mounting or loading, and executed exactly once otherwise.
     pub(crate) fn drain_pending_keyboard_handoff(
         &mut self,
@@ -376,6 +388,16 @@ impl GhostexGpuiApp {
         // arrived, focusing that surface under the dialog: typing into Add Worktree went nowhere
         // until the pane was hidden. It waits for the dialog to close, then lands as it would have.
         if self.native_app_modal.is_some() || self.app_modal_window.is_some() {
+            return;
+        }
+        /*
+        CDXC:FocusRouting 2026-09-26 WHY:
+        Quick Access and the new-thread picker close when they lose activation, through the same path as Escape. A click into a main-window text field (sidebar rename, terminal search, browser find or address bar) dismisses them, and the modal's return handoff must not pull the keyboard back out of that field.
+        */
+        if std::mem::take(&mut self.pending_keyboard_handoff_returns_from_modal)
+            && self.main_window_text_field_owns_focus(window, cx)
+        {
+            self.pending_keyboard_handoff = None;
             return;
         }
         if pending.target != self.shell_focus {

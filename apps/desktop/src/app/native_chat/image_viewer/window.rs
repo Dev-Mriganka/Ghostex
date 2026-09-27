@@ -38,6 +38,11 @@ pub(super) struct ImageViewerWindow {
     /// The picture measured last and its own pixel size, so a resize or a zoom step does not read
     /// the same header again. One entry: the viewer paints one picture at a time.
     pub(super) measured: Option<(u64, Option<gpui::Size<gpui::Pixels>>)>,
+    pub(super) scroll: gpui::ScrollHandle,
+    pub(super) press: Option<super::pan::PicturePress>,
+    pub(super) zoom_anchor: Option<super::pan::ZoomAnchor>,
+    /// The size the picture was painted at last, when it is known.
+    pub(super) painted: Option<gpui::Size<gpui::Pixels>>,
     _subscription: Subscription,
 }
 
@@ -133,6 +138,7 @@ impl NativeChatView {
         self.image_viewer.opening = true;
         let pane = self.bounds.get();
         let parent = self.child_window_parent(cx);
+        let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let chat = cx.entity();
         cx.defer(move |cx| {
             let result = main
@@ -170,7 +176,8 @@ impl NativeChatView {
                             is_minimizable: false,
                             is_movable: false,
                             titlebar: None,
-                            window_background: gpui::WindowBackgroundAppearance::Transparent,
+                            window_background:
+                                super::super::child_window::pane_dialog_window_background(glass),
                             ..Default::default()
                         },
                         {
@@ -178,6 +185,9 @@ impl NativeChatView {
                             move |window, cx| {
                                 crate::app::window::popup_frame::strip_gpui_popup_window_frame(
                                     window,
+                                );
+                                super::super::child_window::prepare_pane_dialog_window(
+                                    window, glass,
                                 );
                                 crate::app::window::attach_gpui_app_modal_window_to_main_window(
                                     window, parent,
@@ -200,6 +210,10 @@ impl NativeChatView {
                                         chat,
                                         focus,
                                         measured: None,
+                                        scroll: gpui::ScrollHandle::new(),
+                                        press: None,
+                                        zoom_anchor: None,
+                                        painted: None,
                                         _subscription: subscription,
                                     }
                                 });

@@ -195,6 +195,9 @@ pub(crate) struct NativeChatView {
     /// The transcript starts at the window's top edge under the floating work area header, so its
     /// first row reserves the header's height (`set_under_workarea_header`).
     pub(crate) under_workarea_header: bool,
+    /// CDXC:SessionChat 2026-09-27 WHY:
+    /// The phone (`apps/gpui-mobile-poc`) draws this view inside its React Native chat screen, where the composer and the cards above it (working strip, questions, approvals, notices) are native React Native views fed by the same core. Set there through `set_transcript_only`, the view draws only the transcript region: no composer, no composer inset, no composer field, and toasts go to the host as a `toast` host action. Off everywhere else, so the desktop and the web build are unchanged.
+    pub(crate) transcript_only: bool,
 }
 
 impl EventEmitter<NativeChatEvent> for NativeChatView {}
@@ -385,6 +388,7 @@ impl NativeChatView {
             last_notified: None,
             notify_scheduled: false,
             under_workarea_header: false,
+            transcript_only: false,
         }
     }
 
@@ -450,6 +454,10 @@ impl NativeChatView {
             self.input_focus_listeners = vec![
                 cx.on_focus(&focus, window, |this, window, cx| {
                     super::focus::reclaim_keyboard_focus(window);
+                    // The field starts its blinking caret from its own focus listener, which is bound to the window it was created in; in any other window the caret never appeared. `focus` starts it from here.
+                    if let Some(input) = this.input.clone() {
+                        input.update(cx, |input, cx| input.focus(window, cx));
+                    }
                     this.composer_focused = true;
                     this.sync_suggestion_window(cx);
                     this.invoke(json!({"type":"composerExpand","editor":true}), cx);
@@ -594,9 +602,12 @@ impl NativeChatView {
     /// Redraws from runtime output are coalesced to one per 50ms; the last output in a burst still paints, only never sooner than that.
     /// CDXC:SessionChat 2026-09-24 WHY:
     /// The model pop-up opened from terminal view belongs to a hidden chat view and repaints only by observing it, so an open pop-up counts as shown; otherwise its tab and search changes reached the runtime while the pop-up kept painting the state it opened with. Supersedes the same rule for the retired full-screen picker.
+    /// CDXC:SessionChat 2026-09-27 WHY:
+    /// A transcript-only view is its phone host's whole window and is never parked, so it counts as shown: with nothing else in that window redrawing every second (the desktop's sidebar does), an idle chat stopped painting the next message once its last draw was a second old.
     fn notify_if_shown(&mut self, cx: &mut Context<Self>) {
         const NOTIFY_MIN_INTERVAL: Duration = Duration::from_millis(50);
         if self.option_menu.is_none()
+            && !self.transcript_only
             && !self
                 .last_render
                 .is_some_and(|at| at.elapsed() < Duration::from_secs(1))
@@ -789,7 +800,11 @@ impl NativeChatView {
                 Some("toast") => {
                     let message = request["params"]["message"].as_str().unwrap_or_default().to_string();
                     let error = request["params"]["level"] == "error";
-                    if let Some(main) = self.main_window && !message.is_empty() {
+                    if self.transcript_only {
+                        if !message.is_empty() {
+                            self.host("toast", json!({"message": message, "level": request["params"]["level"]}), cx);
+                        }
+                    } else if let Some(main) = self.main_window && !message.is_empty() {
                         cx.defer(move |cx| {
                             let _ = main.update(cx, |_, window, cx| {
                                 use gpui_component::WindowExt as _;

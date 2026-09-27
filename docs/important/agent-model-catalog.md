@@ -93,14 +93,15 @@ Label conventions already applied, keep them:
 - Codex ids read as words: "GPT 5.6 Sol", "GPT 5.4 Mini", "GPT 5.3 Codex Spark".
 - Cursor rows drop the "Claude" and "Cursor" words ("Opus 5", "Grok 4.6") and
   keep the literal row text in `pickerLabel`.
-- Claude 2.1.283's picker has ONE Opus 5.5 row, the 200K `opus`, and no 1M
-  row; `opus[1m]` is only reachable through `--model` or `/model opus[1m]`.
-  The catalog keeps `opus[1m]` as its default "Opus 5.5" row and lists the
-  200K `opus` as its `quickPickerHidden` twin, which makes the menu fold both
-  into one row with a 200K/1M Context Window choice (user decision
-  2026-09-26: effort must change on either size). `claude --model` also
-  accepts `sonnet[1m]` and `fable[1m]`, but the picker offers no row for them,
-  so the catalog does not either. Haiku 4.5 is given `efforts: []`.
+- Claude 2.1.282's picker lists Opus 5.5 twice, "Opus 5.5" (`opus`, 200K)
+  and "Opus (1M context)" (`opus[1m]`), so the catalog has both rows with the
+  same label. The model menu folds a `[1m]` twin into its standard row and
+  offers a 200K/1M Context Window choice; picking the model from another model
+  starts on 1M, and the composer pill names the window only when it is 200K.
+  The 200K row is `quickPickerHidden`: the quick picker's one Opus card keeps a
+  session already on 200K there. `claude --model` also accepts `sonnet[1m]` and
+  `fable[1m]`, but the picker offers no row for them, so the catalog does not
+  either. Haiku 4.5 is given `efforts: []`.
 - Antigravity's `value` is the MODEL part of the ids `agy models` prints
   (`gemini-3.8-flash`, not `gemini-3.8-flash-high`); the client appends
   `-<effort>` when it types `/model`. Rows without efforts (`claude-sonnet-4-6`,

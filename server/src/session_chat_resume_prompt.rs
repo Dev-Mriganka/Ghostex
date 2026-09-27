@@ -257,28 +257,53 @@ pub struct SessionChatTerminalPicker {
     pub selected_index: usize,
 }
 
+/// `text` with each whole mention of the model `printed` renamed to `shown`. A mention followed by
+/// " (" is another size of the same model ("Opus 5.5 (1M context)" when `printed` is "Opus 5.5")
+/// and is left alone.
+fn replace_model_name(text: &str, printed: &str, shown: &str) -> String {
+    if printed.is_empty() {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find(printed) {
+        let end = at + printed.len();
+        out.push_str(&rest[..at]);
+        out.push_str(if rest[end..].starts_with(" (") {
+            printed
+        } else {
+            shown
+        });
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 impl SessionChatTerminalPicker {
     /*
-    CDXC:SessionChat 2026-09-26 DECISION:
-    User: "no need to say (1M context) for Opus 5.5, just keep it Opus 5.5" on the chat's model switch card.
-    The card names the model the way the model catalog labels its 1M row, so Opus 5.5 stays "Opus 5.5" beside its 200K twin (restored 2026-09-26); a 1M model the catalog does not list under the bare name keeps Claude's suffix.
+    CDXC:SessionChat 2026-09-27 DECISION:
+    User: "no need to say (1M context) for Opus 5.5, just keep it Opus 5.5" on the chat's model switch card (2026-09-26), and on 2026-09-27, once Claude Code offered Opus 5.5 in 200K and 1M, that 1M reads "Opus 5.5" and 200K reads "Opus 5.5 (200K)", the same rule as the composer pill.
+    This supersedes keeping Claude's "(1M context)" suffix for a model the catalog offers in both context sizes.
     Only the card's copy changes: rows are answered by index against a fresh capture, and the /model job matches the raw rows.
     */
     pub fn with_catalog_model_names(mut self) -> Self {
         if self.kind != SessionChatTerminalPickerKind::SwitchModel {
             return self;
         }
-        let Some((printed, short)) = self.rows.iter().find_map(|row| {
+        let Some((printed, shown)) = self.rows.iter().find_map(|row| {
             let printed = row.label.strip_prefix(SWITCH_CONFIRM_YES_PREFIX)?;
-            let short = crate::agent_model_catalog::long_context_label("claude", printed)?;
-            Some((printed.to_string(), short))
+            let shown = crate::agent_model_catalog::context_window_label("claude", printed)?;
+            Some((printed.to_string(), shown))
         }) else {
             return self;
         };
         for row in &mut self.rows {
-            row.label = row.label.replace(&printed, &short);
+            row.label = replace_model_name(&row.label, &printed, &shown);
         }
-        self.detail = self.detail.map(|detail| detail.replace(&printed, &short));
+        self.detail = self
+            .detail
+            .map(|detail| replace_model_name(&detail, &printed, &shown));
         self
     }
 

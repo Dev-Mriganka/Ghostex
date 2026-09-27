@@ -345,7 +345,15 @@ impl GpuiAppToastWindow {
         }
     }
 
-    fn render_close_button(&self, toast_id: String, cx: &mut gpui::Context<Self>) -> AnyElement {
+    /// `region` collects the button's frame into the window's frosted region, where the window is
+    /// clipped to that region (Windows, see `toast_window_glass`), so the × stays visible and
+    /// clickable beside its card.
+    fn render_close_button(
+        &self,
+        toast_id: String,
+        region: Option<ToastFrames>,
+        cx: &mut gpui::Context<Self>,
+    ) -> AnyElement {
         let app = self.app.clone();
         div()
             .id(format!("ghostex-gpui-app-toast-dismiss-{toast_id}"))
@@ -390,9 +398,27 @@ impl GpuiAppToastWindow {
                 8.0,
                 gpui_app_toast_close_button_icon_color(),
             ))
+            .when_some(region, |button, region| {
+                button.child(
+                    canvas(
+                        move |bounds, _, _| {
+                            region.borrow_mut().push((
+                                bounds.dilate(px(1.0)),
+                                px(GPUI_APP_TOAST_CLOSE_SIZE / 2.0 + 1.0),
+                            ));
+                        },
+                        |_, _, _, _| {},
+                    )
+                    .absolute()
+                    .size_full(),
+                )
+            })
             .into_any_element()
     }
 }
+
+/// The frames a toast window's frosted region is built from, collected while it draws.
+type ToastFrames = std::rc::Rc<std::cell::RefCell<Vec<(Bounds<Pixels>, Pixels)>>>;
 
 pub(crate) fn gpui_app_toast_close_button_color() -> Hsla {
     rgb(0x0e0e0e).opacity(0.96).into()
@@ -412,10 +438,10 @@ pub(crate) fn gpui_app_toast_close_button_icon_color() -> Hsla {
 
 /// Whether toasts sit on their own blurred window.
 ///
-/// CDXC:Theming 2026-09-25 WHY:
-/// Frosted toasts need their window's blur limited to the cards (`set_background_blur_region`), so the gaps between toasts and the close button's outset stay clear. Windows can only confine a window's blur by clipping the window itself, which would cut the hover close button, so on Windows toasts keep their solid tinted cards while the rest of the app is glass.
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "same for ones that should be glass on windows but they're not". Toasts are frosted on Windows too. Their window's blur is limited to the cards (`set_background_blur_region`): macOS masks the blur, and Windows, which can only confine a window's blur by clipping the window itself, clips the window to the cards plus the × of a hovered toast, so the close button stays visible and clickable. Supersedes the 2026-09-25 rule that kept solid cards on Windows.
 pub(crate) fn toast_window_glass() -> bool {
-    cfg!(target_os = "macos") && window_glass_active()
+    cfg!(any(target_os = "macos", target_os = "windows")) && window_glass_active()
 }
 
 impl Render for GpuiAppToastWindow {
@@ -444,6 +470,10 @@ impl Render for GpuiAppToastWindow {
                 let description = toast.description.clone();
                 let colors = GpuiAppToastColors::resolve(toast.level, glass, light);
                 let card_frames = card_frames.clone();
+                // Windows clips the window to its region, so a shown × joins it (see
+                // `render_close_button`); macOS only masks the blur and leaves it out.
+                let close_region =
+                    (glass && cfg!(target_os = "windows")).then(|| card_frames.clone());
                 let truncate_description_from_start =
                     toast.id == GPUI_SESSION_CHAT_FILE_OPENING_TOAST_ID;
                 let indicator = if toast.loading && toast.id != GPUI_GXSERVER_DAEMON_TOAST_ID {
@@ -598,7 +628,7 @@ impl Render for GpuiAppToastWindow {
                             ),
                     )
                     .when(show_close_button, |toast_element| {
-                        toast_element.child(self.render_close_button(toast_id, cx))
+                        toast_element.child(self.render_close_button(toast_id, close_region, cx))
                     })
             }))
             .when(glass, |stack| {

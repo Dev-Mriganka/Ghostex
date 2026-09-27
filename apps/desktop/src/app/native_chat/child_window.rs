@@ -295,3 +295,33 @@ pub(crate) fn move_child_window(
 ) -> bool {
     false
 }
+
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "yes pls make all those that could be glass glass". Under window glass the chat's pane-sized dialogs (Save as Markdown, Rewind and its "could not be rewound" message, the image preview) are frosted: their window blurs the chat behind it instead of laying a dark scrim over it, and a dialog card takes the chat's frosted menu surface. Glass off, they keep the solid card and the dark scrim.
+pub(super) fn pane_dialog_window_background(glass: bool) -> gpui::WindowBackgroundAppearance {
+    if glass {
+        gpui::WindowBackgroundAppearance::Blurred
+    } else {
+        gpui::WindowBackgroundAppearance::Transparent
+    }
+}
+
+/// Gives a pane dialog's blurred window the frosted menus' blur (see `pane_dialog_window_background`).
+pub(super) fn prepare_pane_dialog_window(window: &gpui::Window, glass: bool) {
+    if glass {
+        crate::app::helpers::apply_frosted_menu_blur(window);
+    }
+}
+
+/// The dim a pane dialog lays over the chat: `opaque` over the solid chat, a light one over the
+/// frosted pane (the blur already sets the dialog apart).
+pub(super) fn pane_dialog_scrim(glass: bool, light: bool, opaque: f32) -> gpui::Hsla {
+    if !glass {
+        return gpui::black().opacity(opaque);
+    }
+    if light {
+        gpui::black().opacity(0.04)
+    } else {
+        gpui::black().opacity(0.18)
+    }
+}

@@ -210,6 +210,12 @@ pub struct TerminalDialog {
     pub input_value: String,
     #[serde(default)]
     pub actions: Vec<String>,
+    /// Claude's `/btw` panel with its answer as Markdown (server/src/session_chat_claude_panel.rs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side_question: Option<serde_json::Value>,
+    /// A Settings-style panel read as tabs, headings, tables, meters, text and code-font blocks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocks: Option<Vec<serde_json::Value>>,
 }
 
 /// One row of a terminal dialog.

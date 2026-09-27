@@ -309,6 +309,7 @@ impl NativeChatView {
                         .focus_bordered(false)
                         .disabled(state["submitting"] == true || state["loading"] == true)
                         .placeholder_color(p.muted.opacity(0.6))
+                        .caret_color(p.foreground)
                         .w_full()
                         .min_w_0()
                         .min_h(px(60.0 * s))

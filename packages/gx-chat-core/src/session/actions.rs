@@ -65,16 +65,18 @@ pub fn load_earlier(state: &mut ChatState, context: &ChatContext) -> Vec<Effect>
     )]
 }
 
-/// The automatic boundary fill: a transcript whose first row is not a user turn starts
+/// The automatic boundary fill: a transcript whose first row does not open a turn starts
 /// mid-conversation, so one page is fetched without the user asking.
 ///
 /// It runs once per cursor, so a boundary that stays unresolved cannot become a read loop.
+///
+/// CDXC:SessionChat 2026-09-27 WHY: a background-task notification, a held prompt and a hidden slash command are user-role rows too, so testing the role stopped the fill on them. A long turn whose window began at a task notification then held no prompt at all, and summary mode drew an empty chat with only "Load earlier turns". The fill uses the summary's own turn test instead.
 pub fn fill_history_boundary(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
     let starts_mid_turn = state
         .messages
         .list
         .first()
-        .is_some_and(|first| !matches!(first.role, ghostex_gx_protocol::ChatRole::User));
+        .is_some_and(|first| !crate::transcript::turns::opens_turn(first));
     if !starts_mid_turn || !state.messages.has_more || state.messages.loading_earlier {
         return Vec::new();
     }

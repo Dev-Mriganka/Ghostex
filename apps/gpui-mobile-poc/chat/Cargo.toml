@@ -1,0 +1,45 @@
+[package]
+name = "ghostex-gpui-mobile-chat"
+version = "0.1.0"
+edition = "2024"
+publish = false
+build = "build.rs"
+
+# The crate root is this folder, which stands in for `apps/desktop/src/` (see `lib.rs`, "Layout").
+[lib]
+path = "lib.rs"
+crate-type = ["rlib"]
+
+[dependencies]
+gpui.workspace = true
+# The grammars colour a transcript's fenced code (the CDXC:SessionChat note on this line in apps/desktop/Cargo.toml).
+gpui-component = { path = "../../../.dependencies/gpui-component/crates/component", features = ["tree-sitter-languages"] }
+gpui-component-assets = { package = "gpui-kit-assets", path = "../../../.dependencies/gpui-component/crates/assets" }
+# `debug-embed`: a phone cannot read the repository at run time, so a debug build carries its files too.
+rust-embed = { version = "8.7.2", features = ["debug-embed", "include-exclude"] }
+ghostex-client-storage = { path = "../../../packages/client-storage-native" }
+ghostex-gx-chat-core = { path = "../../../packages/gx-chat-core" }
+ghostex-gx-chat-client = { path = "../../../packages/gx-chat-client" }
+anyhow = "1"
+base64 = "0.22"
+chrono = "0.4.45"
+futures = "0.3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+instant = "0.1"
+log = "0.4"
+raw-window-handle = "0.6"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+web-time = "1"
+
+# A cdylib that keeps the public API alive, to measure what the chat adds to a phone library.
+[[example]]
+name = "size_probe"
+crate-type = ["cdylib"]
+
+# The macOS preview (`examples/preview.rs`) opens a phone-sized window on the desktop platform.
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit", "runtime_shaders"] }
+objc2 = "0.6"

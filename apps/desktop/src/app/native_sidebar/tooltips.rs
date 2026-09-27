@@ -63,7 +63,7 @@ pub(super) fn sidebar_free_width_tooltip(
 }
 
 /**
-CDXC:Sidebar 2026-09-23 DECISION: User: the session tooltip, a flat near-black box on the tinted glass sidebar, should "look more fitting". It takes the sidebar menus' shape (8px corners, the menus' soft ink outline and tinted menu colour), and under window glass it is frosted: on macOS it draws in the frosted tooltip host with the frosted menus' fill and corners (2026-09-25, app/window/frosted_host.rs); where it stays in the window it is only slightly see-through, because an in-window tooltip cannot blur the rows beneath it. The first line (the title) reads as the heading; the state and id lines beneath it are smaller, muted and cut short on one line each.
+CDXC:Sidebar 2026-09-23 DECISION: User: the session tooltip, a flat near-black box on the tinted glass sidebar, should "look more fitting". It takes the sidebar menus' shape (8px corners, the menus' soft ink outline and tinted menu colour), and under window glass it is frosted: on macOS and Windows it draws in the frosted tooltip host with the frosted menus' fill and corners (2026-09-25, Windows since 2026-09-27, app/window/frosted_host.rs); where it stays in the window it is only slightly see-through, because an in-window tooltip cannot blur the rows beneath it. The first line (the title) reads as the heading; the state and id lines beneath it are smaller, muted and cut short on one line each.
 */
 fn sidebar_tooltip_sized(
     text: String,

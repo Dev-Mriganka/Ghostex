@@ -76,6 +76,33 @@ impl GhostexGpuiApp {
         self.ensure_project_keep_alive_expiry_scheduled(cx);
     }
 
+    /// CDXC:Workarea 2026-09-27 WHY:
+    /// The page on screen is parked here, before the incoming project's view state is applied. The ordinary prune runs after that swap, when `active_mode` already belongs to the incoming project, so it asked the incoming project whether the page was visible: the page the user left was closed whenever the other project showed a different view, and coming back rebuilt it behind its skeleton. With keep-alive off the prune keeps its old rules.
+    /// CDXC:Workarea 2026-09-27 DECISION:
+    /// User: the keep-alive slider stays the limit for every parked page, the side panel's active view included; that view is kept awake (CDXC:Workarea 2026-09-26) but its page still closes when the slider's minutes run out.
+    pub(crate) fn park_visible_project_workarea_surfaces_before_switch(
+        &mut self,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        if self.project_switch_keep_alive().is_none() {
+            return;
+        }
+        let visible_slots = self
+            .project_workarea_runtime_cef_surfaces
+            .keys()
+            .copied()
+            .filter(|slot| self.project_workarea_runtime_cef_surface_may_be_visible(*slot))
+            .collect::<Vec<_>>();
+        for slot_key in visible_slots {
+            if let Some(owned) = self.project_workarea_runtime_cef_surfaces.remove(&slot_key) {
+                owned
+                    .surface
+                    .update(cx, |surface, _| surface.set_visible(false));
+                self.park_project_workarea_runtime_cef_surface(owned, slot_key, true, cx);
+            }
+        }
+    }
+
     pub(crate) fn take_parked_project_workarea_runtime_cef_surface(
         &mut self,
         runtime_url: &ProjectWorkareaRealRuntimeUrl,

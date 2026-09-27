@@ -24,9 +24,6 @@ impl GhostexGpuiApp {
 
         match message_type {
             "requestDelayedSendAgents" => self.request_delayed_send_agents(&message, cx),
-            "browserHistoryQuery" | "browserHistoryOpen" => {
-                self.receive_browser_history_message(&message, cx);
-            }
             "accountTitlebarChanged" => self.update_titlebar_account_from_ui(&message, window, cx),
             // CDXC:Settings 2026-09-06 DECISION: Account setup runs its displayed sign-in command with one click in an interactive terminal, using the existing terminal launcher.
             "accountSetup" => {
@@ -158,16 +155,6 @@ impl GhostexGpuiApp {
                     self.handle_gpui_probe_remote_gxserver_install_message(command, cx);
                 }
             }
-            "browseRemoteProjectDirectories" => {
-                if let Some(command) = message.as_object() {
-                    self.handle_gpui_browse_remote_project_directories_message(command, cx);
-                }
-            }
-            "addRemoteProjectPath" => {
-                if let Some(command) = message.as_object() {
-                    self.handle_gpui_add_remote_project_path_message(command, cx);
-                }
-            }
             "addProjectDialogRequest" => {
                 if let Some(command) = message.as_object() {
                     self.handle_gpui_add_project_dialog_request_message(command, cx);
@@ -183,10 +170,7 @@ impl GhostexGpuiApp {
                 let is_first_launch_setup = self.app_modal_window.clone().is_some_and(|handle| {
                     handle
                         .update(cx, |host, _window, _cx| {
-                            matches!(
-                                host.current_modal,
-                                GpuiAppModalKind::FirstLaunchSetup | GpuiAppModalKind::Onboarding
-                            )
+                            host.current_modal == GpuiAppModalKind::Onboarding
                         })
                         .unwrap_or(false)
                 });
@@ -521,10 +505,7 @@ impl GhostexGpuiApp {
                 .update(cx, |host, _window, _cx| host.current_modal.modal_id())
                 .ok()
         });
-        if matches!(
-            closing_modal_id.as_deref(),
-            Some("firstLaunchSetup") | Some("onboarding")
-        ) {
+        if closing_modal_id.as_deref() == Some("onboarding") {
             return;
         }
         support_logs::append(

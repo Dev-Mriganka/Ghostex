@@ -75,9 +75,16 @@ fn answer_settled(state: &mut ChatState, outcome: &RpcOutcome) -> Vec<Effect> {
             let permission_prompt = notice
                 .as_ref()
                 .is_some_and(|notice| notice.kind == "permissionPrompt");
+            // A row picked on any screen dialog ("Enter plan mode?", a goal proposal) answered the
+            // hook's pending approval too; its card must not flash back while the hook catches up.
+            let screen_choice = matches!(
+                request.answer_kind.as_str(),
+                "terminalChoice" | "terminalDialog"
+            );
             if request.answer_kind == "approval"
                 || request.answer_kind == "question"
                 || permission_prompt
+                || screen_choice
             {
                 state.questions.dismissed_prompt = request.prompt_key.clone();
             }

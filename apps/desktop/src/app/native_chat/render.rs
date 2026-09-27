@@ -44,6 +44,18 @@ impl NativeChatView {
         cx.notify();
     }
 
+    /// Draws the transcript region alone, for a host that draws the composer and its cards itself
+    /// (see the `transcript_only` field). Only the phone's crate calls it.
+    #[allow(dead_code)]
+    pub(crate) fn set_transcript_only(&mut self, transcript_only: bool, cx: &mut Context<Self>) {
+        if self.transcript_only == transcript_only {
+            return;
+        }
+        self.transcript_only = transcript_only;
+        self.list.remeasure();
+        cx.notify();
+    }
+
     pub(crate) fn transcript_scrolled_to_top(&self) -> bool {
         let top = self.list.logical_scroll_top();
         top.item_ix == 0 && top.offset_in_item <= px(0.0)
@@ -58,7 +70,7 @@ impl Render for NativeChatView {
         self.last_render = Some(web_time::Instant::now());
         self.schedule_row_detail_sync(window, cx);
         self.note_drawn_in(window, cx);
-        if self.maximized_window.is_none() {
+        if self.maximized_window.is_none() && !self.transcript_only {
             self.ensure_input(window, cx);
         }
         self.sync_chat_zoom_default();
@@ -98,7 +110,7 @@ impl Render for NativeChatView {
         };
         let state = self.snapshot.clone();
         let error = self.error.clone();
-        self.transcript_inset = if maximized {
+        self.transcript_inset = if maximized || self.transcript_only {
             0.0
         } else {
             self.composer_frame(cx).transcript_inset
@@ -137,7 +149,9 @@ impl Render for NativeChatView {
                     .into_any_element(),
             )
         };
-        let composer = if !covered {
+        let composer = if self.transcript_only {
+            div().into_any_element()
+        } else if !covered {
             self.render_composer(&p, window, cx)
         } else if maximized {
             div().h(px(148.0 * s)).into_any_element()

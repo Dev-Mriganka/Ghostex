@@ -48,7 +48,7 @@ impl GhostexGpuiApp {
                     .rounded(px(6.0))
                     .border_1()
                     .border_color(rgb(0x7f8a99).opacity(0.22))
-                    .bg(chrome_color(0x11151b, 0xf5f6f8))
+                    .bg(glass_card(chrome_color(0x11151b, 0xf5f6f8).into(), 1.0))
                     .px(px(28.0))
                     .py(px(24.0))
                     .child(

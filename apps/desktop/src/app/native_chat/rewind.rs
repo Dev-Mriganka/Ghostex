@@ -55,6 +55,7 @@ impl NativeChatView {
         self.rewind_window.opening = true;
         let pane = self.bounds.get();
         let parent = self.child_window_parent(cx);
+        let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let chat = cx.entity();
         cx.defer(move |cx| {
             let result = main
@@ -92,13 +93,16 @@ impl NativeChatView {
                             is_minimizable: false,
                             is_movable: false,
                             titlebar: None,
-                            window_background: gpui::WindowBackgroundAppearance::Transparent,
+                            window_background: super::child_window::pane_dialog_window_background(
+                                glass,
+                            ),
                             ..Default::default()
                         },
                         {
                             let chat = chat.clone();
                             move |window, cx| {
                                 super::save_markdown::platform::prepare(window);
+                                super::child_window::prepare_pane_dialog_window(window, glass);
                                 crate::app::window::attach_gpui_app_modal_window_to_main_window(
                                     window, parent,
                                 );
@@ -194,7 +198,8 @@ impl RewindWindow {
 impl Render for RewindWindow {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let snapshot = self.chat.read(cx).snapshot.clone();
-        let p = ChatAppearance::current(&snapshot);
+        let glass = crate::app::helpers::window_glass_active_for(self.chat.read(cx).main_window);
+        let p = ChatAppearance::current(&snapshot).on_window_glass(glass);
         let state = &snapshot["rewind"];
         let busy = state["busy"] == true;
         let completed = state["completed"] == true;
@@ -210,8 +215,16 @@ impl Render for RewindWindow {
             .p(px(24.0))
             .rounded(px(12.0))
             .border_1()
-            .border_color(p.input_border)
-            .bg(p.card_background)
+            .border_color(if glass {
+                p.composer_border
+            } else {
+                p.input_border
+            })
+            .bg(if glass {
+                p.menu_surface()
+            } else {
+                p.card_background
+            })
             .text_color(p.card_muted)
             .child(
                 div()
@@ -292,7 +305,7 @@ impl Render for RewindWindow {
             .flex()
             .items_center()
             .justify_center()
-            .bg(gpui::Hsla::from(gpui::rgb(0x000000)).opacity(0.45))
+            .bg(super::child_window::pane_dialog_scrim(glass, p.light, 0.45))
             .text_size(px(14.0))
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                 let command = match event.keystroke.key.as_str() {

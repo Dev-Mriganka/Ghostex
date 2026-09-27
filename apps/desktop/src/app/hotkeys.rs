@@ -215,7 +215,8 @@ pub(crate) fn gpui_platform_hotkey_for_action<'a>(action_id: &str, key: &'a str)
 /// Converts a shared-settings hotkey ("cmd+shift+p") into gpui keystroke
 /// syntax ("cmd-shift-p"). Returns None for unbound/invalid entries and for
 /// chords without a non-shift modifier, which must never be stolen from
-/// terminal or web surfaces.
+/// terminal or web surfaces, except on keys that never type text (Escape and
+/// F1-F24).
 pub(crate) fn gpui_keystroke_from_shared_hotkey(key: &str) -> Option<String> {
     let mut command = false;
     let mut control = false;
@@ -281,13 +282,18 @@ pub(crate) fn gpui_keystroke_from_shared_hotkey(key: &str) -> Option<String> {
     if shift {
         modifiers.push("shift");
     }
-    if !modifiers.iter().any(|modifier| *modifier != "shift") {
+    // CDXC:Hotkeys 2026-09-27 WHY:
+    // Focus Chat Box is Shift+Esc, and dropping every Shift-only chord here left it with no binding at all: the native router matched the chord, but the window had nothing to run, so the key did nothing. Escape and the F-keys never type text, so they may go without Cmd, Ctrl or Alt; typing keys still may not.
+    let non_typing_key = key_token == "escape"
+        || key_token
+            .strip_prefix('f')
+            .and_then(|number| number.parse::<u8>().ok())
+            .is_some_and(|number| (1..=24).contains(&number));
+    if !non_typing_key && !modifiers.iter().any(|modifier| *modifier != "shift") {
         return None;
     }
-    let mut keystroke = modifiers.join("-");
-    keystroke.push('-');
-    keystroke.push_str(&key_token);
-    Some(keystroke)
+    modifiers.push(&key_token);
+    Some(modifiers.join("-"))
 }
 
 /// Builds a shell-owned binding from the same cross-platform hotkey spelling

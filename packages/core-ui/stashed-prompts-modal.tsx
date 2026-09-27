@@ -94,7 +94,7 @@ export type StashedPromptsModalProps = {
 };
 
 const TOOLTIP_LINE_COUNT = 30;
-const STASH_PROMPT_HINT = `Press ${formatSidebarHotkeyLabel('alt+s')} while you're using an agent to stash your prompt (Local only for now)`;
+const STASH_PROMPT_HINT = `Press ${formatSidebarHotkeyLabel('alt+s')} while you're using an agent to stash your prompt`;
 
 /*
  * CDXC:SavedPrompts 2026-08-23:

@@ -43,6 +43,7 @@ mod nested_scroll;
 mod new_session_welcome;
 mod note;
 mod notice;
+mod panel_blocks;
 mod pagination;
 mod panel_card;
 mod question;
@@ -57,6 +58,7 @@ mod scroll_bottom;
 mod scrollbar;
 mod search;
 mod startup_delivery;
+mod side_question;
 mod status_rows;
 mod subagent_view;
 mod system_cards;
@@ -103,4 +105,4 @@ mod zoom;
 
 mod save_markdown;
 
-mod table_preview;
+pub(crate) mod table_preview;

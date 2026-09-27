@@ -103,22 +103,30 @@ pub fn catalog_model(agent: &str, value: &str) -> Option<Value> {
         .find(|row| row.get("value").and_then(Value::as_str) == Some(value))
 }
 
-/// The catalog's own name for a model the terminal printed with a " (1M context)" suffix, when
-/// the catalog labels its 1M row with the bare name: "Opus 5.5 (1M context)" is the `opus[1m]` row
-/// labelled "Opus 5.5", even beside its 200K `opus` twin. A 1M model the catalog does not list
-/// under that name keeps its suffix (`None`).
-pub fn long_context_label(agent: &str, name: &str) -> Option<String> {
-    let base = name.trim().strip_suffix(" (1M context)")?;
-    agent_models(&current(), agent)
+/// The name chat shows for a model the terminal printed, when the catalog offers it in a 1M
+/// context window: "Opus 5.5 (1M context)" is the `opus[1m]` row labelled "Opus 5.5", and
+/// "Opus 5.5" is its 200K twin `opus`, named "Opus 5.5 (200K)" so the two stay apart. `None` for
+/// every other name.
+pub fn context_window_label(agent: &str, name: &str) -> Option<String> {
+    let name = name.trim();
+    let (base, long) = match name.strip_suffix(" (1M context)") {
+        Some(base) => (base, true),
+        None => (name, false),
+    };
+    let values: Vec<String> = agent_models(&current(), agent)
         .into_iter()
-        .any(|row| {
-            row.get("label").and_then(Value::as_str) == Some(base)
-                && row
-                    .get("value")
-                    .and_then(Value::as_str)
-                    .is_some_and(|value| value.ends_with("[1m]"))
-        })
-        .then(|| base.to_string())
+        .filter(|row| row.get("label").and_then(Value::as_str) == Some(base))
+        .filter_map(|row| row.get("value").and_then(Value::as_str).map(str::to_string))
+        .collect();
+    let has_long = values.iter().any(|value| value.ends_with("[1m]"));
+    let has_standard = values.iter().any(|value| !value.ends_with("[1m]"));
+    if long && has_long {
+        Some(base.to_string())
+    } else if !long && has_long && has_standard {
+        Some(format!("{base} (200K)"))
+    } else {
+        None
+    }
 }
 
 /// The dispatch value of the row whose `label`, `pickerLabel` or one of its

@@ -170,7 +170,17 @@ pub(crate) fn is_codex_modal_footer(line: &str) -> bool {
         let action = action.strip_prefix(&["to"]).unwrap_or(action);
         matches!(
             action.first(),
-            Some(&"close" | &"cancel" | &"back" | &"quit" | &"exit" | &"tasks")
+            // "esc to continue working" dismisses the Luna Reserve picker, "esc skip" the update prompt.
+            Some(
+                &"close"
+                    | &"cancel"
+                    | &"back"
+                    | &"quit"
+                    | &"exit"
+                    | &"tasks"
+                    | &"continue"
+                    | &"skip"
+            )
         ) || action.starts_with(&["go", "back"])
     })
 }

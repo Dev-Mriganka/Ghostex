@@ -47,6 +47,107 @@ pub(crate) const MODAL_FIT_EXTRA_HEIGHT: f32 =
 const ICON_SELECTOR: &str = "modals/kit/selector.svg";
 const ICON_LOADER: &str = "modals/kit/loader-2.svg";
 
+/// What a modal hands a popover host: the list drawn in `owner`'s content coordinates at `frame`.
+pub(crate) struct ModalPopoverRequest {
+    pub(crate) owner: gpui::AnyWindowHandle,
+    pub(crate) id: &'static str,
+    pub(crate) frame: Bounds<Pixels>,
+    pub(crate) content: Rc<dyn Fn(&mut Window, &mut App) -> AnyElement>,
+}
+
+/// Draws a frosted modal's open popover in a window of its own, so the list blurs the dialog
+/// behind it the way the app's other frosted menus do. The app installs it
+/// (`window/modal_popover_host.rs`); without it (the preview binaries) the popover draws inside
+/// the modal's window as before.
+#[derive(Clone)]
+pub(crate) struct ModalPopoverHost {
+    /// Whether popovers go to their own window right now.
+    pub(crate) active: Rc<dyn Fn() -> bool>,
+    pub(crate) show: Rc<dyn Fn(ModalPopoverRequest, &mut App)>,
+    /// Hides the popover `id` of `owner`, if that is the one showing.
+    pub(crate) hide: Rc<dyn Fn(gpui::AnyWindowHandle, &'static str, &mut App)>,
+}
+
+thread_local! {
+    static MODAL_POPOVER_HOST: std::cell::RefCell<Option<ModalPopoverHost>> = const { std::cell::RefCell::new(None) };
+}
+
+pub(crate) fn install_modal_popover_host(host: ModalPopoverHost) {
+    MODAL_POPOVER_HOST.with(|slot| *slot.borrow_mut() = Some(host));
+}
+
+/// The installed host, when it takes popovers now and this modal is frosted.
+fn modal_popover_host(p: &ModalPalette) -> Option<ModalPopoverHost> {
+    if !p.glass {
+        return None;
+    }
+    MODAL_POPOVER_HOST.with(|slot| slot.borrow().clone().filter(|host| (host.active)()))
+}
+
+/// Hides popover `id` of this window if a host is showing it (every render of a closed select).
+pub(crate) fn hide_hosted_modal_popover(id: &'static str, window: &Window, cx: &mut App) {
+    let host = MODAL_POPOVER_HOST.with(|slot| slot.borrow().clone());
+    if let Some(host) = host {
+        (host.hide)(window.window_handle(), id, cx);
+    }
+}
+
+/// Hands an open popover to the popover host and returns what the modal draws in its own window:
+/// nothing but the outside-press listener that closes the popover (a press on the trigger is the
+/// trigger's own toggle). `None` when no host takes it, so the caller draws the popover itself.
+pub(crate) fn host_modal_popover<V: 'static>(
+    p: &ModalPalette,
+    id: &'static str,
+    trigger: Bounds<Pixels>,
+    frame: Bounds<Pixels>,
+    content: Rc<dyn Fn(&mut Window, &mut App) -> AnyElement>,
+    on_dismiss: impl Fn(&mut V, &mut Window, &mut Context<V>) + 'static,
+    window: &Window,
+    cx: &mut Context<V>,
+) -> Option<AnyElement> {
+    let host = modal_popover_host(p)?;
+    (host.show)(
+        ModalPopoverRequest {
+            owner: window.window_handle(),
+            id,
+            frame,
+            content,
+        },
+        cx,
+    );
+    Some(
+        div()
+            .absolute()
+            .size_0()
+            .on_mouse_down_out(
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    if trigger.contains(&event.position) {
+                        return;
+                    }
+                    on_dismiss(this, window, cx);
+                }),
+            )
+            .into_any_element(),
+    )
+}
+
+/// A handler for a row drawn in a popover host's window: it runs `on_choose` on the modal entity
+/// with the modal's own window, the way a click inside the modal would.
+fn hosted_row_click<V: 'static>(
+    entity: gpui::WeakEntity<V>,
+    owner: gpui::AnyWindowHandle,
+    index: usize,
+    on_choose: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
+) -> impl Fn(&ClickEvent, &mut Window, &mut App) + 'static {
+    move |_, _, cx| {
+        let entity = entity.clone();
+        let on_choose = on_choose.clone();
+        let _ = owner.update(cx, move |_, window, cx| {
+            let _ = entity.update(cx, |this, cx| on_choose(this, index, window, cx));
+        });
+    }
+}
+
 /// The `.gx-app-modal` tokens plus the shadcn theme tokens the modals read,
 /// resolved for one appearance. Dark values come from modals.css and
 /// shadcn.css, light values from modals-light.css.
@@ -649,6 +750,95 @@ pub(crate) fn modal_select_trigger<V: 'static>(
         .into_any_element()
 }
 
+/// The open select's list in a popover host window (see [`ModalPopoverHost`]): the same rows as
+/// the in-window list, on the modal's frosted surface, answering clicks on the modal entity. `None`
+/// when no host takes it.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn hosted_modal_select_menu<V: 'static>(
+    p: &ModalPalette,
+    select: &ModalSelect,
+    id: &'static str,
+    items: &[String],
+    selected: Option<usize>,
+    trigger: Bounds<Pixels>,
+    on_choose: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
+    on_dismiss: impl Fn(&mut V, &mut Window, &mut Context<V>) + 'static,
+    window: &Window,
+    cx: &mut Context<V>,
+) -> Option<AnyElement> {
+    modal_popover_host(p)?;
+    let p = *p;
+    let highlight = select.highlight;
+    let scroll = select.scroll.clone();
+    let items: Rc<Vec<String>> = Rc::new(items.to_vec());
+    // 28px rows inside 4px padding and a 1px border, bounded like the in-window list.
+    let list_height = (items.len() as f32 * 28.0 + 10.0).min(288.0);
+    let frame = Bounds::new(
+        point(
+            trigger.origin.x,
+            trigger.origin.y + trigger.size.height + px(4.0),
+        ),
+        size(trigger.size.width, px(list_height)),
+    );
+    let entity = cx.weak_entity();
+    let owner = window.window_handle();
+    let content: Rc<dyn Fn(&mut Window, &mut App) -> AnyElement> = Rc::new(move |_, _| {
+        let rows = items.iter().enumerate().map(|(index, item)| {
+            let is_selected = selected == Some(index);
+            let highlighted = highlight == Some(index);
+            h_flex()
+                .id((id, index))
+                .w_full()
+                .flex_shrink_0()
+                .h(px(28.0))
+                .px(px(8.0))
+                .gap(px(8.0))
+                .items_center()
+                .rounded(px(6.0))
+                .text_size(px(14.0))
+                .line_height(px(20.0))
+                .text_color(hsla(p.foreground))
+                .cursor_default()
+                .when(is_selected, |this| {
+                    this.bg(hsla(p.menu_selected_background()))
+                })
+                .when(!is_selected && highlighted, |this| this.bg(hsla(p.accent)))
+                .when(!is_selected, |this| {
+                    this.hover(move |this| this.bg(hsla(p.accent)))
+                })
+                .on_click(hosted_row_click(
+                    entity.clone(),
+                    owner,
+                    index,
+                    on_choose.clone(),
+                ))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .whitespace_nowrap()
+                        .text_ellipsis()
+                        .child(item.clone()),
+                )
+        });
+        v_flex()
+            .id(id)
+            .size_full()
+            .overflow_y_scroll()
+            .track_scroll(&scroll)
+            .p(px(4.0))
+            .rounded(px(MODAL_RADIUS_CONTROL))
+            .border_1()
+            .border_color(hsla(p.menu_border))
+            .bg(hsla(p.surface))
+            .font_family(MODAL_UI_FONT)
+            .children(rows)
+            .into_any_element()
+    });
+    host_modal_popover(&p, id, trigger, frame, content, on_dismiss, window, cx)
+}
+
 /// The open select popover, rendered at the modal root so it floats above everything.
 pub(crate) fn modal_select_menu<V: 'static>(
     p: &ModalPalette,
@@ -662,11 +852,32 @@ pub(crate) fn modal_select_menu<V: 'static>(
     cx: &mut Context<V>,
 ) -> Option<AnyElement> {
     if !select.open {
+        hide_hosted_modal_popover(id, window, cx);
         return None;
     }
     let trigger = select.trigger_bounds.get()?;
     let p = *p;
     let highlight = select.highlight;
+    let on_dismiss = Rc::new(on_dismiss);
+    if let Some(element) = hosted_modal_select_menu(
+        &p,
+        select,
+        id,
+        items,
+        selected,
+        trigger,
+        on_choose.clone(),
+        {
+            let on_dismiss = on_dismiss.clone();
+            move |this: &mut V, window: &mut Window, cx: &mut Context<V>| {
+                (*on_dismiss)(this, window, cx)
+            }
+        },
+        window,
+        cx,
+    ) {
+        return Some(element);
+    }
     // CDXC:AppModal 2026-09-16 WHY:
     // Anchoring only repositions the popup; it cannot make a long session list fit or scroll. Bound the list to the window and keep keyboard highlights in the same scroll container.
     let max_height = px(288.0).min((window.viewport_size().height - px(16.0)).max(px(0.0)));
@@ -737,7 +948,7 @@ pub(crate) fn modal_select_menu<V: 'static>(
                                 if trigger.contains(&event.position) {
                                     return;
                                 }
-                                on_dismiss(this, window, cx);
+                                (*on_dismiss)(this, window, cx);
                             },
                         ))
                         .children(rows),

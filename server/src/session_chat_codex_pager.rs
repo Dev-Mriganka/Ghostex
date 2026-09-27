@@ -62,6 +62,8 @@ pub(crate) fn detect_codex_transcript_pager(screen: &str) -> Option<TerminalDial
         input: None,
         input_value: String::new(),
         actions: vec!["cancel".to_string()],
+        side_question: None,
+        blocks: None,
     })
 }
 

@@ -26,14 +26,12 @@ pub(crate) enum GpuiAppModalKind {
     ConfigureAgents,
     ConfigureActions,
     OpenTargets,
-    FirstLaunchSetup,
-    /// CDXC:Onboarding 2026-09-15 SEE-ALSO:
-    /// `onboarding` is the five-panel modal that the automatic first run, Tips > Setup and Quick Access > Setup open (user decision, see modals.rs `open_gpui_first_launch_setup_with_sidebar_state`); `firstLaunchSetup` is the older modal, kept under its own id and opened by nothing by default.
-    /// Every guard that treats `FirstLaunchSetup` as "setup in progress" (no-projects close guard, completion on close, `completeFirstLaunchSetup`) must match both; the React side is `isFirstLaunchSetupModalKind` in apps/desktop/views/modal-host.tsx and the component contract is packages/core-ui/onboarding/contract.ts.
+    /// CDXC:Onboarding 2026-09-27 SEE-ALSO:
+    /// `onboarding` is the five-panel modal that the automatic first run, Tips > Setup and Quick Access > Setup open (user decision, see modals.rs `open_gpui_first_launch_setup_with_sidebar_state`). The older first-launch setup modal was deleted on 2026-09-27 (user: "delete old setup one not new one that's active").
+    /// The guards that treat Onboarding as "setup in progress" (no-projects close guard, completion on close, `completeFirstLaunchSetup`) have a React twin, `isFirstLaunchSetupModalKind` in apps/desktop/views/modal-host.tsx, and the component contract is packages/core-ui/onboarding/contract.ts.
     Onboarding,
     WatchGhostexVideo,
     RemoteGxserverInstall,
-    RemoteProjectPicker,
     RemoteSetup,
     Worktree,
     DeleteWorktree,
@@ -44,7 +42,6 @@ pub(crate) enum GpuiAppModalKind {
     MermaidDiagram,
     MarkdownTable,
     PortlessSetup,
-    DiscoverGhostex,
     Extension(ExtensionId),
     UpdateAvailable,
 }
@@ -71,11 +68,9 @@ impl GpuiAppModalKind {
             "configureAgents" => Some(Self::ConfigureAgents),
             "configureActions" => Some(Self::ConfigureActions),
             "openTargets" => Some(Self::OpenTargets),
-            "firstLaunchSetup" | "tipsAndTricks" => Some(Self::FirstLaunchSetup),
             "onboarding" => Some(Self::Onboarding),
             "watchGhostexVideo" => Some(Self::WatchGhostexVideo),
             "remoteGxserverInstall" => Some(Self::RemoteGxserverInstall),
-            "remoteProjectPicker" => Some(Self::RemoteProjectPicker),
             "remoteSetup" => Some(Self::RemoteSetup),
             "worktree" => Some(Self::Worktree),
             "deleteWorktree" => Some(Self::DeleteWorktree),
@@ -86,7 +81,6 @@ impl GpuiAppModalKind {
             "mermaidDiagram" => Some(Self::MermaidDiagram),
             "markdownTable" => Some(Self::MarkdownTable),
             "portlessSetup" => Some(Self::PortlessSetup),
-            "discoverGhostex" => Some(Self::DiscoverGhostex),
             value if value.starts_with("extension:") => {
                 ExtensionId::new(value.trim_start_matches("extension:")).map(Self::Extension)
             }
@@ -116,11 +110,9 @@ impl GpuiAppModalKind {
             Self::ConfigureAgents => "configureAgents",
             Self::ConfigureActions => "configureActions",
             Self::OpenTargets => "openTargets",
-            Self::FirstLaunchSetup => "firstLaunchSetup",
             Self::Onboarding => "onboarding",
             Self::WatchGhostexVideo => "watchGhostexVideo",
             Self::RemoteGxserverInstall => "remoteGxserverInstall",
-            Self::RemoteProjectPicker => "remoteProjectPicker",
             Self::RemoteSetup => "remoteSetup",
             Self::Worktree => "worktree",
             Self::DeleteWorktree => "deleteWorktree",
@@ -131,7 +123,6 @@ impl GpuiAppModalKind {
             Self::MermaidDiagram => "mermaidDiagram",
             Self::MarkdownTable => "markdownTable",
             Self::PortlessSetup => "portlessSetup",
-            Self::DiscoverGhostex => "discoverGhostex",
             Self::Extension(id) => extension_modal_id(id),
             Self::UpdateAvailable => "updateAvailable",
         }
@@ -158,10 +149,9 @@ impl GpuiAppModalKind {
             Self::ConfigureAgents => "Ghostex Configure Agents",
             Self::ConfigureActions => "Ghostex Actions",
             Self::OpenTargets => "Ghostex Open Targets",
-            Self::FirstLaunchSetup | Self::Onboarding => "Welcome to Ghostex",
+            Self::Onboarding => "Welcome to Ghostex",
             Self::WatchGhostexVideo => "Ghostex Tutorial Video",
             Self::RemoteGxserverInstall => "Ghostex Remote Setup",
-            Self::RemoteProjectPicker => "Ghostex Remote Project",
             Self::RemoteSetup => "Ghostex Mobile & Remote",
             Self::Worktree => "Ghostex Add Worktree",
             Self::DeleteWorktree => "Ghostex Delete Worktree",
@@ -171,7 +161,6 @@ impl GpuiAppModalKind {
             Self::GitFileDiff => "Ghostex File Diff",
             Self::MermaidDiagram | Self::MarkdownTable => "",
             Self::PortlessSetup => "Ghostex Portless Setup",
-            Self::DiscoverGhostex => "Discover Ghostex",
             Self::Extension(_) => "Ghostex Extension",
             Self::UpdateAvailable => "Ghostex Update",
         }
@@ -236,10 +225,6 @@ impl GpuiAppModalKind {
                 px(APP_MODAL_HOST_ADD_PROJECT_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_ADD_PROJECT_WINDOW_HEIGHT),
             ),
-            Self::RemoteProjectPicker => size(
-                px(APP_MODAL_HOST_REMOTE_PROJECT_PICKER_WINDOW_WIDTH),
-                px(APP_MODAL_HOST_REMOTE_PROJECT_PICKER_WINDOW_HEIGHT),
-            ),
             Self::Worktree => size(
                 px(APP_MODAL_HOST_WORKTREE_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_WORKTREE_WINDOW_HEIGHT),
@@ -280,7 +265,6 @@ impl GpuiAppModalKind {
                 px(APP_MODAL_HOST_UPDATE_AVAILABLE_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_UPDATE_AVAILABLE_WINDOW_HEIGHT),
             ),
-            Self::DiscoverGhostex => size(px(1120.0), px(850.0)),
             Self::Extension(id) => extension_modal_window_size(id),
             Self::RemoteGxserverInstall => size(
                 px(APP_MODAL_HOST_REMOTE_GXSERVER_INSTALL_WINDOW_WIDTH),
@@ -290,14 +274,13 @@ impl GpuiAppModalKind {
                 px(APP_MODAL_HOST_REMOTE_SETUP_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_REMOTE_SETUP_WINDOW_HEIGHT),
             ),
-            Self::FirstLaunchSetup => size(px(1120.0), px(850.0)),
             // CDXC:Onboarding 2026-09-11 WHY:
             // The new onboarding renders a 1672x941 stage scaled to fit its window, so the frame keeps that aspect ratio at a size that still fits a 1440x900 screen with the menu bar and Dock.
             Self::Onboarding => size(px(1400.0), px(788.0)),
             Self::WatchGhostexVideo => size(px(1120.0), px(750.0)),
             // CDXC:SessionChat 2026-09-06 DECISION:
             // User: start only the diagram dialog 20% wider and taller (1248x912, previously 1040x760).
-            // SEE-ALSO: packages/core-ui/mermaid/mermaid-diagram.tsx and mermaid.css own the shared React dialog dimensions.
+            // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size; packages/core-ui/mermaid/mermaid.css keeps it for the React viewer's in-page dialog.
             Self::MermaidDiagram => size(px(1248.0), px(912.0)),
             Self::MarkdownTable => size(px(1248.0), px(912.0)),
         }
@@ -373,7 +356,6 @@ impl GpuiAppModalKind {
                 | Self::ConfigureAgents
                 | Self::ConfigureActions
                 | Self::OpenTargets
-                | Self::FirstLaunchSetup
                 | Self::Onboarding
                 | Self::AgentsHub
                 | Self::DelayedSend
@@ -392,7 +374,6 @@ impl GpuiAppModalKind {
                 | Self::GitCommit
                 | Self::GitFileDiff
                 | Self::PortlessSetup
-                | Self::DiscoverGhostex
         )
     }
 
@@ -419,7 +400,6 @@ impl GpuiAppModalKind {
             | Self::SessionNote
             | Self::WatchGhostexVideo
             | Self::RemoteSetup
-            | Self::FirstLaunchSetup
             | Self::Onboarding => serde_json::json!({
                 "modal": self.modal_id(),
                 "type": "open",
@@ -449,12 +429,6 @@ impl GpuiAppModalKind {
                 "remoteMachineName": "Remote",
                 "type": "open",
             }),
-            Self::RemoteProjectPicker => serde_json::json!({
-                "modal": self.modal_id(),
-                "remoteMachineId": "",
-                "remoteMachineName": "Remote",
-                "type": "open",
-            }),
             // These modals are normally opened through bridge messages that
             // carry their full payload (worktree and diff drafts); the bare
             // open message is the menu-path shape. For the Space editor it is
@@ -467,7 +441,6 @@ impl GpuiAppModalKind {
             | Self::GitCommit
             | Self::GitFileDiff
             | Self::PortlessSetup
-            | Self::DiscoverGhostex
             | Self::ExportTranscriptResult
             | Self::MissingProjectFolder => serde_json::json!({
                 "modal": self.modal_id(),

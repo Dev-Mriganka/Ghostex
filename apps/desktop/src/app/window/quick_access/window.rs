@@ -29,7 +29,7 @@ use super::rows::{RowCallbacks, quick_access_row};
 use crate::app::window::native_modal_kit::MODAL_UI_FONT;
 use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, FocusHandle, Focusable, FontWeight,
-    InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, Point, Render, Rgba,
+    InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, Point, Render,
     ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Subscription, Window,
     div, point, px, svg,
 };
@@ -145,29 +145,7 @@ impl GpuiQuickAccessWindow {
     /// the React surface followed `<body data-sidebar-theme>` and the child
     /// window's own fill.
     pub(crate) fn palette(&self) -> QuickAccessPalette {
-        let light = crate::CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed);
-        let settings = crate::shared_settings::shared_sidebar_settings_snapshot();
-        let palette = QuickAccessPalette::resolve(
-            light,
-            settings
-                .object()
-                .get("sidebarTheme")
-                .and_then(serde_json::Value::as_str),
-            self.window_background(),
-        );
-        if !self.glass {
-            return palette;
-        }
-        let fill = crate::app::helpers::frosted_menu_fill(hsla(palette.window));
-        palette.frosted(light, fill.into())
-    }
-
-    fn window_background(&self) -> Rgba {
-        if crate::CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed) {
-            gpui::rgb(0xffffff)
-        } else {
-            Rgba::from(crate::app::helpers::titlebar_background())
-        }
+        QuickAccessPalette::current(self.glass)
     }
 
     pub(crate) fn post(&self, command: serde_json::Value, cx: &mut App) {
@@ -1130,7 +1108,7 @@ const QUICK_ACCESS_PICKERS: [&str; 5] = ["view", "project", "tag", "editorProjec
 /// Menus under window glass: each draws in a frosted host window over this one
 /// (`QuickAccessMenuPaint`).
 impl GpuiQuickAccessWindow {
-    /// Whether the menus draw in frosted host windows (macOS, window glass on when this opened).
+    /// Whether the menus draw in frosted host windows (macOS and Windows, window glass on when this opened).
     fn hosts_menus(&self) -> bool {
         self.glass && crate::app::window::frosted_host::frosted_hosting_active()
     }

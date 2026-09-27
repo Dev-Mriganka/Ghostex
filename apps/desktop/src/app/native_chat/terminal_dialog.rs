@@ -110,6 +110,28 @@ impl NativeChatView {
                     cx,
                 ));
             }
+        } else if let Some(blocks) = dialog["presentation"]["blocks"]
+            .as_array()
+            .filter(|blocks| !blocks.is_empty())
+        {
+            // A long panel (the Usage tab) scrolls inside the card rather than pushing the composer
+            // off screen.
+            body.push(
+                div()
+                    .id("terminal-dialog-blocks")
+                    .max_h(px(window.viewport_size().height.as_f32() * 0.5))
+                    .overflow_y_scroll()
+                    .flex()
+                    .flex_col()
+                    .gap(px(12.0 * p.scale))
+                    // A scrolling column shrinks its children to fit unless they refuse to.
+                    .children(
+                        self.panel_blocks(dialog, blocks, p, cx)
+                            .into_iter()
+                            .map(|block| div().flex_shrink_0().child(block)),
+                    )
+                    .into_any_element(),
+            );
         } else if !has_rows && !text(dialog, "body").is_empty() {
             body.push(
                 div()
@@ -187,11 +209,13 @@ impl NativeChatView {
             body.push(match &state.field {
                 TerminalDialogField::Line(input) => Input::new(input)
                     .disabled(busy)
+                    .caret_color(p.foreground)
                     .w_full()
                     .text_size(px(14.0 * p.scale))
                     .into_any_element(),
                 TerminalDialogField::Lines(input) => Textarea::new(input)
                     .disabled(busy)
+                    .caret_color(p.foreground)
                     .w_full()
                     .text_size(px(14.0 * p.scale))
                     .into_any_element(),
@@ -234,7 +258,11 @@ impl NativeChatView {
                     window.prevent_default(); cx.stop_propagation();
                 })).into_any_element());
         }
-        if !copy.is_object() && !text(dialog, "footer").is_empty() {
+        // Written copy and blocks come with buttons for everything the key-hint footer says.
+        if !copy.is_object()
+            && !dialog["presentation"]["blocks"].is_array()
+            && !text(dialog, "footer").is_empty()
+        {
             body.push(
                 div()
                     .text_size(px(14.0 * p.scale))

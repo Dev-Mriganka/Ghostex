@@ -606,6 +606,13 @@ chats, `/compact` summarizes the conversation to reduce context, just like
 In Claude Code, Codex, and OpenCode v2 chats, start a message with `!` to run a shell command
 in that agent's session, for example `! pwd`. The command and its output appear
 in the chat.
+In Claude Code chats, `/btw <question>` asks a side question without stopping
+the agent's work. The answer opens in a card above the chat box, with Copy, Fork
+(continue the side question as a background agent) and Close; a long answer
+shows Show all. After Close the side question stays in the chat, folded where
+you asked it, and opens again on click. It is not added to the conversation.
+Claude panels such as `/status` and `/usage` show as clickable tabs, tables and
+usage meters instead of terminal text.
 OpenCode v2 supports streamed replies, reasoning, tool results, image attachments,
 questions, permissions, queued prompts, and conversation rewind in Chat. Install
 its hooks in Settings > Agents, then open a new OpenCode session to connect it.
@@ -798,7 +805,8 @@ and clicking one (or choosing Open Video from its menu) opens it in the system's
 app on macOS, Windows, and Linux instead of the code editor.
 Right-click an opened chat image preview to close it. Click the picture itself to step
 through three zoom levels, the last one showing it pixel for pixel, and once more to return
-it to the fitted size; the cursor shows whether the next click still zooms.
+it to the fitted size; the cursor shows whether the next click still zooms. Each step keeps the
+spot you clicked under the pointer, and dragging a zoomed picture moves it around.
 Disabled Code and Docs views are omitted from the menu.
 Hosts without an editor copy the path on click.
 Click the card background, circle, or change counts to expand or collapse the full diff.
@@ -835,8 +843,10 @@ Hover the model pill to see the configured Model & Effort Picker shortcut
 terminal status line.
 
 The chat input row has one model pill. It shows the agent's logo, the model, and
-after it the reasoning level and the context window, for example
-"Fable 5.1 High · 200K". Click it to open the model picker: a row of agent tabs
+after it the reasoning level, for example "Opus 5.5 High". Claude's Opus 5.5
+comes with a 1M or a 200K context window: picking it from another model always
+starts on 1M, and the pill only names the window when it is 200K
+("Opus 5.5 High · 200K"). Click it to open the model picker: a row of agent tabs
 with a starred Favorites tab first, the models of the chosen tab (starred ones
 first, in their usual order),
 and along the bottom a button each for the reasoning level (brain), the context
@@ -1509,8 +1519,8 @@ picture, video and tints are hidden until Always is picked.
 Docs, Kanban, the browser, and the code editor stay opaque. Turning on Reduce
 transparency in the macOS accessibility settings, or turning off Transparency effects
 in Windows Settings > Personalization > Colors, always makes the window opaque. On
-Windows, turning glass on takes effect the next time Ghostex starts, the corners of
-menus and pop-ups follow Windows' own rounding, and notifications keep solid cards.
+Windows, turning glass on takes effect the next time Ghostex starts, and the corners of
+menus and pop-ups follow Windows' own rounding.
 What shows behind the glass (macOS only) is four cards: Desktop and windows (the default) shows everything behind Ghostex. Wallpaper only shows just your desktop wallpaper, so other windows never show through; built-in wallpapers such as Sequoia show as a still picture of that wallpaper, and a solid color wallpaper shows everything behind the window. Picture shows a picture you choose instead, one for dark mode and one for light mode, side by side with Choose and Clear buttons; a mode with no picture shows everything behind the window. Live shows something moving behind the glass, chosen for dark mode and for light mode (only dark mode with Use transparency set to Dark only): one of eight calm animations drawn in your theme's colours (Aurora, Ink, Drift, Nebula, Silk, Bokeh, Waves, Mesh), so switching themes or Colourfulness recolours it at once, or Your video, a .mov, .mp4 or .m4v file you choose, which plays muted, looping and blurred (a mode set to Your video with no file shows everything behind the window). Speed sets how fast the animation moves (a quarter of its pace to twice as fast) and Brightness how bright it glows (45% by default, a subtle glow; every animation is about as bright as the others at the same setting); your own video plays as it is. An animation loops every two minutes without a seam, and changing the animation, theme or brightness, or switching between an animation and your video, fades rather than jumping. Nothing is downloaded. Live pauses whenever Ghostex is in the background, hidden or minimized, while the display sleeps and in Low Power Mode; Reduce Motion shows a still frame; and Play only when plugged in (on by default) pauses it on battery. For Wallpaper, Picture and Your video, Picture position picks Moves with the window (the default: the picture covers the window and moves with it) or Stays with the desktop (the picture stays put while the window moves over it, and can trail the window while you drag it) (`windowGlassSource`, `windowGlassImagePlacement`, `windowGlassImageDark`, `windowGlassImageLight`, `windowGlassLiveStyleDark`, `windowGlassLiveStyleLight`, `windowGlassVideoDark`, `windowGlassVideoLight`, `windowGlassLiveSpeed`, `windowGlassLiveBrightness`, `windowGlassVideoOnlyOnPower`).
 While glass is on, four sliders tune it, each in dark mode and in light mode: Sidebar tint and Work area tint set how much of the desktop each area hides, independently, so either can be the darker one; lower shows more of your desktop.
 Keep Awake (Power)

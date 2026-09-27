@@ -136,10 +136,3 @@ export function lazyModal<Props extends { isOpen: boolean }>(
 ): LazyModalComponent<Props> {
   return createLazyModal(load, (props) => props.isOpen);
 }
-
-/** For modals the host renders only while they are open. */
-export function lazyRenderedModal<Props extends object>(
-  load: () => Promise<ComponentType<Props>>
-): LazyModalComponent<Props> {
-  return createLazyModal(load, () => true);
-}

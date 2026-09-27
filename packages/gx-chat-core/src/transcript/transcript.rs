@@ -8,6 +8,7 @@ use crate::transcript::foreign::{merge_messages_with, order_messages};
 use crate::transcript::image_markers::normalize_image_transcript_messages;
 use crate::transcript::local_command::normalize_local_command_messages;
 use crate::transcript::noise::{drop_hidden_messages, suppressed_turn_label};
+use crate::transcript::side_question::fold_side_questions;
 use crate::transcript::tool_fold::fold_tool_messages;
 use crate::transcript::turns::{
     completed_work_render_items, final_assistant_message_ids, summary_mode_turns,
@@ -16,7 +17,7 @@ use crate::transcript::turns::{
 
 pub fn normalize_chat_transcript(messages: &[ChatMessage]) -> Vec<ChatMessage> {
     let ordered = order_messages(messages);
-    let with_commands = normalize_local_command_messages(&ordered);
+    let with_commands = fold_side_questions(&normalize_local_command_messages(&ordered));
     let with_images = normalize_image_transcript_messages(&with_commands);
     drop_hidden_messages(&with_images)
 }

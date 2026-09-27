@@ -5,6 +5,7 @@
 //! random source, so the host supplies the id with the action that opens the picker.
 
 use crate::menus::catalog::AgentModelCatalog;
+use crate::menus::picker::model_menu::standard_context_value;
 use crate::menus::picker::model_picker::{
     EffortChoice, ModelPickerModel, ModelPickerProvider, ModelPickerRequest,
 };
@@ -80,10 +81,23 @@ pub fn create_model_picker_request(
         .collect();
     // `Array.prototype.sort` is stable, so equal ranks keep catalog order.
     kept.sort_by_key(|model| quick_picker_rank(&agent.quick_picker_order, &model.value));
+    // A long-context card stands for both windows of its model (the catalog hides the 200K
+    // twin's own card), so it carries the session's 200K value while the session runs it: picking
+    // the card again keeps 200K, and moving to it from another model starts on 1M, as
+    // `model_menu_pick_value` decides for the model menu.
+    let card_value = |value: &str| -> String {
+        standard_context_value(value)
+            .filter(|standard| {
+                selected_model == Some(*standard)
+                    && agent.models.iter().any(|model| model.value == *standard)
+            })
+            .unwrap_or(value)
+            .to_string()
+    };
     let models: Vec<ModelPickerModel> = kept
         .into_iter()
         .map(|model| ModelPickerModel {
-            value: model.value.clone(),
+            value: card_value(&model.value),
             label: model
                 .quick_picker_label
                 .clone()
@@ -109,27 +123,6 @@ pub fn create_model_picker_request(
                 .or_else(|| agent.default_effort.clone()),
         })
         .collect();
-    // CDXC:SessionChat 2026-09-26 WHY:
-    // A session on a hidden context twin (Claude's 200K `opus` beside the `opus[1m]` card) matched
-    // no card, so the picker highlighted the catalog default and an effort-only change asked the
-    // agent to switch to the other context size, which Claude 2.1.283's list cannot do. The twin's
-    // card stands for the session's own size instead.
-    let mut models = models;
-    if let Some(selected) = selected_model.filter(|value| {
-        !models.iter().any(|entry| entry.value == *value)
-            && agent
-                .models
-                .iter()
-                .any(|model| model.value == *value && model.group.is_none())
-    }) {
-        let twin = selected
-            .strip_suffix("[1m]")
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("{selected}[1m]"));
-        if let Some(card) = models.iter_mut().find(|entry| entry.value == twin) {
-            card.value = selected.to_string();
-        }
-    }
     // Detection may not have arrived yet. The catalog default is a starting cursor, not a claim
     // about the running agent.
     let catalog_default = agent

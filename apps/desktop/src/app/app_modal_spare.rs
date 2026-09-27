@@ -154,10 +154,7 @@ impl GhostexGpuiApp {
         let fits = modal.uses_react_modal_host()
             && !modal.has_titlebar()
             && !modal.is_resizable()
-            && !matches!(
-                modal,
-                GpuiAppModalKind::Onboarding | GpuiAppModalKind::FirstLaunchSetup
-            )
+            && modal != GpuiAppModalKind::Onboarding
             && spare.window_size == window_size;
         let current = spare.center == self.main_window_bounds.center()
             && spare.light_appearance == CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed);

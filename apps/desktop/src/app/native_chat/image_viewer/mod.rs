@@ -1,3 +1,4 @@
+mod pan;
 mod render;
 mod window;
 

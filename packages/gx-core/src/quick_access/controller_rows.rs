@@ -760,7 +760,7 @@ impl QuickAccessController {
             action_hotkeys: action_hotkeys(),
             hint: if prompts_tab && self.prompts.editing.is_none() {
                 format!(
-                    "Press {} while you're using an agent to stash your prompt (Local only for now)",
+                    "Press {} while you're using an agent to stash your prompt",
                     format_hotkey_label("alt+s", platform)
                 )
             } else {

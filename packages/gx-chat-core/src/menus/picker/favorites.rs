@@ -11,6 +11,7 @@
 use serde_json::Value;
 
 use crate::event::StorageKey;
+use crate::menus::picker::model_menu::long_context_value;
 
 /// The store this list lives in; the host owns the `ghostex.model-favorites` prefix.
 pub const MODEL_FAVORITES_STORE: &str = "modelFavorites";
@@ -53,11 +54,16 @@ pub fn serialize_model_favorites(favorites: &[String]) -> String {
 }
 
 /// `toggleModelMenuFavorite`: starred rows are appended, unstarred ones removed in place.
+///
+/// A row that folds a 1M twin may carry its star under the twin's key (see `model_menu_rows`),
+/// so un-starring removes both keys.
 pub fn toggle_model_favorite(favorites: &[String], key: &str) -> Vec<String> {
-    if favorites.iter().any(|item| item == key) {
+    let twin = long_context_value(key);
+    let starred = |item: &String| item == key || *item == twin;
+    if favorites.iter().any(starred) {
         favorites
             .iter()
-            .filter(|item| *item != key)
+            .filter(|item| !starred(item))
             .cloned()
             .collect()
     } else {

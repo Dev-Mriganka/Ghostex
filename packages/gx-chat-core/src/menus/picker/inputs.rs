@@ -143,7 +143,6 @@ fn model_menu_context(state: &ChatState, options: &NativeChatOptions) -> Option<
     Some(ModelMenuContext {
         provider: Some(provider),
         model_id: Some(catalog.model.id.clone()),
-        model_default: catalog.model.default_value.clone(),
         model_label: options.option_labels.model.clone(),
         descriptors: resolved_descriptors(state, options, &descriptors),
         model_value,

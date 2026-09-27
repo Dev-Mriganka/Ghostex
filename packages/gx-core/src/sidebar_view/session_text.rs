@@ -14,7 +14,6 @@ use super::view::{LabelDeadline, SessionRow};
 const DEFAULT_TERMINAL_SESSION_TITLE: &str = "Terminal Session";
 const TERMINAL_TITLE_MARKER: &str = "∗";
 const UNSYNCED_TITLE_LABEL: &str = "(Unsynced title)";
-const CLOSE_AFTER_DONE_ARMED_REMAINING_LABEL: &str = "03:00";
 const SESSION_NOTE_TOOLTIP_MAX_UTF16: usize = 400;
 
 /// Everything the title and tooltip rules read from a row.
@@ -419,6 +418,9 @@ fn session_state_tooltip_label(input: &TitleInput<'_>) -> Option<&'static str> {
 }
 
 /// `getSessionCardTimerTrailingLabel`.
+///
+/// CDXC:Sessions 2026-09-27 DECISION:
+/// User: an armed Close After Done on a session that is still running must not show a time; the time appears only once the countdown to close starts. The row used to draw a standing `03:00` while it waited for the agent to finish, which read as the time left; the clock icon and the tooltip ("Close After Done armed") already say it is armed.
 pub(crate) fn timer_trailing_label(row: &SessionRow, now_ms: u64) -> Option<String> {
     if let Some(delayed) = &row.delayed_send {
         if let Some(deadline) = delayed
@@ -445,16 +447,11 @@ pub(crate) fn timer_trailing_label(row: &SessionRow, now_ms: u64) -> Option<Stri
     {
         return deadline_countdown(deadline, now_ms);
     }
-    if let Some(label) = close
+    close
         .remaining_label
         .as_deref()
         .filter(|value| !value.is_empty())
-    {
-        return Some(label.to_string());
-    }
-    close
-        .armed
-        .then(|| CLOSE_AFTER_DONE_ARMED_REMAINING_LABEL.to_string())
+        .map(str::to_string)
 }
 
 pub(crate) fn deadline_countdown(deadline_at: &str, now_ms: u64) -> Option<String> {
@@ -535,8 +532,8 @@ pub(crate) fn next_label_deadline(
     if let Some(countdown) = countdown {
         return Some(LabelDeadline::Countdown(countdown.max(now + 1) as u64));
     }
-    // A Delayed Send or Close After Done with no deadline still owns the slot, with a label that
-    // says what it is waiting for rather than a time.
+    // A Delayed Send with no deadline still owns the slot, with a label that says what it is
+    // waiting for rather than a time.
     if timer_trailing_label(row, now_ms).is_some() {
         return None;
     }

@@ -1,5 +1,4 @@
 import type { DelayedSendAgentReference } from '@/packages/shared/delayed-send';
-import type { AgentConfigDraft } from './agent-config-modal';
 import { logAppModalError } from './app-modal-error-log';
 import type { GitCommitModalDraft } from './git-commit-modal';
 import type { MainSettingsInitialSectionId, SettingsModalTab, SettingsSidebarTagsAction } from './settings-modal';
@@ -12,15 +11,12 @@ export type SettingsAgentsSection = 'agentHooks';
 
 export type AppModalKind =
   | 'addProject'
-  | 'agentConfig'
   | 'agentHooksRequired'
   | 'agentsHub'
   | 'commandPalette'
   | 'configureActions'
   | 'configureAgents'
-  | 'discoverGhostex'
   | 'exportTranscriptResult'
-  | 'watchGhostexVideo'
   | 'gitCommit'
   | 'gitFileDiff'
   | 'mermaidDiagram'
@@ -31,11 +27,8 @@ export type AppModalKind =
   | 'openTargets'
   | 'portlessSetup'
   | 'previousSessions'
-  | 'browserHistory'
   | 'recentProjects'
-  | 'firstUserMessage'
   | 'remoteGxserverInstall'
-  | 'remoteProjectPicker'
   | 'remoteSetup'
   | 'delayedSend'
   | 'renameSession'
@@ -44,12 +37,9 @@ export type AppModalKind =
   | 'sidebarSpaceEditor'
   | 'stashedPrompts'
   | 'worktree'
-  | 'tipsAndTricks'
-  | 'firstLaunchSetup'
   | 'onboarding';
 
 export type OpenAppModalMessage =
-  | { modal: 'browserHistory'; paneId: number; runtimeKey: number; type: 'open' }
   | {
       modal: 'previousSessions';
       initialProjectId?: string;
@@ -62,13 +52,10 @@ export type OpenAppModalMessage =
       modal: Exclude<
         AppModalKind,
         | 'addProject'
-        | 'agentConfig'
         | 'agentHooksRequired'
         | 'commandPalette'
         | 'delayedSend'
-        | 'discoverGhostex'
         | 'exportTranscriptResult'
-        | 'firstUserMessage'
         | 'gitCommit'
         | 'gitFileDiff'
         | 'mermaidDiagram'
@@ -77,11 +64,9 @@ export type OpenAppModalMessage =
         | 'missingProjectFolder'
         | 'portlessSetup'
         | 'previousSessions'
-        | 'browserHistory'
         | 'recentProjects'
         | 'remoteGxserverInstall'
         | 'renameSession'
-        | 'remoteProjectPicker'
         | 'sessionNote'
         | 'sidebarSpaceEditor'
         | 'stashedPrompts'
@@ -166,18 +151,6 @@ export type OpenAppModalMessage =
       type: 'open';
     }
   | {
-      /*
-       * CDXC:Onboarding 2026-06-16-07:58:
-       * Automatic first-run onboarding should open the replayable Discover
-       * Ghostex tour before firstLaunchSetup. Keep the follow-up flag scoped
-       * to this modal open so manual overflow-menu Discover launches stay a
-       * standalone tour.
-       */
-      modal: 'discoverGhostex';
-      showFirstLaunchSetupOnClose?: boolean;
-      type: 'open';
-    }
-  | {
       /**
        * CDXC:CommandPalette 2026-06-13-22:18:
        * The Commands tab accepts an optional initial search query. Quick Access
@@ -228,13 +201,6 @@ export type OpenAppModalMessage =
       type: 'open';
     }
   | {
-      initialQuery?: string;
-      modal: 'remoteProjectPicker';
-      remoteMachineId: string;
-      remoteMachineName: string;
-      type: 'open';
-    }
-  | {
       machineId?: string;
       machineName?: string;
       modal: 'recentProjects';
@@ -268,13 +234,6 @@ export type OpenAppModalMessage =
       type: 'open';
     }
   | { gitCommitDraft: GitCommitModalDraft; modal: 'gitCommit'; type: 'open' }
-  | { agentDraft: AgentConfigDraft; modal: 'agentConfig'; type: 'open' }
-  | {
-      message: string;
-      modal: 'firstUserMessage';
-      title?: string;
-      type: 'open';
-    }
   | {
       /**
        * CDXC:DelayedSend 2026-05-17-03:14

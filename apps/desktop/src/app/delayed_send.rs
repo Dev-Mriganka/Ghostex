@@ -2012,12 +2012,6 @@ impl GhostexGpuiApp {
             "probeRemoteGxserverInstall" => {
                 self.handle_gpui_probe_remote_gxserver_install_message(command, cx);
             }
-            "browseRemoteProjectDirectories" => {
-                self.handle_gpui_browse_remote_project_directories_message(command, cx);
-            }
-            "addRemoteProjectPath" => {
-                self.handle_gpui_add_remote_project_path_message(command, cx);
-            }
             "addProjectDialogRequest" => {
                 self.handle_gpui_add_project_dialog_request_message(command, cx);
             }
@@ -2172,9 +2166,9 @@ impl GhostexGpuiApp {
             }
             // CDXC:Onboarding 2026-09-15 DECISION:
             // The Tips dropdown's "Setup" button opens the Onboarding modal, the same one the automatic
-            // first run opens (modals.rs); the old FirstLaunchSetup stays in the tree under its own id and
-            // nothing opens it by default. Quick Access's Setup Ghostex row reaches this arm, so it must
-            // open the same modal as the native Tips header action in titlebar/settings_and_action_state.rs.
+            // first run opens (modals.rs); the older setup modal was deleted on 2026-09-27. Quick Access's
+            // Setup Ghostex row reaches this arm, so it must open the same modal as the native Tips header
+            // action in titlebar/settings_and_action_state.rs.
             "openWorkspaceWelcome" => {
                 self.open_gpui_app_modal_from_titlebar(GpuiAppModalKind::Onboarding, window, cx);
             }

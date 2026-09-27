@@ -26,7 +26,6 @@ describe('agent hook status source', () => {
      * priority provider probes.
      */
     expect(contractSource).toContain('agentIds?: readonly string[];');
-    expect(modalHostSource).toContain('vscode.postMessage({ agentIds, type: "requestAgentHookStatus" });');
     expect(modalHostSource).toContain('vscode.postMessage({ agentIds, type: "installAgentHooks" });');
   });
 

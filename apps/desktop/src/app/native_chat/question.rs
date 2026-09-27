@@ -162,6 +162,7 @@ impl NativeChatView {
                     .aria_label("Your answer")
                     .disabled(self.snapshot["questionCard"]["busy"] == true)
                     .placeholder_color(p.muted.opacity(0.6))
+                    .caret_color(p.foreground)
                     .appearance(false)
                     .bordered(false)
                     .focus_bordered(false)

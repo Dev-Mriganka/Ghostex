@@ -334,40 +334,77 @@ pub(crate) struct NativeDocsState {
     pub(crate) notes_windows: super::notes_windows::DocsNotesWindows,
     /// A field of the floating list to focus once its window draws (the search, a rename).
     pub(crate) drawer_focus: Option<gpui::Entity<gpui_component::input::InputState>>,
+    /// CDXC:Docs 2026-09-27 WHY:
+    /// Docs holds one state for the whole app, so drawing it for another project used to drop the files list, the open files and their editors, and coming back loaded them all again behind "Updating files…" and a new HTML page. A project left with Docs as its awake side panel view (CDXC:Workarea 2026-09-26) parks its state here by project id instead, and coming back puts it back as it was.
+    pub(crate) parked: std::collections::HashMap<String, NativeDocsState>,
+    /// The highest generation handed out, so a new project never reuses a parked one's.
+    pub(crate) generations_issued: u64,
 }
 
 impl NativeDocsState {
-    /// Drops everything that belongs to the previous project. The search box, the focus handle,
-    /// the palette and the pinned intent are app-wide and carry over.
-    pub(crate) fn reset_for_project(&mut self, project: DocsProjectKey) {
-        let generation = self.generation.wrapping_add(1);
-        *self = Self {
+    /// Starts `project` from nothing and returns the previous project's state, stripped of what
+    /// is app-wide (`carry_app_wide_from`).
+    pub(crate) fn reset_for_project(&mut self, project: DocsProjectKey) -> Self {
+        let generation = self.generations_issued.max(self.generation).wrapping_add(1);
+        let mut next = Self {
             project: Some(project),
             generation,
             load_state: Some(DocsLoadState::Loading),
-            search: self.search.take(),
-            search_subscription: self.search_subscription.take(),
-            focus: self.focus.take(),
-            palette: self.palette.take(),
-            appearance_signature: self.appearance_signature,
-            sidebar_pinned: self.sidebar_pinned,
-            format_bar_collapsed: self.format_bar_collapsed,
-            blocks: self.blocks.clone(),
-            line_numbers: self.line_numbers,
-            git_changes: self.git_changes,
-            constrain_width: self.constrain_width,
-            find: self.find.take(),
-            edge_band_armed: true,
-            tree_scroll: self.tree_scroll.clone(),
-            pending_open: self.pending_open.take(),
-            pending_origin: self.pending_origin.take(),
-            watch_task: self.watch_task.take(),
-            drawer: self.drawer.take(),
-            format_bar_window: std::mem::take(&mut self.format_bar_window),
-            notes_windows: std::mem::take(&mut self.notes_windows),
-            drawer_opening: self.drawer_opening,
             ..Self::default()
         };
+        next.carry_app_wide_from(self);
+        next.generations_issued = generation;
+        std::mem::replace(self, next)
+    }
+
+    /// Puts a parked project's state back, under its own generation so its answers still land,
+    /// and returns the previous project's state, stripped of what is app-wide.
+    pub(crate) fn restore_parked(&mut self, mut parked: Self) -> Self {
+        parked.carry_app_wide_from(self);
+        std::mem::replace(self, parked)
+    }
+
+    /// Clears what only means something on screen (a peek, an open menu, the drawer's frame) and
+    /// what must be asked again (the browser area, a pending stat) before the state is parked.
+    pub(crate) fn strip_for_parking(&mut self) {
+        self.transient = None;
+        self.slide = None;
+        self.peek_timer = None;
+        self.format_menu = Default::default();
+        self.drawer_frame = None;
+        self.drawer_synced = false;
+        self.drawer_click_watch = false;
+        self.drawer_focus = None;
+        self.browser_area_key = None;
+        self.stat_in_flight = false;
+    }
+
+    /// The search box, the focus handle, the palette, the windows, the watch, the pinned intent
+    /// and the parked projects belong to the app, not to a project, and move with it.
+    fn carry_app_wide_from(&mut self, from: &mut Self) {
+        self.search = from.search.take();
+        self.search_subscription = from.search_subscription.take();
+        self.focus = from.focus.take();
+        self.palette = from.palette.take();
+        self.appearance_signature = from.appearance_signature;
+        self.sidebar_pinned = from.sidebar_pinned;
+        self.format_bar_collapsed = from.format_bar_collapsed;
+        self.blocks = from.blocks.clone();
+        self.line_numbers = from.line_numbers;
+        self.git_changes = from.git_changes;
+        self.constrain_width = from.constrain_width;
+        self.find = from.find.take();
+        self.edge_band_armed = true;
+        self.tree_scroll = from.tree_scroll.clone();
+        self.pending_open = from.pending_open.take();
+        self.pending_origin = from.pending_origin.take();
+        self.watch_task = from.watch_task.take();
+        self.drawer = from.drawer.take();
+        self.format_bar_window = std::mem::take(&mut from.format_bar_window);
+        self.notes_windows = std::mem::take(&mut from.notes_windows);
+        self.drawer_opening = from.drawer_opening;
+        self.parked = std::mem::take(&mut from.parked);
+        self.generations_issued = from.generations_issued.max(from.generation);
     }
 
     pub(crate) fn document(&self, path: &str) -> Option<&DocsDocument> {

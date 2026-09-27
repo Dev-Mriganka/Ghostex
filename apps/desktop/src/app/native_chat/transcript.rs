@@ -396,6 +396,11 @@ impl NativeChatView {
                 )
                 .into_any_element();
         }
+        if message["sideQuestion"].is_object() {
+            return row
+                .child(self.side_question_row(&id, message, p, cx))
+                .into_any_element();
+        }
         if message["suppressed"].is_object() {
             return row
                 .child(self.suppressed_row(&id, message, p, cx))

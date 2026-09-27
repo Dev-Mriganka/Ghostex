@@ -6,13 +6,17 @@
 // for one of them here and qualify its call sites instead.
 pub(crate) mod account_usage;
 pub(crate) mod agent_hooks_required_modal;
+pub(crate) mod browser_history_modal;
 pub(crate) mod copied_indicator;
 pub(crate) mod frosted_host;
+pub(crate) mod modal_popover_host;
 pub(crate) mod create_worktree_modal;
 pub(crate) mod delayed_send_modal;
 pub(crate) mod delete_worktree_modal;
 pub(crate) mod export_transcript_modal;
 pub(crate) mod extension_titlebar_panel;
+pub(crate) mod markdown_table_modal;
+pub(crate) mod mermaid_diagram_modal;
 pub(crate) mod missing_project_folder_modal;
 pub(crate) mod modal_host;
 pub(crate) mod native_modal_kit;
@@ -35,11 +39,14 @@ pub(crate) mod toast;
 pub(crate) mod update_available_modal;
 
 pub(crate) use agent_hooks_required_modal::*;
+pub(crate) use browser_history_modal::*;
 pub(crate) use create_worktree_modal::*;
 pub(crate) use delayed_send_modal::*;
 pub(crate) use delete_worktree_modal::*;
 pub(crate) use export_transcript_modal::*;
 pub(crate) use extension_titlebar_panel::*;
+pub(crate) use markdown_table_modal::*;
+pub(crate) use mermaid_diagram_modal::*;
 pub(crate) use missing_project_folder_modal::*;
 pub(crate) use modal_host::*;
 pub(crate) use native_modal_kit::*;

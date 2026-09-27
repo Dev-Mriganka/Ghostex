@@ -504,6 +504,8 @@ impl NativeChatView {
                         Textarea::new(&input)
                             .on_paste(Self::paste_handler(cx.entity().downgrade(), None))
                             .placeholder_color(p.muted.opacity(0.6))
+                            // CDXC:SessionChat 2026-09-27 WHY: The chat draws in its own palette (sessionChatTheme can differ from the app theme, and the web page never switches GPUI Kit off its light default), so the kit theme's caret vanished against the composer. Every chat field takes its caret from the chat palette.
+                            .caret_color(p.foreground)
                             .appearance(false)
                             .bordered(false)
                             .focus_bordered(false)

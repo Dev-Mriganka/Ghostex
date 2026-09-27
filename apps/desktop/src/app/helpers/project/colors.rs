@@ -337,10 +337,12 @@ pub(crate) fn workspace_terminal_body_color(
     }
 }
 
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "yes pls make all those that could be glass glass". Under window glass the terminal's state and missing-session cards are the paused view card's flat ink wash (`glass_card`) on the pane's glass, keeping their state-coloured border, badge and button, instead of a solid tinted slab.
 pub(crate) fn workspace_terminal_placeholder_card_color(
     presentation_state: TerminalSessionPresentationState,
 ) -> Hsla {
-    match presentation_state {
+    let solid: Hsla = match presentation_state {
         TerminalSessionPresentationState::Running => chrome_color(0x000000, 0xffffff).into(),
         TerminalSessionPresentationState::Sleeping => chrome_color(0x101923, 0xf0f6fc).into(),
         TerminalSessionPresentationState::Mounting => chrome_color(0x1c160b, 0xfff9ed).into(),
@@ -351,14 +353,15 @@ pub(crate) fn workspace_terminal_placeholder_card_color(
         TerminalSessionPresentationState::PoppedOutPlaceholder => {
             chrome_color(0x1d1118, 0xfcf1f6).into()
         }
-    }
+    };
+    glass_card(solid, 1.0)
 }
 
 pub(crate) fn workspace_terminal_placeholder_border_color(
     presentation_state: TerminalSessionPresentationState,
 ) -> Hsla {
     match presentation_state {
-        TerminalSessionPresentationState::Running => rgb(0x242424).into(),
+        TerminalSessionPresentationState::Running => glass_divider(rgb(0x242424).into()),
         TerminalSessionPresentationState::Sleeping => rgb(0x6bb7ff).opacity(0.22).into(),
         TerminalSessionPresentationState::Mounting => rgb(0xffc14d).opacity(0.22).into(),
         TerminalSessionPresentationState::StartupFailed => rgb(0xff6b6b).opacity(0.24).into(),

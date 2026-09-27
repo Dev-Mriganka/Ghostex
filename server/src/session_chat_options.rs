@@ -686,9 +686,8 @@ fn claude_model_value(family_value: &str, version: &str) -> &'static str {
 
 fn match_claude_model(segment: &str) -> Option<SessionChatDetectedChoice> {
     let says_long_context = segment.ends_with(" (1M)") || segment.ends_with(" (1M context)");
-    // Opus 5.5 is one catalog row whose value is `opus[1m]` and whose label is
-    // the bare "Opus 5.5", so a footer without the 1M marker (a session started
-    // with `--model opus`) must not be read as that row.
+    // Opus 5.5's `opus` and `opus[1m]` rows share the bare label "Opus 5.5", so
+    // a footer without the 1M marker must never be read as the `[1m]` row.
     if let Some(value) = crate::agent_model_catalog::model_value_for_label("claude", segment)
         .filter(|value| says_long_context || !value.ends_with("[1m]"))
     {
@@ -2364,6 +2363,11 @@ pub fn detect_session_chat_terminal_state(
     });
     if let Some(notice) = notice.as_mut() {
         crate::session_chat_codex_lock::enrich_notice(repository, project_id, session_id, notice);
+    }
+    if let (Some(notice), Some(styled)) = (notice.as_mut(), styled_screen.as_deref()) {
+        crate::session_chat_claude_panel::enrich_claude_panel_notice(
+            repository, project_id, session_id, notice, styled,
+        );
     }
     if let Some(notice) = notice.as_mut().filter(|notice| {
         notice.kind == crate::session_chat_notice::SESSION_CHAT_NOTICE_TRUST_PROMPT

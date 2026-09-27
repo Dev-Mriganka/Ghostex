@@ -126,7 +126,7 @@ impl GhostexGpuiApp {
         // `remove_native_app_modal_window` tells the controller the window is gone.
         self.remove_native_app_modal_window(cx);
         self.app_modal_command_return_focus_target = return_focus_target;
-        self.restore_gpui_app_modal_command_return_focus_if_needed(cx);
+        self.restore_keyboard_focus_after_app_modal(cx);
     }
 
     /// Hands one command to the Quick Access model.

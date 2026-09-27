@@ -306,6 +306,11 @@ impl NativeChatView {
 /// only the first 7 lines instead of the whole message. gx-chat-core cuts the source to those lines;
 /// the card clips at the same number of rows, so a long line that wraps cannot grow it either. A
 /// paragraph gap is one row, which keeps every block on the row grid and the clip between rows.
+///
+/// CDXC:SessionChat 2026-09-27 WHY:
+/// The card is plain block boxes on purpose. As a min-width-0 flex column, taffy 0.13 (the GPUI
+/// upgrade) sized it to almost no width inside the tooltip, which is measured at its min-content
+/// size, so the text wrapped one glyph per line and the bubble showed as a thin empty strip.
 fn minimap_preview_card(
     index: usize,
     prompt: &SharedString,
@@ -328,7 +333,6 @@ fn minimap_preview_card(
     style.list = StyleRefinement::default();
     let body = |id: &'static str, text: &SharedString| {
         TextView::markdown((id, index), text.clone())
-            .min_w_0()
             .selectable(false)
             .style(style.clone())
             .text_size(font_size)
@@ -338,18 +342,14 @@ fn minimap_preview_card(
         .py(px(4.0 * p.scale))
         .child(
             div()
-                .flex()
-                .flex_col()
-                .min_w_0()
                 .max_w(px(SPEC.preview_max_width * p.scale))
                 .max_h(px(row * SPEC.preview_lines as f32))
                 .overflow_hidden()
-                .gap(px(row))
                 .child(body("chat-minimap-prompt", prompt))
                 .when(!reply.is_empty(), |card| {
-                    card.child(
+                    card.child(div().pt(px(row)).child(
                         body("chat-minimap-reply", reply).text_color(cx.theme().muted_foreground),
-                    )
+                    ))
                 }),
         )
         .into_any_element()

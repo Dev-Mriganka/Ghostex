@@ -2,16 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { SidebarAgentButton } from '@/packages/shared/sidebar-agents';
 import { AgentConfigModal } from '../agent-config-modal';
 import { ConfirmationModal } from '../confirmation-modal';
-import { FirstUserMessageModal } from '../first-user-message-modal';
 import { MissingProjectFolderModal } from '../missing-project-folder-modal';
 import { PortlessSetupModal } from '../portless-setup-modal';
 import { RemoteGxserverInstallModal } from '../remote-gxserver-install-modal';
-import { RemoteProjectPickerModal } from '../remote-project-picker/remote-project-picker-modal';
 import { RemoteSetupModal } from '../remote-setup-modal';
 import { SessionNoteModal } from '../session-note-modal';
 import { SessionRenameModal } from '../session-rename-modal';
 import { UpdateAvailableModal } from '../update-available-modal';
-import { WatchGhostexVideoModal } from '../watch-ghostex-video-modal';
 import { ModalStorySurface, modalStoryParameters } from './modal-story-surface';
 
 const noop = () => undefined;
@@ -39,19 +36,6 @@ export const Confirmation: Story = {
         onCancel={noop}
         onConfirm={noop}
         title='Delete this session?'
-      />
-    </ModalStorySurface>
-  ),
-};
-
-export const FirstUserMessage: Story = {
-  render: () => (
-    <ModalStorySurface>
-      <FirstUserMessageModal
-        isOpen
-        message='Please review the modal system, identify the visual inconsistencies, and propose one shared design language.'
-        onClose={noop}
-        title='Modal visual audit'
       />
     </ModalStorySurface>
   ),
@@ -108,26 +92,6 @@ export const RemoteGxserverInstall: Story = {
   render: () => (
     <ModalStorySurface>
       <RemoteGxserverInstallModal isOpen machineName='Build Server' onApprove={noop} onCancel={noop} />
-    </ModalStorySurface>
-  ),
-};
-
-export const RemoteProjectPicker: Story = {
-  render: () => (
-    <ModalStorySurface>
-      <RemoteProjectPickerModal
-        isOpen
-        machineName='Build Server'
-        onAddProject={async () => undefined}
-        onBrowse={async () => ({
-          entries: [
-            { fullPath: '/home/story/Ghostex', name: 'Ghostex' },
-            { fullPath: '/home/story/sites', name: 'sites' },
-          ],
-          parentPath: '/home',
-        })}
-        onClose={noop}
-      />
     </ModalStorySurface>
   ),
 };
@@ -207,14 +171,6 @@ export const SessionNote: Story = {
         onConfirm={noop}
         sessionTitle='Unify modal styling'
       />
-    </ModalStorySurface>
-  ),
-};
-
-export const VideoWalkthrough: Story = {
-  render: () => (
-    <ModalStorySurface>
-      <WatchGhostexVideoModal isOpen onClose={noop} theme='dark-2' />
     </ModalStorySurface>
   ),
 };

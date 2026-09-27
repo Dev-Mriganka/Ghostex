@@ -54,6 +54,7 @@ pub(crate) mod session_chat_async_questions;
 pub mod session_chat_branch;
 pub mod session_chat_claude_dialog;
 pub mod session_chat_claude_effort_notice;
+pub(crate) mod session_chat_claude_panel;
 pub(crate) mod session_chat_claude_fleet;
 pub(crate) mod session_chat_claude_interrupt;
 pub(crate) mod session_chat_claude_popups;

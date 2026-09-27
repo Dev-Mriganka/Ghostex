@@ -697,6 +697,10 @@ pub struct GhostexGpuiApp {
     /// The one outstanding keyboard handoff; see keyboard_owner.rs.
     /// Session and command creation, wake, and chat launch paths become type-ready through it: the request waits until the terminal surface or chat composer actually exists, then focuses it once.
     pub(crate) pending_keyboard_handoff: Option<PendingKeyboardHandoff>,
+    /// True while the pending handoff is the one a closing modal asked for, which yields to a text field the user focused in the meantime.
+    pub(crate) pending_keyboard_handoff_returns_from_modal: bool,
+    /// Set once the open native app modal's window has been the key window; a click back into the main window closes only such a modal (native_app_modal_lifecycle.rs).
+    pub(crate) native_app_modal_was_key: std::rc::Rc<std::cell::Cell<bool>>,
     /// The composited terminal the keyboard router currently treats as owner, with the native root it was claimed on, so a terminal that stops rendering can be released.
     pub(crate) composited_terminal_keyboard_owner: Option<(usize, GpuiEngineTerminalEventTarget)>,
     pub(crate) agents_terminal_startup_body_slot_geometries:

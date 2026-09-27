@@ -638,13 +638,31 @@ fn emit_snapshot_frame(
     screen: SessionChatScreenState<'_>,
 ) {
     let queue = read_optional_queue(config);
+    /*
+    CDXC:SessionChat 2026-09-27 WHY:
+    The slash commands the user sent from chat, and the side answers stored as `/btw` outputs, are replayed from gxserver's archive into every read, but the socket's snapshot carried only the transcript, so the desktop and web chats lost them once the live row expired and never got them back on reload. The snapshot now merges the archive exactly as the live-tail read does.
+    */
+    let archived = crate::session_chat_local_command::load_session_chat_local_commands(
+        &config.project_id,
+        &config.session_id,
+    );
+    let local_commands = crate::session_chat_local_command::select_session_chat_local_commands(
+        archived,
+        &tail.messages,
+        true,
+        tail.has_more,
+    );
+    let messages = crate::session_chat_local_command::merge_session_chat_local_commands(
+        tail.messages.clone(),
+        &local_commands,
+    );
     stream.emit_sequenced(
         |seq| {
             let mut frame = session_chat_frame(config, frame_type, epoch, seq);
             frame.insert(
                 "messages".to_string(),
                 Value::Array(crate::session_chat_history::collapse_snapshot_messages(
-                    &tail.messages,
+                    &messages,
                     tail.before_offset,
                 )),
             );
@@ -652,7 +670,7 @@ fn emit_snapshot_frame(
             frame.insert("hasMore".to_string(), json!(tail.has_more));
             frame.insert("hasMoreExact".to_string(), json!(true));
             frame.insert("beforeOffset".to_string(), json!(tail.before_offset));
-            let status = if tail.messages.is_empty() {
+            let status = if messages.is_empty() {
                 SessionChatStatus::Empty
             } else {
                 SessionChatStatus::Ready
@@ -1609,14 +1627,23 @@ pub async fn run_session_chat_follower(
             .is_some_and(|dialog| {
                 dialog.id == crate::session_chat_codex_pager::CODEX_TRANSCRIPT_PAGER_ID
             });
-        let probe_interval_ticks =
-            if published_activity.is_some() || published_fleet.is_some() || transcript_pager_open {
-                crate::session_chat_options::SESSION_CHAT_ACTIVITY_RECONCILE_INTERVAL_TICKS
-            } else if published_working {
-                crate::session_chat_options::SESSION_CHAT_WORKING_RECONCILE_INTERVAL_TICKS
-            } else {
-                crate::session_chat_options::SESSION_CHAT_OPTION_RECONCILE_INTERVAL_TICKS
-            };
+        // An open side question streams its answer and has its clipped window read whole in the
+        // background; both land only through a probe.
+        let side_question_open = published_notice
+            .as_ref()
+            .and_then(|notice| notice.dialog.as_ref())
+            .is_some_and(|dialog| dialog.side_question.is_some());
+        let probe_interval_ticks = if published_activity.is_some()
+            || published_fleet.is_some()
+            || transcript_pager_open
+            || side_question_open
+        {
+            crate::session_chat_options::SESSION_CHAT_ACTIVITY_RECONCILE_INTERVAL_TICKS
+        } else if published_working {
+            crate::session_chat_options::SESSION_CHAT_WORKING_RECONCILE_INTERVAL_TICKS
+        } else {
+            crate::session_chat_options::SESSION_CHAT_OPTION_RECONCILE_INTERVAL_TICKS
+        };
         let activity_command_probe_due = activity_command_probe_ticks > 0;
         activity_command_probe_ticks = activity_command_probe_ticks.saturating_sub(1);
         /*

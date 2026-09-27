@@ -82,7 +82,8 @@ impl Render for SaveMarkdownWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let snapshot = self.chat.read(cx).snapshot.clone();
         let state = &snapshot["saveMarkdown"];
-        let p = ChatAppearance::current(&snapshot);
+        let glass = crate::app::helpers::window_glass_active_for(self.chat.read(cx).main_window);
+        let p = ChatAppearance::current(&snapshot).on_window_glass(glass);
         for (input, key) in [(&self.folder, "folder"), (&self.name, "fileName")] {
             let value = text(state, key);
             if input.read(cx).value().as_str() != value {
@@ -244,10 +245,15 @@ impl Render for SaveMarkdownWindow {
             .p(px(24.0))
             .gap(px(24.0))
             .rounded(px(14.0))
-            .bg(if p.light {
+            .bg(if glass {
+                p.menu_surface()
+            } else if p.light {
                 p.background
             } else {
                 gpui::rgb(0x191919).into()
+            })
+            .when(glass, |dialog| {
+                dialog.border_1().border_color(p.composer_border)
             })
             .shadow(vec![
                 gpui::BoxShadow {
@@ -289,7 +295,9 @@ impl Render for SaveMarkdownWindow {
             .items_center()
             .justify_center()
             .p(px(16.0))
-            .bg(gpui::black().opacity(0.65))
+            .bg(super::super::child_window::pane_dialog_scrim(
+                glass, p.light, 0.65,
+            ))
             .capture_any_mouse_down(|_, window, _| {
                 super::super::focus::reclaim_keyboard_focus(window);
             })

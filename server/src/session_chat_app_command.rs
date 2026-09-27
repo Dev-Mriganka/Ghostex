@@ -115,10 +115,37 @@ fn store() -> &'static AppCommandStore {
     STORE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Answered side questions kept live per session (see `prune`).
+const SIDE_QUESTION_LIMIT: usize = 20;
+
+/// CDXC:SessionChat 2026-09-27 WHY: a client keeps the rows a snapshot gave it and adds live rows after, so an answered `/btw` asked since its last snapshot would vanish when its live row expired, although the user decided side answers stay in the chat for good. Answered side questions are exempt from the expiry and the general cap and keep their own cap instead; the archive holds them across restarts.
 fn prune(rows: &mut Vec<SessionChatAppCommand>, now: Instant) {
-    rows.retain(|row| now.duration_since(row.recorded) < APP_COMMAND_TTL);
-    if rows.len() > APP_COMMAND_LIMIT {
-        rows.drain(..rows.len() - APP_COMMAND_LIMIT);
+    let kept_side_question =
+        |row: &SessionChatAppCommand| is_side_question(&row.command) && row.output.is_some();
+    rows.retain(|row| {
+        kept_side_question(row) || now.duration_since(row.recorded) < APP_COMMAND_TTL
+    });
+    let side_questions = rows.iter().filter(|row| kept_side_question(row)).count();
+    if side_questions > SIDE_QUESTION_LIMIT {
+        let mut surplus = side_questions - SIDE_QUESTION_LIMIT;
+        rows.retain(|row| {
+            if surplus > 0 && kept_side_question(row) {
+                surplus -= 1;
+                return false;
+            }
+            true
+        });
+    }
+    let others = rows.iter().filter(|row| !kept_side_question(row)).count();
+    if others > APP_COMMAND_LIMIT {
+        let mut surplus = others - APP_COMMAND_LIMIT;
+        rows.retain(|row| {
+            if surplus > 0 && !kept_side_question(row) {
+                surplus -= 1;
+                return false;
+            }
+            true
+        });
     }
 }
 
@@ -297,6 +324,108 @@ pub(crate) fn discard_local_command(project_id: &str, session_id: &str, id: &str
     }
 }
 
+/// Claude's `/btw`: its answer is read off the panel whole (session_chat_claude_panel.rs), so the
+/// screen diff, which would capture the panel's chrome and only its visible window, stays out.
+fn is_side_question(command: &str) -> bool {
+    command == "/btw" || command.starts_with("/btw ")
+}
+
+/// Whether an archived or live `/btw` asked `question`. A question Claude cut short with `…` on
+/// its panel matches the full text the user sent.
+fn asks(args: &str, question: &str) -> bool {
+    match question.strip_suffix('…') {
+        Some(prefix) => !prefix.trim().is_empty() && args.starts_with(prefix.trim_end()),
+        None => args == question,
+    }
+}
+
+/*
+CDXC:SessionChat 2026-09-27 DECISION:
+User: side answers stay in the chat after Close, folded, for good, at the point the question was asked. The answer is stored as the `/btw` command's output in the slash-command archive, so it replays on every read and client like any other archived command. A `/btw` typed in the terminal is archived here when its answer is read; an earlier question the user browsed back to is never added.
+*/
+pub(crate) fn attach_side_answer(
+    project_id: &str,
+    session_id: &str,
+    session: Option<&Value>,
+    question: &str,
+    answer: &str,
+    latest: bool,
+) {
+    if answer.trim().is_empty() {
+        return;
+    }
+    let mut durable = None;
+    if let Ok(mut guard) = store().lock() {
+        if let Some(rows) = guard.get_mut(&(project_id.to_string(), session_id.to_string())) {
+            if let Some(row) = rows.iter_mut().rev().find(|row| {
+                row.local_command
+                    && is_side_question(&row.command)
+                    && asks(row.command["/btw".len()..].trim(), question)
+            }) {
+                row.output = Some(answer.to_string());
+                row.screen_baseline = None;
+                durable = row.durable_id.clone();
+            }
+        }
+    }
+    if let Some(id) = durable {
+        crate::session_chat_local_command::attach_session_chat_local_command_output(
+            project_id, session_id, &id, answer,
+        );
+        return;
+    }
+    let archived =
+        crate::session_chat_local_command::load_session_chat_local_commands(project_id, session_id);
+    if let Some(row) = archived
+        .iter()
+        .rev()
+        .find(|row| row.command == "/btw" && asks(&row.args, question))
+    {
+        crate::session_chat_local_command::attach_session_chat_local_command_output(
+            project_id, session_id, &row.id, answer,
+        );
+        return;
+    }
+    if !latest || question.ends_with('…') {
+        return;
+    }
+    let Some(mut row) = crate::session_chat_local_command::prepare_session_chat_local_command(
+        &format!("/btw {question}"),
+    ) else {
+        return;
+    };
+    if let Some(session) = session {
+        crate::session_chat_local_command::anchor_session_chat_local_command(&mut row, session);
+    }
+    row.output = Some(answer.to_string());
+    crate::session_chat_local_command::persist_session_chat_local_command(
+        project_id, session_id, &row,
+    );
+}
+
+/// The whole question behind a `/btw` Claude cut short with `…` on its panel, from what was sent.
+pub(crate) fn full_side_question(
+    project_id: &str,
+    session_id: &str,
+    question: &str,
+) -> Option<String> {
+    question.strip_suffix('…')?;
+    if let Ok(guard) = store().lock() {
+        if let Some(rows) = guard.get(&(project_id.to_string(), session_id.to_string())) {
+            if let Some(row) = rows.iter().rev().find(|row| {
+                is_side_question(&row.command) && asks(row.command["/btw".len()..].trim(), question)
+            }) {
+                return Some(row.command["/btw".len()..].trim().to_string());
+            }
+        }
+    }
+    crate::session_chat_local_command::load_session_chat_local_commands(project_id, session_id)
+        .into_iter()
+        .rev()
+        .find(|row| row.command == "/btw" && asks(&row.args, question))
+        .map(|row| row.args)
+}
+
 pub(crate) fn stop_local_command_output(project_id: &str, session_id: &str) {
     if let Ok(mut guard) = store().lock() {
         if let Some(rows) = guard.get_mut(&(project_id.to_string(), session_id.to_string())) {
@@ -335,7 +464,10 @@ fn refresh_rows(
     screen: &str,
     settled: &mut Vec<(String, String)>,
 ) {
-    for row in rows.iter_mut().filter(|row| row.screen_baseline.is_some()) {
+    for row in rows
+        .iter_mut()
+        .filter(|row| row.screen_baseline.is_some() && !is_side_question(&row.command))
+    {
         let Some(output) = crate::session_chat_local_command::session_chat_local_command_output(
             row.screen_agent.as_deref(),
             &row.command,

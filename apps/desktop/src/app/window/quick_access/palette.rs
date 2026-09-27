@@ -143,6 +143,31 @@ impl QuickAccessPalette {
         }
     }
 
+    /// The palette for the live app appearance and sidebar theme over the window's own fill,
+    /// frosted when the window opened under glass. Quick Access and Browser History share it.
+    pub(crate) fn current(glass: bool) -> Self {
+        let light = crate::CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed);
+        let settings = crate::shared_settings::shared_sidebar_settings_snapshot();
+        let window = if light {
+            rgb(0xffffff)
+        } else {
+            Rgba::from(crate::app::helpers::titlebar_background())
+        };
+        let palette = Self::resolve(
+            light,
+            settings
+                .object()
+                .get("sidebarTheme")
+                .and_then(serde_json::Value::as_str),
+            window,
+        );
+        if !glass {
+            return palette;
+        }
+        let fill = crate::app::helpers::frosted_menu_fill(hsla(palette.window));
+        palette.frosted(light, fill.into())
+    }
+
     /// Under window glass Quick Access is frosted like the app modals (`ModalPalette::frosted`):
     /// its window blurs what is behind it, `fill` replaces the window colour, and the raised
     /// fills become ink washes. Its menus draw in frosted windows of their own on macOS

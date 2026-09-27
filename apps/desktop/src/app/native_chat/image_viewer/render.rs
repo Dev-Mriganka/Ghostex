@@ -304,6 +304,7 @@ impl Render for ImageViewerWindow {
         let natural = self.natural_size(&source, window, cx);
         // Exactly the box the picture fills, whenever its own size is known.
         let painted = natural.map(|natural| painted_size(natural, viewport, zoom));
+        self.follow_zoom_anchor(painted);
         // A picture painted at its own pixels already shows everything it has, so clicking it is
         // not a zoom; one nothing here can measure is enlarged by the steps below instead.
         let zooms = natural.is_none_or(|natural| zoom_widths(natural, viewport).is_some());
@@ -333,11 +334,13 @@ impl Render for ImageViewerWindow {
             Some(picture) => div()
                 .id("chat-image-viewer-picture")
                 /*
-                CDXC:SessionChat 2026-09-20 DECISION:
+                CDXC:SessionChat 2026-09-27 DECISION:
                 User: the previewed picture shows a zoom cursor, zoom-in while a click enlarges it
-                and zoom-out on the step that returns it to the fitted size. It is the one place in
-                the GPUI chat view that changes the cursor at all, so the arrow stays on a picture
-                that has nothing left to show, on the thumbnails, and everywhere else.
+                and zoom-out on the step that returns it to the fitted size, and a closed hand while
+                it is dragged (pan.rs). The closed hand joins the 2026-09-20 decision, which allowed
+                only the zoom cursors. It is the one place in the GPUI chat view that changes the
+                cursor at all, so the arrow stays on a picture that has nothing left to show, on the
+                thumbnails, and everywhere else.
                 SEE-ALSO: apps/desktop/src/app/native_chat/cursor.rs,
                 and the React viewer's `.ghostex-chat-image-preview[data-zoom]` (chat.css, deleted
                 2026-09-25).
@@ -351,12 +354,13 @@ impl Render for ImageViewerWindow {
                 .when_some(painted, |element, size| {
                     element.w(size.width).h(size.height)
                 })
-                // Clicking the picture itself steps the zoom; only the surround dismisses.
+                // Clicking the picture itself steps the zoom and dragging it pans (pan.rs); only
+                // the surround dismisses.
                 .on_mouse_down(
                     gpui::MouseButton::Left,
-                    cx.listener(|this, _, _, cx| {
+                    cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
                         cx.stop_propagation();
-                        this.chat.update(cx, |chat, cx| chat.zoom_image_viewer(cx));
+                        this.press_picture(event.position);
                     }),
                 )
                 .child(picture)
@@ -377,14 +381,30 @@ impl Render for ImageViewerWindow {
         };
         let body = div()
             .id("chat-image-viewer-scroll")
+            .track_scroll(&self.scroll)
             .flex_1()
             .min_h_0()
             .w_full()
             .overflow_scroll()
             .flex()
-            .items_center()
-            .justify_center()
-            .child(content);
+            .items_start()
+            /*
+            CDXC:SessionChat 2026-09-27 WHY:
+            Centred directly in the scroll box, a picture bigger than the viewer hangs past its left
+            and top edges, and GPUI only scrolls toward the right and bottom, so that part could
+            never be reached. The stage is at least the viewer's size and grows with the picture,
+            which centres a small picture and starts a big one at the edge.
+            */
+            .child(
+                div()
+                    .flex_shrink_0()
+                    .min_w(viewport.width)
+                    .min_h(viewport.height)
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(content),
+            );
         let stop = |element: gpui::Div, cx: &Context<Self>| {
             element.on_mouse_down(
                 gpui::MouseButton::Left,
@@ -490,7 +510,14 @@ impl Render for ImageViewerWindow {
             .flex_col()
             .items_center()
             .justify_center()
-            .bg(gpui::Hsla::from(gpui::rgb(0x000000)).opacity(0.7))
+            // Under glass the window blurs the chat behind the picture, so a lighter dim is enough.
+            .bg(
+                if crate::app::helpers::window_glass_active_for(self.chat.read(cx).main_window) {
+                    gpui::Hsla::from(gpui::rgb(0x000000)).opacity(0.45)
+                } else {
+                    gpui::Hsla::from(gpui::rgb(0x000000)).opacity(0.7)
+                },
+            )
             .on_mouse_down(
                 gpui::MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
@@ -522,7 +549,7 @@ impl Render for ImageViewerWindow {
                         true
                     }
                     "enter" | "space" => {
-                        this.chat.update(cx, |chat, cx| chat.zoom_image_viewer(cx));
+                        this.zoom_at(this.scroll.bounds().center(), cx);
                         true
                     }
                     _ => false,
@@ -535,6 +562,7 @@ impl Render for ImageViewerWindow {
             .child(body)
             .child(toolbar)
             .child(close)
+            .child(self.pan_listeners(cx))
             .into_any_element()
     }
 }

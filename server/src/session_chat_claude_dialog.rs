@@ -2,6 +2,7 @@
 
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
+use std::ops::RangeInclusive;
 
 use crate::domain::DomainStateError;
 use crate::session_chat_options::{normalize_spaces, strip_ansi_sgr};
@@ -10,6 +11,128 @@ use crate::session_chat_send::{
     SessionChatSendTarget, SESSION_CHAT_INTERRUPT,
 };
 use crate::session_chat_terminal_dialog::{TerminalDialog, TerminalDialogRow};
+
+/*
+CDXC:AgentScreenDetection 2026-09-27 DECISION:
+User: every Claude Code dialog that asks for a choice must reach the chat as a card whose buttons answer it, like the model switch confirmation.
+Only the fullscreen renderer draws panels under a `▔` rule; the default one draws them in the input slot under the `─` rule that otherwise tops the composer, so tool prompts such as "Enter plan mode?", the setup screens (trust, new MCP servers, external imports, API key) and the resume, nudge and onboarding choosers were never read.
+Such a panel is the last `─` rule followed by an indented `❯` row and no composer; the question tool (answered through its own card) and the offers a send closes with Escape (session_chat_claude_popups.rs, whose DECISION keeps Enter always sending) stay out.
+*/
+fn is_bottom_slot_dialog(text: &str, after: &[String]) -> bool {
+    let highlighted = after
+        .iter()
+        .any(|line| line.starts_with(' ') && line.trim_start().starts_with("❯ "));
+    let composer = after
+        .iter()
+        .any(|line| line.starts_with('❯') || line.starts_with("╭─"));
+    let title_is_row = after
+        .iter()
+        .find(|line| line.chars().any(char::is_alphanumeric))
+        .is_some_and(|line| {
+            let line = line.trim_start().trim_start_matches('❯').trim_start();
+            line.split_once(". ")
+                .is_some_and(|(number, _)| number.parse::<u32>().is_ok())
+        });
+    let question_tool = after
+        .iter()
+        .any(|line| line.contains('☐') || line.contains('☒') || line.contains("✔ Submit"));
+    highlighted
+        && !composer
+        && !title_is_row
+        && !question_tool
+        && crate::session_chat_claude_popups::claude_escape_safe_popup(text).is_none()
+}
+
+/// Whether a chooser is Claude's own usage-limit menu ("You've reached your Fable limit"), which
+/// must stay a usage-limit notice so account switching and queued-delivery holds still see it.
+pub(crate) fn is_claude_usage_limit_chooser(dialog: &TerminalDialog) -> bool {
+    !dialog.rows.is_empty()
+        && [
+            "You've reached your",
+            "You've hit your",
+            "You're out of usage credits",
+        ]
+        .iter()
+        .any(|lead| dialog.title.starts_with(lead))
+}
+
+/// "No, keep planning  shift+tab to approve with this feedback": a key the chat card has no use
+/// for, not a description of the row it sits beside or under.
+fn is_key_hint(text: &str) -> bool {
+    let lower = text.to_ascii_lowercase();
+    ["shift+tab to ", "tab to ", "ctrl+", "esc to "]
+        .iter()
+        .any(|lead| lower.starts_with(lead))
+}
+
+/// The options a Claude chooser draws: the run of rows around the highlighted `❯` one, with the
+/// lines each row wraps onto, and where that run sits in `remainder`. Unselected rows are indented to
+/// the highlighted row's label and wrapped lines deeper. Numbers are optional (`hideIndexes`), so a
+/// row's number is its printed one or its position; numbered lines outside the run (a plan's own
+/// list above "Ready to code?"'s options) are not options.
+fn option_rows(remainder: &[String]) -> (Vec<TerminalDialogRow>, RangeInclusive<usize>) {
+    let indent = |line: &str| line.chars().take_while(|c| *c == ' ').count();
+    let Some(selected) = remainder
+        .iter()
+        .rposition(|line| line.trim_start().starts_with('❯'))
+    else {
+        return (Vec::new(), 1..=0);
+    };
+    let label_column = indent(&remainder[selected]) + 2;
+    let is_row = |index: usize| {
+        index == selected
+            || (!remainder[index].trim().is_empty() && indent(&remainder[index]) == label_column)
+    };
+    let is_wrap = |index: usize| {
+        !remainder[index].trim().is_empty() && indent(&remainder[index]) > label_column
+    };
+    let mut first = selected;
+    while first > 0 && (is_row(first - 1) || is_wrap(first - 1)) {
+        first -= 1;
+    }
+    while first < selected && !is_row(first) {
+        first += 1;
+    }
+    let mut last = selected;
+    while last + 1 < remainder.len() && (is_row(last + 1) || is_wrap(last + 1)) {
+        last += 1;
+    }
+    let mut rows: Vec<TerminalDialogRow> = Vec::new();
+    for index in first..=last {
+        let line = remainder[index].trim();
+        if !is_row(index) {
+            if is_key_hint(line) {
+                continue;
+            }
+            if let Some(row) = rows.last_mut() {
+                let detail = row.description.get_or_insert_with(String::new);
+                if !detail.is_empty() {
+                    detail.push(' ');
+                }
+                detail.push_str(line);
+            }
+            continue;
+        }
+        let text = line.trim_start_matches(['❯', '↓', '↑']).trim();
+        let (number, text) = text
+            .split_once(". ")
+            .and_then(|(number, rest)| number.parse::<u32>().ok().map(|number| (number, rest)))
+            .unwrap_or((rows.len() as u32 + 1, text));
+        let (label, description) = text
+            .trim()
+            .split_once("  ")
+            .map(|(label, description)| (label, Some(description.trim().to_string())))
+            .unwrap_or((text.trim(), None));
+        let description = description.filter(|description| !is_key_hint(description));
+        rows.push(TerminalDialogRow {
+            number,
+            label: label.to_string(),
+            description,
+            selected: index == selected,
+        });
+    }
+    (rows, first..=last)
+}
 
 /// CDXC:AgentScreenDetection 2026-09-05 DECISION:
 /// User: drive Claude's commands through zmx and make their interactions usable in chat, as for Codex.
@@ -27,10 +150,29 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
                 .to_string()
         })
         .collect();
-    let start = lines.iter().rposition(|line| {
-        let line = line.trim();
-        line.chars().count() >= 20 && line.chars().all(|c| c == '▔')
-    })? + 1;
+    let rule = |fill: char| {
+        lines.iter().rposition(|line| {
+            let line = line.trim();
+            line.chars().count() >= 20 && line.chars().all(|c| c == fill)
+        })
+    };
+    let modal = rule('▔');
+    let slot = rule('─').filter(|&index| is_bottom_slot_dialog(text, &lines[index + 1..]));
+    // A `▔` panel keeps its own inner `─` rules ("Ready to code?"), so it wins unless transcript
+    // rows between the two show it is an answered panel left on screen.
+    let start = match (modal, slot) {
+        (Some(modal), Some(slot))
+            if slot > modal
+                && lines[modal + 1..slot]
+                    .iter()
+                    .any(|line| line.starts_with('⏺') || line.starts_with('❯')) =>
+        {
+            slot
+        }
+        (Some(modal), _) => modal,
+        (None, Some(slot)) => slot,
+        (None, None) => return None,
+    } + 1;
     let content = &lines[start..];
     // The composer has no left indent. Selection markers inside Ink panels do.
     if content
@@ -66,10 +208,13 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         .collect::<Vec<_>>()
         .join("\n");
     let lower = footer.to_ascii_lowercase();
+    // A text field is boxed on both sides; a quote (the message `/rewind` restores to) only has
+    // the left bar.
     let boxed = remainder.iter().find_map(|line| {
         let line = line.trim();
-        line.strip_prefix('│')
-            .map(|value| value.trim_end_matches('│').trim())
+        let value = line.strip_prefix('│')?;
+        (value.ends_with('│') || value.trim_start().starts_with('⌕'))
+            .then(|| value.trim_end_matches('│').trim())
     });
     let search = boxed.is_some_and(|line| line.starts_with('⌕'));
     let feedback_field = remainder
@@ -129,52 +274,27 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     } else {
         field.to_string()
     };
-    let mut rows = Vec::new();
-    for line in remainder {
-        let line = line.trim();
-        let selected = line.starts_with('❯');
-        let row = line.trim_start_matches(['❯', '↓', '↑']).trim();
-        if let Some((number, label)) = row.split_once(". ") {
-            if let Ok(number) = number.parse::<u32>() {
-                let (label, description) = label
-                    .trim()
-                    .split_once("  ")
-                    .map(|(label, description)| (label, Some(description.trim().to_string())))
-                    .unwrap_or((label.trim(), None));
-                rows.push(TerminalDialogRow {
-                    number,
-                    label: label.to_string(),
-                    description,
-                    selected,
-                });
-            }
-        }
-    }
+    let (mut rows, option_lines) = option_rows(remainder);
     // Tabbed/searchable lists keep their full panel: a row click cannot express
     // focus changes, filtering, checkboxes, or partially visible numbered lists.
     let numbered = input.is_none()
         && rows.iter().filter(|r| r.selected).count() == 1
         && !title.contains("   ")
-        && !remainder
-            .iter()
-            .any(|line| line.trim().starts_with(['↓', '↑']))
+        // A scrolled list marks its cut-off row "↓ 5. …"; a lone arrow at the right edge only
+        // scrolls a plan or text viewport above the options.
+        && !remainder.iter().any(|line| {
+            let line = line.trim();
+            line.starts_with(['↓', '↑']) && line.chars().count() > 1
+        })
         && !lower.contains("space");
     if !numbered {
         rows.clear();
     }
     let body = remainder
         .iter()
-        .filter(|line| {
-            !is_hint(line)
-                && (!numbered
-                    || !rows.iter().any(|r| {
-                        line.trim()
-                            .trim_start_matches('❯')
-                            .trim()
-                            .starts_with(&format!("{}. ", r.number))
-                    }))
-        })
-        .cloned()
+        .enumerate()
+        .filter(|(index, line)| !is_hint(line) && (!numbered || !option_lines.contains(index)))
+        .map(|(_, line)| line.clone())
         .collect::<Vec<_>>()
         .join("\n")
         .trim()
@@ -225,9 +345,32 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     if lower.contains("enter") || !rows.is_empty() {
         actions.push("confirm");
     }
+    if lower.contains("f to fork") {
+        actions.push("fork");
+    }
     actions.push("cancel");
+    // CDXC:SessionChat 2026-09-27 WHY: the `/btw` panel animates a spinner glyph beside "Answering…", which changed the id on every capture, so Close pressed while Claude was still answering was always refused as "the dialog changed". Blank rows under a short panel are left out too: the probe's capture and the answer's capture disagree on them, which refused every answer to the Settings panel.
+    let painted = content
+        .iter()
+        .rposition(|line| !line.trim().is_empty())
+        .map_or(0, |last| last + 1);
+    let identity: Vec<&str> = content[..painted]
+        .iter()
+        .map(|line| {
+            let trimmed = line.trim_end();
+            if trimmed.ends_with("Answering…") {
+                "Answering…"
+            // `/rewind`'s confirmation quotes the message with its age, "│ (14s ago)", which
+            // ticks between the card's capture and the answer's.
+            } else if trimmed.ends_with(" ago)") && trimmed.trim_start().starts_with("│ (") {
+                "│ (ago)"
+            } else {
+                line.as_str()
+            }
+        })
+        .collect();
     Some(TerminalDialog {
-        id: format!("{:x}", Sha256::digest(content.join("\n").as_bytes())),
+        id: format!("{:x}", Sha256::digest(identity.join("\n").as_bytes())),
         title,
         body,
         footer,
@@ -235,6 +378,8 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         input: input.map(str::to_string),
         input_value,
         actions: actions.into_iter().map(str::to_string).collect(),
+        side_question: None,
+        blocks: None,
     })
 }
 
@@ -319,6 +464,25 @@ pub(crate) fn claude_dialog_steps(
             if action == "submit" {
                 steps.push(SessionChatSendStep::Write("\r".to_string()));
             }
+        } else if action == "selectTab" {
+            // A tab strip moves one tab per arrow; the client sends how far to go.
+            let delta = params
+                .get("tabDelta")
+                .and_then(Value::as_i64)
+                .filter(|delta| *delta != 0 && delta.abs() <= 12)
+                .ok_or_else(invalid)?;
+            let key = if delta > 0 { "right" } else { "left" };
+            if !dialog.actions.iter().any(|a| a == key) {
+                return Err(invalid());
+            }
+            for index in 0..delta.unsigned_abs() {
+                if index > 0 {
+                    steps.push(SessionChatSendStep::SleepMs(80));
+                }
+                steps.push(SessionChatSendStep::Write(
+                    if delta > 0 { "\x1b[1;1C" } else { "\x1b[1;1D" }.to_string(),
+                ));
+            }
         } else {
             if !dialog.actions.iter().any(|a| a == action) {
                 return Err(invalid());
@@ -338,6 +502,7 @@ pub(crate) fn claude_dialog_steps(
                 "reset" => "r",
                 "day" => "d",
                 "week" => "w",
+                "fork" => "f",
                 "cancel" => SESSION_CHAT_INTERRUPT,
                 _ => return Err(invalid()),
             };

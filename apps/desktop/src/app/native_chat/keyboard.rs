@@ -248,7 +248,7 @@ impl NativeChatView {
             the composer even when only the chat background is focused. The shared rules decide what
             counts as typing intent; everything else keeps its own keyboard ownership here.
             */
-            if this.composer_background_key(key, window, cx) {
+            if this.side_question_key(key, cx) || this.composer_background_key(key, window, cx) {
                 cx.stop_propagation();
                 window.prevent_default();
             }

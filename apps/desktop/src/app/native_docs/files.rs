@@ -7,6 +7,7 @@ use serde_json::{Value, json};
 
 use super::state::{DocsEntry, DocsEntryKind, DocsLoadState, DocsProjectKey};
 use crate::GhostexGpuiApp;
+use crate::app::model::TitlebarMode;
 
 /// One drawn row of the Project Docs tree.
 #[derive(Clone, Debug)]
@@ -127,19 +128,86 @@ impl GhostexGpuiApp {
         if self.native_docs.project.as_ref() == Some(project) {
             return false;
         }
-        self.native_docs.reset_for_project(project.clone());
+        let parked = self
+            .native_docs
+            .parked
+            .remove(&project.project_id)
+            .filter(|parked| parked.project.as_ref() == Some(project));
+        let restored = parked.is_some();
+        let mut outgoing = match parked {
+            Some(parked) => self.native_docs.restore_parked(parked),
+            None => self.native_docs.reset_for_project(project.clone()),
+        };
+        if let Some(left) = outgoing
+            .project
+            .clone()
+            .filter(|left| self.native_docs_parks_project(&left.project_id))
+        {
+            outgoing.strip_for_parking();
+            self.native_docs.parked.insert(left.project_id, outgoing);
+        }
+        let released = self
+            .native_docs
+            .parked
+            .keys()
+            .filter(|project_id| !self.native_docs_parks_project(project_id))
+            .cloned()
+            .collect::<Vec<_>>();
+        for project_id in released {
+            self.native_docs.parked.remove(&project_id);
+        }
         let generation = self.native_docs.generation;
         cx.defer_in(window, move |this, _window, cx| {
-            if this.native_docs.generation == generation {
+            if this.native_docs.generation != generation {
+                return;
+            }
+            if restored {
+                this.native_docs_resume_parked(cx);
+            } else {
                 this.native_docs_restore_open_files(cx);
                 this.native_docs_load_notes(cx);
-                if let Some(path) = this.native_docs.pending_open.take() {
-                    this.native_docs_open_external(path, cx);
-                }
-                this.native_docs_refresh(cx);
             }
+            if let Some(path) = this.native_docs.pending_open.take() {
+                this.native_docs_open_external(path, cx);
+            }
+            this.native_docs_refresh(cx);
         });
         true
+    }
+
+    /// Whether `project_id`'s Docs state is kept while another project is on screen: Docs is the
+    /// side panel view it was left on, awake (`GpuiProjectViewState::active_view_awake`).
+    fn native_docs_parks_project(&self, project_id: &str) -> bool {
+        if self.agents_workspace_project_id.as_deref() == Some(project_id) {
+            return self.active_mode == TitlebarMode::Manage
+                && self
+                    .project_editor_shell
+                    .is_mode_awake(TitlebarMode::Manage);
+        }
+        self.project_view_states_by_project
+            .get(project_id)
+            .is_some_and(|state| {
+                state.active_view_awake && state.active_mode == TitlebarMode::Manage
+            })
+    }
+
+    /// Answers that arrived while the state was parked were dropped by the generation check, so
+    /// what they would have finished is asked again. The files list is listed again by the caller;
+    /// the rows already drawn stay until the answer replaces them.
+    fn native_docs_resume_parked(&mut self, cx: &mut Context<Self>) {
+        let mut reread = Vec::new();
+        for document in &mut self.native_docs.documents {
+            document.saving = false;
+            if document.load == super::state::DocsDocumentLoad::Loading {
+                reread.push(document.path.clone());
+            }
+        }
+        for path in reread {
+            self.native_docs_read(&path, cx);
+        }
+        if !self.native_docs.notes_loaded {
+            self.native_docs_load_notes(cx);
+        }
     }
 
     /// Re-lists the tree. The rows already drawn stay until the answer replaces them.

@@ -34,6 +34,9 @@ pub(crate) enum FrostedHostKind {
     /// The sidebar's account usage strip while it peeks over the list unpinned
     /// (`native_sidebar/usage.rs`).
     SidebarUsage,
+    /// A native app modal's open dropdown (`window/modal_popover_host.rs`), drawn over the modal's
+    /// window rather than the main one.
+    ModalPopover,
 }
 
 /// How many stacked sidebar menu panels get a window of their own; deeper ones share none.
@@ -49,10 +52,13 @@ pub(crate) const SIDEBAR_USAGE_HOST_RADIUS: f32 = 8.0;
 pub(crate) const DOCS_SELECTION_TOOLBAR_RADIUS: f32 = 8.0;
 
 /// Whether menus and tooltips drawn inside the main window move into frosted host windows now.
-/// macOS only: a host's blur is limited to its content's frames, which only the macOS window
-/// backend can do; elsewhere they stay in the window with their solid fill.
+/// macOS and Windows: a tooltip host's blur follows its bubble (a blur mask on macOS, the
+/// window's own region on Windows); Linux keeps them in the window with their solid fill.
+///
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "same for ones that should be glass on windows but they're not". The frosted host windows (the sidebar's menus and usage strip, tooltips, modal dropdowns, Quick Access pickers) run on Windows too, where a pop-up window is already non-activating and blurred; supersedes the macOS-only rule.
 pub(crate) fn frosted_hosting_active() -> bool {
-    cfg!(target_os = "macos") && window_glass_active()
+    cfg!(any(target_os = "macos", target_os = "windows")) && window_glass_active()
 }
 
 #[derive(Default)]
@@ -78,6 +84,7 @@ thread_local! {
     static QUICK_ACCESS_PICKER_HOST: RefCell<HostSlot> = RefCell::default();
     static QUICK_ACCESS_ACTIONS_HOST: RefCell<HostSlot> = RefCell::default();
     static SIDEBAR_USAGE_HOST: RefCell<HostSlot> = RefCell::default();
+    static MODAL_POPOVER_HOST: RefCell<HostSlot> = RefCell::default();
     static SIDEBAR_MENU_HOSTS: RefCell<Vec<HostSlot>> = RefCell::default();
 }
 
@@ -94,6 +101,7 @@ fn with_slot<R>(kind: FrostedHostKind, f: impl FnOnce(&mut HostSlot) -> R) -> R 
             QUICK_ACCESS_ACTIONS_HOST.with(|slot| f(&mut slot.borrow_mut()))
         }
         FrostedHostKind::SidebarUsage => SIDEBAR_USAGE_HOST.with(|slot| f(&mut slot.borrow_mut())),
+        FrostedHostKind::ModalPopover => MODAL_POPOVER_HOST.with(|slot| f(&mut slot.borrow_mut())),
         FrostedHostKind::SidebarMenu(level) => SIDEBAR_MENU_HOSTS.with(|slots| {
             let mut slots = slots.borrow_mut();
             let level = usize::from(level);
@@ -186,13 +194,7 @@ fn apply(kind: FrostedHostKind, cx: &mut App) {
                     && parent == Some(target)
                 {
                     if shown != Some(frame) {
-                        let parent_view = native_view_of(target, cx);
-                        crate::app::native_chat::child_window::move_child_window(
-                            handle.into(),
-                            parent_view.unwrap_or(std::ptr::null_mut()),
-                            frame,
-                            cx,
-                        );
+                        move_host(handle.into(), target, frame, cx);
                     }
                     if shown.is_none() {
                         // After the move above, which also runs from a task, so a reused window
@@ -296,6 +298,9 @@ fn open_host(
                 FrostedHostKind::SidebarUsage => {
                     window.set_background_corner_radius(gpui::px(SIDEBAR_USAGE_HOST_RADIUS))
                 }
+                FrostedHostKind::ModalPopover => window.set_background_corner_radius(gpui::px(
+                    super::native_modal_kit::MODAL_RADIUS_CONTROL,
+                )),
             }
             attach_host_window(window, parent_view, kind);
             let observe = with_slot(kind, |slot| slot.observe.clone());
@@ -354,10 +359,83 @@ fn native_view(window: &Window) -> Option<*mut std::ffi::c_void> {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+fn native_view(window: &Window) -> Option<*mut std::ffi::c_void> {
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    match HasWindowHandle::window_handle(window).ok()?.as_raw() {
+        RawWindowHandle::Win32(handle) => Some(handle.hwnd.get() as *mut std::ffi::c_void),
+        _ => None,
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn native_view(_: &Window) -> Option<*mut std::ffi::c_void> {
     None
 }
+
+/// Moves an open host onto `frame` in `parent`'s content coordinates.
+#[cfg(target_os = "macos")]
+fn move_host(
+    handle: AnyWindowHandle,
+    parent: AnyWindowHandle,
+    frame: Bounds<Pixels>,
+    cx: &mut App,
+) {
+    let parent_view = native_view_of(parent, cx);
+    crate::app::native_chat::child_window::move_child_window(
+        handle,
+        parent_view.unwrap_or(std::ptr::null_mut()),
+        frame,
+        cx,
+    );
+}
+
+/// Moves an open host onto `frame` in `parent`'s content coordinates, without activating it or
+/// changing its stacking (a non-activating pop-up keeps the parent's keyboard).
+#[cfg(target_os = "windows")]
+fn move_host(
+    handle: AnyWindowHandle,
+    parent: AnyWindowHandle,
+    frame: Bounds<Pixels>,
+    cx: &mut App,
+) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER, SetWindowPos,
+    };
+    let Some(origin) = parent
+        .update(cx, |_, window, _| {
+            crate::app::native_chat::child_window::content_bounds(window).origin
+        })
+        .ok()
+    else {
+        return;
+    };
+    let Some((hwnd, scale)) = handle
+        .update(cx, |_, window, _| {
+            native_view(window).map(|hwnd| (hwnd, window.scale_factor()))
+        })
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    let screen = Bounds::new(origin + frame.origin, frame.size);
+    let device = |value: Pixels| (f32::from(value) * scale).round() as i32;
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            std::ptr::null_mut(),
+            device(screen.origin.x),
+            device(screen.origin.y),
+            device(screen.size.width),
+            device(screen.size.height),
+            SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER,
+        );
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn move_host(_: AnyWindowHandle, _: AnyWindowHandle, _: Bounds<Pixels>, _: &mut App) {}
 
 /// Attaches the host above its parent without ever taking key status from it (the same attachment
 /// the composer's suggestions use), and lets a tooltip pass the mouse through.
@@ -390,6 +468,9 @@ fn attach_host_window(window: &mut Window, parent: *mut std::ffi::c_void, kind: 
     }
 }
 
+/// On Windows a host is a non-activating pop-up owned by the window that was active when it opened
+/// (`WindowKind::PopUp` with `focus: false`), which is all the attachment it needs. A tooltip's
+/// window is clipped to its bubble (`set_frosted_surface`), so it covers nothing it could catch.
 #[cfg(not(target_os = "macos"))]
 fn attach_host_window(_: &mut Window, _: *mut std::ffi::c_void, _: FrostedHostKind) {}
 
@@ -419,11 +500,30 @@ fn set_visible(
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+fn set_visible(
+    handle: AnyWindowHandle,
+    _parent: Option<AnyWindowHandle>,
+    visible: bool,
+    cx: &mut App,
+) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SW_HIDE, SW_SHOWNOACTIVATE, ShowWindow};
+    if let Some(hwnd) = native_view_of(handle, cx) {
+        unsafe {
+            ShowWindow(hwnd, if visible { SW_SHOWNOACTIVATE } else { SW_HIDE });
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn set_visible(_: AnyWindowHandle, _: Option<AnyWindowHandle>, _: bool, _: &mut App) {}
 
-/// Hands the main window's tooltips to the frosted tooltip host while glass is on, and takes them
-/// back when it is off. Called from the main window's glass sync on every root render.
+/// Hands a window's tooltips to the frosted tooltip host while glass is on, and takes them back
+/// when it is off. Called on every root render (the main window's glass sync, and every other
+/// window through [`FrostedTooltipRootPlugin`]).
+///
+/// CDXC:Theming 2026-09-27 WHY:
+/// The user saw sidebar tooltips "appearing and disappearing multiple times per second when transparency is enabled". Every window with a presenter reports each frame it draws, `None` when it shows no tooltip, and that `None` hid the one shared tooltip host even when the tooltip belonged to another window; any other window redrawing (a Docs window, a frosted chat control, a modal) took the main window's tooltip down and the next main-window frame put it back. A window now hides the host only while the host shows its own tooltip.
 pub(crate) fn sync_frosted_tooltip_presenter(window: &mut Window, cx: &mut App) {
     let wanted = frosted_hosting_active();
     if window.tooltip_presenter_active() == wanted {
@@ -449,7 +549,47 @@ pub(crate) fn sync_frosted_tooltip_presenter(window: &mut Window, cx: &mut App) 
                     cx,
                 );
             }
-            None => hide_frosted_host(FrostedHostKind::Tooltip, cx),
+            // Only the window whose tooltip is up may take it down: every window with a presenter
+            // reports `None` on each frame it draws without a tooltip.
+            None => hide_frosted_host_over(FrostedHostKind::Tooltip, parent, cx),
         },
     )));
+}
+
+/// Gives every other GPUI window's tooltips to the frosted tooltip host too, the way the main
+/// window's own root does (`render/root.rs`): the hover-out sidebar panel, the app modals, the
+/// header's dropdowns and panels, and the chat's pop-up windows. Registered once as a
+/// gpui-component root plugin, so it runs on each window root's render; the frosted host windows
+/// themselves draw without a root, so a tooltip never hosts itself.
+///
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User: "yes pls make all those that could be glass glass". Under window glass a tooltip is frosted in every Ghostex window, not only the main one: each window hands its tooltips to the shared frosted tooltip host, which moves above whichever window asked.
+pub(crate) struct FrostedTooltipRootPlugin {
+    /// Hides the tooltip host when this window goes away while one of its tooltips is up.
+    _release: Subscription,
+}
+
+impl gpui_component::RootPlugin for FrostedTooltipRootPlugin {
+    fn prepare(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        sync_frosted_tooltip_presenter(window, cx);
+    }
+}
+
+impl Render for FrostedTooltipRootPlugin {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+    }
+}
+
+/// Registers [`FrostedTooltipRootPlugin`] for every window opened from now on.
+pub(crate) fn register_frosted_tooltip_root_plugin(cx: &mut App) {
+    gpui_component::Root::register_plugin::<FrostedTooltipRootPlugin>(cx, |window, cx| {
+        let parent = window.window_handle();
+        FrostedTooltipRootPlugin {
+            _release: cx.on_release(move |_, cx| {
+                hide_frosted_host_over(FrostedHostKind::Tooltip, parent, cx);
+                super::modal_popover_host::forget_modal_popover_over(parent, cx);
+            }),
+        }
+    });
 }

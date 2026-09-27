@@ -964,6 +964,8 @@ pub enum SessionChatSendStep {
     GuardClaudeInterrupt,
     /// Recheck the transcript pager and cross-client visibility at the front of the queue.
     CloseUnwatchedCodexTranscriptPager,
+    /// Scroll Claude's `/btw` panel end to end and keep its whole answer (session_chat_claude_panel.rs).
+    ReadClaudeSideAnswer,
     StopLocalCommandOutput,
     /// Baseline the screen so the command's own output can be read back off it.
     /// `durable_id` is set for a slash command the user sent from chat, which is
@@ -2085,6 +2087,15 @@ async fn run_session_chat_send_worker(
                         ));
                         break;
                     }
+                }
+                SessionChatSendStep::ReadClaudeSideAnswer => {
+                    crate::session_chat_claude_panel::read_whole_side_answer(
+                        &project_id,
+                        &session_id,
+                        &zmx_name,
+                        &|| job_generation != generation.load(Ordering::SeqCst),
+                    )
+                    .await;
                 }
                 SessionChatSendStep::SleepMs(delay_ms) => {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;

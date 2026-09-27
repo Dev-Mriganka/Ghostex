@@ -347,6 +347,8 @@ impl GhostexGpuiApp {
                 terminal_text_focus_handle: cx.focus_handle().tab_stop(false),
                 terminal_text_marked_range: None,
                 pending_keyboard_handoff: None,
+                pending_keyboard_handoff_returns_from_modal: false,
+                native_app_modal_was_key: Default::default(),
                 composited_terminal_keyboard_owner: None,
                 agents_terminal_startup_body_slot_geometries: HashMap::new(),
                 agents_terminal_parked_owner_body_slot_geometries: HashMap::new(),

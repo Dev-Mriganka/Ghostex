@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::menus::catalog::AgentModelCatalog;
-use crate::menus::picker::model_menu::{model_menu_entry_for, ModelMenuEntries};
+use crate::menus::picker::model_menu::{
+    is_long_context_value, model_menu_entry_for, ModelMenuEntries,
+};
 
 /// One choice of an option, flattened out of `rows.sections`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -288,12 +290,11 @@ pub fn model_menu_traits(
             choices: entry
                 .variants
                 .iter()
-                .enumerate()
-                .map(|(index, variant)| ModelMenuTraitChoice {
+                .map(|variant| ModelMenuTraitChoice {
                     value: variant.value.clone(),
                     label: variant.label.clone(),
                     selected: Some(variant.value.as_str()) == model,
-                    is_default: index == 0,
+                    is_default: is_long_context_value(&variant.value),
                     exit_plan: None,
                 })
                 .collect(),
@@ -326,7 +327,12 @@ pub fn model_menu_traits(
     traits.into_iter().map(as_button).collect()
 }
 
-/// `modelMenuPillLabels`: the model's name, then the footer values that are set, as "High · 1M".
+/// `modelMenuPillLabels`: the model's name, then the footer values that are set, as "High · 200K".
+///
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: "don't show 1M in the chat composer when we have that one selected, only show 200k when
+/// that one is selected". 1M is the normal window, so the pill names the context window only
+/// when it is 200K; the picker's Context Window button still reads 1M or 200K.
 pub fn model_menu_pill_labels(
     entries: &ModelMenuEntries,
     provider: Option<&str>,
@@ -339,6 +345,13 @@ pub fn model_menu_pill_labels(
         .iter()
         .filter(|trait_row| {
             (trait_row.id == "effort" || trait_row.id == "context") && !trait_row.choices.is_empty()
+        })
+        .filter(|trait_row| {
+            trait_row.id != "context"
+                || !trait_row
+                    .choices
+                    .iter()
+                    .any(|choice| choice.selected && is_long_context_value(&choice.value))
         })
         .filter_map(|trait_row| trait_row.value_label.clone())
         .filter(|value| !value.is_empty())
