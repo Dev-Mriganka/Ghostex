@@ -15,5 +15,5 @@ mod requests;
 mod style;
 mod view;
 
-pub(crate) use style::{AutomatePalette, secondary_button};
+pub(crate) use style::{AutomatePalette, ICON_ALERT, empty_state, icon, secondary_button};
 pub(crate) use view::NativeAutomateView;

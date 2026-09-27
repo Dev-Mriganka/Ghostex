@@ -2803,6 +2803,7 @@ pub(crate) fn titlebar_mode_view_tab_hidden_settings_key(
         TitlebarMode::Automate => Some(AUTOMATE_VIEW_TAB_HIDDEN_SETTINGS_KEY),
         TitlebarMode::Manage => Some(DOCS_VIEW_TAB_HIDDEN_SETTINGS_KEY),
         TitlebarMode::Terminal => Some(TERMINAL_VIEW_TAB_HIDDEN_SETTINGS_KEY),
+        TitlebarMode::BotFeed => Some(BOT_AUTOMATIONS_HIDDEN_SETTINGS_KEY),
         TitlebarMode::Agents | TitlebarMode::Extension(_) => None,
     }
 }
@@ -2822,6 +2823,7 @@ pub(crate) fn gpui_titlebar_mode_plugin_display_name(mode: TitlebarMode) -> &'st
         TitlebarMode::Automate => "Automate",
         TitlebarMode::Manage => "Files",
         TitlebarMode::Terminal => "Terminal",
+        TitlebarMode::BotFeed => "Automations",
         TitlebarMode::Extension(id) => id.as_str(),
     }
 }
@@ -2835,16 +2837,33 @@ pub(crate) fn gpui_disabled_project_workarea_copy_noun(mode: TitlebarMode) -> &'
     }
 }
 
+/// The Official switch a view needs on as well as its own, the Rust side of a descriptor's
+/// `requiresExtension` (packages/shared/ghostex-official-extensions.ts).
+fn titlebar_mode_required_hidden_settings_key(mode: TitlebarMode) -> Option<&'static str> {
+    (mode == TitlebarMode::BotFeed).then_some(BOTS_HIDDEN_SETTINGS_KEY)
+}
+
+/// A view whose switch is off until the user turns it on, so a settings file without the key hides it.
+fn titlebar_mode_hidden_by_default(mode: TitlebarMode) -> bool {
+    mode == TitlebarMode::BotFeed
+        || mode
+            .website_provider()
+            .is_some_and(|provider| provider.hidden_by_default)
+}
+
 pub(crate) fn gpui_titlebar_mode_hidden_from_settings(mode: TitlebarMode) -> bool {
     let Some(settings_key) = titlebar_mode_view_tab_hidden_settings_key(mode) else {
         return false;
     };
-    shared_settings::shared_sidebar_settings_snapshot()
-        .object()
-        .get(settings_key)
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or_else(|| {
-            mode.website_provider()
-                .is_some_and(|provider| provider.hidden_by_default)
-        })
+    let settings = shared_settings::shared_sidebar_settings_snapshot();
+    let hidden = |key: &str| {
+        settings
+            .object()
+            .get(key)
+            .and_then(serde_json::Value::as_bool)
+    };
+    // The one required switch (Bots) is hidden by default too, so only an explicit `false` counts.
+    let required_off = titlebar_mode_required_hidden_settings_key(mode)
+        .is_some_and(|key| hidden(key) != Some(false));
+    required_off || hidden(settings_key).unwrap_or_else(|| titlebar_mode_hidden_by_default(mode))
 }

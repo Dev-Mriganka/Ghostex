@@ -604,6 +604,8 @@ impl GhostexGpuiApp {
             spaces_enabled: false,
             bots_enabled: false,
             bots_mode: false,
+            automations_row: false,
+            automations_today: 0,
             collections: Vec::new(),
             order: Vec::new(),
             more_menu: Value::Null,

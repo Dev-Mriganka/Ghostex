@@ -76,7 +76,7 @@ const LIST_GUTTER: f32 = 20.0;
 /// React's `li + li` margin.
 const LIST_ITEM_GAP: f32 = 4.0;
 
-pub(super) fn text_style(p: &ChatAppearance) -> TextViewStyle {
+pub(crate) fn text_style(p: &ChatAppearance) -> TextViewStyle {
     let mut style = TextViewStyle::default()
         // The chat view never changes the mouse cursor (see native_chat/cursor.rs), so the
         // rendered Markdown asks for no I-beam over its selectable text and no hand over its

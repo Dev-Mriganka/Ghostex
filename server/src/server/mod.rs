@@ -1271,6 +1271,28 @@ async fn route_http(
                 },
             )
         }
+        "/api/listBotFeed" => {
+            let feed_state = state.clone();
+            match tokio::task::spawn_blocking(move || {
+                crate::bot_feed::read_bot_feed(
+                    &feed_state.paths,
+                    &crate::session_chat_hermes::hermes_home(),
+                )
+            })
+            .await
+            {
+                Ok(feed) => routed_json(
+                    Some(endpoint.path),
+                    StatusCode::OK,
+                    rpc_success(request_id, feed),
+                ),
+                Err(error) => domain_error_response(
+                    endpoint.path,
+                    request_id,
+                    DomainStateError::corrupt_state(format!("Bot feed read failed: {error}")),
+                ),
+            }
+        }
         "/api/listProjectWorktrees"
         | "/api/createProjectWorktree"
         | "/api/openProjectWorktree"

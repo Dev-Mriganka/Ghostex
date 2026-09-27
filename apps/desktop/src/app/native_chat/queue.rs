@@ -75,7 +75,8 @@ fn undelivered_info(
         .into_any_element()
 }
 
-fn grip(p: &ChatAppearance) -> AnyElement {
+/// The six-dot drag grip, also drawn by the Bot automations feed's channels in Manual order.
+pub(crate) fn grip(p: &ChatAppearance) -> AnyElement {
     div()
         .flex()
         .flex_col()

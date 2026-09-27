@@ -48,7 +48,7 @@ mod pagination;
 mod panel_card;
 mod question;
 mod question_exchange;
-mod queue;
+pub(crate) mod queue;
 mod reference_menu;
 mod rewind;
 mod row_click;

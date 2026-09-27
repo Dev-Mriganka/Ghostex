@@ -19,6 +19,7 @@ import {
   IconPuzzle,
   IconRefresh,
   IconRobot,
+  IconRss,
   IconTerminal2,
   IconWorld,
   type Icon as TablerIcon,
@@ -39,6 +40,7 @@ import {
   GHOSTEX_OFFICIAL_EXTENSION_CATEGORIES,
   GHOSTEX_OFFICIAL_EXTENSIONS,
   isOfficialExtensionEnabled,
+  officialExtensionBlockedBy,
   type GhostexOfficialExtension,
   type GhostexOfficialExtensionId,
   type GhostexOfficialExtensionSettingsKey,
@@ -60,6 +62,7 @@ const OFFICIAL_EXTENSION_ICONS: Record<GhostexOfficialExtensionId, TablerIcon> =
   posthog: IconChartBar,
   'custom-website': IconWorld,
   automate: IconBolt,
+  botAutomations: IconRss,
   bots: IconRobot,
   browser: IconWorld,
   code: IconCodeDots,
@@ -187,14 +190,16 @@ export function BuiltInExtensionGroups({
                 const scopeKey = officialViewScopeKey(extension.id);
                 // An app-wide entry has no project to be narrowed to, so it shows the switch alone.
                 const scoped = extension.appWide !== true;
+                const blockedBy = officialExtensionBlockedBy(settings, extension);
                 return (
                   <Fragment key={extension.id}>
                     <BuiltInExtensionCard
                       description={extension.description}
                       editing={scoped && scopeControls.editingKey === scopeKey}
-                      enabled={isOfficialExtensionEnabled(settings, extension)}
+                      enabled={isOfficialExtensionEnabled(settings, extension) && !blockedBy}
                       icon={OFFICIAL_EXTENSION_ICONS[extension.id]}
                       id={extension.id}
+                      blockedReason={blockedBy ? `Turn on ${blockedBy.title} first` : undefined}
                       meta={
                         extension.placement === 'sidebar'
                           ? 'Sidebar'
@@ -240,6 +245,7 @@ export function BuiltInExtensionGroups({
 }
 
 function BuiltInExtensionCard({
+  blockedReason,
   description,
   editing,
   enabled,
@@ -254,6 +260,8 @@ function BuiltInExtensionCard({
   scopeSummary,
   title,
 }: {
+  /** Why the switch cannot be used yet: the entry needs another one enabled first. */
+  blockedReason?: string;
   description: string;
   editing?: boolean;
   enabled?: boolean;
@@ -319,6 +327,7 @@ function BuiltInExtensionCard({
           <Switch
             aria-label={`${enabled ? 'Disable' : 'Enable'} ${title}`}
             checked={enabled}
+            disabled={blockedReason !== undefined}
             onCheckedChange={onEnabledChange}
             size='sm'
           />
@@ -339,7 +348,7 @@ function BuiltInExtensionCard({
           <Icon className='size-4' />
         </span>
       }
-      meta={runtimeMeta || meta}
+      meta={runtimeMeta || blockedReason || meta}
       scopeSummary={scopeSummary}
       title={title}
     />

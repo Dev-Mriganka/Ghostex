@@ -21,6 +21,10 @@ pub(crate) struct NativeSidebarSnapshot {
     pub(crate) bots_enabled: bool,
     /// The list shows the Hermes bots rather than the projects.
     pub(crate) bots_mode: bool,
+    /// The Bots list starts with the pinned Automations row.
+    pub(crate) automations_row: bool,
+    /// The runs every bot delivered today, drawn on the Automations row.
+    pub(crate) automations_today: u64,
     pub(crate) collections: Vec<NativeSidebarCollection>,
     pub(crate) order: Vec<NativeSidebarOrderItem>,
     pub(crate) more_menu: Value,

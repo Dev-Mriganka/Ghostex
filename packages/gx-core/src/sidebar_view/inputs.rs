@@ -269,6 +269,8 @@ pub struct SidebarSettings {
     pub show_less_for_expanded_project_jumps: bool,
     /// The Bots extension is on (`botsHidden` is false), so the sidebar offers its Bots mode.
     pub bots_enabled: bool,
+    /// The Bot automations extension is on (`botAutomationsHidden` is false). It needs Bots too.
+    pub bot_automations_enabled: bool,
 }
 
 impl Default for SidebarSettings {
@@ -291,6 +293,7 @@ impl Default for SidebarSettings {
             expand_collapsed_projects_on_jump: true,
             show_less_for_expanded_project_jumps: false,
             bots_enabled: false,
+            bot_automations_enabled: false,
         }
     }
 }
@@ -365,6 +368,10 @@ impl SidebarSettings {
             ),
             // An inverted key like every Official extension switch, hidden unless set to false.
             bots_enabled: !boolean("botsHidden", !defaults.bots_enabled),
+            bot_automations_enabled: !boolean(
+                "botAutomationsHidden",
+                !defaults.bot_automations_enabled,
+            ),
         }
     }
 

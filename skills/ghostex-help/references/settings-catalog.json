@@ -8956,6 +8956,17 @@
       "agentWritable": false
     },
     {
+      "key": "botAutomations",
+      "title": "Bot automations",
+      "subtitle": "A feed of every Hermes cron run, one channel per job, opened from the Bots sidebar. Needs Bots.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
       "key": "docs",
       "title": "Files",
       "subtitle": "Browse your project’s notes, plans, and reference files together in one focused reading space.",
@@ -9091,6 +9102,18 @@
       "key": "botsHidden",
       "title": "Hide Bots",
       "subtitle": "Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true
+    },
+    {
+      "key": "botAutomationsHidden",
+      "title": "Hide Bot automations",
+      "subtitle": "Stop offering Bot automations, the Automations row in the Bots sidebar that opens a feed of every Hermes cron run. Hidden by default; needs Bots.",
       "tab": "extensions",
       "tabTitle": "Extensions",
       "section": "official",

@@ -1251,6 +1251,7 @@ impl GhostexGpuiApp {
                 | TitlebarMode::Kanban
                 | TitlebarMode::Automate
                 | TitlebarMode::Manage
+                | TitlebarMode::BotFeed
                 | TitlebarMode::Extension(_) => ShellFocusTarget::ProjectEditorSurface(mode),
             };
             self.focus_shell_target(focus, cx);
@@ -1308,6 +1309,7 @@ impl GhostexGpuiApp {
             | TitlebarMode::Kanban
             | TitlebarMode::Automate
             | TitlebarMode::Manage
+            | TitlebarMode::BotFeed
             | TitlebarMode::Extension(_) => ShellFocusTarget::ProjectEditorSurface(mode),
             TitlebarMode::Agents | TitlebarMode::Terminal => return false,
         };

@@ -1,13 +1,14 @@
 //! Running the bot sync (crate::bot_projects): `/api/syncBotProjects`, which a client sends on the
 //! way into Bots mode, and one pass when gxserver starts, so a profile made while Ghostex was
 //! closed is there without a mode switch. Every added project is published like any other. Also
-//! the pass that keeps each bot row's gateway dot current.
+//! the pass that keeps each bot row's gateway dot and today's run count current.
 
 use std::sync::Arc;
 
 use serde_json::{json, Value};
 
 use super::{schedule_presentation_project_delta, value_text, AppState};
+use crate::bot_feed::{bot_automations_enabled, refresh_published_bot_runs_today};
 use crate::bot_projects::{
     bot_profile, bots_enabled, discover_bot_profiles, refresh_published_bot_gateways,
     sync_bot_projects,
@@ -52,10 +53,12 @@ pub(crate) fn start_bot_project_sync(state: Arc<AppState>) {
     });
 }
 
-/// Republishes each bot whose gateway started or stopped since the last pass, so its row's dot
-/// follows without a reload. It rides the 60s project refresh wake-up in `background_tasks.rs`: a
-/// pass reads one or two small files per bot and spawns nothing.
-pub(crate) fn run_bot_gateway_refresh_once(state: &Arc<AppState>) -> Result<(), DomainStateError> {
+/// Republishes each bot whose gateway started or stopped, or whose count of runs delivered today
+/// changed, since the last pass, so its row's dot and the Automations row's count follow without a
+/// reload. It rides the 60s project refresh wake-up in `background_tasks.rs`: a pass reads one or
+/// two small files per bot, plus today's cron output while Bot automations is on, and spawns
+/// nothing.
+pub(crate) fn run_bot_refresh_once(state: &Arc<AppState>) -> Result<(), DomainStateError> {
     if !bots_enabled(&state.paths) {
         return Ok(());
     }
@@ -75,8 +78,11 @@ pub(crate) fn run_bot_gateway_refresh_once(state: &Arc<AppState>) -> Result<(), 
             ))
         })
         .collect();
-    let changed =
-        refresh_published_bot_gateways(&hermes_home(), bots.iter().map(|&(_, profile)| profile));
+    let profiles = || bots.iter().map(|&(_, profile)| profile);
+    let mut changed = refresh_published_bot_gateways(&hermes_home(), profiles());
+    if bot_automations_enabled(&state.paths) {
+        changed.extend(refresh_published_bot_runs_today(&hermes_home(), profiles()));
+    }
     for (project_id, profile) in bots {
         if changed.iter().any(|changed| changed == profile) {
             schedule_presentation_project_delta(

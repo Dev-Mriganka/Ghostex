@@ -30,6 +30,7 @@ type BooleanGhostexSettingsKey = {
 export type GhostexOfficialExtensionSettingsKey = Extract<
   BooleanGhostexSettingsKey,
   | 'automateViewTabHidden'
+  | 'botAutomationsHidden'
   | 'botsHidden'
   | 'browserViewTabHidden'
   | 'codeViewTabHidden'
@@ -77,6 +78,7 @@ export const GHOSTEX_OFFICIAL_EXTENSION_CATEGORIES: readonly {
 export type GhostexOfficialExtensionId =
   | ProjectWebsiteId
   | 'automate'
+  | 'botAutomations'
   | 'bots'
   | 'browser'
   | 'code'
@@ -106,6 +108,8 @@ export type GhostexOfficialExtension = {
   placement: GhostexOfficialExtensionPlacement;
   /** The agent CLI (an `agent-cli-catalog.json` id) that must be installed for the entry to be offered at all. */
   requiresAgentCli?: string;
+  /** The entry that must be enabled first: until it is, this entry's switch is shown but cannot be used. */
+  requiresExtension?: GhostexOfficialExtensionId;
   settingsKey: GhostexOfficialExtensionSettingsKey;
   title: string;
 };
@@ -175,6 +179,22 @@ export const GHOSTEX_OFFICIAL_EXTENSIONS: readonly GhostexOfficialExtension[] = 
     requiresAgentCli: 'hermes-agent',
     settingsKey: 'botsHidden',
     title: 'Bots',
+  },
+  /**
+   * CDXC:Bots 2026-09-26 DECISION:
+   * User: Bot automations is a second Official extension beside Bots, off by default, offered only where the Hermes CLI is installed, and disabled while Bots is off.
+   * SEE-ALSO: packages/gx-core/src/sidebar_view/assemble.rs (the Automations row), apps/desktop/src/app/helpers/titlebar.rs (`titlebar_mode_required_hidden_settings_key`) and server/src/bot_feed.rs (`read_bot_feed`) apply the same "needs Bots" rule.
+   */
+  {
+    appWide: true,
+    description: 'A feed of every Hermes cron run, one channel per job, opened from the Bots sidebar. Needs Bots.',
+    category: 'planning',
+    id: 'botAutomations',
+    placement: 'view',
+    requiresAgentCli: 'hermes-agent',
+    requiresExtension: 'bots',
+    settingsKey: 'botAutomationsHidden',
+    title: 'Bot automations',
   },
   {
     description: 'Browse your project’s notes, plans, and reference files together in one focused reading space.',
@@ -279,4 +299,13 @@ export function isOfficialExtensionEnabled(
   extension: Pick<GhostexOfficialExtension, 'settingsKey'>
 ): boolean {
   return settings[extension.settingsKey] !== true;
+}
+
+/** The entry that has to be enabled first while it is off, or nothing when this entry can be switched freely. */
+export function officialExtensionBlockedBy(
+  settings: ghostexSettings,
+  extension: Pick<GhostexOfficialExtension, 'requiresExtension'>
+): GhostexOfficialExtension | undefined {
+  const required = GHOSTEX_OFFICIAL_EXTENSIONS.find(({ id }) => id === extension.requiresExtension);
+  return required && !isOfficialExtensionEnabled(settings, required) ? required : undefined;
 }

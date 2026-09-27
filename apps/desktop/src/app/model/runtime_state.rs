@@ -412,7 +412,8 @@ impl ProjectScopedWorkareaAvailability {
         Titlebar availability mirrors macOS: Agents and Source are always selectable; Browser, Kanban, Automate, and Docs are visible for all contexts but selectable only for real project-scoped contexts. The old Docs/Manage debuggingMode plus showBetaFeatures visibility gate must not participate in switcher visibility, activation guards, restored active-mode coercion, or persisted active-mode fallback.
         */
         match mode {
-            TitlebarMode::Agents => true,
+            // App-wide: the feed reads Hermes, not the project, so every context can show it.
+            TitlebarMode::Agents | TitlebarMode::BotFeed => true,
             TitlebarMode::Extension(_) => self.project_context.has_project_scoped_workareas(),
             TitlebarMode::Source => self.project_features.source,
             TitlebarMode::Browser | TitlebarMode::Kanban | TitlebarMode::Automate => {
@@ -517,7 +518,10 @@ impl ProjectWorkareaCefSurfaceSlotKey {
             TitlebarMode::Automate => Self::Automate,
             TitlebarMode::Manage => Self::Manage,
             TitlebarMode::Extension(id) => Self::Extension(id),
-            TitlebarMode::Agents | TitlebarMode::Browser | TitlebarMode::Terminal => {
+            TitlebarMode::Agents
+            | TitlebarMode::Browser
+            | TitlebarMode::Terminal
+            | TitlebarMode::BotFeed => {
                 return None;
             }
         })

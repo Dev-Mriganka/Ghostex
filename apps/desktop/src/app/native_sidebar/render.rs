@@ -195,6 +195,13 @@ impl GhostexGpuiApp {
                                     .relative()
                                     .left(px(space_offset * appearance.scale))
                                     .opacity(space_opacity)
+                                    .when(content.automations_row, |column| {
+                                        column.child(self.render_native_sidebar_automations_row(
+                                            content.automations_today,
+                                            &appearance,
+                                            cx,
+                                        ))
+                                    })
                                     .when(content.order.is_empty(), |column| {
                                         column.child(self.render_native_sidebar_empty(
                                             &content,

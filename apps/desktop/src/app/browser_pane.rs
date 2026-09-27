@@ -304,7 +304,10 @@ impl GhostexGpuiApp {
                     TitlebarMode::Automate => ProjectWorkareaCefSurfaceSlotKey::Automate,
                     TitlebarMode::Manage => ProjectWorkareaCefSurfaceSlotKey::Manage,
                     TitlebarMode::Extension(id) => ProjectWorkareaCefSurfaceSlotKey::Extension(id),
-                    TitlebarMode::Agents | TitlebarMode::Browser | TitlebarMode::Terminal => {
+                    TitlebarMode::Agents
+                    | TitlebarMode::Browser
+                    | TitlebarMode::Terminal
+                    | TitlebarMode::BotFeed => {
                         return false;
                     }
                 };

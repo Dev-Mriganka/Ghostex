@@ -122,6 +122,7 @@ pub(crate) fn default_shell_focus_for_mode(
         | TitlebarMode::Kanban
         | TitlebarMode::Automate
         | TitlebarMode::Manage
+        | TitlebarMode::BotFeed
         | TitlebarMode::Extension(_) => ShellFocusTarget::ProjectEditorSurface(active_mode),
     }
 }

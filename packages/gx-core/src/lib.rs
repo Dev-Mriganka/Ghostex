@@ -16,6 +16,7 @@
 mod active_project_context;
 pub mod app_shot;
 mod attention;
+pub mod bot_feed;
 mod change;
 mod connection;
 mod core;

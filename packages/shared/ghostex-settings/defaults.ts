@@ -142,6 +142,11 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
    * User: Bots is off by default, so Ghostex looks exactly as it did until the user turns it on.
    */
   botsHidden: true,
+  /**
+   * CDXC:Bots 2026-09-26 DECISION:
+   * User: Bot automations is its own switch, off by default, so Bots can be on without the feed.
+   */
+  botAutomationsHidden: true,
   tipsAndTricksTitlebarButtonHidden: false,
   notificationsTitlebarButtonHidden: false,
   helpTitlebarButtonHidden: false,
