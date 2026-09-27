@@ -20,15 +20,17 @@
 //!   draft in step with the host's composer, `dispatch_action` performs any other core action.
 //! - [`ChatTranscriptEvent`] is everything the view asks of its host: [`ComposerSummary`] on
 //!   change, host actions, toasts, and (opt-in) the whole document.
-mod init;
 pub(crate) mod gxserver_http;
+mod init;
 mod summary;
 mod transcript;
 
 pub use init::{
     ChatInit, init, install_settings, set_clipboard_handler, set_endpoint, set_light_appearance,
 };
-pub(crate) use init::{copy_to_host_clipboard, data_dir, light_appearance, reduce_motion};
+pub(crate) use init::{
+    Endpoint, copy_to_host_clipboard, data_dir, light_appearance, reduce_motion,
+};
 pub use summary::ComposerSummary;
 pub use transcript::{
     ChatTranscript, ChatTranscriptEvent, SendMode, SendOutcome, SessionRef, open_transcript,

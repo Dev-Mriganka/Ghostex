@@ -3,7 +3,7 @@
 # `host` is the library the app loads (JNI on Android, a C ABI on iOS) on top of gpui-mobile.
 [workspace]
 resolver = "2"
-members = ["chat", "host"]
+members = ["chat", "host", "phone"]
 
 [workspace.dependencies]
 gpui = { git = "https://github.com/zed-industries/zed" }

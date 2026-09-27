@@ -83,21 +83,33 @@ pub(crate) fn gxserver_post_typed_operation(
     crate::mobile::gxserver_http::post_typed_operation(path, params, timeout)
 }
 
-/// The phone reaches one gxserver; a remote target is never made (`model::GpuiRemoteGxserverRequestTarget`).
+/// A chat on one of the phone's computers: the call goes through the phone's forward to that
+/// computer's gxserver (`model::GpuiRemoteGxserverRequestTarget`), as a desktop remote chat's
+/// goes through its tunnel.
 pub(crate) fn gpui_remote_gxserver_post_typed_operation(
-    _target: &GpuiRemoteGxserverRequestTarget,
-    _path: &str,
-    _params: &Value,
-    _timeout: Duration,
+    target: &GpuiRemoteGxserverRequestTarget,
+    path: &str,
+    params: &Value,
+    timeout: Duration,
 ) -> Result<(u16, String), String> {
-    Err("Remote machines are reached through the phone's own gxserver connection.".to_string())
+    crate::mobile::gxserver_http::post_typed_operation_to(&target.endpoint(), path, params, timeout)
 }
 
+/// The same call, answered with the envelope's `result` or its error message.
 pub(crate) fn gpui_remote_gxserver_rpc_result(
-    _target: &GpuiRemoteGxserverRequestTarget,
-    _path: &str,
-    _params: &Value,
-    _timeout: Duration,
+    target: &GpuiRemoteGxserverRequestTarget,
+    path: &str,
+    params: &Value,
+    timeout: Duration,
 ) -> Result<Value, String> {
-    Err("Remote machines are reached through the phone's own gxserver connection.".to_string())
+    let (status, body) = gpui_remote_gxserver_post_typed_operation(target, path, params, timeout)?;
+    let mut envelope: Value =
+        serde_json::from_str(&body).map_err(|_| "gxserver returned invalid JSON.".to_string())?;
+    if envelope["ok"] == true && (200..300).contains(&status) {
+        return Ok(envelope["result"].take());
+    }
+    Err(envelope["message"]
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("gxserver request failed with HTTP {status}.")))
 }

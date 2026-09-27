@@ -6,13 +6,22 @@ pub(crate) mod agents_terminal_startup {
 }
 pub(crate) use agents_terminal_startup::*;
 
-/// The desktop reaches a remote machine's daemon through an SSH tunnel it owns. The phone's chat
-/// talks to the one gxserver it was given at `init`, so no value of this type is ever made; it
-/// exists for the shared chat files that carry one (`NativeChatConfig::remote`).
+/// The desktop reaches a remote machine's daemon through an SSH tunnel it owns; the phone reaches
+/// each of its computers' daemons through its own forward (`ChatTranscript::set_machine_endpoint`),
+/// and a chat on that computer carries it here (`NativeChatConfig::remote`).
 #[derive(Clone)]
 pub(crate) struct GpuiRemoteGxserverRequestTarget {
     pub(crate) local_port: u16,
     pub(crate) token: String,
+}
+
+impl GpuiRemoteGxserverRequestTarget {
+    pub(crate) fn endpoint(&self) -> crate::mobile::Endpoint {
+        crate::mobile::Endpoint {
+            base_url: format!("http://127.0.0.1:{}", self.local_port),
+            auth_token: self.token.clone(),
+        }
+    }
 }
 
 /// Only the identity counter of the desktop's chat page state, which the chat view uses for draft

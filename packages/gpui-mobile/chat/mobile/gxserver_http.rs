@@ -15,8 +15,21 @@ mod lifted {
 }
 use lifted::*;
 
-/// `POST <path>` with the protocol envelope, answered as `(status, body)`.
+/// `POST <path>` with the protocol envelope to the gxserver named at `init`, answered as
+/// `(status, body)`.
 pub(crate) fn post_typed_operation(
+    path: &str,
+    params: &Value,
+    timeout: Duration,
+) -> Result<(u16, String), String> {
+    let endpoint = super::init::endpoint().ok_or("Ghostex is not connected yet.")?;
+    post_typed_operation_to(&endpoint, path, params, timeout)
+}
+
+/// `POST <path>` with the protocol envelope to one computer's gxserver (a remote target is the
+/// phone's forward to it), answered as `(status, body)`.
+pub(crate) fn post_typed_operation_to(
+    endpoint: &super::init::Endpoint,
     path: &str,
     params: &Value,
     timeout: Duration,
@@ -24,7 +37,6 @@ pub(crate) fn post_typed_operation(
     if !path.starts_with("/api/") {
         return Err("Invalid gxserver API path.".to_string());
     }
-    let endpoint = super::init::endpoint().ok_or("Ghostex is not connected yet.")?;
     let address = endpoint
         .base_url
         .strip_prefix("http://")

@@ -6,10 +6,15 @@
 //!
 //! Start config keys (besides the host's own): `baseUrl` and `authToken` (gxserver), `projectId`
 //! and `sessionId` (the chat to open first, optional), `lightAppearance`, `reduceMotion`,
-//! `settings` (the desktop's settings object, optional).
+//! `settings` (the desktop's settings object, optional), `hostComposer` (the app draws its own
+//! composer and performs the core's composer requests), `forwardSnapshots`, `clientName`.
 //!
 //! Commands (`{"type": ...}`):
-//! - `openSession {projectId, sessionId}`, `closeSession`
+//! - `setMachineEndpoint {machineId, baseUrl, authToken}`: one of the phone's computers, reached at
+//!   `http://127.0.0.1:<port>` through the app's forward to its gxserver
+//! - `openSession {projectId, sessionId, machineId?}`, `closeSession`
+//! - `resolveComposerRead {id, text}`: the host composer's answer to a forwarded
+//!   `readNativeComposer` read (a `hostAction` `composerRequest` whose request is that rpc)
 //! - `setDraft {text}` as the user types, `saveDraft` when the field loses focus
 //! - `send {text, mode?: "send"|"queue"|"compact", id?}` answers `sendResult {id, outcome, reason}`
 //! - `action {action}`: any other core action (`interrupt`, `composerScroll`, `answerQuestion`, ...)
@@ -51,19 +56,24 @@ pub(crate) fn build(
                 .get("settings")
                 .and_then(Value::as_object)
                 .cloned(),
-            client_name: "gpui-mobile-poc".to_string(),
+            client_name: config
+                .str("clientName")
+                .unwrap_or("gpui-mobile")
+                .to_string(),
             ..Default::default()
         },
     );
     // The chat's copies go through GPUI's clipboard, which the platform hands to the host
     // (`runtime::start`), so no chat-specific clipboard handler is installed.
 
-    let transcript = chat::open_transcript(
-        window,
-        cx,
-        config.str("projectId").unwrap_or_default(),
-        config.str("sessionId").unwrap_or_default(),
-    );
+    let transcript = chat::open_transcript(window, cx, "", "");
+    transcript.update(cx, |transcript, cx| {
+        transcript.set_host_composer(config.bool("hostComposer").unwrap_or(false));
+        transcript.set_forward_snapshots(config.bool("forwardSnapshots").unwrap_or(false));
+        if let (Some(project), Some(session)) = (config.str("projectId"), config.str("sessionId")) {
+            transcript.open_session(SessionRef::new(project, session), cx);
+        }
+    });
     cx.subscribe(&transcript, move |_, event, _| forward(event, events))
         .detach();
     let root = chat::root_view(transcript.clone(), window, cx);
@@ -112,8 +122,32 @@ fn handle(
     let text = |key: &str| command[key].as_str().unwrap_or_default().to_string();
     match command["type"].as_str().unwrap_or_default() {
         "openSession" => {
-            let session = SessionRef::new(text("projectId"), text("sessionId"));
+            let session = match command["machineId"].as_str().filter(|id| !id.is_empty()) {
+                Some(machine) => {
+                    SessionRef::on_machine(machine, text("projectId"), text("sessionId"))
+                }
+                None => SessionRef::new(text("projectId"), text("sessionId")),
+            };
             transcript.update(cx, |transcript, cx| transcript.open_session(session, cx));
+        }
+        "setMachineEndpoint" => {
+            let machine = text("machineId");
+            let Some(port) = local_port(&text("baseUrl")) else {
+                events.emit(json!({
+                    "type": "error",
+                    "message": "setMachineEndpoint needs baseUrl http://127.0.0.1:<port>",
+                }));
+                return true;
+            };
+            let token = text("authToken");
+            transcript.update(cx, |transcript, _| {
+                transcript.set_machine_endpoint(&machine, port, &token)
+            });
+        }
+        "resolveComposerRead" => {
+            let id = command["id"].clone();
+            let body = text("text");
+            transcript.read(cx).answer_composer_read(id, body, cx);
         }
         "closeSession" => transcript.update(cx, |transcript, cx| transcript.close_session(cx)),
         "setDraft" => {
@@ -164,7 +198,9 @@ fn handle(
         }
         "forwardSnapshots" => {
             let enabled = command["enabled"].as_bool().unwrap_or(false);
-            transcript.update(cx, |transcript, _| transcript.set_forward_snapshots(enabled));
+            transcript.update(cx, |transcript, _| {
+                transcript.set_forward_snapshots(enabled)
+            });
         }
         "state" => {
             let transcript = transcript.read(cx);
@@ -178,6 +214,14 @@ fn handle(
         _ => return false,
     }
     true
+}
+
+/// The port of a phone-side forward, `http://127.0.0.1:<port>`.
+fn local_port(base_url: &str) -> Option<u16> {
+    base_url
+        .strip_prefix("http://127.0.0.1:")
+        .map(|port| port.trim_end_matches('/'))
+        .and_then(|port| port.parse().ok())
 }
 
 fn outcome_name(outcome: &SendOutcome) -> &'static str {

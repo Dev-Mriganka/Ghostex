@@ -11,13 +11,17 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use super::summary::ComposerSummary;
-use crate::app::model::TerminalSessionId;
+use crate::app::model::{GpuiRemoteGxserverRequestTarget, TerminalSessionId};
 use crate::app::native_chat::state::{NativeChatConfig, NativeChatEvent, NativeChatView};
 
-/// One session on the machine the chat was pointed at in [`crate::init`].
+/// One session: on the machine the chat was pointed at in [`crate::init`], or on one of the
+/// phone's computers ([`SessionRef::on_machine`], reached through
+/// [`ChatTranscript::set_machine_endpoint`]).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionRef {
+    /// `None` for the `init` machine.
+    pub machine_id: Option<String>,
     pub project_id: String,
     pub session_id: String,
 }
@@ -25,6 +29,19 @@ pub struct SessionRef {
 impl SessionRef {
     pub fn new(project_id: impl Into<String>, session_id: impl Into<String>) -> Self {
         Self {
+            machine_id: None,
+            project_id: project_id.into(),
+            session_id: session_id.into(),
+        }
+    }
+
+    pub fn on_machine(
+        machine_id: impl Into<String>,
+        project_id: impl Into<String>,
+        session_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            machine_id: Some(machine_id.into()),
             project_id: project_id.into(),
             session_id: session_id.into(),
         }
@@ -108,6 +125,10 @@ pub struct ChatTranscript {
     last_snapshot: Option<Arc<Value>>,
     chat_subscriptions: Vec<Subscription>,
     next_shell_id: u64,
+    /// Each computer's gxserver, as the phone's forward reaches it.
+    machines: HashMap<String, GpuiRemoteGxserverRequestTarget>,
+    /// The host draws its own composer (the `host_composer` field of `NativeChatView`).
+    host_composer: bool,
 }
 
 impl EventEmitter<ChatTranscriptEvent> for ChatTranscript {}
@@ -132,6 +153,8 @@ pub fn open_transcript(
             last_snapshot: None,
             chat_subscriptions: Vec::new(),
             next_shell_id: 1,
+            machines: HashMap::new(),
+            host_composer: false,
         };
         if !project_id.is_empty() && !session_id.is_empty() {
             transcript.open_session(SessionRef::new(project_id, session_id), cx);
@@ -161,8 +184,15 @@ impl ChatTranscript {
         self.close_session(cx);
         let shell_session_id = TerminalSessionId(self.next_shell_id);
         self.next_shell_id += 1;
+        let remote = session
+            .machine_id
+            .as_ref()
+            .and_then(|machine| self.machines.get(machine).cloned());
         let config = NativeChatConfig {
-            machine_id: super::init::machine_id(),
+            machine_id: session
+                .machine_id
+                .clone()
+                .unwrap_or_else(super::init::machine_id),
             project_id: session.project_id.clone(),
             session_id: session.session_id.clone(),
             sidebar_session_id: format!(
@@ -171,15 +201,17 @@ impl ChatTranscript {
             ),
             shell_session_id,
             client_id: format!("{}-{}", super::init::client_name(), uuid::Uuid::new_v4()),
-            remote: None,
+            remote,
             app: None,
             parent_native_view: std::ptr::null_mut(),
             initial_snapshot: None,
             initial_presentation: self.presentations.get(&session).cloned(),
         };
+        let host_composer = self.host_composer;
         let chat = cx.new(|cx| {
             let mut view = NativeChatView::new(config, cx);
             view.set_transcript_only(true, cx);
+            view.host_composer = host_composer;
             view
         });
         let key = session.clone();
@@ -205,6 +237,35 @@ impl ChatTranscript {
         }
         self.session = None;
         cx.notify();
+    }
+
+    /// Where one of the phone's computers' gxserver is: the phone's forward to it on
+    /// `127.0.0.1:<local_port>` and its bearer token. Chats opened on that machine afterwards use
+    /// it, and an open chat's socket reconnects to it (the desktop's `set_endpoint` for a tunnel).
+    pub fn set_machine_endpoint(&mut self, machine_id: &str, local_port: u16, token: &str) {
+        let target = GpuiRemoteGxserverRequestTarget {
+            local_port,
+            token: token.to_string(),
+        };
+        crate::app::gx_chat::set_endpoint(
+            machine_id,
+            &format!("http://127.0.0.1:{local_port}"),
+            token,
+        );
+        self.machines.insert(machine_id.to_string(), target);
+    }
+
+    /// Whether the host draws the composer (the phone's React Native one), so the core's composer
+    /// requests reach it as `composerRequest` host actions. Applies to chats opened afterwards.
+    pub fn set_host_composer(&mut self, host_composer: bool) {
+        self.host_composer = host_composer;
+    }
+
+    /// The host composer's answer to a forwarded `readNativeComposer` read.
+    pub fn answer_composer_read(&self, id: Value, text: String, cx: &App) {
+        if let Some(chat) = &self.chat {
+            chat.read(cx).answer_composer_read(id, text);
+        }
     }
 
     pub fn session(&self) -> Option<&SessionRef> {
@@ -394,7 +455,12 @@ impl ChatTranscript {
             self.summary = Some(summary.clone());
             cx.emit(ChatTranscriptEvent::Summary(summary));
         }
+        // The view starts from its own placeholder (a composer placeholder and a few labels) until
+        // the core's first document arrives; only a core document, which always carries `view` and
+        // `status`, is the object the host's cards and composer read.
+        let core_document = snapshot.get("view").is_some() && snapshot.get("status").is_some();
         if self.forward_snapshots
+            && core_document
             && !self
                 .last_snapshot
                 .as_ref()
