@@ -63,6 +63,9 @@ struct ProcessIdentitiesCache {
     /// Every name requested recently, with the time it was last requested.
     recent_names: HashMap<String, Instant>,
     snapshot: Option<CachedProcessIdentities>,
+    /// CDXC:Zmx 2026-09-27 WHY:
+    /// A failed probe is remembered for the same TTL as a snapshot. Callers queued on the probe mutex used to each start their own probe after a failure; on Windows the process scan took over 5s and timed out every time, so they ran back to back, and because the presentation passes call this from gxserver's async request threads, every request (chat sends included) stalled for 10s or more at a time.
+    failed_at: Option<Instant>,
     shutdown: Option<tokio::sync::broadcast::Receiver<()>>,
 }
 
@@ -99,6 +102,7 @@ pub(crate) fn invalidate_zmx_process_identity_cache() {
     if let Some(cache) = PROCESS_IDENTITIES_CACHE.get() {
         if let Ok(mut cache) = cache.lock() {
             cache.snapshot = None;
+            cache.failed_at = None;
             cache.generation = cache.generation.wrapping_add(1);
         }
     }
@@ -154,6 +158,7 @@ pub fn read_cached_zmx_session_process_identities(
         if let Some(snapshot) = fresh_process_snapshot(&guard, session_names, home_dir) {
             return Ok(select_identities(&snapshot.identities, session_names));
         }
+        ensure_no_recent_probe_failure(&guard)?;
     }
     // CDXC:Zmx 2026-09-13 WHY:
     // Concurrent misses used to spawn identical process scans. Serialize only misses and recheck after waiting, while fresh readers keep using the short-held cache mutex.
@@ -168,6 +173,7 @@ pub fn read_cached_zmx_session_process_identities(
         if let Some(snapshot) = fresh_process_snapshot(&guard, session_names, home_dir) {
             return Ok(select_identities(&snapshot.identities, session_names));
         }
+        ensure_no_recent_probe_failure(&guard)?;
         let mut names = guard.recent_names.keys().cloned().collect::<Vec<_>>();
         // A request can outlive the recent-name window while waiting for a probe.
         names.extend(session_names.iter().cloned());
@@ -175,7 +181,19 @@ pub fn read_cached_zmx_session_process_identities(
         names.dedup();
         (names, guard.generation)
     };
-    let identities = read_zmx_session_process_identities(&probe_names, home_dir)?;
+    let probed = read_zmx_session_process_identities(&probe_names, home_dir);
+    let identities = match probed {
+        Ok(identities) => identities,
+        Err(error) => {
+            let mut guard = cache
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if guard.generation == generation {
+                guard.failed_at = Some(Instant::now());
+            }
+            return Err(error);
+        }
+    };
     let selected = select_identities(&identities, session_names);
     {
         let mut guard = cache
@@ -183,6 +201,7 @@ pub fn read_cached_zmx_session_process_identities(
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         ensure_process_identity_probe_active(&guard)?;
         if guard.generation == generation {
+            guard.failed_at = None;
             guard.snapshot = Some(CachedProcessIdentities {
                 fetched_at: Instant::now(),
                 home_dir: home_dir.to_path_buf(),
@@ -192,6 +211,18 @@ pub fn read_cached_zmx_session_process_identities(
         }
     }
     Ok(selected)
+}
+
+fn ensure_no_recent_probe_failure(cache: &ProcessIdentitiesCache) -> ZmxEndpointResult<()> {
+    if cache
+        .failed_at
+        .is_some_and(|failed_at| failed_at.elapsed() < ZMX_PROBE_CACHE_TTL)
+    {
+        return Err(ZmxEndpointError::DependencyUnavailable(
+            "The session process snapshot failed moments ago.".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn fresh_process_snapshot<'a>(
