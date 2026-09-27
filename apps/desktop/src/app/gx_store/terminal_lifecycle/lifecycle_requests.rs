@@ -286,8 +286,7 @@ impl GhostexGpuiApp {
     }
 
     fn gx_store_open_remote_tab(&mut self, session: &SessionKey, cx: &mut gpui::Context<Self>) {
-        let action =
-            open_remote_session_terminal(&session.to_sidebar_session_id(), false, None, false);
+        let action = open_remote_session_terminal(&session.to_sidebar_session_id(), false, None);
         self.receive_sidebar_native_project_path_action_payload(&action.to_string(), cx);
     }
 

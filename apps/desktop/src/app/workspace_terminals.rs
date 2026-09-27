@@ -71,7 +71,6 @@ impl GhostexGpuiApp {
             self.focus_local_workspace_terminal_from_message(
                 &GpuiSidebarWorkspaceTerminalFocusMessage {
                     force_remount: false,
-                    placement: GpuiWorkspaceTerminalFocusPlacement::Tab,
                     placement_target_session_id: None,
                     preferred_interface: GpuiPreferredAgentInterface::Terminal,
                     project_id: key.project_id.clone(),
@@ -446,7 +445,6 @@ impl GhostexGpuiApp {
                 GpuiLocalWorkspaceAttachIntent::Attach,
                 pane_id,
                 true,
-                GpuiWorkspaceTerminalFocusPlacement::Tab,
                 GpuiLocalWorkspaceAttachOrigin::SurfacedRestore,
                 cx,
             );
@@ -1321,7 +1319,6 @@ impl GhostexGpuiApp {
             GpuiLocalWorkspaceAttachIntent::Attach,
             pane_id,
             true,
-            GpuiWorkspaceTerminalFocusPlacement::Tab,
             GpuiLocalWorkspaceAttachOrigin::WakeRecovery,
             cx,
         );
@@ -1608,7 +1605,6 @@ impl GhostexGpuiApp {
             attach_intent,
             requested_pane_id,
             false,
-            GpuiWorkspaceTerminalFocusPlacement::Tab,
             GpuiLocalWorkspaceAttachOrigin::BackgroundSelect,
             cx,
         );

@@ -9,13 +9,13 @@
 //! Ported from these files of the deleted `apps/desktop/sidebar/gxserver-runtime/` (see git
 //! history): `core.ts` (the `handleSidebarMessage` arms), `app-shot-and-misc.ts`
 //! (`postProjectPathActionForGroup`, `copyWorkspaceProjectRemoteUrl`), `sessions-and-focus.ts`
-//! (`copySessionDetails`) and `remote-machines.ts` (`postRemoteSessionNativeAction`,
-//! `postRemoteProjectNativeAction`, `postRemoteToast`).
+//! (`copySessionDetails`) and `remote-machines.ts` (`postRemoteProjectNativeAction`,
+//! `postRemoteToast`).
 
 use serde_json::Value;
 
 use crate::core::Core;
-use crate::keys::{ProjectKey, SessionKey};
+use crate::keys::ProjectKey;
 use crate::sidebar_view::SidebarInputs;
 
 use super::plan::{ActionEffect, SidebarActionPlan, ToastLevel};
@@ -26,10 +26,8 @@ use super::resolve::{
 /// Every message type this file answers. The host checks it before it handles a command (it kept
 /// such commands out of the old runtime, and the deleted parity gate enumerated it), so the set
 /// lives in one place.
-pub const READ_ONLY_MESSAGE_TYPES: [&str; 7] = [
+pub const READ_ONLY_MESSAGE_TYPES: [&str; 5] = [
     "copySessionDetails",
-    "copyResumeCommand",
-    "copyAttachCommand",
     "copyWorkspaceProjectPathForGroup",
     "copyWorkspaceProjectRemoteUrl",
     "openWorkspaceProjectInFinderForGroup",
@@ -53,10 +51,6 @@ pub fn plan_read_only_action(
         "copySessionDetails" => Some(copy_text(text_field(message, "detailsText"))),
         // `copyWorkspaceProjectRemoteUrl`: the same call with the menu's URL.
         "copyWorkspaceProjectRemoteUrl" => Some(copy_text(text_field(message, "remoteUrl"))),
-        // Both command copies exist for REMOTE sessions only, on either side: a local session's
-        // rows are built but the runtime answers them with `handleUnsupportedSidebarMessage`.
-        "copyResumeCommand" => Some(remote_session_action(message, "copyRemoteResumeCommand")),
-        "copyAttachCommand" => Some(remote_session_action(message, "copyRemoteAttachCommand")),
         "copyWorkspaceProjectPathForGroup" => Some(project_path_action(
             core,
             inputs,
@@ -84,21 +78,6 @@ fn copy_text(value: Option<&str>) -> SidebarActionPlan {
         Some(text) => SidebarActionPlan::one(ActionEffect::CopyText {
             text: text.to_string(),
         }),
-        None => SidebarActionPlan::nothing(),
-    }
-}
-
-fn remote_session_action(message: &Value, action: &str) -> SidebarActionPlan {
-    let Some(session) = text_field(message, "sessionId")
-        .and_then(SessionKey::parse_remote_scoped_session_id)
-        .filter(|session| !session.machine.is_local())
-    else {
-        return SidebarActionPlan::nothing();
-    };
-    // The bridge is handed the machine-scoped id back, which is the string it was parsed from;
-    // `postRemoteSessionNativeAction` rebuilds it the same way.
-    match native_project_path_action(action, &session.to_focus_state_session_id()) {
-        Some(effect) => SidebarActionPlan::one(effect),
         None => SidebarActionPlan::nothing(),
     }
 }

@@ -22,7 +22,7 @@
 //! answer is an app-modal-host message (the More menu's rows, a machine's Configure, the Space
 //! editor, a project's Add Worktree and History), `sidebar_state_actions.rs` a row's Delayed Send,
 //! the agent launcher's run and a machine tab's Hide Machine, and `sidebar_snooze.rs` the two that read
-//! the clock and the local calendar, `sidebar_reload.rs` Full Reload and Split Right,
+//! the clock and the local calendar, `sidebar_reload.rs` Full Reload,
 //! `sidebar_bulk.rs` the plural payloads and the renderer's
 //! batch envelope, `sidebar_remote.rs` every per-session action of a row on a remote machine,
 //! `sidebar_remote_focus.rs` the one remote payload that is not a call at all, a row click,
@@ -53,8 +53,8 @@
 //! `diagnostics.rs` writes the log lines.
 
 mod activation_focus;
-mod app_shot;
 mod added_project;
+mod app_shot;
 mod attention;
 mod burst;
 mod client_document;
@@ -76,11 +76,11 @@ mod host;
 mod hud;
 mod indicators;
 mod layout_persist;
-mod presentation_ready;
-mod primary_launcher;
 mod local_delayed_sends;
 mod local_focus;
 mod notifications;
+mod presentation_ready;
+mod primary_launcher;
 mod project_activation;
 mod project_docs;
 mod quick_access_data;
@@ -98,9 +98,9 @@ mod session_walk;
 mod sidebar_accounts;
 mod sidebar_actions;
 mod sidebar_bulk;
-mod sidebar_command_run;
 mod sidebar_clock;
 mod sidebar_close_project;
+mod sidebar_command_run;
 mod sidebar_drag;
 mod sidebar_drop_queue;
 mod sidebar_flags;

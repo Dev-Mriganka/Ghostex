@@ -114,9 +114,6 @@ impl GhostexGpuiApp {
             .iter()
             .any(|machine| machine.machine_id == selected && machine.is_connected());
         MenuHost {
-            // The sidebar page always has the workspace focus bridge; the web app is what does
-            // not, and it never reaches this host.
-            workspace_focus_bridge: true,
             agents: hud.map(|hud| agents(&hud["agents"])).unwrap_or_default(),
             primary_agent_id: self.gx_store.menu_host.primary_agent_id.clone(),
             global_commands: hud

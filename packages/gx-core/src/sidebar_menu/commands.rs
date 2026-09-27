@@ -318,10 +318,6 @@ pub(crate) mod message {
         })
     }
 
-    pub(crate) fn split_session_right(session_id: &str) -> Value {
-        json!({ "type": "splitSessionRight", "sessionId": session_id })
-    }
-
     pub(crate) fn create_group_from_session(session_id: &str) -> Value {
         json!({ "type": "createGroupFromSession", "sessionId": session_id })
     }
@@ -336,14 +332,6 @@ pub(crate) mod message {
             "sessionId": session_id,
             "detailsText": details_text,
         })
-    }
-
-    pub(crate) fn copy_resume_command(session_id: &str) -> Value {
-        json!({ "type": "copyResumeCommand", "sessionId": session_id })
-    }
-
-    pub(crate) fn copy_attach_command(session_id: &str) -> Value {
-        json!({ "type": "copyAttachCommand", "sessionId": session_id })
     }
 
     pub(crate) fn postpone_delayed_send(session_id: &str, delay_ms: i64) -> Value {

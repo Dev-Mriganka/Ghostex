@@ -18,8 +18,6 @@ use crate::*;
 pub(crate) struct GpuiSidebarNativeProjectPathActionMessage {
     pub(crate) action: GpuiSidebarNativeProjectPathAction,
     pub(crate) file_path: Option<String>,
-    /// Only `openRemoteSessionTerminal` carries it; see `GpuiWorkspaceTerminalFocusPlacement`.
-    pub(crate) placement: GpuiWorkspaceTerminalFocusPlacement,
     pub(crate) preferred_interface: GpuiPreferredAgentInterface,
     pub(crate) project_id: String,
     /// Only `openRemoteSessionTerminal` carries it; the remote twin of
@@ -49,8 +47,6 @@ pub(crate) enum GpuiSidebarNativeProjectPathAction {
     OpenRemoteSidebarGitChangedFileInIde,
     OpenRemoteProjectPortsBrowser,
     OpenRemoteSessionTerminal,
-    CopyRemoteAttachCommand,
-    CopyRemoteResumeCommand,
 }
 
 impl GpuiSidebarNativeProjectPathAction {
@@ -80,8 +76,6 @@ impl GpuiSidebarNativeProjectPathAction {
             }
             "openRemoteProjectPortsBrowser" => Some(Self::OpenRemoteProjectPortsBrowser),
             "openRemoteSessionTerminal" => Some(Self::OpenRemoteSessionTerminal),
-            "copyRemoteAttachCommand" => Some(Self::CopyRemoteAttachCommand),
-            "copyRemoteResumeCommand" => Some(Self::CopyRemoteResumeCommand),
             _ => None,
         }
     }
@@ -119,12 +113,7 @@ impl GpuiSidebarNativeProjectPathAction {
     }
 
     pub(crate) fn is_remote_session_action(self) -> bool {
-        matches!(
-            self,
-            Self::OpenRemoteSessionTerminal
-                | Self::CopyRemoteAttachCommand
-                | Self::CopyRemoteResumeCommand
-        )
+        matches!(self, Self::OpenRemoteSessionTerminal)
     }
 
     pub(crate) fn is_remote_project_action(self) -> bool {

@@ -24,7 +24,7 @@ use web_time::Instant;
 use crate::GhostexGpuiApp;
 use crate::app::model::{
     GpuiLocalWorkspaceSessionKey, GpuiPreferredAgentInterface,
-    GpuiSidebarWorkspaceTerminalFocusMessage, GpuiWorkspaceTerminalFocusPlacement,
+    GpuiSidebarWorkspaceTerminalFocusMessage,
 };
 
 /// How long a created session's attach is treated as the create's own. An attach plan answers in
@@ -55,7 +55,6 @@ impl GhostexGpuiApp {
         }
         let message = GpuiSidebarWorkspaceTerminalFocusMessage {
             force_remount: false,
-            placement: GpuiWorkspaceTerminalFocusPlacement::Tab,
             placement_target_session_id: None,
             preferred_interface: preferred_interface
                 .and_then(GpuiPreferredAgentInterface::from_str)

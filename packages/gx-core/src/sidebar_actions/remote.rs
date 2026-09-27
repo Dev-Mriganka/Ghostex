@@ -44,8 +44,7 @@ pub const REMOTE_AWAITED_TIMEOUT_MS: u64 = 20_000;
 /// (`gpui_remote_sidebar_request_timeout`).
 pub const REMOTE_FIRE_AND_FORGET_TIMEOUT_MS: u64 = 15_000;
 
-/// Every payload type a remote leg answers. Split Right is deliberately absent: see the refusal on
-/// [`plan_remote_session_action`].
+/// Every payload type a remote leg answers.
 pub const REMOTE_SESSION_MESSAGE_TYPES: [&str; 11] = [
     "setSessionSleeping",
     "closeSession",
@@ -233,10 +232,6 @@ pub fn owns_remote_session_message(message: &Value) -> bool {
 /// `remote:<machine>:session:<project>:<session>`, which is `parseGpuiRemotePresentationSessionId`'s
 /// pattern. Refused, with the reason at each refusal:
 ///
-/// - **Split Right**, whose remote leg is not a call at all: it acknowledges the row's attention,
-///   posts `openRemoteSessionTerminal` through the native project-path bridge and moves the old
-///   runtime's REMOTE focus, and remote focus is not the store's yet (a remote row click is not
-///   either). Handed over whole rather than performed in part.
 /// - **A payload whose own fields do not parse** (a sleep with no `sleeping`, a pin with no
 ///   `pinned`), for the reason the local planners refuse them: the TypeScript would spread an
 ///   `undefined` into a real call, and a port that guessed a default would send a different one.

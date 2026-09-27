@@ -8,10 +8,10 @@ use ghostex_gx_protocol::{LifecycleState, PresentationSession, SessionKind};
 
 use crate::keys::SessionKey;
 
-use super::agents::{BROWSER_AGENT_ICON, resolve_agent_icon};
+use super::agents::{resolve_agent_icon, BROWSER_AGENT_ICON};
 use super::inputs::{BrowserTabInput, CloseAfterDoneInput, DelayedSendInput};
-use super::session_text::{TitleInput, session_heading, session_tooltip};
-use super::tags::{TagCatalog, effective_tag, tag_presentation};
+use super::session_text::{session_heading, session_tooltip, TitleInput};
+use super::tags::{effective_tag, tag_presentation, TagCatalog};
 use super::text::{encode_uri_component, js_trim, parse_iso_ms};
 use super::view::{DelayedSendView, SessionMenuFacts, SessionRow, SessionTiming};
 
@@ -264,7 +264,7 @@ pub(crate) fn session_row(
                 .as_ref()
                 .map(|provider| provider.as_str().to_string()),
             // `sessionPersistenceName` is the zmx or wmx session name, which the projection
-            // carries even when it is empty; Copy Attach Command tests it for truthiness.
+            // carries even when it is empty; Copy Details tests it for truthiness.
             session_persistence_name: Some(session.zmx_name.clone()),
             session_routing_id: Some(routing_id),
             raw_display_title: session.display_title.clone(),

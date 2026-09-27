@@ -1,8 +1,8 @@
 //! The desktop half of attention: every door that means "the user saw this session" or "Escape in
 //! its terminal" becomes a store intent here, and the store's attention effects are performed here.
 //!
-//! Doors: a terminal the user typed or clicked in, a tab a held key stopped on and Split Right
-//! (queued with the selection tell, gx_store/burst.rs), a remote row click
+//! Doors: a terminal the user typed or clicked in, a tab a held key stopped on (queued with the
+//! selection tell, gx_store/burst.rs), a remote row click
 //! (gx_store/sidebar_remote_focus.rs), the store's own focus paths (gx_store/focus_perform.rs,
 //! which replaced the old runtime's facts channel `attentionAcknowledge`), and Escape
 //! (terminal_sync/workspace_terminal_dispatch.rs).

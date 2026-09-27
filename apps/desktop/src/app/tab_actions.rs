@@ -415,8 +415,8 @@ impl GhostexGpuiApp {
         cx.notify();
     }
 
-    /// CDXC:Workarea 2026-09-05 SEE-ALSO:
-    /// Chat and the focused-session shortcut use the same split_tab_to_pane operation as sidebar Split Right in workspace_events.rs, including its lone-tab no-op.
+    /// CDXC:Workarea 2026-09-27 DECISION:
+    /// User: keep the Split Right shortcut (Option+Shift+D) after removing Split Right from the chat's More actions menu and the sidebar session menu. This is now the only Split Right; splitting the lone tab of the focused pane is a no-op inside the model.
     pub(crate) fn split_existing_agents_session_right(
         &mut self,
         session_id: TerminalSessionId,

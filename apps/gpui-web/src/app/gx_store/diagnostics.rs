@@ -19,7 +19,6 @@ no_op_records! {
     sidebar_reload_ran(a, b);
     sidebar_move_ran(a, b);
     sidebar_order_write_ran(a, b, c);
-    sidebar_split_ran(a, b);
     sidebar_bulk_ran(a, b);
     sidebar_snooze_action_ran(a, b);
     sidebar_snooze_ran(a, b, c, d);

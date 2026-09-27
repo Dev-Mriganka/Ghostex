@@ -13,7 +13,7 @@ use super::focus_perform::RowFocusOptions;
 use crate::GhostexGpuiApp;
 use crate::app::model::{
     GpuiLocalWorkspaceSessionKey, GpuiPreferredAgentInterface,
-    GpuiSidebarWorkspaceTerminalFocusMessage, GpuiWorkspaceTerminalFocusPlacement,
+    GpuiSidebarWorkspaceTerminalFocusMessage,
 };
 use crate::support_logs;
 
@@ -116,9 +116,9 @@ impl GhostexGpuiApp {
         let local_focus = &mut self.gx_store.local_focus;
         if local_focus.burst_task_running {
             let earliest = [local_focus.settle_due, local_focus.finish_due]
-            .into_iter()
-            .flatten()
-            .min();
+                .into_iter()
+                .flatten()
+                .min();
             if let (Some(earliest), Some(sleeping_until), Some(wake)) = (
                 earliest,
                 local_focus.burst_sleeping_until,
@@ -179,9 +179,9 @@ impl GhostexGpuiApp {
         }
         let local_focus = &mut self.gx_store.local_focus;
         let next_due = [local_focus.settle_due, local_focus.finish_due]
-        .into_iter()
-        .flatten()
-        .min();
+            .into_iter()
+            .flatten()
+            .min();
         let Some(next_due) = next_due else {
             local_focus.burst_task_running = false;
             local_focus.burst_wake = None;
@@ -328,7 +328,6 @@ impl GhostexGpuiApp {
                 self.gx_store_request_workspace_focus(
                     GpuiSidebarWorkspaceTerminalFocusMessage {
                         force_remount: false,
-                        placement: GpuiWorkspaceTerminalFocusPlacement::Tab,
                         placement_target_session_id: None,
                         preferred_interface: GpuiPreferredAgentInterface::Terminal,
                         project_id: pending.key.project_id.clone(),

@@ -40,7 +40,7 @@ use crate::app::model::{
     AgentTerminalActivity, AgentsWorkspaceSessionKind, GpuiGxserverPresentationFocusState,
     GpuiLocalWorkspaceSessionKey, GpuiPreferredAgentInterface, GpuiSidebarWorkspaceTabSession,
     GpuiSidebarWorkspaceTerminalFocusMessage, GpuiSwitchableSessionAgent,
-    GpuiWorkspaceTerminalFocusPlacement, TerminalSessionPresentationState,
+    TerminalSessionPresentationState,
 };
 
 /// The id the All Automations overview's focus names (`GPUI_QUICK_AUTOMATIONS_SIDEBAR_SESSION_ID`
@@ -450,7 +450,6 @@ impl GhostexGpuiApp {
         self.gx_store_request_workspace_focus(
             GpuiSidebarWorkspaceTerminalFocusMessage {
                 force_remount: false,
-                placement: GpuiWorkspaceTerminalFocusPlacement::Tab,
                 placement_target_session_id: None,
                 preferred_interface: GpuiPreferredAgentInterface::Terminal,
                 project_id: session.project_id,

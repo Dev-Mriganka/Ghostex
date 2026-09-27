@@ -330,7 +330,6 @@ impl GhostexGpuiApp {
                     &session.to_sidebar_session_id(),
                     false,
                     open_in_chat.then_some("chat"),
-                    false,
                 );
                 self.receive_sidebar_native_project_path_action_payload(&payload.to_string(), cx);
             }

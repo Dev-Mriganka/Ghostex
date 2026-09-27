@@ -156,7 +156,6 @@ impl<'a> SidebarMenus<'a> {
                 || is_user_made_group(core.group_id.as_str()),
             // The projection never sets it, so the Focus item never appears.
             can_focus_mode: false,
-            workspace_focus_bridge: self.host.workspace_focus_bridge,
             project: core.project_context.as_ref(),
             // The projection marks every project group removable; only a remote machine's are not.
             can_remove_project: true,

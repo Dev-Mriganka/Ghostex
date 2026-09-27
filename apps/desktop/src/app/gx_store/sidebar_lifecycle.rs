@@ -30,10 +30,7 @@ use serde_json::Value;
 use super::host::now_ms;
 use super::rpc::gxserver_rpc_result_task;
 use crate::GhostexGpuiApp;
-use crate::app::model::{
-    GpuiPreferredAgentInterface, GpuiSidebarWorkspaceTerminalFocusMessage,
-    GpuiWorkspaceTerminalFocusPlacement,
-};
+use crate::app::model::{GpuiPreferredAgentInterface, GpuiSidebarWorkspaceTerminalFocusMessage};
 
 /// The same bound the app's other wake uses (`session_chat_fork_branches.rs`): a wake starts a
 /// provider and can take a while, and a call that times out must read as "no answer" rather than
@@ -86,11 +83,6 @@ pub(crate) struct SidebarLifecycleCounters {
     /// Wakes that asked the workspace to tear the dead terminal down first, which is the leg that
     /// makes a Full Reload a reload rather than a sleep and a wake.
     pub(crate) remounts: u64,
-    /// Split Rights answered here, by what the row needed.
-    pub(crate) splits: u64,
-    pub(crate) splits_woken: u64,
-    /// Selections that really asked for a new pane, whichever of the two branches asked.
-    pub(crate) splits_placed: u64,
 }
 
 impl GhostexGpuiApp {
@@ -480,9 +472,6 @@ impl GhostexGpuiApp {
                     if options.force_remount {
                         self.gx_store.sidebar_lifecycle.remounts += 1;
                     }
-                    if options.split_right {
-                        self.gx_store.sidebar_lifecycle.splits_placed += 1;
-                    }
                     focus_target = Some((session, options));
                 }
             }
@@ -540,10 +529,9 @@ impl GhostexGpuiApp {
 
     /// The one workspace selection every sidebar action goes through.
     ///
-    /// The two options are the caller's, not the row's: Full Reload's second leg asks for the
-    /// remount that tears down the terminal its own sleep killed, and Split Right asks for the new
-    /// pane. They are carried as data from gx-core rather than decided here, so the gate can
-    /// compare which leg asked for what.
+    /// The option is the caller's, not the row's: Full Reload's second leg asks for the remount
+    /// that tears down the terminal its own sleep killed. It is carried as data from gx-core rather
+    /// than decided here, so the gate can compare which leg asked for what.
     pub(super) fn gx_store_select_local_workspace_session(
         &mut self,
         session: &SessionKey,
@@ -554,10 +542,6 @@ impl GhostexGpuiApp {
         self.focus_local_workspace_terminal_from_message(
             &GpuiSidebarWorkspaceTerminalFocusMessage {
                 force_remount: options.force_remount,
-                placement: match options.split_right {
-                    true => GpuiWorkspaceTerminalFocusPlacement::SplitRight,
-                    false => GpuiWorkspaceTerminalFocusPlacement::Tab,
-                },
                 placement_target_session_id: placement_target
                     .map(|target| target.session_id.clone()),
                 preferred_interface: GpuiPreferredAgentInterface::Terminal,

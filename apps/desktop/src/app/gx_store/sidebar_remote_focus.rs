@@ -40,9 +40,7 @@
 //! (`handle_gpui_remote_session_native_action`, which ends in `begin_gpui_remote_attach_terminal_open`),
 //! packages/gx-core/src/attention.rs.
 
-use ghostex_gx_core::{
-    PreferredInterfaceSettings, RemoteFocusPlan, SessionKey, plan_remote_focus,
-};
+use ghostex_gx_core::{PreferredInterfaceSettings, RemoteFocusPlan, SessionKey, plan_remote_focus};
 use serde_json::{Value, json};
 
 use super::diagnostics::{record, routine_logging_enabled};
@@ -59,7 +57,6 @@ const MAX_REMOTE_FOCUS_RECORDS: u32 = 200;
 pub(crate) struct SidebarRemoteFocusCounters {
     /// Clicks the store answered, and each kind of them.
     pub(crate) opens: u64,
-    pub(crate) splits: u64,
     /// Of those, the ones that carried each option.
     pub(crate) keep_view: u64,
     pub(crate) chat_interface: u64,
@@ -102,7 +99,6 @@ impl SidebarRemoteFocusHost {
             self.counters.core_unplaced += 1;
         }
     }
-
 }
 
 impl GhostexGpuiApp {
@@ -113,7 +109,7 @@ impl GhostexGpuiApp {
     /// Two shapes arrive. `selectSession` with `mode: focus` is the RENDERER command a row click
     /// sends, which `selectNativeSidebarSession` turns into `{ type: 'focusSession', sessionId }`
     /// before it posts it, and that translation is reproduced here rather than a second reading of
-    /// the click. `splitSessionRight` is a gxserver message and arrives WRAPPED.
+    /// the click.
     pub(crate) fn gx_store_plan_remote_row_focus(
         &mut self,
         command: &Value,
@@ -156,11 +152,9 @@ impl GhostexGpuiApp {
         // `selectNativeSidebarSession` cleared the multi-selection and closed an open app modal
         // before it posted the click. The store's own selection intent already follows the command.
         self.gx_store_note_sidebar_command(command, cx);
-        if !plan.split_right {
-            // Closed BEFORE the open, so a keep-view open that leaves the keyboard where it is
-            // cannot have it taken back by the modal's return focus a moment later.
-            self.close_app_modal_from_bridge(cx);
-        }
+        // Closed BEFORE the open, so a keep-view open that leaves the keyboard where it is cannot
+        // have it taken back by the modal's return focus a moment later.
+        self.close_app_modal_from_bridge(cx);
         // The open's selection follows the store's newest local one, whose follow-up runs first.
         self.gx_store_flush_local_selection(cx);
         // A machine this run has not streamed holds no live row to acknowledge (`plan.live`).
@@ -171,10 +165,7 @@ impl GhostexGpuiApp {
         let tab_selections = self.gx_store.sidebar_remote_focus.counters.tab_selections;
         {
             let counters = &mut self.gx_store.sidebar_remote_focus.counters;
-            match plan.split_right {
-                true => counters.splits += 1,
-                false => counters.opens += 1,
-            }
+            counters.opens += 1;
             if plan.keep_view {
                 counters.keep_view += 1;
             }
@@ -245,7 +236,6 @@ impl GhostexGpuiApp {
         record(
             "gxStore.sidebarRemoteFocus",
             json!({
-                "splitRight": plan.split_right,
                 "keepView": plan.keep_view,
                 "chatInterface": plan.preferred_interface.as_deref() == Some("chat"),
                 "totals": remote_focus_counters_json(&counters),
@@ -260,32 +250,22 @@ impl GhostexGpuiApp {
 }
 
 /// The message a remote row's click means, in the shape the planner answers. `selectSession` is a
-/// renderer command at the TOP level; `splitSessionRight` is a gxserver message and is wrapped.
+/// renderer command at the TOP level.
 fn remote_focus_message(command: &Value) -> Option<Value> {
-    let kind = command.get("type").and_then(Value::as_str)?;
-    if kind == "selectSession" {
-        if command.get("mode").and_then(Value::as_str) != Some("focus") {
-            return None;
-        }
-        let session_id = command.get("sessionId").and_then(Value::as_str)?;
-        return Some(json!({ "type": "focusSession", "sessionId": session_id }));
-    }
-    if kind != "command" {
+    if command.get("type").and_then(Value::as_str)? != "selectSession"
+        || command.get("mode").and_then(Value::as_str) != Some("focus")
+    {
         return None;
     }
-    let message = command.get("message")?;
-    match message.get("type").and_then(Value::as_str) {
-        Some("splitSessionRight") => Some(message.clone()),
-        _ => None,
-    }
+    let session_id = command.get("sessionId").and_then(Value::as_str)?;
+    Some(json!({ "type": "focusSession", "sessionId": session_id }))
 }
 
-/// The twelve keys both records carry, well under the sanitizer's 32-entry cap at depth 2. Counts
+/// The eleven keys both records carry, well under the sanitizer's 32-entry cap at depth 2. Counts
 /// only: no id, title or path.
 pub(super) fn remote_focus_counters_json(counters: &SidebarRemoteFocusCounters) -> Value {
     json!({
         "opens": counters.opens,
-        "splits": counters.splits,
         "keepView": counters.keep_view,
         "chatInterface": counters.chat_interface,
         "acknowledgements": counters.acknowledgements,

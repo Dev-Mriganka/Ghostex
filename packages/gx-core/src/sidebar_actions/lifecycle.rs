@@ -87,41 +87,37 @@ pub struct LifecycleRequest {
     /// take the focus back (`focusMovedElsewhereDuringWake`).
     pub focused_before: Option<SessionKey>,
     /// The `options` the TypeScript hands `focusLocalWorkspaceSession` for THIS row, which are the
-    /// caller's and not the payload's: Full Reload's second leg asks for a remount, and Split Right
-    /// asks for the new pane. They never reach the replacement focus, which the TypeScript selects
-    /// with no options at all.
+    /// caller's and not the payload's: Full Reload's second leg asks for a remount. They never
+    /// reach the replacement focus, which the TypeScript selects with no options at all.
     pub focus_options: FocusOptions,
 }
 
-/// The two `focusLocalWorkspaceSession` options a sidebar action can ask for.
+/// The `focusLocalWorkspaceSession` option a sidebar action can ask for.
 ///
 /// CDXC:Sessions 2026-09-21 WHY:
-/// Both exist because the wake and the pane are one step for the user and two for the app. A Full
-/// Reload really cycles the provider, so the local terminal the workspace still holds is dead by
-/// the time the wake lands and `forceRemount` is what tears it down synchronously instead of
-/// re-selecting it (`CDXC:CefRuntime 2026-07-12`). Split Right is a focus with a placement, so the
-/// same wake has to carry where the pane goes or the session opens in the tab it already had.
+/// It exists because the wake and the remount are one step for the user and two for the app. A
+/// Full Reload really cycles the provider, so the local terminal the workspace still holds is dead
+/// by the time the wake lands and `forceRemount` is what tears it down synchronously instead of
+/// re-selecting it (`CDXC:CefRuntime 2026-07-12`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct FocusOptions {
     pub force_remount: bool,
-    pub split_right: bool,
 }
 
 impl FocusOptions {
     pub fn to_json(self) -> Value {
-        json!({ "forceRemount": self.force_remount, "splitRight": self.split_right })
+        json!({ "forceRemount": self.force_remount })
     }
 
-    /// What the message carries. `forceRemount` and `placement` are the two fields the store's own
-    /// compositions set when they build a `setSessionSleeping` message for a row the single-session
-    /// path then answers; a message from the renderer carries neither.
+    /// What the message carries. `forceRemount` is the field the store's own compositions set when
+    /// they build a `setSessionSleeping` message for a row the single-session path then answers; a
+    /// message from the renderer does not carry it.
     pub fn from_message(message: &Value) -> Self {
         Self {
             force_remount: message
                 .get("forceRemount")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
-            split_right: text_field(message, "placement") == Some("splitRight"),
         }
     }
 }
@@ -304,8 +300,8 @@ pub fn apply_lifecycle_answer(
         LifecycleCall::Sleep => {
             if let Some(replacement) = &request.replacement_focus {
                 // The replacement is selected with NO options: it is not the row the caller asked
-                // about, so a Full Reload's remount and a Split Right's pane belong to the row
-                // being reloaded or split and never to whichever row inherits the focus.
+                // about, so a Full Reload's remount belongs to the row being reloaded and never to
+                // whichever row inherits the focus.
                 follow_ups.push(LifecycleFollowUp::Focus {
                     session: replacement.clone(),
                     options: FocusOptions::default(),

@@ -2574,14 +2574,6 @@ export type SidebarToExtensionMessage =
       groupId: string;
     }
   | {
-      type: 'copyResumeCommand';
-      sessionId: string;
-    }
-  | {
-      type: 'copyAttachCommand';
-      sessionId: string;
-    }
-  | {
       /**
        * CDXC:ContextMenus 2026-06-11-23:08:
        * The React sidebar builds Copy details text from its rendered session row
@@ -2636,16 +2628,6 @@ export type SidebarToExtensionMessage =
     }
   | {
       type: 'forkSession';
-      sessionId: string;
-    }
-  | {
-      /**
-       * CDXC:Workarea 2026-09-04 DECISION:
-       * User: with the tabs bar hidden on unsplit workspaces, the sidebar
-       * session menu (Advanced > Split Right) is how a pane gets split: open
-       * this session in a new pane to the right of the focused agents pane.
-       */
-      type: 'splitSessionRight';
       sessionId: string;
     }
   | {

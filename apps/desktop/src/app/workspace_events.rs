@@ -661,35 +661,9 @@ impl GhostexGpuiApp {
         let requested_pane_id =
             placement_target_pane_id.unwrap_or(self.agents_workspace.focused_pane);
         let force_requested_pane_placement = placement_target_pane_id.is_some();
-        let mapped_shell_session_id = self.local_workspace_session_mappings.get(&key).copied();
-        let mapped_pane_id = mapped_shell_session_id.and_then(|shell_session_id| {
-            self.agents_workspace.pane_id_for_session(shell_session_id)
-        });
         self.begin_sidebar_focus_border_handoff(cx);
         self.local_workspace_latest_focus_key = Some(key.clone());
         self.refresh_sidebar_gxserver_bootstrap_if_changed(cx);
-        /*
-        CDXC:Workarea 2026-09-04 DECISION:
-        User: Advanced > Split Right opens the session in a pane to the right of
-        the focused agents pane. A session that already has a tab is moved into
-        a new right-hand leaf here, then the ordinary focus below selects it; a
-        session with no tab yet is attached into a new leaf at completion.
-        Splitting the lone tab of the focused pane is a no-op inside the model,
-        so that case degrades to a plain focus.
-        */
-        if message.placement == GpuiWorkspaceTerminalFocusPlacement::SplitRight
-            && let Some((shell_session_id, source_pane_id)) =
-                mapped_shell_session_id.zip(mapped_pane_id)
-            && self.agents_workspace.split_tab_to_pane(
-                source_pane_id,
-                requested_pane_id,
-                shell_session_id,
-                WorkspaceDropZone::Right,
-            )
-        {
-            self.persist_shell_layout_state();
-            cx.notify();
-        }
         /*
         CDXC:CefRuntime 2026-07-12:
         Full reload kills the zmx daemon before this focus arrives, so the
@@ -731,8 +705,7 @@ impl GhostexGpuiApp {
         };
         // A mapped tab with nothing live behind it is re-attached where it is, so it is brought to
         // the focused pane first, as the focus-existing path above does (session_pane_placement.rs).
-        if message.placement == GpuiWorkspaceTerminalFocusPlacement::Tab
-            && !force_requested_pane_placement
+        if !force_requested_pane_placement
             && let Some(shell_session_id) = self.local_workspace_session_mappings.get(&key).copied()
             && let Some(pane_id) = self.agents_workspace.pane_id_for_session(shell_session_id)
         {
@@ -744,7 +717,6 @@ impl GhostexGpuiApp {
             attach_intent,
             requested_pane_id,
             force_requested_pane_placement,
-            message.placement,
             match message.placement_target_session_id {
                 Some(_) => GpuiLocalWorkspaceAttachOrigin::Fork,
                 None if created_here => GpuiLocalWorkspaceAttachOrigin::Fork,
@@ -947,7 +919,6 @@ impl GhostexGpuiApp {
         attach_intent: GpuiLocalWorkspaceAttachIntent,
         requested_pane_id: WorkspacePaneId,
         force_requested_pane_placement: bool,
-        placement: GpuiWorkspaceTerminalFocusPlacement,
         origin: GpuiLocalWorkspaceAttachOrigin,
         cx: &mut gpui::Context<Self>,
     ) {
@@ -956,10 +927,9 @@ impl GhostexGpuiApp {
         }
 
         let focused_at_request = self.gx_store_focused_session();
-        let open_chat_early = placement == GpuiWorkspaceTerminalFocusPlacement::Tab
-            && self
-                .pending_agents_chat_launch_intents
-                .contains(&GpuiWorkspaceTerminalSessionKey::Local(key.clone()));
+        let open_chat_early = self
+            .pending_agents_chat_launch_intents
+            .contains(&GpuiWorkspaceTerminalSessionKey::Local(key.clone()));
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             if open_chat_early {
@@ -1108,29 +1078,13 @@ impl GhostexGpuiApp {
                         GpuiLocalWorkspaceAttachOrigin::SidebarFocus
                         | GpuiLocalWorkspaceAttachOrigin::Fork
                         | GpuiLocalWorkspaceAttachOrigin::WakeRecovery => {
-                            // A Split Right request whose tab already exists was
-                            // moved into its right-hand leaf when the focus arrived;
-                            // the ordinary open reuses that tab in place. Only a
-                            // session without a tab is attached into a new leaf here.
-                            if placement == GpuiWorkspaceTerminalFocusPlacement::SplitRight
-                                && !this.local_workspace_session_mappings.contains_key(&key)
-                            {
-                                let _ = this.open_gpui_local_workspace_terminal_in_new_leaf(
-                                    key,
-                                    plan,
-                                    requested_pane_id,
-                                    AgentsWorkspaceNewTerminalPlacement::SplitRight,
-                                    cx,
-                                );
-                            } else {
-                                let _ = this.open_gpui_local_workspace_terminal(
-                                    key,
-                                    plan,
-                                    requested_pane_id,
-                                    force_requested_pane_placement,
-                                    cx,
-                                );
-                            }
+                            let _ = this.open_gpui_local_workspace_terminal(
+                                key,
+                                plan,
+                                requested_pane_id,
+                                force_requested_pane_placement,
+                                cx,
+                            );
                         }
                     },
                     Err(message) => {

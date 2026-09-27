@@ -169,12 +169,7 @@ fn action_rows(
     let row = input.row;
     let settings = input.settings;
     let id = row.sidebar_session_id.as_str();
-    let caps = SessionCapabilities::resolve(
-        row,
-        input.group.is_remote,
-        settings.debugging_mode,
-        input.group.workspace_focus_bridge,
-    );
+    let caps = SessionCapabilities::resolve(row, input.group.is_remote);
     let tags = tag_items(input, include_menu);
     let parked = row.is_parked;
     let mut park = MenuItem::row(
@@ -536,13 +531,6 @@ fn full_menu(
             )),
         ));
     }
-    if caps.can_split_session_right {
-        advanced.push(MenuItem::row(
-            "Split Right",
-            "layout-columns",
-            MenuCommand::command(message::split_session_right(id)),
-        ));
-    }
     if group.can_create_session_group {
         advanced.push(MenuItem::row(
             "Move to New Group",
@@ -561,33 +549,16 @@ fn full_menu(
     CDXC:ContextMenus 2026-09-26 DECISION:
     The user wants Copy Details always there under Advanced so anyone can hand a session to another agent; the Settings opt-in that hid it is gone.
     */
-    let mut copy: Vec<MenuItem> = vec![MenuItem::row(
+    advanced.push(MenuItem::separator());
+    advanced.push(MenuItem::heading("Copy"));
+    advanced.push(MenuItem::row(
         "Copy Details",
         "copy",
         MenuCommand::command(message::copy_session_details(
             id,
             &session_details_text(row, &group.details()),
         )),
-    )];
-    if caps.can_copy_resume_command {
-        copy.push(MenuItem::row(
-            "Copy Resume",
-            "copy",
-            MenuCommand::command(message::copy_resume_command(id)),
-        ));
-    }
-    if caps.can_copy_attach_command {
-        copy.push(MenuItem::row(
-            "Copy Attach Command",
-            "copy",
-            MenuCommand::command(message::copy_attach_command(id)),
-        ));
-    }
-    if !copy.is_empty() {
-        advanced.push(MenuItem::separator());
-        advanced.push(MenuItem::heading("Copy"));
-        advanced.extend(copy);
-    }
+    ));
     if !input.below.is_empty() {
         advanced.push(MenuItem::separator());
         advanced.push(MenuItem::heading("Below"));

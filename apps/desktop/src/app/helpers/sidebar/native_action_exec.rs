@@ -48,7 +48,6 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
             "action",
             "projectId",
             "filePath",
-            "placement",
             "preferredInterface",
             "keepView",
         ]
@@ -92,18 +91,6 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
     {
         return Err(());
     }
-    let placement = match object.get("placement") {
-        None => GpuiWorkspaceTerminalFocusPlacement::Tab,
-        Some(value) => value
-            .as_str()
-            .and_then(GpuiWorkspaceTerminalFocusPlacement::from_str)
-            .ok_or(())?,
-    };
-    if object.contains_key("placement")
-        && action != GpuiSidebarNativeProjectPathAction::OpenRemoteSessionTerminal
-    {
-        return Err(());
-    }
     let keep_view = match object.get("keepView") {
         None => false,
         Some(value) => value.as_bool().ok_or(())?,
@@ -128,7 +115,6 @@ pub(crate) fn gpui_sidebar_native_project_path_action_from_json(
     Ok(GpuiSidebarNativeProjectPathActionMessage {
         action,
         file_path,
-        placement,
         preferred_interface,
         project_id,
         keep_view,

@@ -27,8 +27,6 @@ pub struct HeaderCommand {
 /// Everything the menus read that is neither the store nor the settings.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MenuHost {
-    /// `postWorkspaceTerminalFocus` exists, which Split Right needs.
-    pub workspace_focus_bridge: bool,
     /// The agents the launcher offers, in HUD order.
     pub agents: Vec<LauncherAgent>,
     /// The agent the user launched last.

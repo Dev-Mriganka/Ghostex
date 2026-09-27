@@ -33,7 +33,7 @@ use super::records_storage::{RecordStore, write_record};
 use crate::GhostexGpuiApp;
 use crate::app::model::{
     GpuiPendingProjectSwitchPayload, GpuiPreferredAgentInterface, GpuiProjectSwitchRequestKind,
-    GpuiSidebarWorkspaceTerminalFocusMessage, GpuiWorkspaceTerminalFocusPlacement,
+    GpuiSidebarWorkspaceTerminalFocusMessage,
     gpui_click_to_wake_sleeping_sessions_from_shared_settings,
 };
 use crate::shared_settings;
@@ -199,7 +199,6 @@ impl GhostexGpuiApp {
         self.gx_store_request_workspace_focus(
             GpuiSidebarWorkspaceTerminalFocusMessage {
                 force_remount: false,
-                placement: GpuiWorkspaceTerminalFocusPlacement::Tab,
                 placement_target_session_id: None,
                 preferred_interface: preferred_interface.unwrap_or_default(),
                 project_id: session.project_id,
@@ -243,7 +242,7 @@ impl GhostexGpuiApp {
             };
             plan.preferred_interface = Some(interface.to_string());
             plan.native_action =
-                open_remote_session_terminal(row_id, plan.keep_view, Some(interface), false);
+                open_remote_session_terminal(row_id, plan.keep_view, Some(interface));
         }
         self.gx_store.focus_perform.remote_sessions += 1;
         if plan.live {
@@ -374,7 +373,7 @@ impl GhostexGpuiApp {
         )
         .to_focus_state_session_id();
         self.receive_sidebar_native_project_path_action_payload(
-            &open_remote_session_terminal(&scoped, false, None, false).to_string(),
+            &open_remote_session_terminal(&scoped, false, None).to_string(),
             cx,
         );
     }

@@ -5,13 +5,10 @@ export type SidebarSessionContextMenuEligibilityInput = {
   isProjectSessionListMoreRow: boolean;
   isRemoteSession: boolean;
   session: SidebarSessionItem | undefined;
-  debuggingMode: boolean;
 };
 
 export type SidebarSessionContextMenuEligibility = {
   canCloseAfterDone: boolean;
-  canCopyAttachCommand: boolean;
-  canCopyResumeCommand: boolean;
   canCopySessionDetails: boolean;
   canDelayedSend: boolean;
   canExportTranscript: boolean;
@@ -28,14 +25,6 @@ export type SidebarSessionContextMenuEligibility = {
   canPopOutPane: boolean;
   canRenameSession: boolean;
   canSleepSession: boolean;
-  /**
-   * CDXC:Workarea 2026-09-04 DECISION:
-   * User: Advanced > Split Right opens the session in a pane to the right of
-   * the focused agents pane, for local and remote machine rows alike. The Rust
-   * workspace owns pane topology, so the item needs the GPUI bridge and is
-   * hidden in the web app.
-   */
-  canSplitSessionRight: boolean;
   canTagSession: boolean;
   isBrowserSession: boolean;
 };
@@ -44,7 +33,6 @@ export function getSidebarSessionContextMenuEligibility({
   isProjectSessionListMoreRow,
   isRemoteSession,
   session,
-  debuggingMode,
 }: SidebarSessionContextMenuEligibilityInput): SidebarSessionContextMenuEligibility {
   const isBrowserSession = isSidebarBrowserSession(session);
   const hasSession = session !== undefined;
@@ -59,12 +47,6 @@ export function getSidebarSessionContextMenuEligibility({
   return {
     canCloseAfterDone:
       canUseTerminalAgentMenuAction && hasSession && supportsCloseAfterDoneMenuAction(session, isRemoteSession),
-    canCopyAttachCommand:
-      debuggingMode &&
-      canUseTerminalAgentMenuAction &&
-      Boolean(session?.sessionPersistenceProvider && session.sessionPersistenceName),
-    canCopyResumeCommand:
-      debuggingMode && canUseTerminalAgentMenuAction && hasSession && supportsResumeCommandCopy(session),
     canCopySessionDetails: isConcreteSessionRow,
     canDelayedSend:
       canUseTerminalAgentMenuAction && hasSession && supportsDelayedSendMenuAction(session, isRemoteSession),
@@ -79,8 +61,6 @@ export function getSidebarSessionContextMenuEligibility({
      * Rename, Sleep, Pin, Tag, and Close stay available on drafts.
      */
     canForkSession: canUseTerminalAgentMenuAction && hasSession && !isDraftSession && supportsFork(session),
-    canSplitSessionRight:
-      canUseTerminalAgentMenuAction && hasSession && !isDraftSession && gpuiWorkspaceTerminalFocusBridgeAvailable(),
     canFullReloadSession:
       canUseTerminalAgentMenuAction &&
       hasSession &&
@@ -129,37 +109,6 @@ export function canWakeSidebarSession(session: SidebarSessionItem | undefined): 
    * terminal, agent, and browser sessions.
    */
   return session !== undefined && getSidebarSessionLifecycleState(session) === 'sleeping';
-}
-
-export function supportsResumeCommandCopy(session: SidebarSessionItem): boolean {
-  /**
-   * CDXC:SessionSleep 2026-04-27-08:04
-   * Match agent-tiler context-menu visibility: Copy resume is only shown for
-   * built-in agents with known resume or resume-selection CLI behavior.
-   *
-   * CDXC:AgentProviders 2026-05-20-08:20:
-   * Cursor resume uses stored chat UUIDs or a local title lookup fallback, so
-   * Cursor CLI cards expose the same copy-resume affordance as Codex and Pi.
-   */
-  return (
-    session.agentIcon === 'codex' ||
-    session.agentIcon === 'claude' ||
-    session.agentIcon === 'copilot' ||
-    session.agentIcon === 'gemini' ||
-    session.agentIcon === 'opencode' ||
-    session.agentIcon === 'pi' ||
-    (session.agentName === 'zcode' && Boolean(session.agentSessionId)) ||
-    session.agentIcon === 'cursor-cli' ||
-    session.agentIcon === 'antigravity-cli'
-  );
-}
-
-export function gpuiWorkspaceTerminalFocusBridgeAvailable(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  const bridge = (window as { ghostexGpui?: { postWorkspaceTerminalFocus?: unknown } }).ghostexGpui;
-  return typeof bridge?.postWorkspaceTerminalFocus === 'function';
 }
 
 export function supportsFork(session: SidebarSessionItem): boolean {

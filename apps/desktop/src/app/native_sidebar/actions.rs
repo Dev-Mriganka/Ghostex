@@ -194,8 +194,7 @@ impl GhostexGpuiApp {
         if self.gx_store_run_sidebar_snooze(&command, cx) {
             return;
         }
-        // Full Reload is the sleep and the wake in order, and Split Right is a selection that
-        // carries where the pane goes; both end in the lifecycle path above
+        // Full Reload is the sleep and the wake in order, ending in the lifecycle path above
         // (gx_store/sidebar_reload.rs).
         if self.gx_store_run_sidebar_reload(&command, cx) {
             return;
@@ -203,9 +202,6 @@ impl GhostexGpuiApp {
         // A project's Full Reload and a user-made group's are that reload over a set, one row at a
         // time (gx_store/sidebar_reload.rs).
         if self.gx_store_run_sidebar_reload_set(&command, cx) {
-            return;
-        }
-        if self.gx_store_run_sidebar_split(&command, cx) {
             return;
         }
         // A drag writes an order rather than calling the daemon in the moment: the drop decides the
@@ -262,8 +258,7 @@ impl GhostexGpuiApp {
                 json!({"sessionId": command["sessionId"]}),
             );
         }
-        // A click on a row of a REMOTE machine, and its Split Right: the store acknowledges the
-        // attention, performs the same `openRemoteSessionTerminal` the old runtime posted, and the
+        // A click on a row of a REMOTE machine: the store acknowledges the attention, performs the same `openRemoteSessionTerminal` the old runtime posted, and the
         // open's own tab selection moves the remote focus marks, so the command goes no further
         // (gx_store/sidebar_remote_focus.rs), for a machine this run has not streamed too.
         if let Some(plan) = self.gx_store_plan_remote_row_focus(&command) {

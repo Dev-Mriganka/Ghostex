@@ -39,7 +39,7 @@ export function DebuggingSettingsTab({
         <SettingsSection title='Debugging'>
           <ToggleField
             checked={settings.debuggingMode}
-            description='Show diagnostic logs, and Copy Resume and Copy Attach in session menus. Warnings, errors, and crashes are always captured.'
+            description='Show diagnostic logs. Warnings, errors, and crashes are always captured.'
             label='Show debug UI controls'
             {...getModificationProps('debuggingMode')}
             onChange={(checked) => onChange('debuggingMode', checked)}

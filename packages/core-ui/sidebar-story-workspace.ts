@@ -75,8 +75,8 @@ type SidebarSessionDecoration = Pick<
    * CDXC:ContextMenus 2026-07-30:
    * The four fields the session context menu gates items on. Without them the
    * round trip silently strips the row's captured 1st user message (View 1st
-   * message, Generate Title), its stored provider/name pair (Copy attach
-   * command), and its assigned marker (the checked option in Tag as), so those
+   * message, Generate Title), its stored provider/name pair (Copy Details),
+   * and its assigned marker (the checked option in Tag as), so those
    * items could never be exercised in Storybook — the items would simply be
    * missing and a story asserting them would look like a real product bug.
    */

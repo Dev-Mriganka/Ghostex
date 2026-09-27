@@ -285,7 +285,7 @@ impl GhostexGpuiApp {
     /// zero.
     ///
     /// `remoteFocus` carries the row clicks the store opened itself, which have no periodic line
-    /// of their own: `opens` and `splits` are the proof the path fires, `acknowledgements` that the
+    /// of their own: `opens` is the proof the path fires, `acknowledgements` that the
     /// attention went to the old runtime with each, `tabSelections` that the open's callback moved
     /// the remote focus marks, and `marksMissed` an open that was refused so the marks stayed put.
     ///

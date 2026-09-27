@@ -7,7 +7,9 @@ use std::sync::Arc;
 use futures::StreamExt as _;
 use futures::channel::mpsc;
 use ghostex_gx_core::protocol::ClientMessage;
-use ghostex_gx_core::{ConnectionUpdate, Core, Event, MachineId, MenuHost, SessionKey, SidebarUiStore};
+use ghostex_gx_core::{
+    ConnectionUpdate, Core, Event, MachineId, MenuHost, SessionKey, SidebarUiStore,
+};
 use serde_json::Value;
 
 use super::web_transport::{self, GxserverEndpoint, StreamEvent};
@@ -145,10 +147,15 @@ impl GhostexGpuiApp {
             StreamEvent::Open => self.gx_store_subscribe(true),
             StreamEvent::Frame(text) => {
                 // One per HTTP request any client makes, and nothing reads it.
-                if text.contains("\"type\":\"apiRequestHandled\"") || text.contains("\"sessionChat") {
+                if text.contains("\"type\":\"apiRequestHandled\"") || text.contains("\"sessionChat")
+                {
                     return;
                 }
-                match self.gx_store.core.handle_raw_frame(MachineId::Local, &text, now_ms()) {
+                match self
+                    .gx_store
+                    .core
+                    .handle_raw_frame(MachineId::Local, &text, now_ms())
+                {
                     Ok(output) => self.gx_store_after_frame(output, cx),
                     Err(error) => log::warn!("frame did not parse: {error:?}"),
                 }
@@ -190,19 +197,29 @@ impl GhostexGpuiApp {
     }
 
     /// A daemon frame: the client-owned documents' guards judge the daemon's copy, as the desktop's pump does (`gx_store/host.rs`), then the frame's changes are applied like any other.
-    fn gx_store_after_frame(&mut self, output: ghostex_gx_core::Output, cx: &mut gpui::Context<Self>) {
+    fn gx_store_after_frame(
+        &mut self,
+        output: ghostex_gx_core::Output,
+        cx: &mut gpui::Context<Self>,
+    ) {
         let side = &output.changes.side_state;
         let (groups_changed, collections_changed, spaces_changed) =
             (side.workspace_groups, side.project_collections, side.spaces);
-        let local_reloaded = output.changes.machines_reloaded.iter().any(MachineId::is_local);
+        let local_reloaded = output
+            .changes
+            .machines_reloaded
+            .iter()
+            .any(MachineId::is_local);
         self.gx_store_after(output, cx);
         if ghostex_gx_core::document_reconcile_wanted(groups_changed, local_reloaded) {
             self.gx_store.workspace_groups.counters.reconcile_seen += 1;
             self.gx_store_reconcile_workspace_groups(cx);
         }
         self.gx_store_book_project_docs_read(cx);
-        let collections_wanted = ghostex_gx_core::document_reconcile_wanted(collections_changed, local_reloaded);
-        let spaces_wanted = ghostex_gx_core::document_reconcile_wanted(spaces_changed, local_reloaded);
+        let collections_wanted =
+            ghostex_gx_core::document_reconcile_wanted(collections_changed, local_reloaded);
+        let spaces_wanted =
+            ghostex_gx_core::document_reconcile_wanted(spaces_changed, local_reloaded);
         if collections_wanted || spaces_wanted {
             self.gx_store_reconcile_project_docs(collections_wanted, spaces_wanted, cx);
         }
@@ -212,7 +229,9 @@ impl GhostexGpuiApp {
     fn gx_store_after(&mut self, output: ghostex_gx_core::Output, cx: &mut gpui::Context<Self>) {
         for effect in output.effects {
             match effect {
-                ghostex_gx_core::Effect::ResubscribePresentation { .. } => self.gx_store_subscribe(true),
+                ghostex_gx_core::Effect::ResubscribePresentation { .. } => {
+                    self.gx_store_subscribe(true)
+                }
                 effect @ (ghostex_gx_core::Effect::MachineLive { .. }
                 | ghostex_gx_core::Effect::RefetchSidebarHud { .. }
                 | ghostex_gx_core::Effect::DomainProjectChanged { .. }) => {
@@ -238,13 +257,14 @@ impl GhostexGpuiApp {
         let store = &mut self.gx_store;
         let ui = store.sidebar_ui.state().clone();
         let hud = store.runtime_facts.hud_value();
-        // The menus' facts, from the HUD and the launcher's stored default, as the desktop's `gx_store_menu_host` builds them. The page has no Split Right (no panes) and no Keep Awake.
+        // The menus' facts, from the HUD and the launcher's stored default, as the desktop's `gx_store_menu_host` builds them. The page has no Keep Awake.
         store.menu_host = MenuHost {
-            workspace_focus_bridge: false,
             agents: super::menu_host_lifted::launcher_agents(&hud["agents"]),
             primary_agent_id: super::read_primary_agent_launcher_id(),
             global_commands: super::menu_host_lifted::header_commands(&hud["globalCommands"]),
-            project_commands: super::menu_host_lifted::header_commands_by_project(&hud["commandsByProject"]),
+            project_commands: super::menu_host_lifted::header_commands_by_project(
+                &hud["commandsByProject"],
+            ),
             keep_awake_minutes: None,
             machine_connected: true,
         };
@@ -254,7 +274,9 @@ impl GhostexGpuiApp {
             .iter()
             .map(|(project_id, stats)| (project_id.clone(), *stats))
             .collect();
-        let snapshot = store.sidebar_list.update(&store.core, ui, &store.menu_host, &hud, now_ms);
+        let snapshot = store
+            .sidebar_list
+            .update(&store.core, ui, &store.menu_host, &hud, now_ms);
         self.latest_sidebar_project_snapshot = Some(crate::app::model::GpuiProjectSnapshot {
             active_project_id: self
                 .gx_store

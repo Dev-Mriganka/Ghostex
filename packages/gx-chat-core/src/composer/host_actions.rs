@@ -15,8 +15,8 @@ struct Definition {
     hotkey: Option<&'static str>,
 }
 
-/// CDXC:SessionChat 2026-09-05 DECISION:
-/// User: add Split Right below Close After Done in the chat composer's More menu.
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: remove Split Right from the chat's More actions menu (and from the sidebar session menu), superseding the 2026-09-05 request that added it below Close After Done. Option+Shift+D still splits the focused session right.
 /// The renderers list the session rows in this order.
 const DEFINITIONS: &[Definition] = &[
     Definition {
@@ -38,11 +38,6 @@ const DEFINITIONS: &[Definition] = &[
         id: "closeAfterDone",
         label: "Close After Done",
         hotkey: Some("closeAfterDone"),
-    },
-    Definition {
-        id: "splitSessionRight",
-        label: "Split Right",
-        hotkey: Some("splitSessionRight"),
     },
     Definition {
         id: "fork",

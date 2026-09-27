@@ -38,7 +38,7 @@
 //! copy) is answered too, the way the old runtime answered it: see [`RemoteFocusPlan::live`].
 //!
 //! Ported from the deleted `gxserver-runtime/sessions-and-focus.ts` (`focusSession`'s remote
-//! branch, `focusChangesActiveProject`, `sessionPreferredAgentInterface`, `splitSessionRight`).
+//! branch, `focusChangesActiveProject`, `sessionPreferredAgentInterface`).
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/sidebar_remote_focus.rs,
 //! apps/desktop/src/app/remote_conn/native_action.rs.
@@ -62,10 +62,9 @@ pub const SESSION_ATTENTION_ACKNOWLEDGE_MESSAGE_TYPE: &str =
     "ghostex.gpui.sidebar.workspaceSessionAttentionAcknowledge";
 pub const SESSION_ATTENTION_ACKNOWLEDGE_MESSAGE_VERSION: i64 = 1;
 
-/// The two messages whose remote branch is this file's. `focusSession` is what
-/// `selectNativeSidebarSession` posts for a row click, and what a Space restore posts with
-/// `keepView`; `splitSessionRight` is the same open with a placement.
-pub const REMOTE_FOCUS_MESSAGE_TYPES: [&str; 2] = ["focusSession", "splitSessionRight"];
+/// The message whose remote branch is this file's: what `selectNativeSidebarSession` posts for a
+/// row click, and what a Space restore posts with `keepView`.
+pub const REMOTE_FOCUS_MESSAGE_TYPE: &str = "focusSession";
 
 /// `resolveEffectivePreferredAgentInterface`'s two inputs, as plain data.
 ///
@@ -112,8 +111,8 @@ pub struct RemoteFocusPlan {
     /// click and hand it back, but no runtime path was left to take it: the click reached nobody.
     /// It is answered here now with that same payload, and the host skips the acknowledgement.
     pub live: bool,
-    /// The acknowledgement the host sends the old runtime BEFORE the open, as `focusSession` and
-    /// `splitSessionRight` both acknowledge first. Always sent: whether the row is in attention,
+    /// The acknowledgement the host sends the old runtime BEFORE the open, as `focusSession`
+    /// acknowledges first. Always sent: whether the row is in attention,
     /// and whether the minimum visible window defers the clear, is the runtime's to decide, so the
     /// timer stays one implementation.
     pub attention_acknowledgement: Value,
@@ -121,8 +120,6 @@ pub struct RemoteFocusPlan {
     pub keep_view: bool,
     /// The agent's Default Agent View, absent for a row with no agent.
     pub preferred_interface: Option<String>,
-    /// Split Right, which is this same open with a placement.
-    pub split_right: bool,
     /// The `openRemoteSessionTerminal` payload, ready for the native project-path entry point.
     pub native_action: Value,
     /// The group the old runtime's `activeGroupId` holds once the open's tab-selected callback has
@@ -157,7 +154,6 @@ impl RemoteFocusPlan {
             "tabSelection": self.tab_selection(),
             "keepView": self.keep_view,
             "preferredInterface": self.preferred_interface,
-            "splitRight": self.split_right,
             "nativeAction": self.native_action,
         })
     }
@@ -176,7 +172,7 @@ pub fn plan_remote_focus(
     runtime_active_group: Option<&str>,
 ) -> Option<RemoteFocusPlan> {
     let kind = text_field(message, "type")?;
-    if !REMOTE_FOCUS_MESSAGE_TYPES.contains(&kind) {
+    if kind != REMOTE_FOCUS_MESSAGE_TYPE {
         return None;
     }
     let sidebar_session_id = text_field(message, "sessionId")?;
@@ -189,19 +185,11 @@ pub fn plan_remote_focus(
     // `sessionPreferredAgentInterface` reads the row out of the machine's LIVE presentation only
     // (see `RemoteFocusPlan::live`), so a machine this run has not streamed opens without it.
     let live = core.presentation().loaded_live(&session.machine).is_some();
-    let split_right = kind == "splitSessionRight";
-    // Split Right hands `focusLocalWorkspaceSession` a placement and NOTHING else: no `keepView`,
-    // and no preferred interface either, so the two fields are the focus click's alone.
-    let keep_view = match split_right {
-        true => false,
-        false => {
-            message.get("keepView") == Some(&Value::Bool(true))
-                || focus_changes_active_project(runtime_active_group, &session)
-        }
-    };
-    let preferred_interface = match split_right || !live {
-        true => None,
-        false => settings
+    let keep_view = message.get("keepView") == Some(&Value::Bool(true))
+        || focus_changes_active_project(runtime_active_group, &session);
+    let preferred_interface = match live {
+        false => None,
+        true => settings
             .resolve(agent_id_of(core, &session))
             .map(str::to_string),
     };
@@ -209,7 +197,6 @@ pub fn plan_remote_focus(
         sidebar_session_id,
         keep_view,
         preferred_interface.as_deref(),
-        split_right,
     );
     let focus_group = remote_focus_group(core, &session);
     let attention_acknowledgement = json!({
@@ -224,32 +211,24 @@ pub fn plan_remote_focus(
         attention_acknowledgement,
         keep_view,
         preferred_interface,
-        split_right,
         native_action,
         focus_group,
     })
 }
 
-/// `postNativeProjectPathAction`'s payload, with the three options that ride only when they are
-/// set: the TypeScript spreads `options.placement ? { placement } : {}`, and an absent key is a
-/// different message from a `false` or a `null` to the strict parser on the other side.
+/// `postNativeProjectPathAction`'s payload, with the two options that ride only when they are set:
+/// an absent key is a different message from a `false` or a `null` to the strict parser on the
+/// other side.
 pub fn open_remote_session_terminal(
     scoped_session_id: &str,
     keep_view: bool,
     preferred_interface: Option<&str>,
-    split_right: bool,
 ) -> Value {
     let mut payload = Map::new();
     payload.insert(
         "action".to_string(),
         Value::String("openRemoteSessionTerminal".to_string()),
     );
-    if split_right {
-        payload.insert(
-            "placement".to_string(),
-            Value::String("splitRight".to_string()),
-        );
-    }
     if let Some(preferred_interface) = preferred_interface {
         payload.insert(
             "preferredInterface".to_string(),

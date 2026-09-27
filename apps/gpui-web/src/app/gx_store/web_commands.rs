@@ -1,6 +1,8 @@
 //! What a sidebar command does in the browser: the desktop's own `sidebar_*.rs` executor files (symlinked into this folder) in the desktop's order, then the page's parts: the sidebar's own state (the core's `SidebarUiStore`, saved to localStorage under the same keys and formats the desktop uses), a row's menu, and focus (the page opens the session in its work area).
-use ghostex_gx_core::{Event, HoverAction, Intent, MenuItem, SectionId, SidebarMenus, SidebarUiIntent};
 use ghostex_gx_core as sidebar_ui;
+use ghostex_gx_core::{
+    Event, HoverAction, Intent, MenuItem, SectionId, SidebarMenus, SidebarUiIntent,
+};
 use serde_json::Value;
 
 use super::host::now_ms;
@@ -49,7 +51,10 @@ impl GhostexGpuiApp {
             return;
         };
         let state = self.gx_store.sidebar_ui.state();
-        let existing = storage.get_item(sidebar_ui::COLLAPSE_STORAGE_KEY).ok().flatten();
+        let existing = storage
+            .get_item(sidebar_ui::COLLAPSE_STORAGE_KEY)
+            .ok()
+            .flatten();
         let _ = storage.set_item(
             sidebar_ui::COLLAPSE_STORAGE_KEY,
             &sidebar_ui::collapse_into_storage(&state.collapse, existing.as_deref()),
@@ -77,18 +82,30 @@ impl GhostexGpuiApp {
     fn sidebar_ui_intent(&self, command: &Value) -> Option<SidebarUiIntent> {
         let text = |key: &str| command.get(key).and_then(Value::as_str).map(str::to_string);
         match command.get("type").and_then(Value::as_str)? {
-            "toggleGroup" => Some(SidebarUiIntent::ToggleGroupCollapsed { group_id: text("groupId")? }),
-            "toggleList" => Some(SidebarUiIntent::ToggleSessionListExpanded { storage_id: text("groupId")? }),
-            "toggleHoverActions" => Some(SidebarUiIntent::ToggleHoverActions { storage_id: text("groupId")? }),
+            "toggleGroup" => Some(SidebarUiIntent::ToggleGroupCollapsed {
+                group_id: text("groupId")?,
+            }),
+            "toggleList" => Some(SidebarUiIntent::ToggleSessionListExpanded {
+                storage_id: text("groupId")?,
+            }),
+            "toggleHoverActions" => Some(SidebarUiIntent::ToggleHoverActions {
+                storage_id: text("groupId")?,
+            }),
             "toggleSection" => Some(SidebarUiIntent::ToggleSection {
                 storage_id: text("groupId")?,
                 section: section_id(command.get("section").and_then(Value::as_str)?)?,
             }),
-            "selectSpace" => Some(SidebarUiIntent::SelectSpace { space_id: text("spaceId")? }),
+            "selectSpace" => Some(SidebarUiIntent::SelectSpace {
+                space_id: text("spaceId")?,
+            }),
             "toggleTagFilter" => Some(SidebarUiIntent::ToggleTagFilter { tag: text("tag")? }),
-            "sidebarAction" if command["action"] == "showHidden" => Some(SidebarUiIntent::ToggleShowHidden),
+            "sidebarAction" if command["action"] == "showHidden" => {
+                Some(SidebarUiIntent::ToggleShowHidden)
+            }
             "selectSession" if matches!(command["mode"].as_str(), Some("clear" | "focus")) => {
-                Some(SidebarUiIntent::SetSelectedSessions { session_ids: Vec::new() })
+                Some(SidebarUiIntent::SetSelectedSessions {
+                    session_ids: Vec::new(),
+                })
             }
             _ => None,
         }
@@ -115,7 +132,6 @@ impl GhostexGpuiApp {
             || self.gx_store_run_sidebar_snooze(&command, cx)
             || self.gx_store_run_sidebar_reload(&command, cx)
             || self.gx_store_run_sidebar_reload_set(&command, cx)
-            || self.gx_store_run_sidebar_split(&command, cx)
             || self.gx_store_run_sidebar_session_move(&command, cx)
             || self.gx_store_run_sidebar_order_write(&command, cx)
             || self.gx_store_run_project_move(&command, cx)
@@ -152,17 +168,22 @@ impl GhostexGpuiApp {
         if self.open_session.is_some() || self.linked_session_opened {
             return;
         }
-        let Some(search) = web_sys::window().and_then(|window| window.location().search().ok()) else {
+        let Some(search) = web_sys::window().and_then(|window| window.location().search().ok())
+        else {
             return;
         };
         let parameter = |name: &str| {
             search.trim_start_matches('?').split('&').find_map(|pair| {
-                pair.strip_prefix(name)?.strip_prefix('=').map(str::to_string)
+                pair.strip_prefix(name)?
+                    .strip_prefix('=')
+                    .map(str::to_string)
             })
         };
-        let Some((project_id, session_id)) =
-            parameter("session").and_then(|value| value.split_once(':').map(|(p, s)| (p.to_string(), s.to_string())))
-        else {
+        let Some((project_id, session_id)) = parameter("session").and_then(|value| {
+            value
+                .split_once(':')
+                .map(|(p, s)| (p.to_string(), s.to_string()))
+        }) else {
             return;
         };
         // By store key rather than by drawn row: a compact session list hides most of a project's rows.
@@ -171,7 +192,11 @@ impl GhostexGpuiApp {
         }
         self.linked_session_opened = true;
         self.web_open_session(
-            ghostex_gx_core::SessionKey { machine: ghostex_gx_core::MachineId::Local, project_id, session_id },
+            ghostex_gx_core::SessionKey {
+                machine: ghostex_gx_core::MachineId::Local,
+                project_id,
+                session_id,
+            },
             cx,
         );
         if parameter("surface").as_deref() == Some("terminal") {
@@ -199,14 +224,24 @@ impl GhostexGpuiApp {
         }
     }
 
-    fn web_open_session(&mut self, session: ghostex_gx_core::SessionKey, cx: &mut gpui::Context<Self>) {
+    fn web_open_session(
+        &mut self,
+        session: ghostex_gx_core::SessionKey,
+        cx: &mut gpui::Context<Self>,
+    ) {
         self.open_session = Some(session.clone());
         self.web_report_shown_sessions(cx);
         self.ensure_native_chat(&session, cx);
         if self.show_terminal {
             self.ensure_terminal(&session, cx);
         }
-        self.gx_store_handle(Event::Intent(Intent::FocusSession { session, visible: None }), cx);
+        self.gx_store_handle(
+            Event::Intent(Intent::FocusSession {
+                session,
+                visible: None,
+            }),
+            cx,
+        );
         // The Git state follows the active project, as the desktop's workspace reconcile does.
         let active = self.gpui_app_modal_active_project_id();
         if active != self.web_host.git_active_project {
@@ -251,8 +286,11 @@ impl GhostexGpuiApp {
         };
         if items.is_empty() {
             self.dismiss_native_sidebar_menu(cx);
-        } else if let Some(panel) =
-            self.native_sidebar.menu.as_mut().and_then(|menu| menu.panels.get_mut(index))
+        } else if let Some(panel) = self
+            .native_sidebar
+            .menu
+            .as_mut()
+            .and_then(|menu| menu.panels.get_mut(index))
         {
             panel.replace_items(items);
         }

@@ -20,8 +20,6 @@ pub struct MenuGroup<'a> {
     /// The host can put the group into focus mode. The gxserver projection never sets it, so on
     /// this client it is always false and the Focus item never appears.
     pub can_focus_mode: bool,
-    /// The host has `postWorkspaceTerminalFocus`, which Split Right needs. The web app does not.
-    pub workspace_focus_bridge: bool,
     /// A project group's project; absent for the Chats group and for a user-made session group.
     pub project: Option<&'a ProjectContextView>,
     /// A project the sidebar may take out of the workspace.

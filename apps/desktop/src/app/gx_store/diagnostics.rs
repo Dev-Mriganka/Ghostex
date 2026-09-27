@@ -4,9 +4,9 @@ use ghostex_gx_client::{ClientDiagnostic, StartError, redact_quoted_values};
 use ghostex_gx_core::{ConnectionUpdate, Core, Loadable, MachineId, ProjectKey, ResubscribeReason};
 use serde_json::{Value, json};
 
-use super::host::GxStoreCounters;
 use super::focus_perform::FocusPerformCounters;
 use super::focus_publish::FocusPublishCounters;
+use super::host::GxStoreCounters;
 use super::sidebar_list::{LastUpdate, SidebarListCounters};
 use super::sidebar_scratch_compare::ScratchDifference;
 use super::sidebar_self_check::SidebarSelfCheckCounters;
@@ -1146,34 +1146,6 @@ impl GxStoreDiagnostics {
                 // means it arrived without ever being reported as a CHANGE, and held with
                 // `reconcileSeen` non-zero means the host saw it.
                 "sideStateHeld": side_state_held,
-            }),
-        );
-    }
-
-    /// A Split Right, named by which of the two branches the row took.
-    pub(super) fn sidebar_split_ran(
-        &mut self,
-        plan: &ghostex_gx_core::SplitPlan,
-        counters: super::sidebar_lifecycle::SidebarLifecycleCounters,
-    ) {
-        if self.sidebar_lifecycle_records >= MAX_SIDEBAR_ACTION_RECORDS
-            || !routine_logging_enabled()
-        {
-            return;
-        }
-        self.sidebar_lifecycle_records += 1;
-        record(
-            "gxStore.sidebarSplit",
-            json!({
-                "action": log_text(match plan.action {
-                    ghostex_gx_core::SplitAction::Nothing => "nothing",
-                    ghostex_gx_core::SplitAction::Wake(_) => "wake",
-                    ghostex_gx_core::SplitAction::Focus => "focus",
-                }),
-                "splits": counters.splits,
-                "splitsWoken": counters.splits_woken,
-                "splitsPlaced": counters.splits_placed,
-                "declinedSource": counters.declined_source,
             }),
         );
     }

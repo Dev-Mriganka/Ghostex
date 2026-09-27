@@ -105,80 +105,14 @@ impl GhostexGpuiApp {
                 } else {
                     self.pending_keep_view_remote_focus.remove(&remote_key);
                 }
-                let placement = match message.placement {
-                    GpuiWorkspaceTerminalFocusPlacement::Tab => {
-                        AgentsWorkspaceNewTerminalPlacement::Tab
-                    }
-                    GpuiWorkspaceTerminalFocusPlacement::SplitRight => {
-                        AgentsWorkspaceNewTerminalPlacement::SplitRight
-                    }
-                };
                 self.begin_gpui_remote_attach_terminal_open(
-                    reference, config, target, None, placement, cx,
+                    reference,
+                    config,
+                    target,
+                    None,
+                    AgentsWorkspaceNewTerminalPlacement::Tab,
+                    cx,
                 );
-            }
-            GpuiSidebarNativeProjectPathAction::CopyRemoteAttachCommand => {
-                let background = cx.background_executor().clone();
-                cx.spawn(async move |this, cx| {
-                    let result = background
-                        .spawn(async move {
-                            gpui_prepare_remote_attach_terminal_plan(
-                                &config, &target, &reference, false, false,
-                            )
-                        })
-                        .await;
-                    let _ = this.update(cx, |this, cx| match result {
-                        Ok(plan) => {
-                            gpui_copy_to_clipboard(
-                                ClipboardItem::new_string(plan.clipboard_command),
-                                cx,
-                            );
-                            this.dispatch_gpui_app_modal_toast(
-                                "info",
-                                "Remote attach command copied",
-                                "SSH attach command copied to the clipboard.",
-                                cx,
-                            );
-                        }
-                        Err(message) => this.dispatch_gpui_app_modal_toast(
-                            "warning",
-                            "Remote attach unavailable",
-                            message.as_str(),
-                            cx,
-                        ),
-                    });
-                })
-                .detach();
-            }
-            GpuiSidebarNativeProjectPathAction::CopyRemoteResumeCommand => {
-                let background = cx.background_executor().clone();
-                cx.spawn(async move |this, cx| {
-                    let result = background
-                        .spawn(async move {
-                            gpui_prepare_remote_resume_clipboard_command(
-                                &config, &target, &reference,
-                            )
-                        })
-                        .await;
-                    let _ = this.update(cx, |this, cx| match result {
-                        Ok(command) => {
-                            gpui_copy_to_clipboard(ClipboardItem::new_string(command), cx);
-                            this.dispatch_gpui_app_modal_toast(
-                                "info",
-                                "Remote resume command copied",
-                                "SSH resume command copied to the clipboard.",
-                                cx,
-                            );
-                        }
-                        Err(message) => this.dispatch_gpui_app_modal_toast(
-                            "warning",
-                            "Remote resume unavailable",
-                            message.as_str(),
-                            cx,
-                        ),
-                    });
-                })
-                .detach();
             }
             _ => {}
         }

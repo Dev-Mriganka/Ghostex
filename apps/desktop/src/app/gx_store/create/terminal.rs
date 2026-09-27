@@ -171,12 +171,8 @@ impl GhostexGpuiApp {
                     // open's own tab selection moves the remote focus marks (sidebar_remote_focus.rs).
                     let session =
                         SessionKey::remote(machine_id.as_str(), created_project, session_id);
-                    let payload = open_remote_session_terminal(
-                        &session.to_sidebar_session_id(),
-                        false,
-                        None,
-                        false,
-                    );
+                    let payload =
+                        open_remote_session_terminal(&session.to_sidebar_session_id(), false, None);
                     this.receive_sidebar_native_project_path_action_payload(
                         &payload.to_string(),
                         cx,

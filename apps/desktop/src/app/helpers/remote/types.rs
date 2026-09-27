@@ -207,7 +207,6 @@ pub(crate) struct GpuiRemoteAttachTerminalPlan {
     pub(crate) agent_icon: Option<&'static str>,
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     pub(crate) askpass: Option<GpuiRemoteAskpassScript>,
-    pub(crate) clipboard_command: String,
     pub(crate) terminal_command: String,
     pub(crate) title: String,
 }

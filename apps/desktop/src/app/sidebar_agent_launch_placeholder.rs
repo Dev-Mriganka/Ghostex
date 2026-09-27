@@ -167,7 +167,6 @@ impl GhostexGpuiApp {
     ) {
         if self.agent_launch_placeholders.is_empty()
             || !message.keep_view
-            || message.placement != GpuiWorkspaceTerminalFocusPlacement::Tab
             || message.placement_target_session_id.is_some()
             || message.force_remount
             || message.startup_restore
