@@ -28,6 +28,9 @@ pub(crate) fn sync_and_publish_bot_projects(
         return Ok(json!({ "enabled": false, "added": [] }));
     }
     let added = sync_bot_projects(repository, &discover_bot_profiles(&hermes_home()))?;
+    if !added.is_empty() {
+        crate::external_sessions::rescan_on_next_discovery(&state.paths);
+    }
     for project in &added {
         let project_id = value_text(project, "projectId")?;
         schedule_presentation_project_delta(state, db, repository, &project_id, "projectAdded")?;

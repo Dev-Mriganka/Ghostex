@@ -152,7 +152,14 @@ impl<'a> SidebarMenus<'a> {
             // a remote group whose project the machine did not publish is the case it was never
             // asked about, and `!is_chats_group` would offer the item on a group with nothing to
             // put in it.
-            can_create_session_group: core.project_context.is_some()
+            //
+            // A bot's sessions stay under the bot: Bots lists them flat, with no groups (the bot
+            // row's own menu has no New Group, see sidebar_menu/project.rs), so a group made from
+            // one would leave Bots for Projects > Other.
+            can_create_session_group: core
+                .project_context
+                .as_ref()
+                .is_some_and(|project| project.bot_profile.is_none())
                 || is_user_made_group(core.group_id.as_str()),
             // The projection never sets it, so the Focus item never appears.
             can_focus_mode: false,

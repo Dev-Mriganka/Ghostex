@@ -6,16 +6,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::collections::{CollectionItem, CollectionsState, project_sidebar_collections};
-use super::groups::{GroupBuild, GroupKind, GroupPlan, group_summary};
+use super::collections::{project_sidebar_collections, CollectionItem, CollectionsState};
+use super::groups::{group_summary, GroupBuild, GroupKind, GroupPlan};
 use super::inputs::{
-    LOCAL_MACHINE_ID, SidebarHostInputs, SidebarMode, SidebarSettings, SidebarUiState,
-    effective_sidebar_mode,
+    effective_sidebar_mode, SidebarHostInputs, SidebarMode, SidebarSettings, SidebarUiState,
+    LOCAL_MACHINE_ID,
 };
 use super::projects::ProjectMeta;
 use super::spaces::{
-    OTHER_SPACE_ICON, OTHER_SPACE_ID, OTHER_SPACE_LABEL, SpaceSelection, SpacesState,
-    resolve_selected_space, selection_shows_project, space_for_group,
+    resolve_selected_space, selection_shows_project, space_for_group, SpaceSelection, SpacesState,
+    OTHER_SPACE_ICON, OTHER_SPACE_ID, OTHER_SPACE_LABEL,
 };
 use super::view::{
     CollectionView, EmptyState, GroupView, MachineSummary, MachineTabView, OrderItem, OrderKind,
@@ -398,13 +398,18 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         groups,
         collections,
         order,
-        empty_state: if bots_mode {
-            EmptyState {
-                copy: "No Hermes profiles found.".to_string(),
-                ..EmptyState::default()
+        empty_state: {
+            let empty = empty_state(&input, selection.as_ref());
+            // Bots changes only the copy of a loaded, empty list; loading and a load failure read
+            // the same in both modes.
+            if bots_mode && !empty.loading && !empty.error {
+                EmptyState {
+                    copy: "No Hermes profiles found.".to_string(),
+                    ..EmptyState::default()
+                }
+            } else {
+                empty
             }
-        } else {
-            empty_state(&input, selection.as_ref())
         },
     }
 }

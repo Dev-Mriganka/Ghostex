@@ -95,6 +95,7 @@ pub(crate) fn valid_non_command_shell_focus_with_browser_tabs(
                         | TitlebarMode::Kanban
                         | TitlebarMode::Automate
                         | TitlebarMode::Manage
+                        | TitlebarMode::BotFeed
                 ) =>
         {
             Some(focus)

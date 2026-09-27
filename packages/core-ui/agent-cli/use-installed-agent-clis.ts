@@ -16,7 +16,11 @@ export function useInstalledAgentClis(agentIds: readonly string[]): ReadonlySet<
   const connection = useAgentCliConnections()[0];
   const [installed, setInstalled] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
-    if (!connection || !agentIds.length) return;
+    if (!connection || !agentIds.length) {
+      // An answer from before the connection went away says nothing now.
+      setInstalled((current) => (current.size ? new Set() : current));
+      return;
+    }
     let answers = installedByConnection.get(connection.id);
     if (!answers) installedByConnection.set(connection.id, (answers = new Map()));
     const cache = answers;
@@ -27,7 +31,13 @@ export function useInstalledAgentClis(agentIds: readonly string[]): ReadonlySet<
         if (!answer) {
           answer = connection
             .request({ action: 'read', agentId })
-            .then((state) => Boolean(state.executablePath))
+            .then((state) => {
+              const found = Boolean(state.executablePath);
+              // Only "installed" is remembered, so a CLI installed while Ghostex runs is found the
+              // next time the page asks.
+              if (!found) cache.delete(agentId);
+              return found;
+            })
             // A failed read is asked again next time rather than remembered as "not installed".
             .catch(() => {
               cache.delete(agentId);

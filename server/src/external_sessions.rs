@@ -38,6 +38,16 @@ fn error(error: impl std::fmt::Display) -> DomainStateError {
     DomainStateError::corrupt_state(format!("Could not discover external sessions: {error}"))
 }
 
+/// Makes the next discovery scan again. Bot sync calls it after adding a bot project: a scan that
+/// ran before the project existed skipped that bot's conversations and marked the store scanned.
+pub(crate) fn rescan_on_next_discovery(paths: &GxserverPaths) {
+    if let Some(scanned) = SCANNED.get() {
+        if let Ok(mut scanned) = scanned.lock() {
+            scanned.remove(&paths.state_db_file);
+        }
+    }
+}
+
 /// Receipts survive removing/restoring a history row, so deleted conversations
 /// do not return on the next launch. Discovery never starts an agent process.
 pub(crate) fn discover(

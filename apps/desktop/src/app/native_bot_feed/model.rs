@@ -101,9 +101,10 @@ pub(crate) fn feed_bots(jobs: &[BotFeedJob]) -> Vec<(String, SharedString)> {
     bots
 }
 
-/// One row of the message list.
+/// One row of the message list. A day separator carries its `YYYY-MM-DD` as well as its label,
+/// since a label repeats (the same weekday and date in another year) and "Today" moves at midnight.
 pub(crate) enum FeedRow {
-    Day(String),
+    Day { date: String, label: String },
     Run(FeedRun),
 }
 
@@ -111,7 +112,7 @@ impl FeedRow {
     /// What stays the same for this row across a reload, so the list can keep its place.
     pub(crate) fn key(&self, jobs: &[BotFeedJob]) -> SharedString {
         match self {
-            FeedRow::Day(label) => label.clone().into(),
+            FeedRow::Day { date, .. } => date.clone().into(),
             FeedRow::Run(run) => jobs[run.job].runs[run.run].id.clone(),
         }
     }
@@ -128,7 +129,10 @@ pub(crate) fn feed_rows(jobs: &[BotFeedJob], runs: Vec<FeedRun>, today: NaiveDat
             .unwrap_or_default();
         if day != Some(date) {
             day = Some(date);
-            rows.push(FeedRow::Day(day_label(date, today)));
+            rows.push(FeedRow::Day {
+                date: date.to_string(),
+                label: day_label(date, today),
+            });
         }
         rows.push(FeedRow::Run(run));
     }

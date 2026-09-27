@@ -131,7 +131,7 @@ impl GhostexGpuiApp {
         div()
             .id(id)
             .role(gpui::Role::Button)
-            .aria_label("Bots")
+            .aria_label(tooltip)
             .aria_selected(bots_mode)
             .flex()
             .flex_shrink_0()

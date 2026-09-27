@@ -181,17 +181,17 @@ pub(crate) mod agent_cli_http;
 pub mod agent_http;
 pub mod agent_prompt_search_http;
 pub mod background_tasks;
+mod bot_sync;
 mod browser_tcp;
 mod close_after_done_runtime;
-mod open_conversation_http;
 pub mod commit_message_generation;
 pub mod http_endpoints;
 pub mod http_infra;
+mod open_conversation_http;
 pub mod presentation_delta;
 mod project_docs_http;
 pub mod project_paths;
 mod session_auto_sleep_sweep;
-mod bot_sync;
 pub mod session_state_sync;
 pub mod telemetry_http;
 pub mod telemetry_tasks;
@@ -1259,17 +1259,32 @@ async fn route_http(
                 },
             )
         }
+        // Off the async runtime like the startup pass: the sync reads the profiles folder and
+        // writes the database.
         "/api/syncBotProjects" => {
-            let bot_state = state.clone();
-            handle_domain_http(
-                &state,
-                endpoint.path,
-                request_id,
-                &body_json,
-                move |repository, db, _, _| {
-                    bot_sync::sync_and_publish_bot_projects(&bot_state, db, repository)
-                },
-            )
+            let worker_state = state.clone();
+            let worker_endpoint = endpoint.path.clone();
+            let worker_request_id = request_id.clone();
+            match tokio::task::spawn_blocking(move || {
+                handle_domain_http(
+                    &worker_state,
+                    worker_endpoint,
+                    worker_request_id,
+                    &body_json,
+                    |repository, db, _, _| {
+                        bot_sync::sync_and_publish_bot_projects(&worker_state, db, repository)
+                    },
+                )
+            })
+            .await
+            {
+                Ok(response) => response,
+                Err(error) => domain_error_response(
+                    endpoint.path,
+                    request_id,
+                    DomainStateError::corrupt_state(format!("Bot project sync failed: {error}")),
+                ),
+            }
         }
         "/api/listBotFeed" => {
             let feed_state = state.clone();
@@ -2499,8 +2514,7 @@ async fn route_http(
                 .await
         }
         "/api/interruptSessionChat" => {
-            handle_interrupt_session_chat_http(&state, endpoint.path, request_id, &body_json)
-                .await
+            handle_interrupt_session_chat_http(&state, endpoint.path, request_id, &body_json).await
         }
         /*
         CDXC:SessionChat 2026-09-02:
@@ -2604,8 +2618,24 @@ async fn route_http(
             handle_read_session_transcript_sizes_http(&state, endpoint.path, request_id, &body_json)
                 .await
         }
-        "/api/readProjectGitState" => crate::project_git_state::handle_read_project_git_state_http(&state, endpoint.path, request_id, &body_json).await,
-        "/api/runGitShipWorkflow" => crate::git_ship_workflow::handle_run_git_ship_workflow_http(&state, endpoint.path, request_id, &body_json).await,
+        "/api/readProjectGitState" => {
+            crate::project_git_state::handle_read_project_git_state_http(
+                &state,
+                endpoint.path,
+                request_id,
+                &body_json,
+            )
+            .await
+        }
+        "/api/runGitShipWorkflow" => {
+            crate::git_ship_workflow::handle_run_git_ship_workflow_http(
+                &state,
+                endpoint.path,
+                request_id,
+                &body_json,
+            )
+            .await
+        }
         "/api/createPullRequest" => {
             handle_create_pull_request_http(&state, endpoint.path, request_id, &body_json).await
         }

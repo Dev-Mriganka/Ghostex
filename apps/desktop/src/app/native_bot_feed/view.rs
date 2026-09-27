@@ -1102,7 +1102,7 @@ impl NativeBotFeedView {
     fn render_row(&self, index: usize) -> AnyElement {
         let p = &self.style.palette;
         match self.rows.get(index) {
-            Some(FeedRow::Day(label)) => h_flex()
+            Some(FeedRow::Day { label, .. }) => h_flex()
                 .px(px(16.0))
                 .pt(px(14.0))
                 .pb(px(6.0))
@@ -1158,9 +1158,12 @@ impl NativeBotFeedView {
                                 TextView::markdown(run.id.clone(), run.body.clone())
                                     .min_w_0()
                                     .max_w(gpui::relative(1.0))
-                                    // Cron output is agent-written, so only web links open.
-                                    .on_link_click(|href, _, _, _| {
-                                        let _ = gpui_open_external_http_url(href);
+                                    // Cron output is agent-written, so only web links open, and
+                                    // only on a primary click.
+                                    .on_link_click(|href, event, _, _| {
+                                        if event.standard_click() {
+                                            let _ = gpui_open_external_http_url(href);
+                                        }
                                     })
                                     .selectable(true)
                                     .style(self.style.markdown.clone())

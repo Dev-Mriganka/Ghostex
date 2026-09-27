@@ -91,18 +91,28 @@ pub(crate) fn bot_profile(project: &Value) -> Option<&str> {
         .filter(|profile| is_bot_profile_name(profile))
 }
 
-/// The agent config a Hermes launch into a bot project uses: the bot's own profile. `None` for any
-/// other project or agent.
+/// The agent config a Hermes launch into a bot project uses: the bot's own profile, named after the
+/// bot so a session gxserver titles itself is "Harry Session" as the desktop titles it. `None` for
+/// any other project or agent.
 pub(crate) fn bot_agent_config(project: &Value, agent_id: &str) -> Option<Map<String, Value>> {
     if !agent_id.trim().eq_ignore_ascii_case("hermes-agent") {
         return None;
     }
     let profile = bot_profile(project)?;
-    Some(object_from_value(json!({
+    let mut config = object_from_value(json!({
         "agentId": "hermes-agent",
         "command": bot_launch_command(profile),
         "icon": "hermes-agent",
-    })))
+    }));
+    if let Some(name) = project
+        .get("name")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+    {
+        config.insert("name".to_string(), Value::String(name.to_string()));
+    }
+    Some(config)
 }
 
 /// The default profile, then every profile folder in name order. Nothing when Hermes has no home.
