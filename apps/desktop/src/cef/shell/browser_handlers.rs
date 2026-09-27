@@ -220,11 +220,9 @@ wrap_life_span_handler! {
             cef_life_span_handler.h the app must still complete it by
             proceeding with window/view-hierarchy tear-down, or the browser is
             left partially closed and its renderer process never exits. That
-            step is `CefBrowser::drop` calling `platform::release_native_view`,
-            which removes the CEF child view from its superview (macOS) or
-            destroys the embed-host window (Linux). Drop is only "fully owning"
-            teardown because it performs that removal; do not turn
-            release_native_view back into a no-op.
+            step on macOS/Windows is `CefBrowser::drop` calling
+            `platform::release_native_view`. Linux instead lets CEF close its
+            own X11 child before releasing the embed host in on_before_close.
 
             CDXC:Browser 2026-08-21:
             DevTools Target.closeTarget and /json/close enter through this
@@ -238,6 +236,13 @@ wrap_life_span_handler! {
                 && let Some(handler) = self.page_metadata_handler.as_ref()
             {
                 handler(BrowserPageMetadataEvent::CloseRequested);
+            }
+            // CEF's Linux CloseHostWindow sends WM_DELETE_WINDOW to its own
+            // CefWindowX11, not the GPUI ancestor. Let that native close tear
+            // down Chromium's compositor before removing our embed host.
+            #[cfg(target_os = "linux")]
+            if self.app_initiated_close.get() || self.register_created_native_view {
+                return 0;
             }
             1
         }
@@ -262,7 +267,10 @@ wrap_life_span_handler! {
             let Some(host) = browser.and_then(|browser| browser.host()) else {
                 return;
             };
-            unregister_native_view_browser(platform::native_view_ptr(host.window_handle()));
+            let native_view = platform::native_view_ptr(host.window_handle());
+            unregister_native_view_browser(native_view);
+            #[cfg(target_os = "linux")]
+            platform::browser_native_close_finished(native_view);
         }
 
         fn on_before_popup(

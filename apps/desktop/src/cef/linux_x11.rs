@@ -405,8 +405,7 @@ to the CEF window itself.
 
 The host id is recorded against the CEF window right after synchronous
 browser creation (prepare_native_view_for_focus, which runs on the single
-creating thread) and destroyed in release_native_view when the owning
-CefBrowser drops.
+creating thread) and destroyed after CEF finishes closing the browser.
 */
 static PENDING_EMBED_HOST: Mutex<Option<X11Window>> = Mutex::new(None);
 static EMBED_HOST_BY_CEF_WINDOW: Mutex<Option<HashMap<X11Window, X11Window>>> = Mutex::new(None);
@@ -572,7 +571,29 @@ pub(super) fn prepare_native_view_for_focus(native_view: *mut c_void) {
     pointer_focus::observe(cef_window);
 }
 
+/// CDXC:CefRuntime 2026-09-27 WHY:
+/// Destroying the embed host before CloseBrowser races Chromium's GPU surface creation: the Linux crash dump shows ANGLE's WindowSurfaceGLX dereferencing a null visual after XGetWindowAttributes fails, and three GPU crashes disable WebGL for every tab.
+/// Detach the unmapped host from the GPUI window so that closing its owner cannot destroy Chromium's children while CEF completes its native close; on_before_close releases the container.
 pub(super) fn release_native_view(native_view: *mut c_void) {
+    let Some(cef_window) = x11_window(native_view) else {
+        return;
+    };
+    pointer_focus::forget(cef_window);
+    let Some(host) = embed_host_for_cef_window(cef_window) else {
+        return;
+    };
+    let (connection, screen_index) = x11_connection();
+    let root = connection.setup().roots[*screen_index].root;
+    let _ = connection.unmap_window(host);
+    let _ = connection.reparent_window(host, root, 0, 0);
+    // The GPUI owner may be destroyed on another connection immediately after
+    // Drop returns, so finish the reparent before allowing that destruction.
+    if let Ok(cookie) = connection.get_input_focus() {
+        let _ = cookie.reply();
+    }
+}
+
+pub(super) fn browser_native_close_finished(native_view: *mut c_void) {
     let Some(cef_window) = x11_window(native_view) else {
         return;
     };

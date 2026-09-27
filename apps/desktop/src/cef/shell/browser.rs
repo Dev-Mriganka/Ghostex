@@ -846,12 +846,13 @@ impl Drop for CefBrowser {
 
             CDXC:CefRuntime 2026-08-24:
             release_native_view above destroys the CEF child view/window
-            (removeFromSuperview on macOS, DestroyWindow on Windows, embed-host
-            destroy on Linux), which can complete the whole browser close
+            (removeFromSuperview on macOS, DestroyWindow on Windows), which can complete the whole browser close
             synchronously before close_browser(1) even runs — in that case CEF
             skips DoClose and close_browser is a no-op backstop. Callbacks that
             can fire synchronously in that window (on_before_close) touch only
             thread-local registries, never the gpui App.
+            On Linux release_native_view only unmaps and reparents the embed
+            host; CEF closes its child before on_before_close removes the host.
             */
             platform::schedule_message_pump_work(0);
         }
