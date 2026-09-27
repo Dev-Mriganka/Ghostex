@@ -838,7 +838,7 @@ background task finished.
 Summary mode has its own button between More actions and Session note when the
 chat toolbar has room, and is always under More actions > View.
 The button highlights when Summary mode is on; its tooltip shows the Toggle Summary
-Mode shortcut (Cmd+Ctrl+S on macOS, Ctrl+Alt+Shift+S on Windows and Linux), which
+Mode shortcut (Option+Ctrl+S on macOS, Ctrl+Alt+Shift+S on Windows and Linux), which
 switches it from anywhere in that chat and can be changed in Settings > Hotkeys.
 As space gets tighter, toolbar buttons move into More actions one at a time:
 Summary mode (under View), Session note, Stash prompt, Attach, Maximize, then Terminal View.
