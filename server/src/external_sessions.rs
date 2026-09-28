@@ -20,6 +20,7 @@ use std::{
 static SCANNED: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
 
 mod hermes;
+pub(crate) use hermes::HERMES_INJECTED_PREFIXES;
 mod scan_cache;
 use scan_cache::ScanCache;
 

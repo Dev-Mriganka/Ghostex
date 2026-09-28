@@ -24,6 +24,8 @@ use crate::transcript::prose::joined_text;
 
 /// Claude: the row derived from `/compact`'s local-command output.
 const COMPACTION_COMPLETED_LABEL: &str = "Compaction completed";
+/// Hermes: a `/compress` that found nothing to compact.
+const NOTHING_TO_COMPRESS_LABEL: &str = "Nothing to compress";
 /*
 Codex: the row gxserver decodes from the rollout's `ContextCompaction` thread item
 (`CONTEXT_COMPACTED_STATUS_TEXT` in server/src/session_chat.rs; keep the two spellings in step).
@@ -310,6 +312,48 @@ fn is_post_compact_success(line: &str) -> bool {
     let tail = &rest[close + 1..];
     let space = leading_space_len(tail);
     space > 0 && tail[space..].starts_with("completed successfully:")
+}
+
+/*
+CDXC:SessionChat 2026-09-28 WHY:
+Carries the Hermes compress DECISION on `hermes_compacting_activity`
+(server/src/session_chat_terminal_activity.rs) into the transcript. The card shows the run and the
+transcript's "Context compacted" row is the one line, so a `/compress` output stays hidden while it
+runs and once it compacted, and one that found nothing to compact becomes the "Nothing to compress"
+pill. Any other ending (skipped for the lock, refused, aborted, fallback, failed) keeps its output:
+that is news the reader has to see.
+*/
+fn hermes_compress_result(text: &str) -> Option<SuppressedTurn> {
+    let body = strip_ansi(&suppressed_turn_body(text));
+    let lines: Vec<&str> = split_newlines(&body)
+        .into_iter()
+        .map(|line| js_trim(line).trim_start_matches(|ch: char| !ch.is_alphanumeric() && ch != '('))
+        .filter(|line| !line.is_empty())
+        .collect();
+    if lines.iter().any(|line| {
+        line.starts_with("No changes from compression: ")
+            || line.starts_with("Nothing to compress yet.")
+            || line.starts_with("(._.) Not enough conversation to compress")
+    }) {
+        return Some(SuppressedTurn::Status {
+            label: NOTHING_TO_COMPRESS_LABEL.to_string(),
+            tone: None,
+        });
+    }
+    if !lines
+        .first()
+        .is_some_and(|line| line.starts_with("Compressing context"))
+    {
+        return None;
+    }
+    match lines
+        .iter()
+        .find(|line| line.starts_with("Compressed") || line.starts_with("Compression"))
+    {
+        None => Some(SuppressedTurn::Hidden),
+        Some(ending) if ending.starts_with("Compressed: ") => Some(SuppressedTurn::Hidden),
+        Some(_) => None,
+    }
 }
 
 fn is_compaction_command_output(text: &str) -> bool {
@@ -619,6 +663,16 @@ fn is_context_compaction_record(message: &ChatMessage, text: &str) -> bool {
         && js_trim(text) == CONTEXT_COMPACTED_LABEL
 }
 
+/// Whether the agent's transcript recorded a finished compaction here: Claude's `/compact` output,
+/// or the "Context compacted" row gxserver decodes for Codex and Hermes.
+pub fn is_compaction_record(message: &ChatMessage) -> bool {
+    matches!(
+        classify_suppressed_turn(message),
+        Some(SuppressedTurn::Status { ref label, .. })
+            if label == CONTEXT_COMPACTED_LABEL || label == COMPACTION_COMPLETED_LABEL
+    )
+}
+
 /// Which marker, status row, or nothing a turn renders as.
 pub fn classify_suppressed_turn(message: &ChatMessage) -> Option<SuppressedTurn> {
     let text = js_trim(&joined_text(&message.blocks)).to_string();
@@ -683,6 +737,9 @@ pub fn classify_suppressed_turn(message: &ChatMessage) -> Option<SuppressedTurn>
         return Some(SuppressedTurn::Hidden);
     }
     if label == "Local command output" {
+        if let Some(result) = hermes_compress_result(&text) {
+            return Some(result);
+        }
         if let Some(model) = model_set_by_command_output(&text) {
             return Some(SuppressedTurn::Status {
                 label: format!("Set model to {}", model.model.replace('`', "")),

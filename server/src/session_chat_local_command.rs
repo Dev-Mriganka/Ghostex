@@ -523,6 +523,9 @@ pub fn session_chat_local_command_output(
 }
 
 fn normalize_local_command_screen(agent: Option<&str>, screen: &str) -> String {
+    if agent == Some("hermes-agent") {
+        return strip_hermes_chrome(screen);
+    }
     if agent == Some("claude")
         && crate::session_chat_diff_panel::claude_diff_panel_on_screen(screen)
         && crate::session_chat_claude_dialog::detect_claude_dialog(screen).is_none()
@@ -531,6 +534,34 @@ fn normalize_local_command_screen(agent: Option<&str>, screen: &str) -> String {
     } else {
         screen.to_string()
     }
+}
+
+/*
+CDXC:SessionChat 2026-09-28 WHY:
+Hermes paints its own layout under the output: a status bar with running clocks,
+the `<profile> ❯` composer between rules (a spinner replaces the profile while a
+command runs), and a "command in progress" hint; stale copies of the bar land in
+scrollback when Hermes prints above them. Left in, the pre-send anchor never
+matched, so no Hermes slash command sent from chat got its output (observed
+2026-09-28). Its `⚙️ /command` echo goes too: the chat already shows the command.
+*/
+fn strip_hermes_chrome(screen: &str) -> String {
+    let lines: Vec<&str> = screen.lines().collect();
+    let composer = crate::session_chat_composer::hermes_composer_row(screen).unwrap_or(lines.len());
+    lines[..composer]
+        .iter()
+        .filter(|line| {
+            let trimmed = line.trim();
+            !crate::session_chat_options::is_hermes_statusline(trimmed)
+                && !crate::session_chat_options::is_hermes_busy_hint(trimmed)
+                && !(trimmed.starts_with('⚙')
+                    && trimmed
+                        .trim_start_matches(['⚙', '\u{fe0f}', ' '])
+                        .starts_with('/'))
+        })
+        .copied()
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn result_branch(lines: &[String]) -> Vec<String> {

@@ -751,8 +751,9 @@ Slash commands sent from chat stay in the conversation after a reload, together
 with any captured output. Long command output expands when clicked; model, effort,
 Fast mode, and compaction results keep their status rows.
 During `/compact`, Claude, Codex, Cursor, and Grok Build show a compaction card above the input.
-Cursor's `/summarize` uses the same flow. Claude shows its reported progress;
-Codex, Cursor, and Grok Build show a looping bar. Messages sent or queued during compaction
+Cursor's `/summarize` and Hermes's `/compress` use the same flow. Claude shows its reported progress;
+Codex, Cursor, Grok Build, and Hermes show a looping bar. A Hermes `/compress` sent from chat that
+finds nothing to compact shows Nothing to compress. Messages sent or queued during compaction
 wait until it finishes without a delivery warning.
 To compact before sending a new prompt, press `⌥Enter` on macOS or `Alt+Enter` on Windows and Linux in the chat box,
 Option-click Send (Alt-click on Windows and Linux), or right-click Send and choose Compact & Send. Ghostex sends `/compact` first,

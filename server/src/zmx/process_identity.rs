@@ -214,7 +214,7 @@ fn resolve_process_command_agent_identity(command: &str) -> Option<ProcessIdenti
         return None;
     }
     resolve_agent_process_invocation(&tokens, 0, GXSERVER_DIRECT_AGENT_PROCESS_CONFIDENCE)
-        .or_else(|| resolve_wrapped_agent_process_invocation(&tokens))
+        .or_else(|| resolve_wrapped_agent_process_invocation(command, &tokens))
 }
 
 fn should_ignore_process_command_for_agent_identity(command: &str, tokens: &[String]) -> bool {
@@ -233,11 +233,24 @@ fn should_ignore_process_command_for_agent_identity(command: &str, tokens: &[Str
         .any(|marker| lower_command.contains(marker))
 }
 
+/// CDXC:SessionIdentity 2026-09-28 WHY:
+/// Hermes runs as a Python interpreter: its installer's launcher is `python3 -I -c "<bootstrap>"` and a pip install is `python3 …/bin/hermes`. Left unrecognised, the first agent binary below it owned the row, and Hermes's Claude subscription provider spawns the native `claude` for every turn, so a Hermes row turned into a Claude session mid-conversation, dropped its Hermes conversation id, and its chat lost the history (observed live 2026-09-28).
 fn resolve_wrapped_agent_process_invocation(
+    command: &str,
     tokens: &[String],
 ) -> Option<ProcessIdentityObservation> {
-    let executable_name = normalize_process_executable_name(tokens.first().map(String::as_str));
-    if executable_name.as_deref() == Some("env") {
+    let executable_name = normalize_process_executable_name(tokens.first().map(String::as_str))?;
+    let is_python = executable_name.starts_with("python");
+    if is_python && command.contains("import hermes_bootstrap") {
+        return Some(ProcessIdentityObservation {
+            confidence: GXSERVER_WRAPPED_AGENT_PROCESS_CONFIDENCE,
+            identity: ZmxProcessIdentity {
+                agent_id: Some("hermes-agent".to_string()),
+                ..ZmxProcessIdentity::default()
+            },
+        });
+    }
+    if executable_name == "env" || is_python {
         if let Some(invocation_index) = find_env_wrapped_command_index(tokens) {
             return resolve_agent_process_invocation(
                 tokens,
@@ -246,10 +259,7 @@ fn resolve_wrapped_agent_process_invocation(
             );
         }
     }
-    if !executable_name
-        .as_deref()
-        .is_some_and(|name| matches!(name, "bun" | "node"))
-    {
+    if !matches!(executable_name.as_str(), "bun" | "node") {
         return None;
     }
     for index in 1..tokens.len().min(8) {

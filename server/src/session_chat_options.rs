@@ -1388,6 +1388,16 @@ fn hermes_context_usage(segments: &[&str]) -> Option<SessionChatContextUsage> {
     (!usage.is_empty()).then_some(usage)
 }
 
+/// Hermes's status bar (`☤ model │ … │ ⏲ 3s │ …`), which it repaints under its output.
+pub(crate) fn is_hermes_statusline(line: &str) -> bool {
+    line.contains('\u{2502}') && match_hermes_statusline(line).is_some()
+}
+
+/// The hint Hermes paints above its status bar while a slash command runs.
+pub(crate) fn is_hermes_busy_hint(line: &str) -> bool {
+    line.contains("command in progress · ")
+}
+
 fn match_hermes_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
     let segments: Vec<&str> = line.split('\u{2502}').map(str::trim).collect();
     if segments.len() < 4

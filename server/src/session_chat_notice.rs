@@ -1851,6 +1851,24 @@ fn notice_from_hermes_blocking_screen(
     )])
 }
 
+fn notice_from_hermes_turn_error(
+    screen: &NoticeScreen,
+    error: String,
+) -> SessionChatTerminalNotice {
+    SessionChatTerminalNotice::new(
+        SESSION_CHAT_NOTICE_AGENT_ERROR,
+        SessionChatTerminalNoticeSeverity::Error,
+        SessionChatTerminalNoticeSource::Screen,
+        "Hermes could not finish the turn",
+    )
+    .with_input_blocking(false)
+    .with_detail(error)
+    .with_screen_tail(screen.screen_tail())
+    .with_actions(vec![SessionChatTerminalNoticeAction::switch_to_terminal(
+        OPEN_TERMINAL.label,
+    )])
+}
+
 fn notice_from_omp_blocking_screen(
     screen: &NoticeScreen,
     blocking: crate::session_chat_omp_blocking::OmpBlockingScreen,
@@ -2077,6 +2095,11 @@ pub fn classify_session_chat_terminal_notice(
             crate::session_chat_hermes_blocking::detect_hermes_blocking_screen(screen_text)
         {
             return Some(notice_from_hermes_blocking_screen(&screen, blocking));
+        }
+        if let Some(error) =
+            crate::session_chat_hermes_blocking::detect_hermes_turn_error(screen_text)
+        {
+            return Some(notice_from_hermes_turn_error(&screen, error));
         }
     }
     if agent == SessionChatOptionAgent::Omp {

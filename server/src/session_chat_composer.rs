@@ -59,6 +59,12 @@ use crate::storage::open_gxserver_database;
 mod input;
 pub use input::{claude_composer_draft, session_chat_composer_input, SessionChatComposerInput};
 
+/// The row Hermes's live composer starts on, the one readiness reads, or `None` when it is not on screen.
+pub(crate) fn hermes_composer_row(screen_text: &str) -> Option<usize> {
+    let raw_lines: Vec<_> = screen_text.lines().map(strip_ansi_sgr).collect();
+    input::hermes_input_region(&raw_lines).map(|region| region.start)
+}
+
 /// Non-blank lines kept from the bottom of a capture. Wide enough to hold
 /// opencode's mid-screen composer plus the banner above it on an 80x24 pane,
 /// and to hold gemini's full-height dialogs without the composer scan running
