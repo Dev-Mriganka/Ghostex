@@ -284,6 +284,26 @@ impl GhostexGpuiApp {
                 self.gx_store.pending_collection_rename = Some((collection_id, request_id));
                 self.gx_store_update_sidebar_list(cx);
             }
+            ProjectWrite::FollowToSpace { space_id, group_id } => {
+                // The Space's own intent rather than a `selectSpace` through the dispatch, which
+                // would also restore the Space's last session and focus another project.
+                self.gx_store_apply_sidebar_ui_intent(
+                    ghostex_gx_core::SidebarUiIntent::SelectSpace { space_id },
+                    cx,
+                );
+                // A remote project's focus attaches one of its sessions, which filing it never did.
+                let project = ghostex_gx_core::ProjectKey::parse_sidebar_group_id(&group_id)
+                    .filter(|project| project.machine.is_local());
+                let already_active = project.as_ref().is_some_and(|project| {
+                    self.gx_store.core.focus().active_project.as_ref() == Some(project)
+                });
+                if project.is_some() && !already_active {
+                    self.dispatch_native_sidebar_command(
+                        json!({ "type": "focusGroup", "groupId": group_id }),
+                        cx,
+                    );
+                }
+            }
             ProjectWrite::OpenSpaceEditor {
                 section_key,
                 remote_machine_id,

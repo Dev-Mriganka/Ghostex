@@ -279,9 +279,10 @@ Space.
 Grouping never moves a project out of its Space: a group made with Add to Group
 > New Project Group joins the Space its project is in, and a project taken out
 of a group (Remove from Group, Ungroup, or dragging it out) stays in that
-group's Space. Adding a project to an existing group moves it to that group's
-Space. A session group made with a project's New Group, or with a session's
-Move to New Group, shows in the project's Space.
+group's Space. Adding a project to an existing group in another Space moves it
+to that group's Space, and the sidebar switches there with the project focused.
+A session group made with a session's Move to New Group shows in the project's
+Space.
 In Add Project, select the computer whose folders you want to browse. Local
 folder starts in your home folder, and External drives and other folders shows
 that computer's filesystem root. On a computer running native Windows

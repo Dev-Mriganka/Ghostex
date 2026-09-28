@@ -30,6 +30,7 @@ use crate::project_docs::{
     reorder_spaces, toggle_space_member, CollectionsDocument, DropPosition, SpaceMemberKind,
     SpacesDocument,
 };
+use crate::sidebar_view::spaces::resolve_selected_space;
 use crate::sidebar_view::{SidebarInputs, OTHER_SPACE_ID};
 
 use super::project_inventory::{project_section, selected_machine, ProjectSection};
@@ -60,6 +61,9 @@ pub enum ProjectWrite {
     /// `ui.renameRequest`: the Rename dialog opens on the collection that was just created, so the
     /// user names it instead of living with "Group 7".
     RequestCollectionRename { collection_id: String },
+    /// Select this Space in the section, without the Space switch's restore of its last session,
+    /// and focus the project group that was just filed into it.
+    FollowToSpace { space_id: String, group_id: String },
     /// `openAppModal({ type: 'open', modal: 'sidebarSpaceEditor', mode: 'create', ... })`: the New
     /// Space item of a membership menu, which creates the Space AND puts the member in it.
     OpenSpaceEditor {
@@ -91,6 +95,9 @@ impl ProjectWrite {
             }
             Self::RequestCollectionRename { collection_id } => {
                 json!({ "write": "renameCollection", "collectionId": collection_id })
+            }
+            Self::FollowToSpace { space_id, group_id } => {
+                json!({ "write": "followToSpace", "spaceId": space_id, "groupId": group_id })
             }
             Self::OpenSpaceEditor {
                 section_key,
@@ -241,6 +248,7 @@ pub fn plan_project_move(
         "moveCollection" => plan_move_collection(&section, collections, command),
         "projectMembership" => {
             plan_project_membership(&section, collections, spaces, command, now_ms)
+                .map(|plan| follow_to_space(plan, inputs, section_spaces, command))
         }
         "spaceMembership" => plan_space_membership(&section, inputs, section_spaces, command),
         _ => None,
@@ -552,6 +560,60 @@ fn plan_project_membership(
         move_projects_to_collection(collections, &family, collection_id),
         spaces,
     )))
+}
+
+/// Add to Group with a group in another Space: the section follows the project there.
+///
+/// CDXC:Spaces 2026-09-29 DECISION:
+/// User: Add to Group keeps listing every Project Group, and picking one that lives in another Space
+/// moves the sidebar to that Space and follows the project. The switch skips the Space's usual
+/// restore of its last session, which would focus some other project instead of this one.
+fn follow_to_space(
+    mut plan: ProjectMovePlan,
+    inputs: &SidebarInputs,
+    spaces: Option<&SpacesDocument>,
+    command: &Value,
+) -> ProjectMovePlan {
+    let (Some(spaces), Some(group_id), Some(collection_id)) = (
+        spaces,
+        command.get("groupId").and_then(Value::as_str),
+        command.get("collectionId").and_then(Value::as_str),
+    ) else {
+        return plan;
+    };
+    if command.get("action").and_then(Value::as_str) != Some("moveCollection") {
+        return plan;
+    }
+    let state = &spaces.state;
+    let target = state
+        .order
+        .iter()
+        .find(|space_id| {
+            state.spaces.get(*space_id).is_some_and(|space| {
+                space
+                    .member_collection_ids
+                    .iter()
+                    .any(|member| member == collection_id)
+            })
+        })
+        .cloned()
+        .unwrap_or_else(|| OTHER_SPACE_ID.to_string());
+    let selected = resolve_selected_space(
+        state,
+        inputs
+            .ui
+            .collapse
+            .selected_space_by_section
+            .get(&inputs.ui.section_key())
+            .map(String::as_str),
+    );
+    if selected.space_id() != target {
+        plan.writes.push(ProjectWrite::FollowToSpace {
+            space_id: target,
+            group_id: group_id.to_string(),
+        });
+    }
+    plan
 }
 
 /// `getProjectCollectionFamilyProjectIds`: the project ids of one family, de-duplicated, falling
