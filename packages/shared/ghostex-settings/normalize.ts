@@ -85,6 +85,7 @@ import {
   type SidebarVisibilityMemory,
   type SidebarSettingsPresetId,
   type TerminalBackgroundImageFit,
+  type TerminalBackgroundMode,
   type TerminalCursorStyle,
   type TerminalViewWidthMode,
   type WebLinkOpenTarget,
@@ -307,11 +308,7 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       DEFAULT_ghostex_SETTINGS.storybookViewTabHidden
     ),
     botsHidden: readBoolean(source, 'botsHidden', DEFAULT_ghostex_SETTINGS.botsHidden),
-    botAutomationsHidden: readBoolean(
-      source,
-      'botAutomationsHidden',
-      DEFAULT_ghostex_SETTINGS.botAutomationsHidden
-    ),
+    botAutomationsHidden: readBoolean(source, 'botAutomationsHidden', DEFAULT_ghostex_SETTINGS.botAutomationsHidden),
     tipsAndTricksTitlebarButtonHidden: readBoolean(
       source,
       'tipsAndTricksTitlebarButtonHidden',
@@ -1019,13 +1016,10 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
         DEFAULT_ghostex_SETTINGS.workspaceActivePaneBorderColor
       ).trim() || DEFAULT_ghostex_SETTINGS.workspaceActivePaneBorderColor,
     /**
-     * CDXC:Theming 2026-09-23 DECISION:
-     * User: "wtf does terminal color have to do with workarea theme??? pls make this more intuitive pls". Terminal
-     * background only colours the terminal panes, never the work area, and it follows the theme by default: an empty
-     * value means follow the theme, a colour replaces the theme's colour behind terminal cells. The old default
-     * #010101, which every settings file carried, migrates to follow the theme. Supersedes the 2026-04-28 note that
-     * this colour was the workspace background.
+     * CDXC:Theming 2026-09-28 DECISION:
+     * User: "allow us to set terminal background color to full black/white and make it black by default not the background color from the theme". Terminal background is a choice of Black / white (pure black behind dark terminals, pure white behind light ones; the default), Follow theme (the theme's content colour), or Custom (`workspaceBackgroundColor`, dark mode only). It only colours the terminal panes, never the work area. A settings file saved before this choice existed keeps its custom colour, and one that followed the theme by default moves to the new black default. Supersedes the 2026-09-23 decision that the terminal background follows the theme by default.
      */
+    terminalBackgroundMode: normalizeTerminalBackgroundMode(source),
     workspaceBackgroundColor: normalizeTerminalBackgroundSetting(
       readString(source, 'workspaceBackgroundColor', DEFAULT_ghostex_SETTINGS.workspaceBackgroundColor)
     ),
@@ -1509,7 +1503,17 @@ function normalizeWindowGlassWorkAreaTint(source: Record<string, unknown>, appea
   return clampWindowGlassWorkAreaTintPercent(migrateWindowGlassWorkAreaTintPercent(sidebar, extra), fallback);
 }
 
-/** `workspaceBackgroundColor`: '' follows the theme; the retired default #010101 reads as following the theme too. */
+/** SEE-ALSO: `terminal_background_mode` in apps/desktop/src/shared_settings.rs applies the same migration. */
+function normalizeTerminalBackgroundMode(source: Record<string, unknown>): TerminalBackgroundMode {
+  const value = source.terminalBackgroundMode;
+  if (value === 'pure' || value === 'theme' || value === 'custom') {
+    return value;
+  }
+  const legacyColor = normalizeTerminalBackgroundSetting(readString(source, 'workspaceBackgroundColor', ''));
+  return legacyColor === '' ? DEFAULT_ghostex_SETTINGS.terminalBackgroundMode : 'custom';
+}
+
+/** `workspaceBackgroundColor`: the Custom terminal background; the retired default #010101 reads as unset. */
 function normalizeTerminalBackgroundSetting(value: string): string {
   const trimmed = value.trim();
   return trimmed.toLowerCase() === '#010101' ? '' : trimmed;

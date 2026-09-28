@@ -49,7 +49,7 @@ const DEFAULT_TERMINAL_FONT_FAMILY: &str = "JetBrains Mono";
 const DEFAULT_TERMINAL_FONT_WEIGHT: f64 = 300.0;
 const NORMAL_TERMINAL_FONT_WEIGHT: f64 = 400.0;
 const DEFAULT_TERMINAL_GHOSTTY_THEME: &str = "GitHub Dark";
-/// Empty: the terminal background follows the theme (`workspaceBackgroundColor` in
+/// Empty: no custom terminal background colour (`workspaceBackgroundColor` in
 /// packages/shared/ghostex-settings/defaults.ts).
 const DEFAULT_TERMINAL_BACKGROUND_COLOR: &str = "";
 const DEFAULT_TERMINAL_BACKGROUND_IMAGE: &str = "";
@@ -316,7 +316,7 @@ pub struct SharedGpuiTerminalEngineSettings {
     pub ghostty_theme: String,
     pub color_scheme: String,
     pub light_theme: String,
-    pub terminal_background_rgb: Option<[u8; 3]>,
+    pub terminal_background: SharedTerminalBackground,
     pub background_image_path: String,
     pub background_image_opacity: f32,
     pub background_image_fit: String,
@@ -334,6 +334,27 @@ pub struct SharedGpuiTerminalEngineSettings {
 impl SharedGpuiTerminalEngineSettings {
     pub fn uses_light_theme(&self, system_is_light: bool) -> bool {
         self.color_scheme == "light" || (self.color_scheme == "system" && system_is_light)
+    }
+}
+
+/// The Terminal background choice (`terminalBackgroundMode` plus `workspaceBackgroundColor`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SharedTerminalBackground {
+    /// Pure black behind dark terminals, pure white behind light ones.
+    Pure,
+    Theme,
+    /// Painted in dark mode only; light terminals keep the theme.
+    Custom([u8; 3]),
+}
+
+impl SharedTerminalBackground {
+    /// The colour behind terminal cells, or `None` to paint the theme's content colour.
+    pub fn override_rgb(self, light: bool) -> Option<[u8; 3]> {
+        match self {
+            Self::Pure => Some(if light { [0xff, 0xff, 0xff] } else { [0, 0, 0] }),
+            Self::Theme => None,
+            Self::Custom(rgb) => (!light).then_some(rgb),
+        }
     }
 }
 
@@ -881,11 +902,7 @@ impl SharedSidebarSettingsSnapshot {
                 "GitHub Light Default",
             )
             .to_string(),
-            terminal_background_rgb: normalize_terminal_background_rgb(read_string_field(
-                &self.object,
-                "workspaceBackgroundColor",
-                DEFAULT_TERMINAL_BACKGROUND_COLOR,
-            )),
+            terminal_background: terminal_background(&self.object),
             background_image_path: read_string_field(
                 &self.object,
                 "terminalBackgroundImage",
@@ -2238,7 +2255,32 @@ fn normalize_ghostty_theme(value: &str) -> String {
     }
 }
 
-/// `None` follows the theme: an empty value, or the retired default #010101 that every settings
+/// SEE-ALSO: `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize.ts, whose
+/// migration this mirrors: a file without a mode keeps its custom colour, otherwise it gets the
+/// Black / white default.
+fn terminal_background(
+    object: &serde_json::Map<String, serde_json::Value>,
+) -> SharedTerminalBackground {
+    let custom = normalize_terminal_background_rgb(read_string_field(
+        object,
+        "workspaceBackgroundColor",
+        DEFAULT_TERMINAL_BACKGROUND_COLOR,
+    ));
+    match read_string_field(object, "terminalBackgroundMode", "") {
+        "theme" => SharedTerminalBackground::Theme,
+        "custom" => custom.map_or(
+            SharedTerminalBackground::Theme,
+            SharedTerminalBackground::Custom,
+        ),
+        "pure" => SharedTerminalBackground::Pure,
+        _ => custom.map_or(
+            SharedTerminalBackground::Pure,
+            SharedTerminalBackground::Custom,
+        ),
+    }
+}
+
+/// `None` is unset: an empty value, or the retired default #010101 that every settings
 /// file carried (the same migration as `normalizeTerminalBackgroundSetting` in TS).
 fn normalize_terminal_background_rgb(value: &str) -> Option<[u8; 3]> {
     let value = value.trim();
@@ -2249,12 +2291,11 @@ fn normalize_terminal_background_rgb(value: &str) -> Option<[u8; 3]> {
     if hex.len() != 6 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
-    let rgb = [
+    Some([
         u8::from_str_radix(&hex[0..2], 16).ok()?,
         u8::from_str_radix(&hex[2..4], 16).ok()?,
         u8::from_str_radix(&hex[4..6], 16).ok()?,
-    ];
-    Some(if rgb == [0, 0, 0] { [1, 1, 1] } else { rgb })
+    ])
 }
 
 fn normalize_terminal_background_image_fit(value: &str) -> String {

@@ -275,6 +275,7 @@ export const MAIN_SETTINGS_SECTION_SETTING_KEYS: Record<MainSettingsSectionId, r
   statusIndicators: ['petOverlayEnabled', 'selectedPetId'],
   terminal: [
     'ghosttySettingsActions',
+    'terminalBackgroundMode',
     'workspaceBackgroundColor',
     'terminalBackgroundImage',
     'terminalBackgroundImageOpacity',
@@ -634,7 +635,6 @@ export const ADVANCED_MAIN_SETTING_KEYS = new Set<string>([
   'renameSessionOnDoubleClick',
   'showActivePaneOutline',
   'workspaceActivePaneBorderColor',
-  'workspaceBackgroundColor',
   'terminalBackgroundImage',
   'terminalBackgroundImageOpacity',
   'terminalBackgroundImageFit',

@@ -95,6 +95,7 @@ import {
   type SidebarSpaceSwitchBehavior,
   type SidebarVisibilityMemory,
   type TerminalBackgroundImageFit,
+  type TerminalBackgroundMode,
   type WebLinkOpenTarget,
   type TerminalCursorStyle,
   type ghostexSettingsPatch,
@@ -1970,30 +1971,37 @@ export function SettingsModal({
                                 modification={getSettingModificationProps}
                               />
                             ) : null}
-                            {mainSettingVisible(settingsSearch.terminal, 'workspaceBackgroundColor') ? (
-                              <>
-                                <ToggleField
-                                  checked={draft.workspaceBackgroundColor === ''}
-                                  description='Only changes the terminal panes. Leave on Follow theme to match your theme.'
-                                  label='Terminal background: Follow theme'
-                                  {...getSettingModificationProps('workspaceBackgroundColor')}
-                                  onChange={(checked) =>
-                                    updateDraft(
-                                      'workspaceBackgroundColor',
-                                      checked ? '' : TERMINAL_BACKGROUND_STARTING_COLOR
-                                    )
-                                  }
-                                />
-                                {draft.workspaceBackgroundColor !== '' ? (
-                                  <ColorField
-                                    dependent
-                                    description='Painted behind terminal text in dark mode. Light mode and window glass keep the theme.'
-                                    label='Terminal background color'
-                                    onChange={(value) => updateDraft('workspaceBackgroundColor', value)}
-                                    value={draft.workspaceBackgroundColor}
-                                  />
-                                ) : null}
-                              </>
+                            {mainSettingVisible(settingsSearch.terminal, 'terminalBackgroundMode') ? (
+                              <SelectField
+                                description='Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.'
+                                label='Terminal background'
+                                {...getSettingModificationProps('terminalBackgroundMode')}
+                                onChange={(value) =>
+                                  applySettingsPatch({
+                                    terminalBackgroundMode: value as TerminalBackgroundMode,
+                                    ...(value === 'custom' && draft.workspaceBackgroundColor === ''
+                                      ? { workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR }
+                                      : {}),
+                                  })
+                                }
+                                options={[
+                                  { label: 'Black / white', value: 'pure' },
+                                  { label: 'Follow theme', value: 'theme' },
+                                  { label: 'Custom color', value: 'custom' },
+                                ]}
+                                value={draft.terminalBackgroundMode}
+                              />
+                            ) : null}
+                            {draft.terminalBackgroundMode === 'custom' &&
+                            mainSettingVisible(settingsSearch.terminal, 'workspaceBackgroundColor') ? (
+                              <ColorField
+                                dependent
+                                description='Painted behind terminal text in dark mode. Light mode and window glass keep the theme.'
+                                label='Terminal background color'
+                                {...getSettingModificationProps('workspaceBackgroundColor')}
+                                onChange={(value) => updateDraft('workspaceBackgroundColor', value)}
+                                value={draft.workspaceBackgroundColor}
+                              />
                             ) : null}
                             {mainSettingVisible(settingsSearch.terminal, 'terminalBackgroundImage') ? (
                               <TextField

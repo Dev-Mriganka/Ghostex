@@ -62,6 +62,7 @@ export {
   type GhosttyScrollbar,
   type TerminalCursorStyle,
   type TerminalBackgroundImageFit,
+  type TerminalBackgroundMode,
   type TerminalViewWidthMode,
   type PortlessProtocol,
   type WebLinkOpenTarget,

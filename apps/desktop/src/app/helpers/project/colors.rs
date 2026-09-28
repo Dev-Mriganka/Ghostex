@@ -104,16 +104,22 @@ pub(crate) fn refresh_gpui_visual_settings(
     The work area always paints the theme's content colour for the terminal's own appearance (the
     chrome in light mode, one step off it in dark), so the theme's tint and Background contrast
     always reach it, superseding the Ghostty config background and the light palette's background.
-    The Terminal background setting no longer touches the work area: it follows the theme by
-    default, and a chosen colour only replaces the colour behind terminal cells in dark mode
-    (`GpuiTerminalConfig::apply_color_scheme`). Supersedes the 2026-09-22 rule that an explicit
-    Terminal Background won for the whole dark work area.
+    The Terminal background setting never touches the work area; it only chooses the colour behind
+    terminal cells (`GpuiTerminalEngineConfig::apply_color_scheme`, which holds the 2026-09-28
+    Black / white default decision). Supersedes the 2026-09-22 rule that an explicit Terminal
+    Background won for the whole dark work area.
     */
     let workspace = gpui_terminal_theme_background_rgb(object, terminal_is_light);
     GPUI_WORKSPACE_BACKGROUND_RGB.store(u64::from(workspace), Ordering::Relaxed);
+    // The padding around a light terminal matches its cells (pure white under Black / white).
     GPUI_TERMINAL_PADDING_BACKGROUND_RGB.store(
         if terminal_is_light {
-            u64::from(workspace)
+            terminal_settings
+                .terminal_background
+                .override_rgb(true)
+                .map_or(u64::from(workspace), |[r, g, b]| {
+                    u64::from(u32::from_be_bytes([0, r, g, b]))
+                })
         } else {
             0
         },
