@@ -372,6 +372,13 @@ fn unwrap_terminal_rows(lines: &[String], printed: &[String], index: usize) -> S
     let mut joined = printed[index].trim_end().to_string();
     let mut row = index;
     while let Some(next) = printed.get(row + 1) {
+        // An error that happens to end at the pane edge is followed by Hermes's own chrome, never a wrapped row.
+        let next_start = next.trim_start();
+        if next_start.starts_with(|character: char| ('\u{2500}'..='\u{257f}').contains(&character))
+            || crate::session_chat_options::is_hermes_statusline(next_start)
+        {
+            break;
+        }
         let cells = terminal_cells(printed[row].trim_end());
         if cells == pane_width {
             joined.push_str(next.trim_end());
