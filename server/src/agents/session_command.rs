@@ -40,6 +40,12 @@ pub(crate) fn command_word(command: &str, from: usize) -> Option<(usize, usize, 
     Some((start, command.len(), word))
 }
 
+/// Whether a shell word read by [`command_word`] can be an option: a quoted instruction containing a
+/// flag is an argument, not an option.
+pub(crate) fn is_option_word(literal: &str, word: &str) -> bool {
+    literal == word || literal.starts_with('-')
+}
+
 /// CDXC:AgentProviders 2026-09-11 WHY:
 /// History launches save a complete resume invocation as agentCommand. Dropping that command after assigning an account discarded cswap's selected login and launched the project's c2 alias instead.
 /// Remove only conversation selectors, keeping the account wrapper and the remaining argument spelling; apply this when assigning an account and when reading older saved commands.
@@ -62,9 +68,8 @@ pub(crate) fn reusable_account_command(
     let mut codex_reference_pending = false;
     while index < words.len() {
         let (start, end, word) = &words[index];
-        // A quoted instruction containing a flag is an argument, not a selector.
         let literal = &command[*start..*end];
-        let selector = (literal == word || literal.starts_with('-'))
+        let selector = is_option_word(literal, word)
             && match agent {
                 "claude" => matches!(word.as_str(), "--resume" | "-r" | "--session-id"),
                 "codex" => matches!(word.as_str(), "resume" | "fork" | "--resume" | "--fork"),
