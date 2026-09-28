@@ -1,8 +1,15 @@
-//! Search by Prompt's colours: the Session Chat tokens the React page resolved (`.ghostex-find-scope`
-//! in packages/core-ui/styles/find.css on the `plain-dark` / `plain-light` sidebar themes), and the
-//! lifted palette packages/core-ui/styles/modals-glass.css gave it under window glass.
+//! Search by Prompt's colours: the tokens the React page resolved (`.ghostex-find-scope` in
+//! packages/core-ui/styles/find.css), laid over the theme's own window colour like the other native
+//! modals, and frosted under window glass.
+//!
+//! CDXC:Theming 2026-09-29 DECISION:
+//! User: "make the find by prompt modal also get same transparency as other modals like the cmd + n
+//! modal", and "it should take the colors of the theme applied". The window is the theme's chrome
+//! colour (white in light mode), and under glass it takes the app's frosted menu fill with ink washes
+//! for its raised fills, the recipe Quick Access and the New Thread picker use. Supersedes the fixed
+//! React greys and the lifted #2b2b2b this window first shipped with.
 use crate::app::window::native_modal_kit::MODAL_UI_FONT;
-use crate::app::window::native_modal_kit::{modal_rgba, rgba_of};
+use crate::app::window::native_modal_kit::{css_mix, modal_rgba, rgba_of};
 use gpui::{Rgba, SharedString};
 
 #[derive(Clone, Copy)]
@@ -38,21 +45,52 @@ pub(crate) struct FindPalette {
 }
 
 impl FindPalette {
-    /// `light` is the Session Chat theme (the React page's `theme` parameter); `glass` is window
-    /// glass, which only lifts the dark palette.
+    /// `light` is the app appearance and `glass` window glass. The window is the theme's chrome
+    /// colour; under glass it is the app's frosted fill of it, with ink washes for raised fills.
     pub(crate) fn resolve(light: bool, glass: bool) -> Self {
+        let chrome: Rgba = if light {
+            modal_rgba(0xffffff, 1.0)
+        } else {
+            Rgba::from(crate::app::helpers::titlebar_background())
+        };
+        let base = Self::react(light, chrome);
+        if !glass {
+            return base;
+        }
+        let ink = if light { 0x000000 } else { 0xffffff };
+        // Menus draw inside this window, over rows nothing blurs, so they stay solid.
+        let solid_menu = if light {
+            chrome
+        } else {
+            css_mix(modal_rgba(0xffffff, 1.0), 0.06, chrome)
+        };
+        Self {
+            background: crate::app::helpers::frosted_menu_fill(chrome.into()).into(),
+            accent: modal_rgba(ink, if light { 0.07 } else { 0.09 }),
+            button_hover: modal_rgba(ink, if light { 0.05 } else { 0.06 }),
+            field: modal_rgba(ink, if light { 0.04 } else { 0.05 }),
+            pill: modal_rgba(ink, if light { 0.05 } else { 0.07 }),
+            pill_outline: modal_rgba(ink, 0.10),
+            popover: solid_menu,
+            hairline: modal_rgba(ink, if light { 0.09 } else { 0.08 }),
+            ..base
+        }
+    }
+
+    /// The React page's tokens with `window` as its background.
+    fn react(light: bool, window: Rgba) -> Self {
         if light {
             let foreground = modal_rgba(0x262626, 1.0);
             return Self {
                 light,
-                background: modal_rgba(0xffffff, 1.0),
+                background: window,
                 foreground,
                 muted: modal_rgba(0x636363, 1.0),
                 border: modal_rgba(0x000000, 0.14),
                 hairline: modal_rgba(0x000000, 0.084),
                 accent: modal_rgba(0xe9e9e9, 1.0),
                 primary: foreground,
-                popover: modal_rgba(0xffffff, 1.0),
+                popover: window,
                 popover_border: modal_rgba(0x000000, 0.12),
                 button: modal_rgba(0xffffff, 1.0),
                 button_hover: modal_rgba(0xf1f1f1, 1.0),
@@ -67,16 +105,16 @@ impl FindPalette {
                 favorite: modal_rgba(0xffb900, 1.0),
             };
         }
-        let dark = Self {
+        Self {
             light,
-            background: modal_rgba(0x0e0e0e, 1.0),
+            background: window,
             foreground: modal_rgba(0xc8cdd5, 1.0),
             muted: modal_rgba(0x747b85, 1.0),
             border: modal_rgba(0xffffff, 0.11),
             hairline: modal_rgba(0xffffff, 0.066),
             accent: modal_rgba(0x262626, 1.0),
             primary: modal_rgba(0xe5e5e5, 1.0),
-            popover: modal_rgba(0x0e0e0e, 1.0),
+            popover: window,
             popover_border: modal_rgba(0xffffff, 0.12),
             button: modal_rgba(0x000000, 0.0),
             button_hover: modal_rgba(0xffffff, 0.045),
@@ -84,25 +122,11 @@ impl FindPalette {
             field_border: modal_rgba(0x737373, 1.0),
             field_ring: modal_rgba(0x737373, 0.2),
             destructive: modal_rgba(0xff6467, 1.0),
-            pill: modal_rgba(0x141414, 1.0),
+            pill: css_mix(modal_rgba(0xffffff, 1.0), 0.025, window),
             pill_outline: modal_rgba(0xffffff, 0.05),
             pill_highlight: modal_rgba(0xffffff, 0.03),
             matched: modal_rgba(0xe3b341, 1.0),
             favorite: modal_rgba(0xffb900, 1.0),
-        };
-        if !glass {
-            return dark;
-        }
-        Self {
-            background: modal_rgba(0x2b2b2b, 1.0),
-            muted: modal_rgba(0x9ca2ab, 1.0),
-            border: modal_rgba(0xffffff, 0.13),
-            hairline: modal_rgba(0xffffff, 0.078),
-            accent: modal_rgba(0x3d3d3d, 1.0),
-            popover: modal_rgba(0x313131, 1.0),
-            pill: modal_rgba(0x383838, 1.0),
-            pill_outline: modal_rgba(0xffffff, 0.10),
-            ..dark
         }
     }
 
@@ -113,10 +137,6 @@ impl FindPalette {
 
     pub(crate) fn accent_at(&self, alpha: f32) -> Rgba {
         rgba_of(self.accent, alpha)
-    }
-
-    pub(crate) fn background_at(&self, alpha: f32) -> Rgba {
-        rgba_of(self.background, alpha)
     }
 }
 
