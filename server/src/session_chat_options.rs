@@ -1853,7 +1853,8 @@ fn read_session_chat_statusline_selection(
         label: label.to_string(),
         source: SessionChatOptionEvidence::Statusline,
     };
-    let model = claude_statusline_model_choice(payload).map(|found| choice(&found.value, &found.label));
+    let model =
+        claude_statusline_model_choice(payload).map(|found| choice(&found.value, &found.label));
     let effort = payload
         .get("effort")
         .and_then(|effort| transcript_text(effort.get("level")))

@@ -655,7 +655,9 @@ impl NativeChatView {
 
     /// CDXC:SessionChat 2026-09-18 WHY:
     /// Retained chat views stay subscribed while parked, and every state frame (several a second across working sessions) notified, which redraws the whole window for a view nobody sees.
-    /// The state is applied either way; only a view that rendered recently asks for a redraw, and a parked one paints the latest state when it comes back.
+    /// The state is applied either way; only a view in a visible pane, or one that rendered recently, asks for a redraw, and a parked one paints the latest state when it comes back.
+    /// CDXC:SessionChat 2026-09-28 WHY:
+    /// "Rendered recently" alone missed a visible chat: the pane draws it as a cached view, so an idle chat stops rendering, and in a window where nothing else redraws (a new install's sidebar has no ticking times) the next card never painted until the mouse moved. Claude's first-run cards after an answer and the first card after a cold start stayed blank that way on Windows. A view whose pane is on screen (`pane_hidden`, kept by the visibility reconcile) counts as shown.
     /// CDXC:SessionChat 2026-09-19 WHY:
     /// A streaming agent produced a runtime output several times a frame, and each one redrew the whole window, which re-lays out every visible transcript row; with a few agents streaming that was most of the UI thread.
     /// Redraws from runtime output are coalesced to one per 50ms; the last output in a burst still paints, only never sooner than that.
@@ -667,6 +669,7 @@ impl NativeChatView {
         const NOTIFY_MIN_INTERVAL: Duration = Duration::from_millis(50);
         if self.option_menu.is_none()
             && !self.transcript_only
+            && self.pane_hidden
             && !self
                 .last_render
                 .is_some_and(|at| at.elapsed() < Duration::from_secs(1))

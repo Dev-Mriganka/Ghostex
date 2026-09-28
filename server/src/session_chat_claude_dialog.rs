@@ -43,6 +43,55 @@ fn is_bottom_slot_dialog(text: &str, after: &[String]) -> bool {
         && crate::session_chat_claude_popups::claude_escape_safe_popup(text).is_none()
 }
 
+/// CDXC:AgentScreenDetection 2026-09-28 WHY:
+/// Claude's first-run screens (text style, login method, the sign-in code, the "Press Enter to continue/retry" notes, terminal setup) draw under its "Welcome to Claude Code" banner with no panel rule, so a new install stopped at "finish it in the terminal" and Claude could not be set up from Ghostex. The banner line starts them when no transcript follows and a highlighted row, the sign-in code field or an Enter prompt is waiting.
+fn first_run_start(lines: &[String]) -> Option<usize> {
+    let welcome = lines
+        .iter()
+        .rposition(|line| line.trim_start().starts_with("Welcome to Claude Code"))?;
+    let after = &lines[welcome + 1..];
+    let transcript = after
+        .iter()
+        .any(|line| line.starts_with('⏺') || line.starts_with('❯') || line.starts_with("╭─"));
+    let waiting = after.iter().any(|line| {
+        (line.starts_with(' ') && line.trim_start().starts_with("❯ "))
+            || first_run_code_field(line).is_some()
+            || line.to_ascii_lowercase().contains("press enter to")
+    });
+    (!transcript && waiting).then_some(welcome)
+}
+
+/// What is typed after "Paste code here if prompted >", the field Claude's browser sign-in reads its code from.
+fn first_run_code_field(line: &str) -> Option<&str> {
+    let rest = line.trim().strip_prefix("Paste code here if prompted")?;
+    Some(rest.trim_start().strip_prefix('>').unwrap_or(rest).trim())
+}
+
+/// A first-run screen as the card shows it: without the theme step's colour preview (a sample diff between
+/// `╌` rules), and with the sign-in link the terminal wrapped at its width joined back into one line.
+fn first_run_content(content: &[String]) -> Vec<String> {
+    let end = content
+        .iter()
+        .position(|line| {
+            let line = line.trim();
+            line.chars().count() >= 20 && line.chars().all(|c| c == '╌')
+        })
+        .unwrap_or(content.len());
+    let mut lines: Vec<String> = Vec::with_capacity(end);
+    let mut in_link = false;
+    for line in &content[..end] {
+        let wrapped = in_link && !line.is_empty() && !line.contains(char::is_whitespace);
+        match lines.last_mut() {
+            Some(link) if wrapped => link.push_str(line),
+            _ => {
+                in_link = line.starts_with("https://");
+                lines.push(line.clone());
+            }
+        }
+    }
+    lines
+}
+
 /// Whether a chooser is Claude's own usage-limit menu ("You've reached your Fable limit"), which
 /// must stay a usage-limit notice so account switching and queued-delivery holds still see it.
 pub(crate) fn is_claude_usage_limit_chooser(dialog: &TerminalDialog) -> bool {
@@ -158,6 +207,7 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     };
     let modal = rule('▔');
     let slot = rule('─').filter(|&index| is_bottom_slot_dialog(text, &lines[index + 1..]));
+    let first_run = modal.is_none() && slot.is_none();
     // A `▔` panel keeps its own inner `─` rules ("Ready to code?"), so it wins unless transcript
     // rows between the two show it is an answered panel left on screen.
     let start = match (modal, slot) {
@@ -171,9 +221,15 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         }
         (Some(modal), _) => modal,
         (None, Some(slot)) => slot,
-        (None, None) => return None,
+        (None, None) => first_run_start(&lines)?,
     } + 1;
-    let content = &lines[start..];
+    let first_run_lines: Vec<String>;
+    let content: &[String] = if first_run {
+        first_run_lines = first_run_content(&lines[start..]);
+        &first_run_lines
+    } else {
+        &lines[start..]
+    };
     // The composer has no left indent. Selection markers inside Ink panels do.
     if content
         .iter()
@@ -181,10 +237,22 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     {
         return None;
     }
-    let heading = content
-        .iter()
-        .position(|line| line.chars().any(|c| c.is_alphanumeric()))?;
-    let title = content[heading].trim().to_string();
+    let is_heading = |line: &String| {
+        line.chars().any(|c| c.is_alphanumeric())
+            && !(first_run && line.trim() == "Let's get started.")
+    };
+    let heading = content.iter().position(is_heading)?;
+    let mut title = content[heading].trim().to_string();
+    let mut title_hint = None;
+    if first_run {
+        // The card shows the link itself; "c" copies it only in the terminal.
+        title = title.trim_end_matches("(c to copy)").trim_end().to_string();
+        // "Login successful. Press Enter to continue…" is one line: the hint becomes the button.
+        if let Some(at) = title.find("Press Enter to").filter(|at| *at > 0) {
+            title_hint = Some(title[at..].to_string());
+            title = title[..at].trim_end().to_string();
+        }
+    }
     if title.len() > 240 || title.starts_with("Question ") {
         return None;
     }
@@ -201,10 +269,15 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
             || lower.contains("↑/↓")
             || lower.contains("d to day")
     };
-    let footer = remainder
-        .iter()
-        .filter(|line| is_hint(line))
-        .map(|line| line.trim())
+    let footer = title_hint
+        .as_deref()
+        .into_iter()
+        .chain(
+            remainder
+                .iter()
+                .filter(|line| is_hint(line))
+                .map(|line| line.trim()),
+        )
         .collect::<Vec<_>>()
         .join("\n");
     let lower = footer.to_ascii_lowercase();
@@ -250,7 +323,12 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     .flatten();
     let text_field = remainder
         .iter()
-        .find_map(|line| line.trim().strip_prefix("> "));
+        .find_map(|line| line.trim().strip_prefix("> "))
+        .or_else(|| {
+            first_run
+                .then(|| remainder.iter().find_map(|line| first_run_code_field(line)))
+                .flatten()
+        });
     let input = if search {
         Some("search")
     } else if boxed.is_some()
@@ -293,7 +371,11 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     let body = remainder
         .iter()
         .enumerate()
-        .filter(|(index, line)| !is_hint(line) && (!numbered || !option_lines.contains(index)))
+        .filter(|(index, line)| {
+            !is_hint(line)
+                && (!numbered || !option_lines.contains(index))
+                && !(first_run && first_run_code_field(line).is_some())
+        })
         .map(|(_, line)| line.clone())
         .collect::<Vec<_>>()
         .join("\n")
@@ -348,7 +430,10 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
     if lower.contains("f to fork") {
         actions.push("fork");
     }
-    actions.push("cancel");
+    // First-run setup has nothing to go back to.
+    if !first_run {
+        actions.push("cancel");
+    }
     // CDXC:SessionChat 2026-09-27 WHY: the `/btw` panel animates a spinner glyph beside "Answering…", which changed the id on every capture, so Close pressed while Claude was still answering was always refused as "the dialog changed". Blank rows under a short panel are left out too: the probe's capture and the answer's capture disagree on them, which refused every answer to the Settings panel.
     let painted = content
         .iter()

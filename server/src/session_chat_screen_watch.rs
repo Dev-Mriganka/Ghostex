@@ -15,7 +15,7 @@ only when that grid differs from the previous look.
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// True when the session's live terminal grid changed since the previous call.
 /// The first look only seeds, because the probe that started the follower
@@ -26,37 +26,39 @@ pub type SessionChatScreenChangeWatch = Arc<dyn Fn() -> bool + Send + Sync>;
 /// by then is left to the steady probe.
 const SESSION_CHAT_SCREEN_LOOK_DEADLINE: Duration = Duration::from_secs(2);
 
-/// Windows reaches its daemons through a spawned process per capture, which is
-/// too heavy to pay every second for an idle session, so it keeps the steady
-/// tier alone.
-#[cfg(unix)]
+/// CDXC:AgentScreenDetection 2026-09-28 WHY:
+/// Windows reaches its daemons through a spawned `wmx history` per look (about 25 ms), and it used to keep the 30s steady tier alone, so on a new install Claude's first-run screens and every dialog it opened on its own reached the chat up to half a minute late. It looks every other second instead of every tick.
+const SESSION_CHAT_SCREEN_LOOK_INTERVAL: Duration = if cfg!(windows) {
+    Duration::from_secs(2)
+} else {
+    Duration::ZERO
+};
+
 pub(crate) fn session_chat_screen_change_watch(
     zmx_name: String,
 ) -> Option<SessionChatScreenChangeWatch> {
-    let observed: Mutex<Option<u64>> = Mutex::new(None);
+    let observed: Mutex<(Option<u64>, Option<Instant>)> = Mutex::new((None, None));
     Some(Arc::new(move || {
         // A look still waiting on a slow daemon owns the lock; skipping keeps
         // stalled reads from piling up one per tick.
         let Ok(mut observed) = observed.try_lock() else {
             return false;
         };
+        let (fingerprint, looked_at) = &mut *observed;
+        if looked_at.is_some_and(|at| at.elapsed() < SESSION_CHAT_SCREEN_LOOK_INTERVAL) {
+            return false;
+        }
+        *looked_at = Some(Instant::now());
         let Ok(capture) = crate::zmx::read_zmx_session_grid_capture(&zmx_name) else {
             return false;
         };
         let mut hasher = DefaultHasher::new();
         capture.text.hash(&mut hasher);
-        let fingerprint = hasher.finish();
-        let changed = observed.is_some_and(|previous| previous != fingerprint);
-        *observed = Some(fingerprint);
+        let current = hasher.finish();
+        let changed = fingerprint.is_some_and(|previous| previous != current);
+        *fingerprint = Some(current);
         changed
     }))
-}
-
-#[cfg(not(unix))]
-pub(crate) fn session_chat_screen_change_watch(
-    _zmx_name: String,
-) -> Option<SessionChatScreenChangeWatch> {
-    None
 }
 
 /// Takes one look off the async reconcile loop. `false` when there is no watch,

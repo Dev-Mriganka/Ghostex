@@ -56,8 +56,6 @@ pub const SESSION_CHAT_NOTICE_LOGIN_EXPIRED: &str = "loginExpired";
 pub const SESSION_CHAT_NOTICE_TRUST_PROMPT: &str = "trustPrompt";
 /// A sibling blocking dialog about settings/permissions.
 pub const SESSION_CHAT_NOTICE_PERMISSIONS_WARNING: &str = "permissionsWarning";
-/// A first-run setup screen is blocking the composer.
-pub const SESSION_CHAT_NOTICE_ONBOARDING: &str = "onboarding";
 /// Usage/rate/credit limit reported on screen.
 pub const SESSION_CHAT_NOTICE_USAGE_LIMIT: &str = "usageLimit";
 /// Network/server failure reported on screen.
@@ -1483,22 +1481,6 @@ const CLAUDE_RULES: &[NoticeRule] = &[
         ],
         actions: &[OPEN_TERMINAL],
         quote_evidence: true,
-    },
-    NoticeRule {
-        kind: SESSION_CHAT_NOTICE_ONBOARDING,
-        severity: SessionChatTerminalNoticeSeverity::Info,
-        title: "Claude Code is in first-run setup",
-        detail: "Claude Code is showing a first-run setup screen, which blocks its composer until it is finished in the terminal.",
-        blocks_input: true,
-        signatures: &[NoticeSignature {
-            scope: NoticeScope::Dialog,
-            parts: &[NoticePart::Text(
-                "Choose the text style that looks best with your terminal",
-            )],
-            corroborators: &[],
-        }],
-        actions: &[OPEN_TERMINAL],
-        quote_evidence: false,
     },
 ];
 

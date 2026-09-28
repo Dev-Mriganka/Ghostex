@@ -9,7 +9,7 @@ use crate::questions::model::TerminalDialog;
 
 /// The card's title and markdown paragraphs for a panel we have copy for, or `None`.
 pub fn terminal_dialog_copy(dialog: &TerminalDialog) -> Option<Value> {
-    if !dialog.rows.is_empty() || dialog.input.is_some() {
+    if !dialog.rows.is_empty() {
         return None;
     }
     let title = plain_title(&dialog.title);
@@ -19,7 +19,13 @@ pub fn terminal_dialog_copy(dialog: &TerminalDialog) -> Option<Value> {
         .map(str::trim)
         .filter(|line| !line.is_empty())
         .collect();
-    let (title, paragraphs) = if title == "Fast mode" || title == "Fast mode (research preview)" {
+    let (title, paragraphs) = if dialog.input.is_some() {
+        if dialog.input.as_deref() == Some("text") && title == CLAUDE_SIGN_IN_TITLE {
+            claude_sign_in_copy(&lines)?
+        } else {
+            return None;
+        }
+    } else if title == "Fast mode" || title == "Fast mode (research preview)" {
         fast_mode_copy(&lines)?
     } else if let Some(left) = title.strip_prefix("Guest passes · ") {
         guest_passes_copy(left, &lines)?
@@ -89,4 +95,24 @@ fn guest_passes_copy(left: &str, lines: &[&str]) -> Option<(String, Vec<String>)
             format!("Your referral link: {}", link?),
         ],
     ))
+}
+
+/// The title of Claude's first-run sign-in step, where its browser sign-in hands back a code.
+pub const CLAUDE_SIGN_IN_TITLE: &str = "Browser didn't open? Use the url below to sign in";
+
+/// CDXC:Onboarding 2026-09-28 WHY: a new Claude install signs in through this card, and its terminal wording ("Browser didn't open?", a bare link, a field) did not say what to do with the code the browser shows.
+fn claude_sign_in_copy(lines: &[&str]) -> Option<(String, Vec<String>)> {
+    let [link] = lines else {
+        return None;
+    };
+    (link.starts_with("https://") && !link.contains(char::is_whitespace)).then(|| {
+        (
+            "Sign in to Claude".to_string(),
+            vec![
+                "Sign in on the page that opened in your browser. When it shows a code, paste it below."
+                    .to_string(),
+                format!("Browser didn't open? Open this link to sign in: {link}"),
+            ],
+        )
+    })
 }

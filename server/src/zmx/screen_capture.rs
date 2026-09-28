@@ -287,14 +287,20 @@ That path keeps the head at the stdout byte cap, so an oversized capture still r
 */
 #[cfg(not(unix))]
 pub(crate) fn read_zmx_session_screen_capture(zmx_name: &str) -> Result<ZmxHistoryCapture, String> {
-    read_zmx_session_screen_capture_format(zmx_name, false)
+    read_zmx_session_screen_capture_format(zmx_name, false, ZMX_SCREEN_CAPTURE_SCROLLBACK_ROWS)
 }
 
 #[cfg(not(unix))]
 pub(crate) fn read_zmx_session_screen_capture_vt(
     zmx_name: &str,
 ) -> Result<ZmxHistoryCapture, String> {
-    read_zmx_session_screen_capture_format(zmx_name, true)
+    read_zmx_session_screen_capture_format(zmx_name, true, ZMX_SCREEN_CAPTURE_SCROLLBACK_ROWS)
+}
+
+/// The live grid alone, as plain text, for learning whether the screen changed.
+#[cfg(not(unix))]
+pub(crate) fn read_zmx_session_grid_capture(zmx_name: &str) -> Result<ZmxHistoryCapture, String> {
+    read_zmx_session_screen_capture_format(zmx_name, false, 0)
 }
 
 /// CDXC:AgentScreenDetection 2026-09-22 SEE-ALSO:
@@ -304,15 +310,11 @@ pub(crate) fn read_zmx_session_screen_capture_vt(
 fn read_zmx_session_screen_capture_format(
     zmx_name: &str,
     vt: bool,
+    scrollback_rows: u32,
 ) -> Result<ZmxHistoryCapture, String> {
     let zmx = require_bundled_zmx()?;
     let result = run_zmx_interaction_command(
-        build_zmx_screen_capture_command(
-            zmx_name,
-            &zmx.executable_path,
-            ZMX_SCREEN_CAPTURE_SCROLLBACK_ROWS,
-            vt,
-        ),
+        build_zmx_screen_capture_command(zmx_name, &zmx.executable_path, scrollback_rows, vt),
         ZmxCommandOptions {
             allow_stdout_truncation: true,
             stdout_limit_bytes: Some(GXSERVER_ZMX_HISTORY_STDOUT_LIMIT_BYTES),

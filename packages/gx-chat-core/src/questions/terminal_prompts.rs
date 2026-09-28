@@ -47,6 +47,8 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
         "Start review"
     } else if dialog.title == "Add marketplace" {
         "Add marketplace"
+    } else if dialog.title == crate::questions::terminal_dialog_copy::CLAUDE_SIGN_IN_TITLE {
+        "Sign in"
     } else if dialog.footer.contains("Enter to continue") {
         "Continue"
     } else if dialog.footer.contains("Enter to add") {
@@ -113,6 +115,10 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
                 "Fork".to_string()
             } else if action == "confirm" && dialog.footer.contains("set as default") {
                 "Set as default".to_string()
+            } else if action == "confirm" && dialog.footer.contains("Enter to retry") {
+                "Retry".to_string()
+            } else if action == "confirm" && dialog.footer.contains("Enter to continue") {
+                "Continue".to_string()
             } else {
                 action_label(action)
                     .map(str::to_string)
