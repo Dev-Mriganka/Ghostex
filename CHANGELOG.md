@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+## 10.6.0 - 2026-09-29
+
+**Ghostex 10.6.0 is out.** Settings, first-run setup, Add Project, the Agents hub and Git Commit are now native windows, Chromium becomes an optional one-time install, the Files editor gains tables, Mermaid and drag and drop, Claude Opus 5.5 and Sonnet 5.5 arrive, and Windows installs get through first launch on a clean computer.
+
+### 🧩 Ghostex without Chromium
+- **Settings, first-run setup, Add Project, the Agents hub and Git Commit open as native windows,** so almost all of Ghostex works without the built-in web runtime, and the Settings colour swatches use your system's colour picker.
+- **The web runtime is an optional one-time install.** Until you install it, the Browser, the Code view, website and extension views, and HTML and media files show an Install button (or Hide tab), and web links open in your system browser. Nothing is downloaded until you press Install; Settings > Extensions > Built-in > Chromium runtime installs, reinstalls or uninstalls it.
+
+### 🗂 A richer Files editor
+- **Markdown in Files gains table tools, emoji, Mermaid diagrams, smarter list keys, find and notes,** with a richer gutter and rename and conflict dialogs.
+- **Drag and drop files and folders in the Files tree,** and opening a file from chat always goes to the Files view.
+
+### 💬 Chat and agents
+- **Claude Opus 5.5 and Sonnet 5.5 replace Opus 5 and Sonnet 5** in the model pickers for Claude Code and Cursor, and Opus 5.5 is a single 1M row.
+- **Claude Code 2.1.284 works with every chat picker:** the effort slider knows the new Ultracode switch, session-only model and effort picks answer Claude's Switch model? prompt, the model picker works in short panes, and a 1M session keeps its 1M pill.
+- **A new Claude Code install's first-run setup is answered in the chat,** with a Sign in to Claude card that tells you to paste the code your browser shows.
+- **A collapsed approval shows the command it asks to run,** compaction shows its token counter, and the Note, Stash, Attach and Switch to Terminal tooltips name their hotkeys, on the computer and the phone.
+- **Codex plans show above Implement this plan?,** a Codex script that runs several commands lists each one, and an interrupted turn keeps its Interrupted marker under your prompt.
+- **Hermes chats keep every prompt and reply across a compaction,** Hermes /compress works like /compact, and subagent notices and errors read the way the terminal prints them, thanks to @banozz0.
+- **Chat rides out a gxserver restart** instead of saying gxserver is not reachable, links take the chat's own light or dark link colour, and the scrollbar stays on the pane's right edge in a wide chat.
+
+### 🗃 Sidebar, Spaces and sleeping sessions
+- **Dim sleeping sessions and Wake sleeping sessions when selected** are new in Settings > Advanced. Turn off the second one and clicking a sleeping session opens it with its Resume button instead of waking it.
+- **Grouping never moves a project out of its Space.** A new group joins its project's Space, a project taken out of a group stays in that Space, and adding a project to a group in another Space switches the sidebar there.
+- **Marking a notification read clears its session's done or needs-input mark** in every sidebar, and a newly pinned session goes to the bottom of the pinned list.
+- **Search by Prompt follows your theme and window glass,** and its preview text can be selected and copied.
+
+### 🪟 Windows
+- **A clean Windows install gets through first launch and onboarding** without the Visual C++ runtime, and a slow first start (often the antivirus scan) is waited for, with Retry if it fails.
+- **Agent CLIs installed where new terminals cannot find them offer Add to PATH,** and Git and the GitHub CLI installed while Ghostex runs are picked up without a restart.
+- **Opening Ghostex again hands off to the running window at once,** and slow first session starts no longer fail the session.
+
+### 🩹 Fixes
+- **A woken Hermes session resumes under its own profile,** even when the project's Hermes agent uses another one, thanks to @banozz0.
+- **Attaching to a session after Codex's fullscreen view or Claude Code quit keeps the shell history** instead of showing an empty screen.
+
 ## 10.5.5 - 2026-09-28
 
 **Ghostex 10.5.5 is out.** A big round of Windows fixes, from agent startup and accented typing to mouse Back and Forward, Hermes bot sessions that keep their status and chat, large files that open at any size, an optional highlight for unanswered questions, and keyboard and terminal fixes.
