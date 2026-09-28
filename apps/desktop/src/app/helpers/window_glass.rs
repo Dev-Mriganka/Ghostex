@@ -260,9 +260,11 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
     let source = object
         .get("windowGlassSource")
         .and_then(serde_json::Value::as_str);
-    // Linux and macOS implement the complete backdrop API.
+    // The wallpaper, picture and Live backdrops are drawn by the macOS, Windows and Linux window
+    // backends (gpui_macos window_wallpaper.rs / window_live.rs, gpui_windows directx_backdrop.rs,
+    // gpui_linux); Settings offers them only there.
     WINDOW_GLASS_WALLPAPER.store(
-        cfg!(any(target_os = "macos", target_os = "linux"))
+        cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
             && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
         Ordering::Relaxed,
     );
@@ -293,8 +295,10 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
                 .and_then(serde_json::Value::as_str)
                 .and_then(window_glass_video::resolve_glass_video)
         };
-        // A settings file saved before Live took over the videos may still say Video.
-        videos.video = matches!(source, Some("live" | "video"));
+        // A settings file saved before Live took over the videos may still say Video. The user's own
+        // video plays in the macOS and Linux backends; Windows does not offer it.
+        videos.video = cfg!(any(target_os = "macos", target_os = "linux"))
+            && matches!(source, Some("live" | "video"));
         videos.dark = video("windowGlassVideoDark");
         videos.light = video("windowGlassVideoLight");
         videos.only_on_power = object

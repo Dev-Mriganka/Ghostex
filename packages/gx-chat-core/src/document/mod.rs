@@ -4,8 +4,8 @@ mod assemble;
 mod composer;
 mod frame;
 mod panels;
-mod queue;
 mod question;
+mod queue;
 mod snapshot;
 mod transcript;
 mod view;
@@ -18,10 +18,10 @@ pub use crate::document::frame::{Frame, ItemsSplice, MinimapMarker, RowDetails};
 pub use crate::document::panels::{
     AccountStatus, DeferredWorkRow, HostAction, TerminalTail, TerminalTailNotice, WorkingStrip,
 };
-pub use crate::document::queue::{Queue, QueueCapabilities, QueuedPrompt};
 pub use crate::document::question::{
     AsyncQuestions, PendingAsyncQuestion, QuestionCard, QuestionControls, QuestionDraft,
 };
+pub use crate::document::queue::{Queue, QueueCapabilities, QueuedPrompt};
 pub use crate::document::snapshot::Document;
 pub use crate::document::transcript::{ProjectedMessage, TranscriptItem};
 pub use crate::document::view::{EmptyState, NewSessionWelcome, ViewState};

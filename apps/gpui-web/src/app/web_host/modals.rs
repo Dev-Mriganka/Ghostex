@@ -27,6 +27,7 @@ fn opens_in_browser(kind: GpuiAppModalKind) -> bool {
             | GpuiAppModalKind::RecentProjects
             | GpuiAppModalKind::PreviousSessions
             | GpuiAppModalKind::StashedPrompts
+            | GpuiAppModalKind::FindPrompts
     )
 }
 
@@ -82,6 +83,7 @@ impl GhostexGpuiApp {
             | GpuiAppModalKind::StashedPrompts => {
                 self.open_gpui_quick_access_modal(kind, message, cx)
             }
+            GpuiAppModalKind::FindPrompts => self.open_gpui_find_prompts_modal(cx),
             _ => {}
         }
     }

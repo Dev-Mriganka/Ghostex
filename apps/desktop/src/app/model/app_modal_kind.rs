@@ -317,10 +317,7 @@ impl GpuiAppModalKind {
     }
 
     pub(crate) fn uses_react_modal_host(self) -> bool {
-        !matches!(
-            self,
-            Self::FindPrompts | Self::WatchGhostexVideo | Self::Extension(_)
-        )
+        !matches!(self, Self::WatchGhostexVideo | Self::Extension(_))
     }
 
     pub(crate) fn is_settings_modal_entry(self) -> bool {
@@ -341,11 +338,7 @@ impl GpuiAppModalKind {
     /// Settings > Agents), which reads `window.ghostexGpui.gxserverBootstrap`. Without the bootstrap the panel silently
     /// downgrades every Install button to "Install guide", so Onboarding must be in this allowlist.
     pub(crate) fn needs_gxserver_bootstrap(self) -> bool {
-        self.is_settings_modal_entry()
-            || matches!(
-                self,
-                Self::FindPrompts | Self::RemoteSetup | Self::Onboarding
-            )
+        self.is_settings_modal_entry() || matches!(self, Self::RemoteSetup | Self::Onboarding)
     }
 
     pub(crate) fn requires_sidebar_state(self) -> bool {

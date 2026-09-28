@@ -119,12 +119,6 @@ pub(crate) const COMMAND_ACTION_STATUS_POLL_INTERVAL: Duration = Duration::from_
 
 pub(crate) const CEF_DARK_PREPAINT_BACKGROUND_COLOR: u32 = 0xFF0E0E0E;
 
-/* Find keeps the older near-black its own page paints; only the chat surface
-moved. */
-pub(crate) const CEF_FIND_PROMPTS_DARK_PREPAINT_BACKGROUND_COLOR: u32 = 0xFF111111;
-
-pub(crate) const CEF_LIGHT_PREPAINT_BACKGROUND_COLOR: u32 = 0xFFFDFDFD;
-
 /// Matches `ghostexEditorProtocolVersion` in apps/editor/macos DaemonSupport.swift.
 pub(crate) const GHOSTEX_EDITOR_PROTOCOL_VERSION: u64 = 1;
 

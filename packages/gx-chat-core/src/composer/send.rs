@@ -76,6 +76,7 @@ pub fn begin(
         state.core.fail(refused, None);
         return vec![submission_failed(mode, text)];
     }
+    let version = version.map(|version| unconsumed_version(state, context, version));
     let capabilities = crate::composer::document::queue(state).capabilities;
     let steps = match submission_steps(
         text,
@@ -125,6 +126,41 @@ pub fn begin(
         awaiting_gate: false,
     });
     run_head(state, context)
+}
+
+/// Whether gxserver's receipts say this revision (or a later one of the same draft) was already sent.
+fn is_consumed(state: &ChatState, version: &crate::composer::queue::DraftVersion) -> bool {
+    state
+        .session
+        .synced_draft
+        .as_ref()
+        .and_then(|draft| draft.get("consumedDrafts"))
+        .and_then(Value::as_array)
+        .is_some_and(|receipts| {
+            receipts.iter().any(|receipt| {
+                receipt.get("draftId").and_then(Value::as_str) == Some(&version.draft_id)
+                    && js_number_of(receipt.get("revision"))
+                        .is_some_and(|revision| revision >= version.revision as f64)
+            })
+        })
+}
+
+/// The identity a send goes out under: a fresh one when the composer's is already sent.
+///
+/// CDXC:Drafts 2026-09-27 WHY:
+/// gxserver refuses a send whose draft revision it already consumed ("The submitted draft revision is no longer available"), which is right for a retried copy of one submission. But the composer can still hold a consumed identity when the user presses Enter: on 2026-09-27 a "continue" typed under revision 11 of one draft went out at 09:40, and at 18:16 Enter sent "continue" again under that same revision. The save before the send was silently ignored as obsolete, the send bounced, and the text only went on the second Enter because the restored text had a new identity. A user's Enter is a new submission, so it gets a new identity here; a retry of one submission keeps its own and is still refused.
+fn unconsumed_version(
+    state: &ChatState,
+    context: &ChatContext,
+    version: crate::composer::queue::DraftVersion,
+) -> crate::composer::queue::DraftVersion {
+    if !is_consumed(state, &version) {
+        return version;
+    }
+    crate::composer::queue::DraftVersion {
+        draft_id: context.random_id(1),
+        revision: 1,
+    }
 }
 
 /// Runs the head phase, or finishes the submission when the list has run out.
@@ -664,21 +700,9 @@ pub fn receive_handoff(
     {
         return Vec::new();
     }
-    let consumed = version.as_ref().is_some_and(|version| {
-        state
-            .session
-            .synced_draft
-            .as_ref()
-            .and_then(|draft| draft.get("consumedDrafts"))
-            .and_then(Value::as_array)
-            .is_some_and(|receipts| {
-                receipts.iter().any(|receipt| {
-                    receipt.get("draftId").and_then(Value::as_str) == Some(&version.draft_id)
-                        && js_number_of(receipt.get("revision"))
-                            .is_some_and(|revision| revision >= version.revision as f64)
-                })
-            })
-    });
+    let consumed = version
+        .as_ref()
+        .is_some_and(|version| is_consumed(state, version));
     state
         .composer
         .receiving_handoffs

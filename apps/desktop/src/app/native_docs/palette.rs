@@ -47,7 +47,6 @@ pub(crate) struct DocsPalette {
     pub(crate) danger: Hsla,
     pub(crate) green: Hsla,
     pub(crate) amber: Hsla,
-    pub(crate) send: Hsla,
 }
 
 fn ink(light: bool, alpha: f32) -> Hsla {
@@ -124,7 +123,6 @@ impl DocsPalette {
             danger: pick(light, 0xbe123c, 0xfda4af),
             green: pick(light, 0x15803d, 0x86efac),
             amber: rgb(0xfbbf24).into(),
-            send: pick(light, 0x0f766e, 0x8ed3f3),
         }
     }
 }

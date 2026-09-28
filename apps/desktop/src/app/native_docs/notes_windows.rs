@@ -7,8 +7,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    AnyElement, AppContext as _, Bounds, Context, IntoElement, Pixels, Render, Styled as _,
-    Subscription, WeakEntity, Window, WindowBounds, WindowOptions, div, px,
+    AnyElement, AppContext as _, Bounds, Context, InteractiveElement as _, IntoElement,
+    ParentElement as _, Pixels, Render, Styled as _, Subscription, WeakEntity, Window,
+    WindowBounds, WindowOptions, div, px,
 };
 use gpui_component::Root;
 
@@ -45,6 +46,23 @@ pub(crate) struct DocsNotesWindows {
 struct DocsComposerWindowView {
     app: WeakEntity<GhostexGpuiApp>,
     _observe: Subscription,
+    _activation: Subscription,
+}
+
+impl DocsComposerWindowView {
+    /// CDXC:Docs 2026-09-27 WHY:
+    /// User: "I cant type in the Add a comment modal" of the Docs view under glass. The field used to be focused once, a frame after it was made, so a window that became key only later (or again, after a click elsewhere) held no focused field and dropped every key. The window focuses its field each time it becomes the key window, the way the native dialogs focus theirs.
+    fn focus_field(&self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let input = app
+            .read(cx)
+            .native_docs_composer_input_in(window.window_handle());
+        if let Some(input) = input {
+            input.update(cx, |input, cx| input.focus(window, cx));
+        }
+    }
 }
 
 impl Render for DocsComposerWindowView {
@@ -52,9 +70,25 @@ impl Render for DocsComposerWindowView {
         let Some(app) = self.app.upgrade() else {
             return div().into_any_element();
         };
-        app.update(cx, |app, cx| {
+        let panel = app.update(cx, |app, cx| {
             app.render_native_docs_composer_window(window, cx)
-        })
+        });
+        div()
+            .size_full()
+            .capture_key_down(|event: &gpui::KeyDownEvent, window, cx| {
+                let key = &event.keystroke.key;
+                crate::support_logs::append(
+                    crate::support_logs::GpuiSupportLog::TerminalFocus,
+                    "TEMP.gpui.docsComposer.keyDown",
+                    serde_json::json!({
+                        "key": if key.chars().count() == 1 { "char" } else { key.as_str() },
+                        "windowActive": window.is_window_active(),
+                        "somethingFocused": window.focused(cx).is_some(),
+                    }),
+                );
+            })
+            .child(panel)
+            .into_any_element()
     }
 }
 
@@ -251,9 +285,23 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
             crate::app::window::popup_frame::strip_gpui_popup_window_frame(window);
             // Kept above the main window and made key, so the text field takes the keyboard.
             crate::app::window::attach_gpui_app_modal_window_to_main_window(window, parent);
+            window.activate_window();
             let view = cx.new(|cx| DocsComposerWindowView {
                 app: observed.downgrade(),
                 _observe: cx.observe(&observed, |_, _, cx| cx.notify()),
+                _activation: cx.observe_window_activation(
+                    window,
+                    |view: &mut DocsComposerWindowView, window, cx| {
+                        crate::support_logs::append(
+                            crate::support_logs::GpuiSupportLog::TerminalFocus,
+                            "TEMP.gpui.docsComposer.windowActivation",
+                            serde_json::json!({ "active": window.is_window_active() }),
+                        );
+                        if window.is_window_active() {
+                            view.focus_field(window, cx);
+                        }
+                    },
+                ),
             });
             cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
         },

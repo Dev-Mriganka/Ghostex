@@ -62,17 +62,44 @@ pub(super) fn path(path: &Path) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
-pub(super) fn cli_status() -> super::WindowsWslGhostexCliStatus {
-    let mut status = super::WindowsWslGhostexCliStatus::default();
-    if let Some(path) = std::env::current_exe()
+pub(super) fn cli_path() -> Option<PathBuf> {
+    std::env::current_exe()
         .ok()
         .and_then(|path| {
             path.parent()
                 .map(|parent| parent.join("resources/native/ghostex.exe"))
         })
         .filter(|path| path.is_file())
-    {
-        status.ghostex_path = Some(path.to_string_lossy().into_owned());
+}
+
+pub(super) fn cli_status() -> super::WindowsWslGhostexCliStatus {
+    let storage = crate::shared_settings::ghostex_storage_paths();
+    let home = if crate::app::helpers::gpui_uses_isolated_storage() {
+        &storage.data_dir
+    } else {
+        &storage.home_dir
+    };
+    let skill_path = |name: &str| {
+        let path = home.join(".agents/skills").join(name).join("SKILL.md");
+        path.is_file().then(|| path.to_string_lossy().into_owned())
+    };
+    let gx_path = crate::app::helpers::gpui_which_command("gx");
+    let gx_usable = gx_path
+        .as_ref()
+        .is_some_and(|path| crate::app::helpers::gpui_is_probably_ghostex_command(path, "gx"));
+    super::WindowsWslGhostexCliStatus {
+        ghostex_path: cli_path().map(|path| path.to_string_lossy().into_owned()),
+        gx_blocked_by_existing_command: gx_path.is_some() && !gx_usable,
+        gx_path: gx_path.map(|path| path.to_string_lossy().into_owned()),
+        gx_usable,
+        cli_skill_path: skill_path("ghostex-cli"),
+        browser_skill_path: skill_path("ghostex-browser-use"),
+        computer_use_skill_path: skill_path("ghostex-computer-use"),
+        embedded_browser_skill_path: skill_path("ghostex-embedded-browser-use"),
+        agents_orchestration_skill_path: skill_path("ghostex-agents"),
+        manage_beads_skill_path: skill_path("ghostex-manage-beads"),
+        generate_title_skill_path: skill_path("ghostex-auto-rename-session"),
+        move_codex_session_skill_path: skill_path("ghostex-move-codex-session"),
+        help_skill_path: skill_path("ghostex-help"),
     }
-    status
 }

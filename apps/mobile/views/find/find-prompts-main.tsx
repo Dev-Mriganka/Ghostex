@@ -18,8 +18,9 @@ import type { FindPromptsTransport } from '@/packages/core-ui/find/find-prompts-
 CDXC:PromptSearch 2026-08-20:
 Find page for the React Native app — the GUI for `gx f` — bundled by
 tooling/build-mobile-find.mjs into one self-contained HTML string the app loads
-in a react-native-webview. It mounts the same shared FindPromptsView as gpui's
-find.html and the web app; only the transport differs. The phone has no HTTP
+in a react-native-webview. It mounts the shared FindPromptsView, which the
+desktop's native Search by Prompt window (apps/desktop/src/app/window/find_prompts/)
+mirrors; only the transport differs. The phone has no HTTP
 path to gxserver (SSH only), so every transport call crosses a postMessage
 bridge to React Native, which SSH-execs the matching `ghostex` CLI verb on the
 machine. The RN side stays a dumb verb runner so all Find behavior lives in

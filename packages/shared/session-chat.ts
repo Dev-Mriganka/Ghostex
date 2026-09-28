@@ -51,10 +51,9 @@ export interface SessionChatPendingModelSelection {
 }
 
 /**
- * CDXC:SessionChat 2026-09-18 DECISION:
- * User: a chat model pick can apply to this session alone instead of changing the agent's saved default.
- * `'session'` is Claude-only: its `/model` picker answers `s` with "for this session only", while confirming Codex's
- * picker rewrites `model` and `model_reasoning_effort` in `~/.codex/config.toml` with no way to opt out.
+ * CDXC:SessionChat 2026-09-27 DECISION:
+ * User: a chat model pick can apply to this session alone instead of changing the agent's saved default (2026-09-18), and Codex uses its own session choice too (2026-09-27).
+ * `'session'` works for Claude (its `/model` list answers `s` with "for this session only"), Codex 0.157 or newer (`s session` in its reasoning lists, answered "for this conversation") and OpenCode. This supersedes Claude-only session picks.
  * SEE-ALSO: server/src/session_chat_codex_picker.rs drives both scopes; server/src/session_chat_model_selection.rs
  * carries this through the durable queue.
  */

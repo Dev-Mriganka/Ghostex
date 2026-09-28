@@ -1,8 +1,8 @@
 use ghostex_gx_chat_core::menus::{
     catalog::parse_agent_model_catalog,
-    option_catalog::{OptionDispatch, session_option_catalog},
+    option_catalog::{session_option_catalog, OptionDispatch},
     picker::{
-        model_picker::{ModelPickerProvider, ModelSelectionScope, model_pick_scope},
+        model_picker::{model_pick_scope, ModelPickerProvider, ModelSelectionScope},
         request::create_model_picker_request,
     },
 };

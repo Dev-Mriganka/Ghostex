@@ -236,6 +236,16 @@ impl GhostexGpuiApp {
             titlebar_icon_color()
         };
         let button_bounds = self.titlebar_more_button_bounds.clone();
+        // The ⋯ button anchors its own menu and every panel its rows open.
+        let anchored_kinds: Vec<GpuiTitlebarPopupKind> =
+            std::iter::once(GpuiTitlebarPopupKind::More)
+                .chain(
+                    self.titlebar_more_menu_items()
+                        .into_iter()
+                        .filter_map(GpuiTitlebarMoreMenuItem::popup_kind),
+                )
+                .collect();
+        let app = cx.entity().downgrade();
 
         div()
             .id("ghostex-gpui-titlebar-button-more")
@@ -275,12 +285,19 @@ impl GhostexGpuiApp {
                     this.toggle_gpui_titlebar_more_menu(window, cx);
                 }),
             )
-            .on_prepaint(move |bounds, window, _cx| {
+            .on_prepaint(move |bounds, window, cx| {
                 let moved = button_bounds.get() != Some(bounds);
                 button_bounds.set(Some(bounds));
                 if moved {
                     window.request_animation_frame();
                 }
+                GhostexGpuiApp::open_pending_titlebar_popup(
+                    app.clone(),
+                    &anchored_kinds,
+                    bounds,
+                    window,
+                    cx,
+                );
             })
             .child(titlebar_svg_icon(TITLEBAR_ICON_DOTS, 16.0, icon_color))
             .into_any_element()

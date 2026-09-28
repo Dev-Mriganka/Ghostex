@@ -18,18 +18,25 @@ mod transcript_view;
 pub use crate::state::chat::{ChatState, CoreState, PublishAwait};
 pub use crate::state::composer::{ComposerState, Submission};
 pub use crate::state::context::{ChatContext, FormattedTime, FormattedTimeStyle};
-pub use crate::state::extras::{ExtrasState, PanelsState, SaveMarkdownRequest, SaveMarkdownSheet, SaveMarkdownStage, SaveMarkdownState, SearchState, SubagentGap, SubagentRequest, SubagentState, SubagentTarget, TerminalTailState, WorkingWordState, LOADING_STAGE_BLANK, LOADING_STAGE_INDICATOR, LOADING_STAGE_RETRY};
+pub use crate::state::extras::{
+    ExtrasState, PanelsState, SaveMarkdownRequest, SaveMarkdownSheet, SaveMarkdownStage,
+    SaveMarkdownState, SearchState, SubagentGap, SubagentRequest, SubagentState, SubagentTarget,
+    TerminalTailState, WorkingWordState, LOADING_STAGE_BLANK, LOADING_STAGE_INDICATOR,
+    LOADING_STAGE_RETRY,
+};
 pub use crate::state::menus::{DraftAgentSwitch, MenusState};
 pub use crate::state::messages::{
     FramePosition, LoadEarlierRequest, MessagesState, OutstandingRead, ReadKind, ResyncState,
 };
 pub use crate::state::pending::{CommandMarker, PendingSend, PendingState, TerminalStream};
-pub use crate::state::pickers::{ContextPreferencesByAgent, ContextState, ForkBranchesState, PickersState};
+pub use crate::state::pickers::{
+    ContextPreferencesByAgent, ContextState, ForkBranchesState, PickersState,
+};
 pub use crate::state::questions::{
     AnswerRequest, AsyncQuestionsState, AsyncSubmit, QuestionsState,
 };
 pub use crate::state::session::{SessionIdentity, SessionState};
 pub use crate::state::transcript_view::{
-    ProjectedMessage, ProjectionInputs,
-    OpenRow, RewindRequest, TranscriptViewState, BACKFILL_BATCH, EAGER_TAIL_ITEMS, ROOT_AGENT_PATH,
+    OpenRow, ProjectedMessage, ProjectionInputs, RewindRequest, TranscriptViewState,
+    BACKFILL_BATCH, EAGER_TAIL_ITEMS, ROOT_AGENT_PATH,
 };

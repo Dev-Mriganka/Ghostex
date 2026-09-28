@@ -55,6 +55,15 @@ const CODEX_ADVANCED_REASONING_TITLE: &str = "Advanced Reasoning";
 const CODEX_MODEL_CHANGED_PREFIX: &str = "Model changed to ";
 /// Highlight marker on the picker's current row (and Codex's composer prompt).
 const CODEX_CURSOR: char = '\u{203a}';
+/// The reasoning lists' footer names this key since Codex 0.157 (`enter default · s session · esc back`).
+const CODEX_SESSION_KEY_HINT: &str = "s session";
+const CODEX_SESSION_KEY: &str = "s";
+/// What Codex adds to its change line when `s` applied the pick to this conversation alone.
+const CODEX_SESSION_CHANGED_SUFFIX: &str = "for this conversation";
+const CODEX_ARROW_UP: &str = "\u{1b}[A";
+const CODEX_ARROW_DOWN: &str = "\u{1b}[B";
+/// One press per row of the longest reasoning list, with slack.
+const CODEX_ROW_STEP_LIMIT: usize = 12;
 const CODEX_ULTRA_CURSOR: char = '\u{00bb}';
 
 /// Typed as a bracketed paste; its list lives in session_chat_claude_model_list.rs.
@@ -162,10 +171,13 @@ struct PickerRow {
     number: u32,
     /// The row text after `N.`, with the highlight marker removed.
     text: String,
+    /// Whether the highlight marker sits on this row.
+    selected: bool,
 }
 
 /// `› 2. gpt-5.6-terra (current) Balanced agentic …` → number 2, text after the dot.
 fn parse_picker_row(line: &str) -> Option<PickerRow> {
+    let selected = line.starts_with(CODEX_CURSOR);
     let rest = line
         .strip_prefix(CODEX_CURSOR)
         .map(str::trim_start)
@@ -176,6 +188,7 @@ fn parse_picker_row(line: &str) -> Option<PickerRow> {
     (!text.is_empty()).then(|| PickerRow {
         number,
         text: text.to_string(),
+        selected,
     })
 }
 
@@ -205,6 +218,20 @@ fn effort_picker_rows(screen: &str, model: &str) -> Option<Vec<PickerRow>> {
     picker_rows_under(&screen_lines(screen), |line| {
         line.eq_ignore_ascii_case(&expected)
     })
+}
+
+/// Whether the reasoning list for `model` offers Codex's session key; builds before 0.157 do not.
+fn effort_picker_offers_session(screen: &str, model: &str) -> bool {
+    let expected = format!("{CODEX_EFFORT_PICKER_TITLE_PREFIX}{model}");
+    let lines = screen_lines(screen);
+    lines
+        .iter()
+        .rposition(|line| line.eq_ignore_ascii_case(&expected))
+        .is_some_and(|title| {
+            lines[title + 1..]
+                .iter()
+                .any(|line| line.contains(CODEX_SESSION_KEY_HINT))
+        })
 }
 
 fn advanced_effort_picker_rows(screen: &str) -> Option<Vec<PickerRow>> {
@@ -272,14 +299,18 @@ fn row_key(row: &PickerRow, step: &str) -> Result<String, DomainStateError> {
     }
 }
 
-fn changed_line_present(screen: &str, model: &str, effort: &str) -> bool {
+/// `• Model changed to gpt-6-luna low`, or with ` for this conversation` after a session pick,
+/// which is the only proof that `s` applied it without saving the default.
+fn changed_line_present(screen: &str, model: &str, effort: &str, session_only: bool) -> bool {
     let expected = format!("{CODEX_MODEL_CHANGED_PREFIX}{model} {effort}");
     screen_lines(screen).iter().any(|line| {
         let rest = line
             .strip_prefix(CODEX_CURSOR)
             .map(str::trim_start)
             .unwrap_or(line);
-        rest.trim_start_matches(['•', ' ']).starts_with(&expected)
+        rest.trim_start_matches(['•', ' '])
+            .strip_prefix(&expected)
+            .is_some_and(|tail| !session_only || tail.trim() == CODEX_SESSION_CHANGED_SUFFIX)
     })
 }
 
@@ -725,6 +756,46 @@ impl PickerDriver<'_> {
         Ok(())
     }
 
+    /// CDXC:SessionChat 2026-09-27 DECISION:
+    /// User: Codex uses its own "this session only" choice, which Codex 0.157 added to its reasoning lists as `s session`. A session pick highlights the reasoning row with arrows and answers `s`, and succeeds only on Codex's "Model changed to <model> <effort> for this conversation".
+    /// A row digit is never used for it (a digit saves the default), nor the Shift+Up/Down reasoning shortcut, whose effect on `~/.codex/config.toml` is unverified.
+    /// SEE-ALSO: server/src/session_chat_model_selection.rs read_scope, packages/gx-chat-core/src/menus/picker/model_picker.rs model_picker_supports_session_scope.
+    ///
+    /// Each press is read back before the next, because Codex can coalesce a burst of keys.
+    async fn answer_codex_row_for_session(
+        &self,
+        step: &str,
+        to: u32,
+        rows: impl Fn(&str) -> Option<Vec<PickerRow>>,
+    ) -> Result<(), DomainStateError> {
+        let highlighted = |screen: &str| {
+            rows(screen)?
+                .into_iter()
+                .find(|row| row.selected)
+                .map(|row| row.number)
+        };
+        for _ in 0..CODEX_ROW_STEP_LIMIT {
+            let from = self.wait_for(step, highlighted).await?;
+            if from == to {
+                return self.write(CODEX_SESSION_KEY).await;
+            }
+            self.write(if to > from {
+                CODEX_ARROW_DOWN
+            } else {
+                CODEX_ARROW_UP
+            })
+            .await?;
+            self.wait_for(step, |screen| {
+                highlighted(screen).filter(|landed| *landed != from)
+            })
+            .await?;
+        }
+        Err(dialog_mismatch(
+            step,
+            "the highlight never reached the row, so it was not applied.",
+        ))
+    }
+
     async fn drive(&self, plan: &CodexPickerPlan) -> Result<(), DomainStateError> {
         // Re-checked here, one instant before the first keystroke, because the
         // handler's check ran before this job reached the front of the queue.
@@ -761,7 +832,9 @@ impl PickerDriver<'_> {
             if effort.value == plan.effort {
                 return Ok(());
             }
-            if !matches!(plan.effort.as_str(), "max" | "ultra") {
+            // A session pick always goes through the list's `s`: the reasoning shortcut is not
+            // known to leave the saved default alone.
+            if !plan.session_only && !matches!(plan.effort.as_str(), "max" | "ultra") {
                 return self.change_effort(plan, &effort.value).await;
             }
         }
@@ -799,8 +872,25 @@ impl PickerDriver<'_> {
         let effort_rows = self
             .wait_for("effort", |screen| effort_picker_rows(screen, &plan.model))
             .await?;
+        if plan.session_only
+            && !self
+                .capture()
+                .await
+                .is_some_and(|screen| effort_picker_offers_session(&screen, &plan.model))
+        {
+            return Err(unsupported_selection(
+                "This Codex version cannot apply a model to one conversation. Update Codex, or save the pick as the default.",
+            ));
+        }
         if let Some(row) = effort_rows.iter().find(|row| row_names(row, effort_label)) {
-            self.write(&row_key(row, "effort")?).await?;
+            if plan.session_only {
+                self.answer_codex_row_for_session("effort", row.number, |screen| {
+                    effort_picker_rows(screen, &plan.model)
+                })
+                .await?;
+            } else {
+                self.write(&row_key(row, "effort")?).await?;
+            }
         } else if let Some(more) = effort_rows
             .iter()
             .find(|row| row.text.starts_with(CODEX_MORE_REASONING_ROW))
@@ -813,7 +903,16 @@ impl PickerDriver<'_> {
                         .and_then(|rows| rows.into_iter().find(|row| row_names(row, effort_label)))
                 })
                 .await?;
-            self.write(&row_key(&row, "more reasoning")?).await?;
+            if plan.session_only {
+                self.answer_codex_row_for_session(
+                    "more reasoning",
+                    row.number,
+                    advanced_effort_picker_rows,
+                )
+                .await?;
+            } else {
+                self.write(&row_key(&row, "more reasoning")?).await?;
+            }
         } else {
             let listed = effort_rows
                 .iter()
@@ -829,7 +928,7 @@ impl PickerDriver<'_> {
         self.wait_for("confirm", |screen| {
             let selection = detect_session_chat_selection(SessionChatOptionAgent::Codex, screen)?;
             // Earlier visits can leave the same confirmation line in scrollback.
-            (changed_line_present(screen, &plan.model, &plan.effort)
+            (changed_line_present(screen, &plan.model, &plan.effort, plan.session_only)
                 && !any_picker_open(screen)
                 && selection.model.as_ref()?.value == plan.model
                 && selection.effort.as_ref()?.value == plan.effort)

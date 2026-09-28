@@ -426,27 +426,54 @@ impl GpuiContextMenu {
         })
     }
 
+    /// CDXC:ContextMenus 2026-09-28 WHY:
+    /// A row dispatches from the element that had focus when the menu opened, so handlers local to
+    /// that element still see it. When that element is no longer drawn (the Code tab was closed
+    /// while it held focus) or nothing had focus, GPUI starts the dispatch at the window root, above
+    /// the app's `on_action` listeners, and the row did nothing: `+` → Code after closing Code. Those
+    /// rows dispatch from the app's always-drawn `root_action_focus_handle` instead; menus opened
+    /// from another window keep the old path because that handle is not drawn there.
     fn popup_menu_item(&self, row: &ContextMenuRow) -> PopupMenuItem {
         let action = row.action.boxed_clone();
         let source_window = self.source_window;
         let source_focus = self.source_focus.clone();
+        let app = self.app.clone();
         Self::row_element(row.label.clone(), row.icon, row.disabled, false)
             .disabled(row.disabled)
             .checked(row.checked)
             .on_click(move |_, _, cx| {
                 let action = action.boxed_clone();
                 let source_focus = source_focus.clone();
+                let app = app.clone();
                 // PopupMenu dismisses after this callback; dispatch afterward so an action
                 // that opens another popup cannot have it closed by this menu's dismissal.
                 cx.defer(move |cx| {
-                    if let Some(source_window) = source_window {
-                        let _ = source_window.update(cx, |_, window, cx| {
-                            if let Some(focus) = source_focus {
-                                focus.focus(window, cx);
-                            }
-                            window.dispatch_action(action, cx);
+                    let Some(source_window) = source_window else {
+                        return;
+                    };
+                    let _ = source_window.update(cx, |_, window, cx| {
+                        // Only the window the app itself draws has the handle to fall back to.
+                        let root_focus = app.and_then(|app| app.upgrade()).filter(|app| {
+                            window.root::<Root>().flatten().is_some_and(|root| {
+                                root.read(cx).view().entity_id() == app.entity_id()
+                            })
                         });
-                    }
+                        let root_focus =
+                            root_focus.map(|app| app.read(cx).root_action_focus_handle.clone());
+                        let drawn_source_focus = source_focus.filter(|focus| {
+                            root_focus
+                                .as_ref()
+                                .is_none_or(|root| root.contains(focus, window))
+                        });
+                        match (drawn_source_focus, root_focus) {
+                            (Some(focus), _) => {
+                                focus.focus(window, cx);
+                                window.dispatch_action(action, cx);
+                            }
+                            (None, Some(root)) => root.dispatch_action(action.as_ref(), window, cx),
+                            (None, None) => window.dispatch_action(action, cx),
+                        }
+                    });
                 });
             })
     }

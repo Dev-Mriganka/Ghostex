@@ -66,6 +66,14 @@ impl GhostexGpuiApp {
             {
                 self.run_quick_access_command_row(command_type, &command, window, cx);
             }
+            // Search by Prompt (the Commands row and the More menu's entry); other hotkey actions need the desktop.
+            "runGhostexHotkeyAction" if text("actionId").as_deref() == Some("openFindPrompts") => {
+                self.close_gpui_quick_access_window(cx);
+                self.open_app_modal_from_bridge(
+                    json!({ "modal": "findPrompts", "type": "open" }),
+                    cx,
+                );
+            }
             "openBrowserChat" => {
                 self.gx_store_run_app_modal_create_command(&command_type, cx);
             }

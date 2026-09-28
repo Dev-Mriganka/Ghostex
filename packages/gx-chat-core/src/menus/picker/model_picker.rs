@@ -119,10 +119,15 @@ impl ModelSelectionScope {
 
 /// Whether this agent's own picker can apply a choice without changing its saved default.
 ///
-/// Claude Code's `/model` list answers `s` with "for this session only"; Codex's picker writes
-/// `model` and `model_reasoning_effort` into `~/.codex/config.toml` on every confirm.
+/// Claude Code's `/model` list answers `s` with "for this session only", and Codex 0.157 added the
+/// same key to its reasoning lists ("for this conversation"); gxserver refuses the session pick on
+/// an older Codex rather than saving the default. SEE-ALSO: server/src/session_chat_model_selection.rs
+/// read_scope (the 2026-09-27 decision).
 pub fn model_picker_supports_session_scope(provider: ModelPickerProvider) -> bool {
-    matches!(provider, ModelPickerProvider::Claude | ModelPickerProvider::OpenCode)
+    matches!(
+        provider,
+        ModelPickerProvider::Claude | ModelPickerProvider::Codex | ModelPickerProvider::OpenCode
+    )
 }
 
 /// CDXC:SessionChat 2026-09-21 DECISION:
@@ -143,7 +148,7 @@ pub fn model_pick_scope(
     }
 }
 
-/// Shown for every agent whose picker cannot apply a choice to one session: Codex, Cursor, Grok,
+/// Shown for every agent whose picker cannot apply a choice to one session: Cursor, Grok,
 /// Antigravity.
 pub const MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON: &str =
     "This agent's model picker always saves the choice as its default.";

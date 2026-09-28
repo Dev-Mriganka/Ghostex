@@ -62,8 +62,8 @@ pub(crate) fn current_process_is_elevated() -> io::Result<bool> {
     token_is_elevated(&current_process_token()?)
 }
 
-/// CDXC:PlatformSupport 2026-09-26 DECISION:
-/// The user decided agents on Windows run without administrator rights, so Codex works "and not fight their updates", and without `--no-daemon`. Codex 0.157 refuses to start its shared background server from an elevated process, and Windows OpenSSH hands Administrators-group accounts a full admin token, so a gxserver started by a remote client (or from an admin terminal) passed admin rights to every wmx session and agent. When the caller is elevated, gxserver is started with the token UAC would give the same user: administrative groups deny-only, only standard-user privileges, Medium integrity, and the user as owner of what it creates.
+/// CDXC:PlatformSupport 2026-09-28 DECISION:
+/// The user decided agents on Windows run without administrator rights, so Codex works "and not fight their updates". This supersedes the 2026-09-26 wording "and without `--no-daemon`": Ghostex now launches Codex with `--no-daemon` on every platform (see `agents/codex_daemon.rs`), and standard rights still matter for everything else an agent runs. Codex 0.157 refuses to start its shared background server from an elevated process, and Windows OpenSSH hands Administrators-group accounts a full admin token, so a gxserver started by a remote client (or from an admin terminal) passed admin rights to every wmx session and agent. When the caller is elevated, gxserver is started with the token UAC would give the same user: administrative groups deny-only, only standard-user privileges, Medium integrity, and the user as owner of what it creates.
 ///
 /// CDXC:PlatformSupport 2026-09-26 WHY:
 /// The token is derived from the caller's own so CreateProcessAsUserW needs no SeAssignPrimaryTokenPrivilege and the server stays outside any job. Relaunching through Task Scheduler or with the desktop shell's token was tried: both put the server in a job that forbids breakaway, which makes Codex refuse again ("host Job Object prevents daemon detachment").

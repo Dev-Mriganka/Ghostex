@@ -25,8 +25,9 @@ let posterPhase: Float = 19.4
 // LIVE_PERIOD in window_live.rs.
 let period: Float = 120.0
 let measure = CommandLine.arguments.contains("--measure")
-// Settings' default Brightness (`windowGlassLiveBrightness`, 45%) for --measure; posters use 100%.
-let drawBrightness: Float = measure ? 0.45 : 1.0
+// Settings' default Brightness (`windowGlassLiveBrightness`, 60%), for --measure and the posters, so the
+// style cards show what the window draws by default.
+let drawBrightness: Float = 0.60
 
 struct Uniforms {
     var resolution: SIMD2<Float>
@@ -48,7 +49,7 @@ func rgb(_ hex: UInt32) -> SIMD4<Float> {
 
 // Dark and light samples in the shape `live_background_colors` (window_glass_live.rs) produces.
 let palettes: [(String, [SIMD4<Float>])] = [
-    ("dark", [rgb(0x0e1522), rgb(0x2f5d8f), rgb(0x5fb2e6)]),
+    ("dark", [rgb(0x0e1522), rgb(0x3a73b1), rgb(0x69b7e8)]),
     ("light", [rgb(0xe9eef5), rgb(0xa9c3e3), rgb(0x79b9e0)]),
 ]
 
