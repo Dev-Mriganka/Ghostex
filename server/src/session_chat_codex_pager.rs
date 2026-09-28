@@ -27,6 +27,22 @@ pub(crate) fn codex_escape_would_open_transcript_pager(screen: &str) -> bool {
     })
 }
 
+/// CDXC:SessionChat 2026-09-28 WHY:
+/// Codex's fullscreen view (the default since 0.157) binds Escape to its own transcript while the user has text selected ("esc clear"), a search open ("esc close") or the view scrolled up ("enter/esc latest"), and its footer says so. Chat Stop's single Escape then only cleared the selection or returned to the bottom while the turn kept streaming, so the interrupt dismisses what this footer names first.
+pub(crate) fn codex_escape_would_dismiss_transcript_interaction(screen: &str) -> bool {
+    let screen = strip_ansi_sgr(screen);
+    let Some(footer) = screen.lines().rev().find(|line| !line.trim().is_empty()) else {
+        return false;
+    };
+    let footer = normalize_spaces(footer)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    footer.split(" · ").any(|hint| {
+        matches!(hint, "esc clear" | "esc close" | "esc") || hint.ends_with("esc latest")
+    })
+}
+
 pub(crate) fn transcript_pager_footer(screen: &str) -> Option<String> {
     let footer = screen.lines().rev().find(|line| !line.trim().is_empty())?;
     let footer = normalize_spaces(&strip_ansi_sgr(footer))

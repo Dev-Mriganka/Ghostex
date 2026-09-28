@@ -58,8 +58,10 @@ const CODEX_CURSOR: char = '\u{203a}';
 /// The reasoning lists' footer names this key since Codex 0.157 (`enter default · s session · esc back`).
 const CODEX_SESSION_KEY_HINT: &str = "s session";
 const CODEX_SESSION_KEY: &str = "s";
-/// What Codex adds to its change line when `s` applied the pick to this conversation alone.
-const CODEX_SESSION_CHANGED_SUFFIX: &str = "for this conversation";
+/// CDXC:AgentScreenDetection 2026-09-28 WHY:
+/// What Codex adds to its change line when `s` applied the pick to this conversation alone. Codex 0.157 prints `for this session only` (`tui/src/app/model_defaults.rs`) while its conversation-default path still prints `for this conversation`; accepting only the older wording timed out every session-scoped pick after the change had already been applied.
+const CODEX_SESSION_CHANGED_SUFFIXES: [&str; 2] =
+    ["for this session only", "for this conversation"];
 const CODEX_ARROW_UP: &str = "\u{1b}[A";
 const CODEX_ARROW_DOWN: &str = "\u{1b}[B";
 /// One press per row of the longest reasoning list, with slack.
@@ -310,7 +312,9 @@ fn changed_line_present(screen: &str, model: &str, effort: &str, session_only: b
             .unwrap_or(line);
         rest.trim_start_matches(['•', ' '])
             .strip_prefix(&expected)
-            .is_some_and(|tail| !session_only || tail.trim() == CODEX_SESSION_CHANGED_SUFFIX)
+            .is_some_and(|tail| {
+                !session_only || CODEX_SESSION_CHANGED_SUFFIXES.contains(&tail.trim())
+            })
     })
 }
 

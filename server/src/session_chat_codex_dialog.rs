@@ -1159,22 +1159,54 @@ fn history_without_composer(text: &str) -> Vec<String> {
     }) {
         lines.truncate(composer);
     }
-    while lines.last().is_some_and(|line| line.trim().is_empty()) {
+    while lines
+        .last()
+        .is_some_and(|line| line.trim().is_empty() || is_composer_gap_line(line))
+    {
         lines.pop();
     }
     lines
 }
 
+/// CDXC:AgentScreenDetection 2026-09-28 WHY:
+/// Codex's fullscreen view (the default since 0.157) draws a centred turn tip, the "↓ Back to bottom" pill and copy feedback in the gap above its composer, and moves them below every new output. Left in the history, the pre-send anchor ended on the tip, the only suffix still found after `/status` was the tip itself, now under the result, and the command's output came back empty. They are chrome, never output, so they are dropped with the composer. The indent test keeps a transcript line of the agent's own ("  Tip: …" in an answer) as text.
+fn is_composer_gap_line(line: &str) -> bool {
+    let text = line.trim();
+    line.len() - line.trim_start().len() >= 3
+        && [
+            "Tip:",
+            "↓",
+            "New activity",
+            "New ·",
+            "Copied",
+            "Copying",
+            "Copy ",
+        ]
+        .iter()
+        .any(|prefix| text.starts_with(prefix))
+}
+
 /// Only newly printed command output, excluding the previous conversation and
 /// the returned composer. A live dialog has its own card instead.
-pub fn codex_command_output(before: &str, after: &str) -> Option<String> {
+pub fn codex_command_output(command: &str, before: &str, after: &str) -> Option<String> {
     if detect_codex_dialog(after).is_some() {
         return None;
     }
     let before = history_without_composer(before);
     let after = history_without_composer(after);
-    let output =
-        crate::session_chat_local_command::newly_printed_lines(&before, &after)?.join("\n");
+    /*
+    CDXC:AgentScreenDetection 2026-09-28 WHY:
+    Codex prints the command it ran (`/status`) on its own line above the result. When the pre-send tail is gone from a short grid (chat view parks fullscreen Codex at about 24 rows), the latest echo still attributes what follows it, the way Claude's echo does. With neither anchor there is no result: Codex keeps the newest read, so a guessed cut-off would overwrite a good one.
+    */
+    let printed =
+        crate::session_chat_local_command::newly_printed_lines(&before, &after).or_else(|| {
+            let command = command.trim();
+            let echo = after
+                .iter()
+                .rposition(|line| !command.is_empty() && clean(line) == command)?;
+            Some(after[echo..].to_vec())
+        })?;
+    let output = printed.join("\n");
     // A submitted terminal prompt belongs to the JSONL transcript, not this local command.
     let output = output
         .lines()

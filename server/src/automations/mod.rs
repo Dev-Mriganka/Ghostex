@@ -198,6 +198,12 @@ impl AutomationRuntime {
                 return fail_run(&db, &project_id, &run_id, &error.message, "failed");
             }
         }
+        let run_created_at = {
+            let db = open_gxserver_database(&self.paths).map_err(internal_error)?;
+            read_run(&db, &project_id, &run_id)
+                .ok()
+                .map(|run| run.created_at)
+        };
         for _ in 0..AUTOMATION_RUN_POLL_LIMIT {
             tokio::time::sleep(Duration::from_secs(AUTOMATION_RUN_POLL_SECONDS)).await;
             let db = open_gxserver_database(&self.paths).map_err(internal_error)?;
@@ -205,9 +211,12 @@ impl AutomationRuntime {
             if !is_run_active(&db, &project_id, &run_id)? {
                 return Ok(());
             }
-            if let Some((status, summary)) =
-                read_automation_result_from_session(&repository, &session_project_id, &session_id)?
-            {
+            if let Some((status, summary)) = read_automation_result_from_session(
+                &repository,
+                &session_project_id,
+                &session_id,
+                run_created_at.as_deref(),
+            )? {
                 complete_run(&db, &project_id, &run_id, &status, summary.as_deref())?;
                 return Ok(());
             }
@@ -901,9 +910,12 @@ fn recover_running_automation_runs(
         };
         let session_project_id =
             find_run_session_project_id(repository, &run).unwrap_or_else(|| run.project_id.clone());
-        if let Some((status, summary)) =
-            read_automation_result_from_session(repository, &session_project_id, session_id)?
-        {
+        if let Some((status, summary)) = read_automation_result_from_session(
+            repository,
+            &session_project_id,
+            session_id,
+            Some(&run.created_at),
+        )? {
             complete_run(db, &run.project_id, &run.id, &status, summary.as_deref())?;
         } else {
             /*
@@ -923,11 +935,31 @@ fn recover_running_automation_runs(
     Ok(())
 }
 
+/*
+CDXC:Automations 2026-09-28 WHY:
+The agent's own transcript is read first, then the terminal text. A full-screen TUI keeps no terminal scrollback (Claude Code, and Codex since its fullscreen view became the default in 0.157), so the terminal text is one screenful: a closing marker that scrolled out of the agent's view, or a view the user scrolled up, left the run waiting for the watcher timeout. The newest assistant message holds the marker whatever is on screen; agents without a readable transcript keep the terminal scan. Only a message written after the run was created counts, because a thread run reuses a session whose newest reply can be an earlier run's marker.
+*/
 fn read_automation_result_from_session(
     repository: &DomainRepository<'_>,
     project_id: &str,
     session_id: &str,
+    run_created_at: Option<&str>,
 ) -> Result<Option<(String, Option<String>)>, DomainStateError> {
+    let since_ms = run_created_at
+        .and_then(|created_at| chrono::DateTime::parse_from_rfc3339(created_at).ok())
+        .map(|created_at| created_at.timestamp_millis());
+    let transcript_result = since_ms.and_then(|since_ms| {
+        repository
+            .get_session(project_id, session_id)
+            .ok()
+            .flatten()
+            .and_then(|session| crate::notification_feed::body::last_assistant_message(&session))
+            .filter(|(_, timestamp)| timestamp.is_some_and(|timestamp| timestamp >= since_ms))
+            .and_then(|(text, _)| parse_automation_result(&text))
+    });
+    if transcript_result.is_some() {
+        return Ok(transcript_result);
+    }
     let mut params = Map::new();
     params.insert(
         "projectId".to_string(),

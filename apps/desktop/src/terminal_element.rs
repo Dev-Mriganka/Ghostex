@@ -1218,6 +1218,18 @@ impl TerminalView {
         if support_logs::scenario_enabled(GpuiDiagnosticScenario::TerminalFocus) {
             self.log_diagnostic_frame(&frame);
         }
+        /*
+        CDXC:Terminal 2026-09-28 WHY:
+        A selection is stored in absolute rows of the screen it was made on, and ghostty keeps one per screen. Switching between the primary and alternate screens (Codex's fullscreen view entering or quitting, Claude Code the same) left it highlighting and copying rows of the other screen, so it is dropped when the active screen changes.
+        */
+        if self
+            .frame
+            .as_ref()
+            .is_some_and(|previous| previous.alternate_screen != frame.alternate_screen)
+        {
+            self.selection = None;
+            self.drag = None;
+        }
         self.frame = Some(frame);
         self.recompute_search_matches();
         self.update_scroll_button_visibility();
@@ -1942,6 +1954,23 @@ impl TerminalView {
             }
         }
 
+        /*
+        CDXC:Terminal 2026-09-28 WHY:
+        Cmd+click opens the link under the pointer (ghostty behavior) instead of starting a selection, and it is checked before mouse reporting the way ghostty's `mouseButtonCallback` handles a link before reporting, because a link click swallows the event. Codex's fullscreen view (its default since 0.157) captures the mouse for its whole session, so with the check after reporting every Cmd+click went to Codex, which opened the URL with the host's own opener and skipped Ghostex's link routing (browser pane, editor, remote sessions). A plain click still goes to the app.
+        */
+        if event.button == MouseButton::Left && event.modifiers.platform {
+            let viewport_cell = self.grid_cell(event.position, origin);
+            if let Some(link) = self
+                .hovered_link
+                .as_ref()
+                .filter(|link| link.row == viewport_cell.0 && link.cols.contains(&viewport_cell.1))
+            {
+                let target = resolve_relative_link_target(&link.url, self.pwd.as_deref());
+                cx.emit(TerminalViewEvent::OpenUrlRequested(target));
+                return;
+            }
+        }
+
         let shift_captured = event.modifiers.shift
             && matches!(
                 self.settings.mouse_shift_capture,
@@ -2002,19 +2031,6 @@ impl TerminalView {
             return;
         }
         let viewport_cell = self.grid_cell(event.position, origin);
-
-        // Cmd+click opens the link under the pointer (ghostty behavior)
-        // instead of starting a selection; the app vets and opens the URL.
-        if event.modifiers.platform
-            && let Some(link) = self
-                .hovered_link
-                .as_ref()
-                .filter(|link| link.row == viewport_cell.0 && link.cols.contains(&viewport_cell.1))
-        {
-            let target = resolve_relative_link_target(&link.url, self.pwd.as_deref());
-            cx.emit(TerminalViewEvent::OpenUrlRequested(target));
-            return;
-        }
         let cell = self.absolute_cell(viewport_cell);
 
         match event.click_count {
@@ -2394,6 +2410,11 @@ impl TerminalView {
         };
         match route {
             WheelRoute::Report => {
+                // Ghostty clears a (shift-made) selection whenever it reports
+                // the wheel: the app scrolls other text under the highlight.
+                if self.selection.take().is_some() {
+                    cx.notify();
+                }
                 let (x, y) = self.device_position(event.position, origin, scale);
                 let button = if steps > 0 {
                     VtMouseButton::WheelUp
