@@ -57,9 +57,13 @@ impl GhostexGpuiApp {
     }
 
     pub(crate) fn ensure_gpui_app_modal_spare_preloaded(&mut self, cx: &mut gpui::Context<Self>) {
+        // Only a CEF that a web view already started pays for the spare, and only while Settings
+        // is still the React page: the native Settings needs no spare
+        // (CDXC:CefRuntime 2026-09-28 in app/helpers/web_runtime.rs).
         if self.app_modal_spare.is_some()
             || self.app_modal_window.is_some()
             || !cef::context_initialized()
+            || crate::app::settings_modal_lifecycle::native_settings_modal_enabled()
         {
             return;
         }
@@ -182,6 +186,7 @@ impl GhostexGpuiApp {
                 modal,
                 open_message.clone(),
                 sidebar_state_message.clone(),
+                Duration::ZERO,
                 cx,
             );
         }

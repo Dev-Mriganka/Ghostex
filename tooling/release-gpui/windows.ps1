@@ -92,6 +92,8 @@ if (-not (Test-Path $OnDemandManifestPath)) {
     throw "Windows staged app is missing its sealed component manifest"
 }
 $OnDemandManifest = Get-Content -Raw $OnDemandManifestPath | ConvertFrom-Json
+# CEF (the web runtime) is optional: the app starts without it and downloads this sealed component
+# only when the user installs it from a web view or Plugins, so the entry must be valid and published.
 $CefComponent = $OnDemandManifest.components.cef
 $CefAsset = $CefComponent.platforms."windows-$Arch"
 if (-not $CefComponent.componentVersion -or $CefComponent.downloadTag -ne "cef-$($CefComponent.componentVersion)" -or $CefAsset.sha256 -cnotmatch '^[0-9a-f]{64}$') {

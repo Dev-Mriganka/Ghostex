@@ -26,6 +26,7 @@ pub(crate) mod terminal_view_surface;
 pub(crate) mod view_picker;
 pub(crate) mod view_tab_strip;
 pub(crate) mod view_tab_strip_browser_tabs;
+pub(crate) mod web_runtime_prompt;
 pub(crate) mod window_drag_region;
 pub(crate) mod workarea_header;
 pub(crate) mod workarea_split;

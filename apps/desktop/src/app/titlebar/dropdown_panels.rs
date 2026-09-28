@@ -75,18 +75,35 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) -> AnyElement {
-        let Some((id, trigger_bounds, panel, error)) =
+        let Some((id, trigger_bounds, panel, error, waiting_for_web_runtime)) =
             self.titlebar_extension_popup.as_ref().map(|state| {
                 (
                     state.id,
                     state.trigger_bounds,
                     state.panel.clone(),
                     state.error.clone(),
+                    state.waiting_for_web_runtime.is_some(),
                 )
             })
         else {
             return div().size_0().into_any_element();
         };
+        let web_runtime_prompt = waiting_for_web_runtime
+            .then(|| {
+                crate::app::helpers::web_runtime::web_runtime_install_prompt(&format!(
+                    "The {} extension",
+                    TitlebarMode::Extension(id).tab_label()
+                ))
+            })
+            .flatten()
+            .map(|prompt| {
+                self.render_web_runtime_prompt_card(
+                    "ghostex-gpui-titlebar-extension-web-runtime-prompt",
+                    prompt,
+                    None,
+                    cx,
+                )
+            });
         let Some(popup_bounds) = self.titlebar_extension_popup_bounds(window) else {
             return div().size_0().into_any_element();
         };
@@ -127,6 +144,8 @@ impl GhostexGpuiApp {
                         .map(|this| {
                             if let Some(panel) = panel {
                                 this.child(panel)
+                            } else if let Some(prompt) = web_runtime_prompt {
+                                this.child(prompt)
                             } else if let Some(error) = error {
                                 this.child(
                                     v_flex()

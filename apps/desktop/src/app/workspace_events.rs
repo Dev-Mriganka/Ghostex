@@ -4,6 +4,7 @@
 //
 // Cluster: project-workarea + sidebar bridge events, agents chat/find surfaces
 
+use crate::app::helpers::web_bridge_types::AppModalHostBridgeEvent;
 use std::rc::Rc;
 
 // RefCell backs cross-platform runtime state (window frame persistence), not
@@ -72,7 +73,7 @@ impl GhostexGpuiApp {
                     if let Some(source) = request.get("source").and_then(serde_json::Value::as_str)
                     {
                         self.receive_app_modal_host_bridge_event(
-                            cef::AppModalHostBridgeEvent::Message(
+                            AppModalHostBridgeEvent::Message(
                                 serde_json::json!({
                                     "type": "open", "modal": "mermaidDiagram", "source": source,
                                 })
@@ -485,6 +486,17 @@ impl GhostexGpuiApp {
         */
         if gpui_titlebar_mode_hidden_from_settings(TitlebarMode::Browser) {
             self.copy_path_for_disabled_project_workarea(&message.url, "Browser", cx);
+            return;
+        }
+        /*
+        CDXC:CefRuntime 2026-09-28 WHY:
+        Without the optional web runtime a link opened here would land on the Browser's install prompt, so it opens in the system browser instead; the Open links in setting keeps its value and applies again once the runtime is installed. A remote computer's own localhost is the exception: the system browser cannot reach it, so that link still opens the Browser, which offers the install.
+        */
+        if remote_machine_id.is_none() && !crate::app::helpers::web_runtime::web_runtime_available()
+        {
+            if let Some(url) = normalize_address(&message.url) {
+                let _ = gpui_open_external_http_url(&url);
+            }
             return;
         }
         if let Some(project_id) = message.project_id.as_deref() {

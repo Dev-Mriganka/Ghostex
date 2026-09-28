@@ -1,6 +1,7 @@
 // RefCell backs cross-platform runtime state (window frame persistence), not
 // just the macOS-only shims that first introduced the import.
 
+use crate::app::helpers::web_bridge_types::AppModalHostBridgeEvent;
 use gpui::Window;
 
 use crate::app::helpers::*;
@@ -10,11 +11,11 @@ use crate::*;
 impl GhostexGpuiApp {
     pub(crate) fn receive_app_modal_host_bridge_event(
         &mut self,
-        event: cef::AppModalHostBridgeEvent,
+        event: AppModalHostBridgeEvent,
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        let cef::AppModalHostBridgeEvent::Message(payload) = event;
+        let AppModalHostBridgeEvent::Message(payload) = event;
         let Ok(message) = serde_json::from_str::<serde_json::Value>(&payload) else {
             return;
         };
@@ -414,7 +415,7 @@ impl GhostexGpuiApp {
                 .map(str::to_string);
         }
         if modal == GpuiAppModalKind::GitFileDiff
-            && self.gpui_app_modal_current_modal(cx) == Some(GpuiAppModalKind::GitCommit)
+            && self.native_app_modal_kind() == Some(GpuiAppModalKind::GitCommit)
         {
             self.dispatch_open_gpui_app_modal_message(message, cx);
             return;

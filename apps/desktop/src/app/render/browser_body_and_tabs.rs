@@ -70,7 +70,11 @@ impl GhostexGpuiApp {
             )
             .when_some(active_browser_surface, |this, browser| this.child(browser))
             .when(render_empty_body, |this| {
-                if let Some(machine_id) = self
+                if let Some(signature) =
+                    self.web_runtime_placeholder_signature(TitlebarMode::Browser)
+                {
+                    this.child(self.render_project_editor_placeholder(signature, cx))
+                } else if let Some(machine_id) = self
                     .browser_tabs
                     .active_tab_for_pane(pane_id)
                     .and_then(|tab| tab.remote_machine_id.as_deref())

@@ -119,12 +119,15 @@ impl GhostexGpuiApp {
                     self.git_open_changed_file(Some(&request_id), &file_path, open_location, cx);
                 }
             }
-            Some("cancelSidebarGitCommit") => {
-                self.gx_store.git.reviews.remove(&request_id);
-                self.git_publish_menu_state(cx);
-            }
+            Some("cancelSidebarGitCommit") => self.git_cancel_review(&request_id, cx),
             _ => {}
         }
+    }
+
+    /// `cancelSidebarGitCommit`: the review is dropped, so nothing can confirm it later.
+    pub(crate) fn git_cancel_review(&mut self, request_id: &str, cx: &mut gpui::Context<Self>) {
+        self.gx_store.git.reviews.remove(request_id);
+        self.git_publish_menu_state(cx);
     }
 
     /// Opens the review dialog over the state just read (`promptSidebarGitActionReview`).
@@ -393,7 +396,7 @@ impl GhostexGpuiApp {
     }
 
     /// `runSidebarGitMultipleCommits`.
-    fn git_run_multiple_commits(
+    pub(crate) fn git_run_multiple_commits(
         &mut self,
         request_id: &str,
         agent_id: Option<String>,
@@ -444,7 +447,7 @@ impl GhostexGpuiApp {
 
     /// A changed file's diff in the review dialog (`openSidebarGitChangedFileDiff`). Only paths the
     /// review listed are read.
-    fn git_open_changed_file_diff(
+    pub(crate) fn git_open_changed_file_diff(
         &mut self,
         request_id: &str,
         file_path: &str,

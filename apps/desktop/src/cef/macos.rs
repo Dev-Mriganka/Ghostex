@@ -193,6 +193,9 @@ pub(super) fn system_uses_dark_page_appearance() -> bool {
     unsafe { GhostexGpuiCEFSystemUsesDarkPageAppearance() }
 }
 
+/// LaunchServices already activates the running app on a second launch.
+pub(super) fn activate_running_app() {}
+
 pub(super) fn install_application_hooks() {
     unsafe { GhostexGpuiCEFInstallApplicationHooks() };
 }

@@ -43,6 +43,11 @@ path = "src/bin/terminal_element_demo.rs"
 name = "native-modal-demo"
 path = "src/bin/native_modal_demo.rs"
 
+# CDXC:Docs 2026-09-28 WHY: standalone preview of the native Files view's Markdown document (see src/bin/native_docs_demo.rs) so its look can be compared with the React Files page without launching Ghostex.
+[[bin]]
+name = "native-docs-demo"
+path = "src/bin/native_docs_demo.rs"
+
 [dependencies]
 anyhow = "1"
 base64 = "0.22"
@@ -69,6 +74,8 @@ gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["fo
 # CDXC:SessionChat 2026-09-18 WHY: every tree-sitter grammar in gpui-component sits behind an off-by-default feature, and `TextView` silently renders an unhighlighted fence when the language cannot be resolved. Without this the native transcript shows plain grey code while the React one colours the same fence through Shiki, so the feature list is part of chat parity, not an optional extra.
 gpui-component = { path = "../../.dependencies/gpui-component/crates/component", features = ["tree-sitter-languages"] }
 gpui-component-assets = { package = "gpui-kit-assets", path = "../../.dependencies/gpui-component/crates/assets" }
+# CDXC:Settings 2026-09-28 WHY: the native Settings slider is drawn on GPUI-Kit's unstyled slider primitives (`gpui_base::{Slider, SliderTrack, SliderIndicator, SliderThumb}`); `gpui_component::slider::Slider` fixes a 6px track tinted from the bar colour, which cannot match the React 4px track. gpui-base was already in the graph through gpui-component.
+gpui-base = { path = "../../.dependencies/gpui-component/crates/base" }
 image = { version = "0.25", default-features = false, features = ["png"] }
 # CDXC:SessionTitles 2026-09-15 WHY: the native Rename Session dialog ports `normalizeSessionRenameTitle` (NFKC + a Unicode-class glyph filter); both crates were already in the graph through gpui and url, so this is a direct-dependency promotion, not a new download.
 icu_normalizer = "2"
@@ -91,6 +98,8 @@ tar = "0.4"
 tokio = { version = "1", features = ["rt", "net", "time", "sync", "io-util", "macros"] }
 tokio-tungstenite = { version = "0.28", default-features = false, features = ["handshake"] }
 ureq = { version = "3.3.0", default-features = false, features = ["platform-verifier", "rustls"] }
+# CDXC:AddProject 2026-09-28 WHY: the native Add Project dialog ports `parseAddProjectCloneInput`, which normalizes pasted clone URLs with the WHATWG `URL` parser. The `url` crate implements that same standard and was already in the graph through ureq and gpui, so this is a direct-dependency promotion, not a new download.
+url = "2"
 # CDXC:SessionChat 2026-09-22 WHY: the Rust chat host mints the draft ids and the chat client id the brain must not generate itself (the core reads no random source), in the same v4 shape `crypto.randomUUID()` produces. Already in the graph through the desktop crate's other dependencies.
 uuid = { version = "1", features = ["v4"] }
 # CDXC:WebGpui 2026-09-22 WHY: `std::time::Instant::now()` panics on wasm32, and apps/gpui-web compiles the drawing files of this crate for the browser. `web_time::Instant` IS `std::time::Instant` on every native target (a re-export, already in the graph through gpui), so files shared with the web build name it instead.
@@ -122,6 +131,8 @@ windows-sys = { version = "0.61", features = [
     "Win32_System_LibraryLoader",
     "Win32_System_Registry",
     "Win32_System_Threading",
+    # The native Settings colour swatch opens the system colour dialog (ChooseColorW), as the React `<input type="color">` did through CEF.
+    "Win32_UI_Controls_Dialogs",
     "Win32_UI_HiDpi",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",

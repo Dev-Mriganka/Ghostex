@@ -7,6 +7,7 @@ Environment:
     GHOSTEX_NATIVE_MODAL_DEMO=export-transcript|...           (which modal; default export-transcript)
     GHOSTEX_NATIVE_MODAL_DEMO_THEME=dark|light                (default dark)
     GHOSTEX_NATIVE_MODAL_DEMO_STATE=<per-modal state name>    (default: the opening state)
+    GHOSTEX_NATIVE_MODAL_DEMO_BACKGROUND=1                    (open without taking focus, for screenshots)
     GHOSTEX_EXPORT_MODAL_DEMO_MODE=handoff|export             (Handoff / Export only)
 Hosts simulate the daemon: a primary action answers after one second with a
 fake success, or with a failure message when the state is `failed`. Closing
@@ -24,10 +25,18 @@ mod native_modal_kit;
 #[path = "../ui_fonts.rs"]
 mod ui_fonts;
 // DEMO-MODULES: one `#[path]` include per converted modal, plus its demo module under native_modal_demo/.
+#[path = "native_modal_demo/add_project.rs"]
+mod add_project_demo;
+#[path = "../app/window/add_project_modal/mod.rs"]
+mod add_project_modal;
 #[path = "native_modal_demo/agent_hooks_required.rs"]
 mod agent_hooks_required_demo;
 #[path = "../app/window/agent_hooks_required_modal.rs"]
 mod agent_hooks_required_modal;
+#[path = "native_modal_demo/agents_hub.rs"]
+mod agents_hub_demo;
+#[path = "../app/window/agents_hub/mod.rs"]
+mod agents_hub_modal;
 #[path = "native_modal_demo/create_worktree.rs"]
 mod create_worktree_demo;
 #[path = "../app/window/create_worktree_modal.rs"]
@@ -40,6 +49,10 @@ mod delayed_send_modal;
 mod delete_worktree_demo;
 #[path = "../app/window/delete_worktree_modal.rs"]
 mod delete_worktree_modal;
+#[path = "native_modal_demo/git_commit.rs"]
+mod git_commit_demo;
+#[path = "../app/window/git_commit_modal/mod.rs"]
+mod git_commit_modal;
 #[path = "native_modal_demo/missing_project_folder.rs"]
 mod missing_project_folder_demo;
 #[path = "../app/window/missing_project_folder_modal.rs"]
@@ -48,6 +61,10 @@ mod missing_project_folder_modal;
 mod new_thread_picker;
 #[path = "native_modal_demo/new_thread_picker.rs"]
 mod new_thread_picker_demo;
+#[path = "../app/window/onboarding/mod.rs"]
+mod onboarding;
+#[path = "native_modal_demo/onboarding.rs"]
+mod onboarding_demo;
 #[path = "native_modal_demo/portless_setup.rs"]
 mod portless_setup_demo;
 #[path = "../app/window/portless_setup_modal.rs"]
@@ -72,6 +89,10 @@ mod rename_worktree_modal;
 mod session_note_demo;
 #[path = "../app/window/session_note_modal.rs"]
 mod session_note_modal;
+#[path = "native_modal_demo/settings.rs"]
+mod settings_demo;
+#[path = "../app/window/settings_modal/mod.rs"]
+mod settings_modal;
 #[path = "native_modal_demo/space_editor.rs"]
 mod space_editor_demo;
 #[path = "../app/window/space_editor_modal.rs"]
@@ -80,6 +101,10 @@ mod space_editor_modal;
 mod update_available_demo;
 #[path = "../app/window/update_available_modal.rs"]
 mod update_available_modal;
+#[path = "native_modal_demo/web_runtime_prompt.rs"]
+mod web_runtime_prompt_demo;
+#[path = "../app/window/web_runtime_prompt_modal.rs"]
+mod web_runtime_prompt_modal;
 
 use export_transcript_modal::*;
 use gpui::{
@@ -135,9 +160,12 @@ fn open_modal_window<V: Render>(
         .primary_display()
         .map(|display| Bounds::centered_at(display.bounds().center(), window_size))
         .unwrap_or_else(|| Bounds::new(point(px(240.0), px(160.0)), window_size));
+    // GHOSTEX_NATIVE_MODAL_DEMO_BACKGROUND=1 opens the window without taking
+    // focus, so an agent can screenshot it while the user keeps typing elsewhere.
+    let background = env("GHOSTEX_NATIVE_MODAL_DEMO_BACKGROUND") == "1";
     let options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(bounds)),
-        focus: true,
+        focus: !background,
         show: true,
         is_resizable: false,
         is_minimizable: false,
@@ -150,7 +178,9 @@ fn open_modal_window<V: Render>(
     let window = cx
         .open_window(options, move |window, cx| {
             window.set_window_title("");
-            window.activate_window();
+            if !background {
+                window.activate_window();
+            }
             let view = build(window, cx);
             *out.borrow_mut() = Some(view.clone());
             cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
@@ -281,11 +311,13 @@ fn main() {
             match demo.modal.as_str() {
                 "export-transcript" => open_export_transcript(&demo, cx),
                 // DEMO-ARMS: one arm per converted modal.
+                "add-project" => add_project_demo::open(&demo, cx),
                 "new-thread-picker" => new_thread_picker_demo::open(&demo, cx),
                 "update-available" => update_available_demo::open(&demo, cx),
                 "remote-setup" => remote_setup_demo::open(&demo, cx),
                 "delayed-send" => delayed_send_demo::open(&demo, cx),
                 "space-editor" => space_editor_demo::open(&demo, cx),
+                "settings" => settings_demo::open(&demo, cx),
                 "create-worktree" => create_worktree_demo::open(&demo, cx),
                 "remote-gxserver-install" => remote_gxserver_install_demo::open(&demo, cx),
                 "portless-setup" => portless_setup_demo::open(&demo, cx),
@@ -295,6 +327,11 @@ fn main() {
                 "rename-session" => rename_session_demo::open(&demo, cx),
                 "session-note" => session_note_demo::open(&demo, cx),
                 "install-hooks" => agent_hooks_required_demo::open(&demo, cx),
+                "agents-hub" => agents_hub_demo::open(&demo, cx),
+                "git-commit" => git_commit_demo::open(&demo, cx),
+                "git-file-diff" => git_commit_demo::open_file_diff(&demo, cx),
+                "onboarding" => onboarding_demo::open(&demo, cx),
+                "web-runtime-prompt" => web_runtime_prompt_demo::open(&demo, cx),
                 other => {
                     eprintln!("unknown modal {other:?}");
                     cx.quit();

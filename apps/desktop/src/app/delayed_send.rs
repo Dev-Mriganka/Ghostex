@@ -2709,6 +2709,12 @@ impl GhostexGpuiApp {
                     self.reinstall_plugin_from_settings(plugin_id, cx);
                 }
             }
+            "uninstallPlugin" => {
+                if let Some(plugin_id) = command.get("pluginId").and_then(serde_json::Value::as_str)
+                {
+                    self.uninstall_plugin_from_settings(plugin_id, cx);
+                }
+            }
             "setOSIntegrationDefaults" => {
                 let target = command
                     .get("target")

@@ -452,7 +452,6 @@ impl GhostexGpuiApp {
                 plugins_modal_window: None,
                 plugin_settings_action_progress: HashMap::new(),
                 plugin_settings_action_errors: HashMap::new(),
-                plugin_settings_action_generations: HashMap::new(),
                 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
                 cef_component_window: None,
                 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]

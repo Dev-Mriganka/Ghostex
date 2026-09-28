@@ -25,7 +25,7 @@ mod merge;
 mod modal_commands;
 mod poll;
 mod prompt_agent;
-mod review;
+pub(crate) mod review;
 mod scope;
 mod toasts;
 mod worktree_create;
@@ -37,8 +37,7 @@ use std::collections::{HashMap, HashSet};
 
 use ghostex_gx_core::ProjectDiffStats;
 use ghostex_gx_core::git_menu::{
-    GIT_HUB_MEMO_TTL_MS, GIT_STATE_MEMO_TTL_MS, GitHubState, GitState, GitTtlMemo,
-    PendingGitReview,
+    GIT_HUB_MEMO_TTL_MS, GIT_STATE_MEMO_TTL_MS, GitHubState, GitState, GitTtlMemo, PendingGitReview,
 };
 
 pub(crate) use export_transcript::{ExportTranscriptHost, HandoffTarget};

@@ -4,6 +4,7 @@
 // recent-project mutations, and project settings/presentation conversions.
 // See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
+use crate::app::helpers::web_bridge_types::SidebarRuntimeSettingsSnapshot;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,
@@ -554,7 +555,7 @@ pub(crate) fn gpui_project_snapshot_is_quick_automations_overview(
 #[allow(dead_code)]
 pub(crate) fn automate_workarea_runtime_url_from_project_snapshot(
     snapshot: &GpuiProjectSnapshot,
-    runtime_settings: &cef::SidebarRuntimeSettingsSnapshot,
+    runtime_settings: &SidebarRuntimeSettingsSnapshot,
 ) -> Option<ProjectWorkareaRealRuntimeUrl> {
     /*
     CDXC:Automations 2026-07-04-23:18:

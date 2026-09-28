@@ -89,7 +89,7 @@ const OFFICIAL_EXTENSION_RUNTIME_IDS: Partial<Record<GhostexOfficialExtensionId,
 const SHARED_RUNTIME_LABEL = 'Shared runtime';
 const CEF_TITLE = 'Chromium runtime (CEF)';
 const CEF_DESCRIPTION =
-  'Chromium Embedded Framework powers Ghostex web surfaces and stays on because the app requires it.';
+  'Chromium Embedded Framework is the optional web runtime for the Browser, the Code view, website and extension views, and HTML files in Files. Install it here or from the first view that needs it.';
 
 /** Every category label a built-in card can carry, in page order, for the page's category filter. */
 export const BUILT_IN_CATEGORY_LABELS = [

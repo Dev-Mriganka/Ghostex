@@ -1769,7 +1769,7 @@ pub(crate) fn sidebar_titlebar_light_background_for_lightness(
 /// packages/shared/ghostex-settings/titlebar-color.ts: each of the sixteen presets per appearance is
 /// a (contrast, tint) pair fed through the same scale as the custom controls, and the new tints
 /// have matching entries in the tint tables above. Keep the tables in sync entry for entry.
-const DARK_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
+pub(crate) const DARK_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
     (
         "gray",
         DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARKNESS_PERCENT,
@@ -1791,7 +1791,7 @@ const DARK_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
     ("pink", 96.0, 0x854f7a),
     ("purple", 96.0, 0x6c4f8f),
 ];
-const LIGHT_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
+pub(crate) const LIGHT_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
     (
         "gray",
         DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_LIGHTNESS_PERCENT,
@@ -1817,7 +1817,9 @@ const LIGHT_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
 /// The saved custom dark controls: the darkness slider (seeded from a valid legacy saved
 /// background color when the slider key is missing) plus the tint choice. The stored
 /// `customSidebarTitlebarBackgroundColor` hex itself is never the applied color.
-fn custom_dark_chrome_controls(object: &serde_json::Map<String, serde_json::Value>) -> (f64, u32) {
+pub(crate) fn custom_dark_chrome_controls(
+    object: &serde_json::Map<String, serde_json::Value>,
+) -> (f64, u32) {
     let legacy_background =
         gpui_settings_hex_rgb(object.get("customSidebarTitlebarBackgroundColor"));
     let darkness_fallback = legacy_background

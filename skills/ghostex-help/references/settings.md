@@ -354,7 +354,7 @@ How to use this file:
 - **Quick Actions** `quickActions` (Settings UI row without a settings key; use `ghostex settings open`): A work area header button that runs your saved terminal and browser actions in one click.
 - **Open In** `openIn` (Settings UI row without a settings key; use `ghostex settings open`): A work area header button that opens the active project in another app.
 - **Extensions** `extensionsButton` (Settings UI row without a settings key; use `ghostex settings open`): An entry in the work area header’s ⋯ menu that opens this Extensions page.
-- **Chromium runtime (CEF)** `cef` (Settings UI row without a settings key; use `ghostex settings open`): Inspect or reinstall the Chromium runtime used by Ghostex web surfaces.
+- **Chromium runtime (CEF)** `cef` (Settings UI row without a settings key; use `ghostex settings open`): Install, reinstall or uninstall the optional web runtime used by the Browser, the Code view, website and extension views, and HTML files in Files.
 - **Hide Bots** `botsHidden` (boolean, default true): Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.
 - **Hide Bot automations** `botAutomationsHidden` (boolean, default true): Stop offering Bot automations, the Automations row in the Bots sidebar that opens a feed of every Hermes cron run. Hidden by default; needs Bots.
 ### Extensions Store

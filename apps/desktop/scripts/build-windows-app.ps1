@@ -138,7 +138,12 @@ if ($BuildPhase -ne "stage") {
     try {
         bun apps/editor/scripts/build-editor-web.mjs
         if ($LASTEXITCODE -ne 0) { throw "Prompt editor page build failed" }
-        cargo build --release --manifest-path apps/editor/desktop/Cargo.toml
+    }
+    finally { Pop-Location }
+    # Built from inside its folder so cargo reads apps/editor/desktop/.cargo/config.toml (the static C runtime).
+    Push-Location (Join-Path $RepoRoot "apps/editor/desktop")
+    try {
+        cargo build --release
         if ($LASTEXITCODE -ne 0) { throw "Prompt editor helper build failed" }
     }
     finally { Pop-Location }
@@ -209,6 +214,9 @@ if (Test-Path $AppDir) {
 }
 New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
 
+# CDXC:CefRuntime 2026-09-28 WHY: with on-demand components Ghostex.exe only launches
+# ghostex-gpui-runtime.exe. The runtime delay-loads libcef.dll and downloads the sealed `cef`
+# component only when the user installs the web runtime, so the app folder carries no CEF files.
 if ($OnDemandComponents) {
     Copy-Item (Join-Path $GpuiDir "target/release/ghostex-gpui-cef-bootstrap.exe") (Join-Path $AppDir "Ghostex.exe")
     Copy-Item (Join-Path $GpuiDir "target/release/ghostex-gpui.exe") (Join-Path $AppDir "ghostex-gpui-runtime.exe")

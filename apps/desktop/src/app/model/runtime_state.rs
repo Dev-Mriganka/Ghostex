@@ -2,6 +2,7 @@
 // move, no logic changes; items made pub(crate) so main.rs and sibling
 // modules can still reach them). See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
+use crate::app::helpers::web_bridge_types::SidebarRuntimeSettingsSnapshot;
 use crate::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -728,9 +729,7 @@ impl SourceCodeServerRuntimeSettings {
         }
     }
 
-    pub(crate) fn from_sidebar_runtime_settings(
-        settings: &cef::SidebarRuntimeSettingsSnapshot,
-    ) -> Self {
+    pub(crate) fn from_sidebar_runtime_settings(settings: &SidebarRuntimeSettingsSnapshot) -> Self {
         let object = serde_json::from_str::<serde_json::Value>(&settings.saved_settings_json)
             .ok()
             .and_then(|value| value.as_object().cloned())

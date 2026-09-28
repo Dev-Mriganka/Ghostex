@@ -133,12 +133,12 @@ pub enum ProjectWorkareaBridgeEvent {
 
 pub type ProjectWorkareaBridgeEventHandler = StdRc<dyn Fn(ProjectWorkareaBridgeEvent)>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppModalHostBridgeEvent {
-    Message(String),
-}
-
-pub type AppModalHostBridgeEventHandler = StdRc<dyn Fn(AppModalHostBridgeEvent)>;
+/// Plain Rust shared with the native app, which names no CEF type; see
+/// `app/helpers/web_bridge_types.rs`.
+pub use crate::app::helpers::web_bridge_types::{
+    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
+    SidebarGxserverBootstrap,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExtensionBridgeEvent {
@@ -168,24 +168,6 @@ pub(crate) fn project_workarea_bridge_event_kind_for_process_message(
         .map(|spec| ProjectWorkareaBridgeEventKind::from(spec.id))
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct SidebarRuntimeSettingsSnapshot {
-    pub debugging_mode: bool,
-    pub show_beta_features: bool,
-    pub saved_settings_json: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SidebarGxserverBootstrap {
-    pub base_url: String,
-    pub auth_token: String,
-    pub protocol_version: i32,
-    pub client_id: String,
-    pub initial_active_project_id: Option<String>,
-    pub focused_session_id: Option<String>,
-    pub visible_session_ids: Vec<String>,
-}
-
 pub enum BrowserPageMetadataEvent {
     HistoryRequested,
     FindRequested,
@@ -206,17 +188,6 @@ pub enum BrowserPageMetadataEvent {
 }
 
 pub type BrowserPageMetadataHandler = StdRc<dyn Fn(BrowserPageMetadataEvent)>;
-
-/*
-CDXC:Onboarding 2026-08-18:
-Third-party surfaces that carry no Ghostex bridge (today only the tutorial
-video modal, which loads the YouTube watch page as its top-level document) can
-still need a host-side action once their page is really on screen. This
-callback reports main-frame load-end for exactly those surfaces; it carries no
-page data (no URL, title, or content), only the "this browser finished loading
-its main frame" edge.
-*/
-pub type PageLoadEndHandler = StdRc<dyn Fn()>;
 
 /*
 CDXC:Browser 2026-07-27:

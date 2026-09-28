@@ -9,12 +9,15 @@ mod chat_message_actions;
 mod chat_references;
 #[path = "assets/chat_working.rs"]
 pub(crate) mod chat_working;
+#[path = "assets/onboarding.rs"]
+mod onboarding;
 
 #[derive(RustEmbed)]
 #[folder = "assets"]
 #[include = "titlebar/**/*.svg"]
 #[include = "modals/**/*.svg"]
-#[include = "docs/**/*.svg"]
+// CDXC:Docs 2026-09-28 WHY: the Files view's icons live in files-view/ (they were in docs/), because the root .gitignore ignores every folder named docs/ and the old assets/docs/ icons never reached git (a fresh checkout drew Files without icons).
+#[include = "files-view/**/*.svg"]
 struct GhostexEmbeddedAssets;
 
 #[derive(RustEmbed)]
@@ -44,7 +47,14 @@ impl AssetSource for GhostexAssets {
                 .map(|svg| Some(Cow::Owned(svg.into_bytes())))
                 .ok_or_else(|| anyhow!("unknown working strip asset {key:?}"));
         }
-        if path.starts_with("titlebar/") || path.starts_with("modals/") || path.starts_with("docs/")
+        if let Some(key) = path.strip_prefix("onboarding/") {
+            return onboarding::asset(key)
+                .map(Some)
+                .ok_or_else(|| anyhow!("unknown onboarding asset {key:?}"));
+        }
+        if path.starts_with("titlebar/")
+            || path.starts_with("modals/")
+            || path.starts_with("files-view/")
         {
             return GhostexEmbeddedAssets::get(path)
                 .map(|asset| Some(asset.data))

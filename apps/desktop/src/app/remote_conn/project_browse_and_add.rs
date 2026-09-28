@@ -61,6 +61,52 @@ impl GhostexGpuiApp {
             );
             return;
         };
+        let machine_id = command
+            .get("machineId")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        let empty_params = serde_json::Map::new();
+        let raw_params = command
+            .get("params")
+            .and_then(serde_json::Value::as_object)
+            .unwrap_or(&empty_params);
+        self.run_gpui_add_project_dialog_operation(
+            operation,
+            machine_id.as_deref(),
+            raw_params,
+            move |this, result, cx| match result {
+                Ok(value) => this.dispatch_gpui_add_project_dialog_result(
+                    request_id,
+                    true,
+                    Some(value),
+                    None,
+                    cx,
+                ),
+                Err(error) => this.dispatch_gpui_add_project_dialog_result(
+                    request_id,
+                    false,
+                    None,
+                    Some(error.as_str()),
+                    cx,
+                ),
+            },
+            cx,
+        );
+    }
+
+    /// One Add Project round trip, answered through `on_result`: the React dialog's bridge
+    /// request above and the native dialog (add_project_modal_lifecycle.rs) both run it, so the
+    /// routing, the parameter allowlist, the Windows path translation and the follow-ups after an
+    /// add or a clone (activation, remote refresh, clone watch) are one code path.
+    pub(crate) fn run_gpui_add_project_dialog_operation(
+        &mut self,
+        operation: GpuiAddProjectDialogOperation,
+        machine_id: Option<&str>,
+        raw_params: &serde_json::Map<String, serde_json::Value>,
+        on_result: impl FnOnce(&mut Self, Result<serde_json::Value, String>, &mut gpui::Context<Self>)
+        + 'static,
+        cx: &mut gpui::Context<Self>,
+    ) {
         support_logs::append(
             support_logs::GpuiSupportLog::AppModal,
             "gpui.addProject.request",
@@ -68,18 +114,10 @@ impl GhostexGpuiApp {
         );
         if operation == GpuiAddProjectDialogOperation::ListMachines {
             let machines = self.gpui_add_project_dialog_machine_options();
-            self.dispatch_gpui_add_project_dialog_result(
-                request_id,
-                true,
-                Some(serde_json::json!({ "machines": machines })),
-                None,
-                cx,
-            );
+            on_result(self, Ok(serde_json::json!({ "machines": machines })), cx);
             return;
         }
-        let requested_machine_id = command
-            .get("machineId")
-            .and_then(serde_json::Value::as_str)
+        let requested_machine_id = machine_id
             .map(str::trim)
             .filter(|machine_id| !machine_id.is_empty())
             .unwrap_or(GPUI_ADD_PROJECT_DIALOG_LOCAL_MACHINE_ID);
@@ -90,28 +128,15 @@ impl GhostexGpuiApp {
             match gpui_normalize_remote_machine_id(requested_machine_id) {
                 Some(remote_machine_id) => Some(remote_machine_id),
                 None => {
-                    self.dispatch_gpui_add_project_dialog_result(
-                        request_id,
-                        false,
-                        None,
-                        Some("That machine is unavailable."),
-                        cx,
-                    );
+                    on_result(self, Err("That machine is unavailable.".to_string()), cx);
                     return;
                 }
             }
         };
-        let empty_params = serde_json::Map::new();
-        let raw_params = command
-            .get("params")
-            .and_then(serde_json::Value::as_object)
-            .unwrap_or(&empty_params);
         let Some(params) = gpui_add_project_dialog_params(operation, raw_params) else {
-            self.dispatch_gpui_add_project_dialog_result(
-                request_id,
-                false,
-                None,
-                Some("The add-project request was invalid."),
+            on_result(
+                self,
+                Err("The add-project request was invalid.".to_string()),
                 cx,
             );
             return;
@@ -121,13 +146,7 @@ impl GhostexGpuiApp {
             match gpui_add_project_dialog_translate_local_windows_paths(operation, params) {
                 Ok(params) => params,
                 Err(error) => {
-                    self.dispatch_gpui_add_project_dialog_result(
-                        request_id,
-                        false,
-                        None,
-                        Some(error.as_str()),
-                        cx,
-                    );
+                    on_result(self, Err(error), cx);
                     return;
                 }
             }
@@ -139,13 +158,7 @@ impl GhostexGpuiApp {
                 match self.gpui_remote_gxserver_request_target(remote_machine_id) {
                     Some(target) => Some(target),
                     None => {
-                        self.dispatch_gpui_add_project_dialog_result(
-                            request_id,
-                            false,
-                            None,
-                            Some("That machine is not connected."),
-                            cx,
-                        );
+                        on_result(self, Err("That machine is not connected.".to_string()), cx);
                         return;
                     }
                 }
@@ -219,22 +232,7 @@ impl GhostexGpuiApp {
                         GpuiAddProjectDialogOperation::ReadCloneJob
                             | GpuiAddProjectDialogOperation::StartClone
                     );
-                match result {
-                    Ok(value) => this.dispatch_gpui_add_project_dialog_result(
-                        request_id,
-                        true,
-                        Some(value),
-                        None,
-                        cx,
-                    ),
-                    Err(error) => this.dispatch_gpui_add_project_dialog_result(
-                        request_id,
-                        false,
-                        None,
-                        Some(error.as_str()),
-                        cx,
-                    ),
-                }
+                on_result(this, result, cx);
                 // CDXC:AddProject 2026-09-06 DECISION: User: newly added projects become active, switch to their Space, expand their sidebar groups, and scroll into view, just like Quick Access project activation.
                 // Completed clones register through Add too; the shared activation route refreshes the project and focuses or creates its default session.
                 if let Some(project_id) = added_project_id {

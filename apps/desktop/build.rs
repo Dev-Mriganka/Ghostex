@@ -500,6 +500,15 @@ fn main() {
             "cargo:rustc-link-arg-bin=ghostex-gpui-cef-helper=/MANIFESTINPUT:{}",
             windows_manifest.display()
         );
+        /*
+        CDXC:CefRuntime 2026-09-28 WHY:
+        The web runtime is an optional component, so the app must start with no CEF files present.
+        cef-dll-sys links libcef.dll at load time (and already links delayimp); delay-loading it
+        means Windows resolves the DLL on the first CEF call, which cef/windows.rs makes only after
+        loading the installed component's libcef.dll by full path. The helper stays load-time
+        linked: it only ever runs as a CEF subprocess, with the runtime folder on PATH.
+        */
+        println!("cargo:rustc-link-arg-bin=ghostex-gpui=/DELAYLOAD:libcef.dll");
         return;
     }
 
@@ -706,6 +715,13 @@ fn main() {
     gpui_macos_objc_build()
         .file(gpui_standard_about_panel)
         .compile("ghostex_gpui_standard_about_panel");
+
+    // The native Settings colour swatch's NSColorPanel (settings_modal_lifecycle.rs).
+    let gpui_color_panel = manifest_dir.join("native/macos/GpuiColorPanel.m");
+    println!("cargo:rerun-if-changed={}", gpui_color_panel.display());
+    gpui_macos_objc_build()
+        .file(gpui_color_panel)
+        .compile("ghostex_gpui_color_panel");
 
     /*
     CDXC:AppModal 2026-07-04:

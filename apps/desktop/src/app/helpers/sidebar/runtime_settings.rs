@@ -9,6 +9,7 @@
 // RefCell backs cross-platform runtime state (window frame persistence), not
 // just the macOS-only shims that first introduced the import.
 
+use crate::app::helpers::web_bridge_types::SidebarRuntimeSettingsSnapshot;
 use anyhow::Result;
 
 use crate::app::helpers::*;
@@ -105,7 +106,7 @@ pub(crate) fn gpui_sidebar_open_browser_url_from_json(
 
 pub(crate) fn sidebar_runtime_settings_snapshot_from_shared_settings(
     settings: &shared_settings::SharedSidebarSettingsSnapshot,
-) -> cef::SidebarRuntimeSettingsSnapshot {
+) -> SidebarRuntimeSettingsSnapshot {
     /*
     CDXC:CefRuntime 2026-06-23-06:36:
     The sidebar CEF runtime settings handoff must use the same shared sidebar settings file and strict boolean interpretation as SidebarApp. These booleans seed TS-side payload and workarea behavior only; Docs titlebar visibility stays governed by project context, not debuggingMode/showBetaFeatures.
@@ -113,7 +114,7 @@ pub(crate) fn sidebar_runtime_settings_snapshot_from_shared_settings(
     CDXC:Settings 2026-06-24-11:22:
     The GPUI sidebar runtime snapshot now also carries the saved shared Settings object as serialized first-party payload so the mounted SidebarApp could normalize real user preferences immediately on initial CEF install and after Settings saves (SidebarApp and the sidebar runtime are deleted; Rust readers such as gx_store/hud/host.rs read the snapshot now). This is not a generic settings bus and must not write logs, persist another copy, or expose settings to Browser/workarea/modal CEF clients.
     */
-    cef::SidebarRuntimeSettingsSnapshot {
+    SidebarRuntimeSettingsSnapshot {
         debugging_mode: settings.debugging_mode(),
         show_beta_features: settings.show_beta_features(),
         saved_settings_json: sidebar_runtime_saved_settings_json(settings),
@@ -128,8 +129,8 @@ pub(crate) fn sidebar_runtime_saved_settings_json(
 }
 
 pub(crate) fn changed_sidebar_runtime_settings_snapshot(
-    current: &cef::SidebarRuntimeSettingsSnapshot,
-    next: cef::SidebarRuntimeSettingsSnapshot,
-) -> Option<cef::SidebarRuntimeSettingsSnapshot> {
+    current: &SidebarRuntimeSettingsSnapshot,
+    next: SidebarRuntimeSettingsSnapshot,
+) -> Option<SidebarRuntimeSettingsSnapshot> {
     (current != &next).then_some(next)
 }

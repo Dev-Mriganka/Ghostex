@@ -1,3 +1,6 @@
+use crate::app::helpers::web_bridge_types::{
+    SidebarGxserverBootstrap, SidebarRuntimeSettingsSnapshot,
+};
 use crate::app::terminal_sync::{
     GpuiRetiringTerminalViewer, GpuiTerminalChatClaimState, GpuiTerminalViewerOwner,
     GpuiTerminalViewerRecipe,
@@ -386,7 +389,7 @@ pub struct GhostexGpuiApp {
     CDXC:CefRuntime 2026-06-23-08:23:
     GPUI stores the last sidebar runtime settings snapshot it installed or sent so polling and Settings-save refreshes can no-op unchanged strict debug/beta plus saved-settings payloads and refresh their readers only when they change (since the CEF sidebar and its runtime were deleted, those readers are Rust: the store's HUD, remote reconnect, the workarea and code-server; see `refresh_sidebar_runtime_settings_if_changed`). Docs titlebar visibility and active-mode fallback use project-context availability instead of this settings snapshot.
     */
-    pub(crate) sidebar_runtime_settings_snapshot: cef::SidebarRuntimeSettingsSnapshot,
+    pub(crate) sidebar_runtime_settings_snapshot: SidebarRuntimeSettingsSnapshot,
     pub(crate) system_color_scheme_is_light: bool,
     /*
     CDXC:ServerDaemon 2026-06-24-11:17:
@@ -398,7 +401,7 @@ pub struct GhostexGpuiApp {
     CDXC:FocusRouting 2026-06-24-21:07:
     Focused and visible gxserver session ids are now a separate runtime-only GPUI state sourced only from React's gxserver presentation session ids or Rust's remote attach session references. Store raw local gxserver ids and machine-scoped remote ids only; never derive this state from terminal shell ids, titles, paths, project names, command text, logs, or persisted layout.
     */
-    pub(crate) sidebar_gxserver_bootstrap: Option<cef::SidebarGxserverBootstrap>,
+    pub(crate) sidebar_gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
     pub(crate) sidebar_gxserver_presentation_focus_state: GpuiGxserverPresentationFocusState,
     /*
     CDXC:FocusRouting 2026-06-26-06:08:
@@ -847,7 +850,6 @@ pub struct GhostexGpuiApp {
     pub(crate) plugin_settings_action_progress:
         HashMap<&'static str, component_store::ComponentStoreProgressPhase>,
     pub(crate) plugin_settings_action_errors: HashMap<&'static str, String>,
-    pub(crate) plugin_settings_action_generations: HashMap<&'static str, u64>,
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     pub(crate) cef_component_window:
         Option<WindowHandle<cef_component_window::GpuiCefComponentWindow>>,

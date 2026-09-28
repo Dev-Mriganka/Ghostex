@@ -66,16 +66,9 @@ impl GhostexGpuiApp {
             // Automate renders natively (app/native_automate/), so its CEF slot never gets a URL:
             // no surface is created, and one left from before is pruned.
             ProjectWorkareaCefSurfaceSlotKey::Automate => None,
-            // Native Docs (app/native_docs/) draws the view itself; the Docs page only runs as
-            // the browser area for an open HTML file or drawing.
-            ProjectWorkareaCefSurfaceSlotKey::Manage
-                if crate::app::native_docs::render::native_docs_enabled() =>
-            {
-                self.native_docs_browser_area_url(snapshot)
-            }
-            ProjectWorkareaCefSurfaceSlotKey::Manage => {
-                manage_workarea_runtime_url_from_project_snapshot(snapshot)
-            }
+            // Files (app/native_docs/) draws the view itself; its slot only runs the embed page
+            // as the browser area for an open HTML file, drawing or media file.
+            ProjectWorkareaCefSurfaceSlotKey::Manage => self.native_docs_browser_area_url(snapshot),
             ProjectWorkareaCefSurfaceSlotKey::Extension(_) => None,
         }
     }

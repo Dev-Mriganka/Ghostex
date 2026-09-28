@@ -54,18 +54,55 @@ static PUMP_REENTRANCY_DETECTED: AtomicBool = AtomicBool::new(false);
 static PUMP_DISPATCH_PENDING: AtomicBool = AtomicBool::new(false);
 static PUMP_DISPATCH_DELAY_MS: Mutex<i64> = Mutex::new(PUMP_PLACEHOLDER_DELAY_MS);
 
-/// The release bootstrap starts this runtime with the verified component
-/// directory on PATH, allowing the Windows loader to resolve libcef.dll before
-/// Rust enters main. Development layouts keep the DLL beside the executable.
+/// libcef.dll, loaded from the verified runtime folder for the rest of the process.
 pub(super) struct PlatformCefRuntime;
 
+/// CDXC:CefRuntime 2026-09-28 WHY:
+/// ghostex-gpui.exe delay-loads libcef.dll (apps/desktop/build.rs) so it starts without the optional web runtime. Before the first CEF call this loads the installed component's libcef.dll by full path with LOAD_WITH_ALTERED_SEARCH_PATH, so its own imports (chrome_elf.dll) resolve from that folder and the delay-load helper then finds the module already loaded. The folder also goes first on PATH, for the helper subprocess (load-time linked) and anything Chromium loads by name, which is exactly what the bootstrap arranged before it stopped installing CEF; SetDllDirectoryW is not used because it would put Chromium's DLLs ahead of System32 for the whole app. Development layouts keep the DLL beside the executable, which is the same path.
 pub(super) fn load_cef_runtime() -> Result<PlatformCefRuntime> {
+    use std::os::windows::ffi::OsStrExt as _;
+    use windows_sys::Win32::System::LibraryLoader::{
+        LOAD_WITH_ALTERED_SEARCH_PATH, LoadLibraryExW,
+    };
+
     let runtime_dir = std::env::var_os(crate::cef_component_window::CEF_RUNTIME_DIR_ENV)
         .map(std::path::PathBuf::from)
         .context("verified CEF runtime directory is not configured")?;
     let library = runtime_dir.join("libcef.dll");
     if !library.is_file() {
         anyhow::bail!("verified CEF runtime is missing {}", library.display());
+    }
+    let library_wide = library
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<u16>>();
+    // SAFETY: the path is a NUL-terminated UTF-16 string that outlives the call; the module
+    // handle is never freed, because CEF stays loaded until the process exits.
+    unsafe {
+        if LoadLibraryExW(
+            library_wide.as_ptr(),
+            std::ptr::null_mut(),
+            LOAD_WITH_ALTERED_SEARCH_PATH,
+        )
+        .is_null()
+        {
+            anyhow::bail!(
+                "Windows could not load {}: {}",
+                library.display(),
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+    let current_path = std::env::var_os("PATH").unwrap_or_default();
+    if !std::env::split_paths(&current_path).any(|path| path == runtime_dir) {
+        let joined = std::env::join_paths(
+            std::iter::once(runtime_dir.clone()).chain(std::env::split_paths(&current_path)),
+        )
+        .context("the CEF runtime folder cannot be added to PATH")?;
+        // SAFETY: runs on the main thread inside cef::initialize, before CEF starts its own
+        // threads, and Windows serialises environment reads and writes itself.
+        unsafe { std::env::set_var("PATH", joined) };
     }
     if crate::shared_settings::shared_sidebar_settings_snapshot().debugging_mode()
         && crate::support_logs::scenario_id_enabled("native.host.lifecycle")
@@ -88,6 +125,53 @@ pub(super) fn install_application_hooks() {
     // no Windows counterpart: Chromium's Windows message pump needs no host
     // application protocol, and edit-command dispatch (Ctrl+A/C/V/X) reaches
     // the focused Chromium child HWND through normal Win32 key routing.
+}
+
+/// Brings this process's main window to the front when Ghostex is launched while it already runs: the largest
+/// visible top-level window without an owner, which skips app modals attached to the main window.
+pub(super) fn activate_running_app() {
+    use windows_sys::Win32::Foundation::RECT;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GW_OWNER, GetWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic,
+        IsWindowVisible, SW_RESTORE, SetForegroundWindow,
+    };
+    unsafe extern "system" fn visit(hwnd: HWND, lparam: LPARAM) -> windows_sys::core::BOOL {
+        // SAFETY: `lparam` is the `best` tuple below, alive for the whole EnumWindows call.
+        let best = unsafe { &mut *(lparam as *mut (HWND, i64)) };
+        let mut pid = 0u32;
+        unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
+        if pid != std::process::id()
+            || unsafe { IsWindowVisible(hwnd) } == 0
+            || !unsafe { GetWindow(hwnd, GW_OWNER) }.is_null()
+        {
+            return 1;
+        }
+        let mut rect = RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
+        unsafe { GetWindowRect(hwnd, &mut rect) };
+        let area = i64::from(rect.right - rect.left) * i64::from(rect.bottom - rect.top);
+        if area > best.1 {
+            *best = (hwnd, area);
+        }
+        1
+    }
+    let mut best: (HWND, i64) = (std::ptr::null_mut(), 0);
+    // SAFETY: `visit` only reads windows and writes through the pointer to `best`.
+    unsafe { EnumWindows(Some(visit), &mut best as *mut (HWND, i64) as LPARAM) };
+    if best.0.is_null() {
+        return;
+    }
+    // SAFETY: `best.0` is a live top-level window of this process found above.
+    unsafe {
+        if IsIconic(best.0) != 0 {
+            ShowWindow(best.0, SW_RESTORE);
+        }
+        SetForegroundWindow(best.0);
+    }
 }
 
 pub(super) fn install_message_pump(_cx: &gpui::App) {

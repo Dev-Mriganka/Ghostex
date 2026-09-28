@@ -4,6 +4,9 @@
 //
 // Cluster: sidebar/app-modal/session-chat CEF bridge handlers and chat host actions
 
+use crate::app::helpers::web_bridge_types::{
+    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
+};
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -170,7 +173,7 @@ impl GhostexGpuiApp {
     pub(crate) fn tutorial_video_page_load_end_handler(
         &self,
         cx: &mut gpui::Context<Self>,
-    ) -> cef::PageLoadEndHandler {
+    ) -> PageLoadEndHandler {
         let app = cx.entity().downgrade();
         let async_cx = cx.to_async();
         let background = cx.background_executor().clone();
@@ -205,12 +208,12 @@ impl GhostexGpuiApp {
     pub(crate) fn app_modal_host_bridge_event_handler(
         &self,
         cx: &mut gpui::Context<Self>,
-    ) -> cef::AppModalHostBridgeEventHandler {
+    ) -> AppModalHostBridgeEventHandler {
         let app = cx.entity().downgrade();
         let async_cx = cx.to_async();
         let foreground = cx.foreground_executor().clone();
 
-        Rc::new(move |event: cef::AppModalHostBridgeEvent| {
+        Rc::new(move |event: AppModalHostBridgeEvent| {
             let app = app.clone();
             let mut async_cx = async_cx.clone();
             foreground
@@ -265,7 +268,7 @@ impl GhostexGpuiApp {
             )
         {
             self.receive_app_modal_host_bridge_event(
-                cef::AppModalHostBridgeEvent::Message(payload.to_string()),
+                AppModalHostBridgeEvent::Message(payload.to_string()),
                 window,
                 cx,
             );
@@ -1239,16 +1242,8 @@ impl GhostexGpuiApp {
         }
 
         if destination == Some(shared_settings::SharedChatFileOpenView::Docs) {
-            let docs_folders =
-                gpui_manage_additional_docs_folders_text(&self.sidebar_runtime_settings_snapshot);
-            // The native Files view lists the whole project, so any project file is a tree path.
-            let files_scope = crate::app::native_docs::render::native_docs_enabled();
-            let normal_docs_path = project_relative_path.clone().filter(|relative| {
-                files_scope
-                    || manage_path_is_in_docs_scan_root(relative, &docs_folders)
-                    || manage_is_root_artifact_file_relative_path(relative)
-            });
-            let relative_path = if let Some(relative_path) = normal_docs_path {
+            // The Files view lists the whole project, so any project file is a tree path.
+            let relative_path = if let Some(relative_path) = project_relative_path.clone() {
                 relative_path
             } else {
                 let Some(project_id) = session_project_id else {
@@ -1468,43 +1463,14 @@ impl GhostexGpuiApp {
         }
     }
 
-    /**
-    Hands the pending Docs path to the Manage page. The surface may not exist
-    yet (the mode was just switched) and the page may still be loading, so the
-    request stays pending until the script lands and the injected script itself
-    waits for the page's own open hook, the same retry shape the Manage bridge
-    shim uses.
-    */
+    /// Hands the pending path to the native Files view.
     pub(crate) fn deliver_pending_docs_file_open(&mut self, cx: &mut gpui::Context<Self>) -> bool {
         let Some(relative_path) = self.pending_docs_file_open.clone() else {
             return false;
         };
-        if crate::app::native_docs::render::native_docs_enabled() {
-            self.pending_docs_file_open = None;
-            self.native_docs_open_external(relative_path, cx);
-            return true;
-        }
-        let Some(surface) = self
-            .project_workarea_runtime_cef_surfaces
-            .get(&ProjectWorkareaCefSurfaceSlotKey::Manage)
-            .map(|owned_surface| owned_surface.surface.clone())
-        else {
-            return false;
-        };
-        // JSON is a valid JS literal except for U+2028/U+2029; escape them so
-        // a pathological file name cannot break the generated script.
-        let literal = serde_json::Value::String(relative_path)
-            .to_string()
-            .replace('\u{2028}', "\\u2028")
-            .replace('\u{2029}', "\\u2029");
-        let script = format!(
-            "(function(){{var p={literal};var a=0;var send=function(){{var open=window.ghostexOpenDocsFile;if(typeof open==='function'){{open(p);return;}}if(++a<250){{setTimeout(send,20);}}}};send();}})(); undefined;"
-        );
-        let dispatched = surface.update(cx, |surface, _| surface.execute_app_owned_script(&script));
-        if dispatched {
-            self.pending_docs_file_open = None;
-        }
-        dispatched
+        self.pending_docs_file_open = None;
+        self.native_docs_open_external(relative_path, cx);
+        true
     }
 
     /**

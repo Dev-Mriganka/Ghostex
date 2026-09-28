@@ -958,7 +958,7 @@ fn legacy_asset_cache_root() -> Result<PathBuf, String> {
         .map_err(|error| format!("Could not migrate Ghostex release asset storage: {error}"));
 }
 
-fn current_platform() -> Result<String, String> {
+pub(crate) fn current_platform() -> Result<String, String> {
     let os = if cfg!(target_os = "macos") {
         "darwin"
     } else if cfg!(target_os = "windows") {

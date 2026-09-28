@@ -281,6 +281,8 @@ phase_assemble() {
 		"$REPO_ROOT/apps/desktop/scripts/build-macos-app.sh"
 
 	COMPONENT_MANIFEST="$REPO_ROOT/build/on-demand-components/components.json"
+	# Both are optional components: the bundle ships without them (the app loads the CEF framework
+	# at run time) and downloads one only when the user installs it, so each must be published.
 	for component in code-server cef; do
 		component_version="$(COMPONENT="$component" node -e '
 const fs = require("fs");

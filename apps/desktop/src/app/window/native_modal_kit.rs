@@ -626,6 +626,17 @@ pub(crate) fn capture_child_bounds(
     move |bounds, _window, _cx| cell.set(bounds.get(index).copied())
 }
 
+/// Whether a select list of `list_height` opens above its trigger.
+///
+/// CDXC:AppModal 2026-09-28 WHY:
+/// Base UI flips a select popup above its trigger when it does not fit below and there is more room above (the commit review's footer agent select sits on the window's bottom edge). Snapping the list back into the window instead drew it over the trigger.
+fn select_menu_opens_upward(trigger: Bounds<Pixels>, list_height: Pixels, window: &Window) -> bool {
+    let viewport = window.viewport_size().height;
+    let below = viewport - (trigger.origin.y + trigger.size.height + px(4.0)) - px(8.0);
+    let above = trigger.origin.y - px(4.0) - px(8.0);
+    list_height > below && above > below
+}
+
 /// The shadcn select, drawn in-window: a raised 32px trigger and an anchored
 /// popover with 28px rows (selected row filled at 12% foreground, hovered or
 /// keyboard-highlighted row on the accent). Owned by the modal entity.
@@ -773,11 +784,13 @@ pub(crate) fn hosted_modal_select_menu<V: 'static>(
     let items: Rc<Vec<String>> = Rc::new(items.to_vec());
     // 28px rows inside 4px padding and a 1px border, bounded like the in-window list.
     let list_height = (items.len() as f32 * 28.0 + 10.0).min(288.0);
+    let top = if select_menu_opens_upward(trigger, px(list_height), window) {
+        trigger.origin.y - px(4.0) - px(list_height)
+    } else {
+        trigger.origin.y + trigger.size.height + px(4.0)
+    };
     let frame = Bounds::new(
-        point(
-            trigger.origin.x,
-            trigger.origin.y + trigger.size.height + px(4.0),
-        ),
+        point(trigger.origin.x, top),
         size(trigger.size.width, px(list_height)),
     );
     let entity = cx.weak_entity();
@@ -881,10 +894,17 @@ pub(crate) fn modal_select_menu<V: 'static>(
     // CDXC:AppModal 2026-09-16 WHY:
     // Anchoring only repositions the popup; it cannot make a long session list fit or scroll. Bound the list to the window and keep keyboard highlights in the same scroll container.
     let max_height = px(288.0).min((window.viewport_size().height - px(16.0)).max(px(0.0)));
-    let position = point(
-        trigger.origin.x,
-        trigger.origin.y + trigger.size.height + px(4.0),
-    );
+    // 32px rows inside 4px padding and a 1px border.
+    let list_height = px(items.len() as f32 * 32.0 + 10.0).min(max_height);
+    let upward = select_menu_opens_upward(trigger, list_height, window);
+    let position = if upward {
+        point(trigger.origin.x, trigger.origin.y - px(4.0))
+    } else {
+        point(
+            trigger.origin.x,
+            trigger.origin.y + trigger.size.height + px(4.0),
+        )
+    };
     let rows = items.iter().enumerate().map(|(index, item)| {
         let is_selected = selected == Some(index);
         let highlighted = highlight == Some(index);
@@ -926,6 +946,7 @@ pub(crate) fn modal_select_menu<V: 'static>(
     Some(
         deferred(
             anchored()
+                .when(upward, |this| this.anchor(gpui::Anchor::BottomLeft))
                 .position(position)
                 .snap_to_window_with_margin(px(8.0))
                 .child(
@@ -2171,4 +2192,311 @@ pub(crate) fn modal_shell_scrolling<V: Render>(
                 .children(footer),
         )
         .children(overlay)
+}
+
+// ---------------------------------------------------------------------------
+// Added with the Agents Hub modal: the 40px raised tab rail with shortcut
+// hints, the bordered segmented control, skinned text inputs and the shadcn
+// `Button` variants with caller-chosen colors.
+// ---------------------------------------------------------------------------
+
+/// One segment of [`modal_raised_tab_rail`] or [`modal_bordered_segmented_control`]: its label
+/// and an optional trailing note (a shortcut hint, a count) in its own quieter tone.
+pub(crate) struct ModalRailItem {
+    pub(crate) label: SharedString,
+    pub(crate) trailing: Option<SharedString>,
+}
+
+/// The `.raised-tab-rail` tokens (packages/components/ui/raised-tab-rail.css): track, track
+/// border, resting text, hover fill, pressed text, pressed fill and the pressed ring.
+fn raised_rail_tokens(p: &ModalPalette) -> (Rgba, Rgba, Rgba, Rgba, Rgba, Rgba, Rgba) {
+    if p.light {
+        (
+            rgb(0xededed),
+            modal_rgba(0x000000, 0.14),
+            rgb(0x525252),
+            rgb(0xe3e3e3),
+            rgb(0x262626),
+            rgb(0xffffff),
+            modal_rgba(0x000000, 0.08),
+        )
+    } else {
+        (
+            rgb(0x202020),
+            modal_rgba(0xffffff, 0.14),
+            rgb(0xb8b8b8),
+            rgb(0x292929),
+            rgb(0xf5f5f5),
+            rgb(0x363636),
+            modal_rgba(0xffffff, 0.08),
+        )
+    }
+}
+
+/// `TabsList variant='raised'` stretched over the modal width (packages/components/ui/tabs.tsx
+/// with raised-tab-rail.css): a 40px inset track (8px radius, 3px padding and gap) whose equal
+/// tabs carry a 13px label and an 11px/500 trailing hint 6px after it, `trailing` at rest and
+/// `trailing_active` on the pressed tab. The pressed tab is raised exactly like
+/// [`modal_segmented_control`]'s pressed segment.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn modal_raised_tab_rail<V: 'static>(
+    p: &ModalPalette,
+    id: &'static str,
+    items: &[ModalRailItem],
+    selected: usize,
+    trailing: Rgba,
+    trailing_active: Rgba,
+    on_select: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
+    cx: &mut Context<V>,
+) -> AnyElement {
+    let (track, track_border, text, hover_bg, active_text, pressed_bg, ring) =
+        raised_rail_tokens(p);
+    let tabs = items.iter().enumerate().map(|(index, item)| {
+        let pressed = index == selected;
+        let on_select = on_select.clone();
+        h_flex()
+            .id((id, index))
+            .flex_1()
+            .flex_basis(px(0.0))
+            .min_w_0()
+            .h_full()
+            .items_center()
+            .justify_center()
+            .gap(px(6.0))
+            .px(px(10.0))
+            .rounded(px(5.0))
+            .text_size(px(13.0))
+            .line_height(px(20.0))
+            .whitespace_nowrap()
+            .text_color(hsla(if pressed { active_text } else { text }))
+            .cursor_pointer()
+            .when(pressed, |this| {
+                this.bg(hsla(pressed_bg)).shadow(vec![
+                    gpui::BoxShadow {
+                        color: hsla(modal_rgba(0x000000, 0.14)),
+                        offset: point(px(0.0), px(1.0)),
+                        blur_radius: px(3.0),
+                        spread_radius: px(0.0),
+                        inset: false,
+                    },
+                    gpui::BoxShadow {
+                        color: hsla(ring),
+                        offset: point(px(0.0), px(0.0)),
+                        blur_radius: px(0.0),
+                        spread_radius: px(1.0),
+                        inset: false,
+                    },
+                ])
+            })
+            .when(!pressed, |this| {
+                this.hover(move |this| this.bg(hsla(hover_bg)).text_color(hsla(active_text)))
+            })
+            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                on_select(this, index, window, cx);
+            }))
+            .child(
+                div()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(item.label.clone()),
+            )
+            .children(item.trailing.clone().map(|hint| {
+                div()
+                    .flex_shrink_0()
+                    .text_size(px(11.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(hsla(if pressed { trailing_active } else { trailing }))
+                    .child(hint)
+            }))
+    });
+    h_flex()
+        .id(id)
+        .w_full()
+        .flex_shrink_0()
+        .h(px(40.0))
+        .items_stretch()
+        .gap(px(3.0))
+        .p(px(3.0))
+        .rounded(px(MODAL_RADIUS_CONTROL))
+        .border_1()
+        .border_color(hsla(track_border))
+        .bg(hsla(track))
+        .overflow_hidden()
+        .children(tabs)
+        .into_any_element()
+}
+
+/// The default `SegmentedControl` (packages/components/ui/segmented-control.tsx and its
+/// canonical rules in packages/core-ui/styles.css): one `border` (8px radius) around equal
+/// segments split by the same hairline, 14px labels at 78% foreground, a 6% foreground wash on
+/// hover and a 14% one on the pressed segment, which also takes the full foreground. A
+/// segment's trailing note (a count) is drawn in `trailing`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn modal_bordered_segmented_control<V: 'static>(
+    foreground: Rgba,
+    border: Rgba,
+    trailing: Rgba,
+    id: &'static str,
+    items: &[ModalRailItem],
+    selected: usize,
+    on_select: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
+    cx: &mut Context<V>,
+) -> Stateful<Div> {
+    let segments = items.iter().enumerate().map(|(index, item)| {
+        let pressed = index == selected;
+        let on_select = on_select.clone();
+        h_flex()
+            .id((id, index))
+            .flex_1()
+            .flex_basis(px(0.0))
+            .min_w_0()
+            .h_full()
+            .items_center()
+            .justify_center()
+            .gap(px(6.0))
+            .px(px(12.0))
+            .when(index > 0, |this| {
+                this.border_l_1().border_color(hsla(border))
+            })
+            .text_size(px(14.0))
+            .line_height(px(20.0))
+            .whitespace_nowrap()
+            .text_color(hsla(if pressed {
+                foreground
+            } else {
+                rgba_of(foreground, foreground.a * 0.78)
+            }))
+            .cursor_pointer()
+            .when(pressed, |this| this.bg(hsla(rgba_of(foreground, 0.14))))
+            .when(!pressed, |this| {
+                this.hover(move |this| {
+                    this.bg(hsla(rgba_of(foreground, 0.06)))
+                        .text_color(hsla(foreground))
+                })
+            })
+            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                on_select(this, index, window, cx);
+            }))
+            .child(item.label.clone())
+            .children(
+                item.trailing
+                    .clone()
+                    .map(|note| div().text_color(hsla(trailing)).child(note)),
+            )
+    });
+    h_flex()
+        .id(id)
+        .flex_shrink_0()
+        .h(px(MODAL_CONTROL_HEIGHT))
+        .items_stretch()
+        .rounded(px(MODAL_RADIUS_CONTROL))
+        .border_1()
+        .border_color(hsla(border))
+        .overflow_hidden()
+        .children(segments)
+}
+
+/// [`modal_text_input`] with a [`ModalFieldSkin`] and a caller-chosen side padding (the shadcn
+/// `Input` is `px-2.5`), 32px tall, its border turning `focus_border` while focused.
+pub(crate) fn modal_text_input_skinned(
+    p: &ModalPalette,
+    state: &gpui::Entity<InputState>,
+    skin: ModalFieldSkin,
+    padding_x: f32,
+    window: &Window,
+    cx: &App,
+) -> AnyElement {
+    let focused = state.read(cx).focus_handle(cx).is_focused(window);
+    div()
+        .w_full()
+        .min_w_0()
+        .h(px(MODAL_CONTROL_HEIGHT))
+        .px(px(padding_x))
+        .flex()
+        .items_center()
+        .rounded(px(MODAL_RADIUS_CONTROL))
+        .border_1()
+        .border_color(hsla(if focused {
+            skin.focus_border
+        } else {
+            skin.border
+        }))
+        .bg(hsla(skin.background))
+        .child(
+            div().flex_1().min_w_0().child(
+                Input::new(state)
+                    .with_size(ComponentSize::Small)
+                    .appearance(false)
+                    .bordered(false)
+                    .focus_bordered(false)
+                    .w_full()
+                    .px(px(0.0))
+                    .py(px(0.0))
+                    .text_size(px(skin.text_size))
+                    .text_color(hsla(p.foreground)),
+            ),
+        )
+        .into_any_element()
+}
+
+/// The fill, edge and ink of one shadcn `Button` variant inside a modal's skin, at rest and hovered.
+#[derive(Clone, Copy)]
+pub(crate) struct ModalButtonSkin {
+    pub(crate) background: Rgba,
+    pub(crate) border: Rgba,
+    pub(crate) text: Rgba,
+    pub(crate) hover_background: Rgba,
+    pub(crate) hover_text: Rgba,
+}
+
+/// A shadcn `Button` (packages/components/ui/button.tsx): content-sized, 8px radius, a 1px edge,
+/// `height` tall (32 for `default` and `icon`, 28 for `sm`) with `padding_x` sides, a 14px/400
+/// label after an optional leading icon, `gap` apart, and `disabled_opacity` when disabled
+/// (0.5 in shadcn). A button without a label is square. Returned stateful so callers can attach
+/// a tooltip.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn modal_skinned_button<V: 'static>(
+    id: impl Into<gpui::ElementId>,
+    skin: ModalButtonSkin,
+    height: f32,
+    padding_x: f32,
+    gap: f32,
+    leading: Option<AnyElement>,
+    label: Option<SharedString>,
+    disabled: bool,
+    disabled_opacity: f32,
+    on_click: impl Fn(&mut V, &mut Window, &mut Context<V>) + 'static,
+    cx: &mut Context<V>,
+) -> Stateful<Div> {
+    let square = label.is_none();
+    h_flex()
+        .id(id)
+        .flex_shrink_0()
+        .h(px(height))
+        .when(square, |this| this.w(px(height)))
+        .when(!square, |this| this.px(px(padding_x)))
+        .gap(px(gap))
+        .items_center()
+        .justify_center()
+        .rounded(px(MODAL_RADIUS_CONTROL))
+        .border_1()
+        .border_color(hsla(skin.border))
+        .bg(hsla(skin.background))
+        .text_size(px(14.0))
+        .line_height(px(20.0))
+        .text_color(hsla(skin.text))
+        .whitespace_nowrap()
+        .when(disabled, |this| this.opacity(disabled_opacity))
+        .when(!disabled, |this| {
+            this.hover(move |this| {
+                this.bg(hsla(skin.hover_background))
+                    .text_color(hsla(skin.hover_text))
+            })
+            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                on_click(this, window, cx);
+            }))
+        })
+        .children(leading)
+        .children(label)
 }

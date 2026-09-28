@@ -1,3 +1,4 @@
+use crate::app::helpers::web_bridge_types::SidebarGxserverBootstrap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -649,13 +650,13 @@ impl GhostexGpuiApp {
     pub(crate) fn agents_session_chat_gxserver_bootstrap(
         &self,
         session_id: TerminalSessionId,
-    ) -> Option<cef::SidebarGxserverBootstrap> {
+    ) -> Option<SidebarGxserverBootstrap> {
         if self.agents_chat_local_key_for_session(session_id).is_some() {
             return self.sidebar_gxserver_bootstrap.clone();
         }
         let key = self.agents_chat_remote_key_for_session(session_id)?;
         let target = self.gpui_remote_gxserver_request_target(key.remote_machine_id.as_str())?;
-        Some(cef::SidebarGxserverBootstrap {
+        Some(SidebarGxserverBootstrap {
             base_url: format!("http://127.0.0.1:{}", target.local_port),
             auth_token: target.token,
             protocol_version: GPUI_GXSERVER_PROTOCOL_VERSION as i32,

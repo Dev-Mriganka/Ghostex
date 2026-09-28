@@ -197,6 +197,7 @@ impl GhostexGpuiApp {
             generation,
             panel: None,
             error: None,
+            waiting_for_web_runtime: None,
         });
         cx.notify();
 
@@ -411,6 +412,23 @@ impl GhostexGpuiApp {
             }
             return;
         };
+        // A page can only be created once CEF runs: the popup shows the web runtime prompt (or
+        // its skeleton while CEF starts) and `retry_titlebar_extension_popup_after_cef_ready`
+        // creates it then.
+        if !cef::context_initialized() {
+            if let Some(state) = self
+                .titlebar_extension_popup
+                .as_mut()
+                .filter(|state| state.generation == generation && state.id == id)
+            {
+                state.waiting_for_web_runtime = Some(url);
+                cx.notify();
+            }
+            if crate::app::helpers::web_runtime::web_runtime_available() {
+                cef::request_runtime();
+            }
+            return;
+        }
         let parent_ns_view = self.parent_ns_view;
         let event_handler = self.titlebar_extension_bridge_event_handler(generation, id, cx);
         let app = cx.entity().downgrade();
@@ -431,6 +449,33 @@ impl GhostexGpuiApp {
                 });
             })
             .detach();
+    }
+
+    /// Creates the open popup's page once CEF is ready (or asks CEF to start after an install).
+    pub(crate) fn retry_titlebar_extension_popup_after_cef_ready(
+        &mut self,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let Some((generation, id, waiting)) =
+            self.titlebar_extension_popup.as_ref().and_then(|state| {
+                state
+                    .waiting_for_web_runtime
+                    .clone()
+                    .map(|url| (state.generation, state.id, url))
+            })
+        else {
+            return;
+        };
+        if !cef::context_initialized() {
+            if crate::app::helpers::web_runtime::web_runtime_available() {
+                cef::request_runtime();
+            }
+            return;
+        }
+        if let Some(state) = self.titlebar_extension_popup.as_mut() {
+            state.waiting_for_web_runtime = None;
+        }
+        self.schedule_titlebar_extension_panel_creation(generation, id, waiting, cx);
     }
 
     pub(crate) fn attach_titlebar_extension_panel(

@@ -103,6 +103,14 @@ impl GhostexGpuiApp {
             self.copy_path_for_disabled_project_workarea(&url, "Browser", cx);
             return;
         }
+        // Without the web runtime the saved page opens in the system browser, as links do
+        // (CDXC:CefRuntime 2026-09-28 in workspace_events.rs).
+        if !crate::app::helpers::web_runtime::web_runtime_available() {
+            if let Some(url) = normalize_address(&url) {
+                let _ = gpui_open_external_http_url(&url);
+            }
+            return;
+        }
         self.change_active_mode_with_pane_state(TitlebarMode::Browser, cx);
         self.focus_shell_target(
             ShellFocusTarget::BrowserPane(self.browser_tabs.focused_pane),

@@ -184,6 +184,17 @@ wrap_browser_process_handler! {
         fn on_schedule_message_pump_work(&self, delay_ms: i64) {
             platform::schedule_message_pump_work(delay_ms);
         }
+
+        /// CDXC:PlatformSupport 2026-09-28 WHY:
+        /// Opening Ghostex while it already ran (the desktop icon, Start menu or taskbar again) started a second process on the same CEF profile; Chromium handed its command line to this instance, and returning 0 here let Chromium open its own "New Tab - Chromium" window with a "Restore pages?" bubble. Ghostex has no Chromium window of its own, so the relaunch is handled here: bring the Ghostex window forward and open nothing.
+        fn on_already_running_app_relaunch(
+            &self,
+            _command_line: Option<&mut CommandLine>,
+            _current_directory: Option<&CefString>,
+        ) -> c_int {
+            platform::activate_running_app();
+            1
+        }
     }
 }
 

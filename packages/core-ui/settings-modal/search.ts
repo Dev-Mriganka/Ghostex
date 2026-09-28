@@ -499,7 +499,8 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
           })),
           {
             key: 'cef',
-            subtitle: 'Inspect or reinstall the Chromium runtime used by Ghostex web surfaces.',
+            subtitle:
+              'Install, reinstall or uninstall the optional web runtime used by the Browser, the Code view, website and extension views, and HTML files in Files.',
             title: 'Chromium runtime (CEF)',
           },
         ],

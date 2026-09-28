@@ -67,6 +67,12 @@ impl GhostexGpuiApp {
                         state.first_launch_setup_seen_revision =
                             Some(GPUI_FIRST_LAUNCH_SETUP_SEEN_REVISION.to_string());
                     }
+                    GpuiFirstRunOnboardingMarker::FirstLaunchSetupNotShown => {
+                        if state.first_launch_setup_seen_revision.is_none() {
+                            return;
+                        }
+                        state.first_launch_setup_seen_revision = None;
+                    }
                     GpuiFirstRunOnboardingMarker::OsIntegrationOnboardingSeen => {
                         if state.os_integration_onboarding_seen {
                             return;
@@ -159,12 +165,7 @@ impl GhostexGpuiApp {
                 return;
             }
             let _ = this.update(cx, |this, cx| {
-                // The setup modal is a CEF page and its "seen" marker is only written once the window exists. With CEF deferred at launch, start the runtime and let the CEF-ready entry point run this pass again (CDXC:CefRuntime 2026-09-19).
-                if first_launch_setup_sidebar_state.is_some() && !cef::context_initialized() {
-                    this.first_run_onboarding_started = false;
-                    this.request_cef_runtime(cx);
-                    return;
-                }
+                // CDXC:Onboarding 2026-09-28 WHY: the onboarding is a native window now (window/onboarding/), so first run no longer starts or downloads the CEF runtime to show it; this supersedes the CDXC:CefRuntime 2026-09-19 wait for CEF here.
                 if show_os_integration_toast {
                     this.upsert_gpui_app_toast(
                         GpuiAppToast {
@@ -192,7 +193,9 @@ impl GhostexGpuiApp {
                     this.open_gpui_first_launch_setup_with_sidebar_state(base_sidebar_state, cx);
                     // Only a window that actually exists counts as "this
                     // revision's setup was presented".
-                    if this.app_modal_window.is_some() {
+                    if this.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding)
+                        || this.app_modal_window.is_some()
+                    {
                         this.persist_gpui_first_run_onboarding_marker(
                             GpuiFirstRunOnboardingMarker::FirstLaunchSetupSeen,
                             cx,

@@ -1,9 +1,7 @@
 pub use super::sidebar_bridge_manifest::AppModalHostBridgeSurface;
 use anyhow::Result;
 use gpui::{Bounds, Pixels};
-use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
 
 pub fn prepare_application() {}
 
@@ -50,9 +48,11 @@ pub enum BrowserPageMetadataEvent {
 
 pub type BrowserPageMetadataHandler = Rc<dyn Fn(BrowserPageMetadataEvent)>;
 
-/// CDXC:Onboarding 2026-08-18: API mirror of the CEF
-/// main-frame load-end callback used by bridge-less third-party surfaces.
-pub type PageLoadEndHandler = Rc<dyn Fn()>;
+/// Plain Rust shared with the native app; see `app/helpers/web_bridge_types.rs`.
+pub use crate::app::helpers::web_bridge_types::{
+    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
+    SidebarGxserverBootstrap,
+};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BrowserMediaAccessKinds {
@@ -104,63 +104,9 @@ pub enum ProjectWorkareaBridgeEvent {
 
 pub type ProjectWorkareaBridgeEventHandler = Rc<dyn Fn(ProjectWorkareaBridgeEvent)>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppModalHostBridgeEvent {
-    Message(String),
-}
-
-pub type AppModalHostBridgeEventHandler = Rc<dyn Fn(AppModalHostBridgeEvent)>;
-
-#[derive(Clone, Debug)]
-pub struct ManageDocsResourceScope;
-
-/// CDXC:Docs 2026-08-09: parity with the CEF scope, whose mounted
-/// Docs roots and their allowed relative roots are resolved together, lazily,
-/// off the main thread.
-type ManageDocsLocalRootResolver =
-    Arc<dyn Fn() -> Option<Vec<ManageDocsResourceRoot>> + Send + Sync>;
-
-/// CDXC:Docs 2026-08-09: parity with the CEF scope's mount record.
-#[derive(Clone)]
-pub struct ManageDocsResourceRoot {
-    pub allowed_relative_roots: Vec<String>,
-    pub mount_segment: String,
-    pub path: PathBuf,
-}
-
-/// Parity with the CEF scope's in-memory/remote resource loader.
-type ManageDocsRemoteResourceLoader = Arc<dyn Fn(&str) -> Option<Vec<u8>> + Send + Sync>;
-
-impl ManageDocsResourceScope {
-    pub fn new(
-        _resolve_root: ManageDocsLocalRootResolver,
-        _resolve_dynamic_root: Arc<dyn Fn(&str) -> Option<ManageDocsResourceRoot> + Send + Sync>,
-    ) -> Self {
-        Self
-    }
-
-    pub fn new_remote(_loader: ManageDocsRemoteResourceLoader) -> Self {
-        Self
-    }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct SidebarRuntimeSettingsSnapshot {
-    pub debugging_mode: bool,
-    pub show_beta_features: bool,
-    pub saved_settings_json: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SidebarGxserverBootstrap {
-    pub base_url: String,
-    pub auth_token: String,
-    pub protocol_version: i32,
-    pub client_id: String,
-    pub initial_active_project_id: Option<String>,
-    pub focused_session_id: Option<String>,
-    pub visible_session_ids: Vec<String>,
-}
+/// The Docs resource scope is plain Rust shared with the native Files view; see
+/// `app/helpers/manage_docs_resources.rs`.
+pub use crate::app::helpers::manage_docs_resources::ManageDocsResourceScope;
 
 pub struct CefBrowser;
 
@@ -209,6 +155,10 @@ impl CefBrowser {
     }
 
     pub fn blur(&self) {}
+
+    pub fn is_loading(&self) -> bool {
+        false
+    }
 
     pub fn load_url(&self, _url: &str) {}
 

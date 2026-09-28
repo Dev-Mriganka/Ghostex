@@ -363,11 +363,15 @@ impl GhostexGpuiApp {
         remote_machine_id: String,
         cx: &mut gpui::Context<Self>,
     ) {
-        if self.app_modal_window.is_none() {
+        if self.app_modal_window.is_none()
+            && !self
+                .native_app_modal_kind()
+                .is_some_and(|kind| kind.is_settings_modal_entry())
+        {
             /*
-            Nothing can render the answer while no app modal is open, so skip
-            the SSH round trip instead of probing every saved machine on the
-            automatic startup connect pass.
+            Nothing can render the answer while no app modal is open (the React
+            host or the native Settings modal), so skip the SSH round trip instead
+            of probing every saved machine on the automatic startup connect pass.
             */
             return;
         }

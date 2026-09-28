@@ -10,7 +10,8 @@
  * SEE-ALSO: packages/core-ui/settings-modal/search-catalog.ts, server/src/ghostex_cli/settings.rs, server/src/ghostex_cli/guide.rs.
  */
 import './catalog-platform';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -116,7 +117,66 @@ const outputs = {
   catalog: resolve(referencesDir, 'settings-catalog.json'),
   hotkeys: resolve(referencesDir, 'hotkeys.md'),
   settings: resolve(referencesDir, 'settings.md'),
+  nativeSettingsCatalog: resolve(
+    repoRoot,
+    'apps/desktop/src/app/window/settings_modal/catalog/settings-catalog.generated.json'
+  ),
 };
+
+type JsonPath = Array<string | number>;
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** `[path, value]` pairs that turn `base` into `other`, each replacing the smallest subtree whose shape or value differs. */
+function jsonDifferences(
+  base: unknown,
+  other: unknown,
+  path: JsonPath = [],
+  out: Array<[JsonPath, unknown]> = []
+): Array<[JsonPath, unknown]> {
+  if (Array.isArray(base) && Array.isArray(other) && base.length === other.length) {
+    base.forEach((item, index) => jsonDifferences(item, other[index], [...path, index], out));
+    return out;
+  }
+  if (isPlainRecord(base) && isPlainRecord(other)) {
+    const baseKeys = Object.keys(base);
+    const otherKeys = Object.keys(other);
+    if (baseKeys.length === otherKeys.length && baseKeys.every((key, index) => key === otherKeys[index])) {
+      for (const key of baseKeys) {
+        jsonDifferences(base[key], other[key], [...path, key], out);
+      }
+      return out;
+    }
+  }
+  if (JSON.stringify(base) !== JSON.stringify(other)) {
+    out.push([path, other]);
+  }
+  return out;
+}
+
+/**
+ * CDXC:Settings 2026-09-28 WHY:
+ * The native Settings modal embeds the same search rows, option tables and defaults the React modal reads, so the two cannot drift and `bun run typecheck` flags a stale copy. The Settings modules compute platform text at module load, so each platform is exported by its own process; the file keeps the macOS catalog whole and only the values that differ on Windows and Linux.
+ * SEE-ALSO: tooling/ghostex-help/settings-catalog-export.ts, apps/desktop/src/app/window/settings_modal/catalog.rs.
+ */
+function renderNativeSettingsCatalog(): string {
+  const exportScript = resolve(repoRoot, 'tooling/ghostex-help/settings-catalog-export.ts');
+  const platformCatalog = (platform: string): unknown =>
+    JSON.parse(
+      execFileSync(process.execPath, [exportScript, platform], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+      })
+    );
+  const base = platformCatalog('macos');
+  const platforms = Object.fromEntries(
+    ['windows', 'linux'].map((platform) => [platform, jsonDifferences(base, platformCatalog(platform))])
+  );
+  return `${JSON.stringify({ generatedBy: GENERATOR_PATH, base, platforms }, null, 2)}\n`;
+}
 
 /** Keys whose value must never be read or written by an agent, whatever their type. */
 const AGENT_DENIED_KEY_PATTERN = /token|password|secret|apikey|credential/iu;
@@ -956,6 +1016,7 @@ function main(): void {
     catalog: `${JSON.stringify(catalog, null, 2)}\n`,
     hotkeys: renderHotkeysMarkdown(catalog),
     settings: renderSettingsMarkdown(catalog),
+    nativeSettingsCatalog: renderNativeSettingsCatalog(),
   };
   const stale: string[] = [];
   for (const [name, path] of Object.entries(outputs) as Array<[keyof typeof outputs, string]>) {
@@ -970,6 +1031,7 @@ function main(): void {
     }
     stale.push(path.slice(repoRoot.length + 1));
     if (!check) {
+      mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, rendered[name]);
     }
   }

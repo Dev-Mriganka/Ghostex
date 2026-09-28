@@ -27,6 +27,11 @@ pub(crate) enum ProjectEditorPlaceholderAction {
     ProjectViewOutput,
     ProjectViewOpen,
     ProjectViewConfigure,
+    /// The web runtime prompt (app/render/web_runtime_prompt.rs): hide this view's tab, install
+    /// the runtime, or try a failed install or start again.
+    HideViewTab,
+    InstallWebRuntime,
+    RetryWebRuntime,
 }
 
 impl ProjectEditorPlaceholderSignature {

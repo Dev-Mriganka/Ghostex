@@ -126,7 +126,9 @@ view from the strip.
   `closeFocusedSession`.
 - **Code**: the built-in VS Code based editor (code-server). Opens files from
   chat links, `ghostex edit <file>`, and Open In. Optional Use VS Code settings
-  reuses the local VS Code configuration.
+  reuses the local VS Code configuration. The editor and the web runtime (see
+  Browser) are both optional installs; the Code view offers each one the first
+  time it opens.
 - **Browser**: embedded Chromium tabs with profiles, splits, annotations,
   DevTools, and agent control through the `$ghostex-embedded-browser-use`
   skill. Its tabs sit in the view panel's tab strip, in the same row as the view
@@ -141,7 +143,16 @@ view from the strip.
   another tab. A tab with no address yet is blank: type or paste an address, or
   pick a running server from the ⋯ menu's Dev servers panel.
   Web links from terminals, chat, and detected dev servers
-  open here or in the system browser depending on Open links in. Annotate the current page
+  open here or in the system browser depending on Open links in.
+  The Browser runs on the web runtime (Chromium), an optional one-time install
+  that Ghostex does not need for anything else: until it is installed the
+  Browser, the Code view, website and extension views, and HTML, drawing and
+  media files in Files show an Install button instead of the page (or Hide tab
+  to remove the view), and web links and saved Browser actions open in the
+  system browser. Nothing is downloaded until you press Install, and the runtime
+  starts only when one of those views is shown. Settings > Extensions > Built-in
+  > Chromium runtime (CEF) installs, reinstalls or uninstalls it (uninstall
+  before opening a web view, right after starting Ghostex). Annotate the current page
   with Agentation in the Browser toolbar; GitHub pages disallow that tool.
   When a page shows its content inside a frame, such as a Storybook story,
   the Annotate toolbar opens inside that frame so the content itself can be
@@ -626,6 +637,9 @@ shows Show all. After Close the side question stays in the chat, folded where
 you asked it, and opens again on click. It is not added to the conversation.
 Claude panels such as `/status` and `/usage` show as clickable tabs, tables and
 usage meters instead of terminal text.
+A new Claude Code install's first-run setup is answered in the chat too: the
+text style, the login method, and Sign in to Claude, where you paste the code the
+browser sign-in page shows and press Sign in (Retry appears if the code was wrong).
 OpenCode v2 supports streamed replies, reasoning, tool results, image attachments,
 questions, permissions, queued prompts, and conversation rewind in Chat. Install
 its hooks in Settings > Agents, then open a new OpenCode session to connect it.
@@ -1132,16 +1146,25 @@ Related settings: `terminalFontFamily`, `terminalFontSize`,
 
 Agents are the launch buttons per project: Claude Code, Codex, Gemini CLI,
 OpenCode, Pi, and more are built in, and custom commands can be added in
-Settings > Agents. Expand an agent row to install or update its CLI, see its
-installed version and command output, or open its Install docs link. Ghostex
-selects an updater for recognized installations; choose the original installation
-method when it cannot be detected. mise is offered for supported CLIs and is the
+Settings > Agents. An agent row whose CLI is missing shows Install CLI, and one
+with a newer release shows Update CLI. Expand an agent row to install or update
+its CLI, see its installed version (and the newer one when available) and
+command output, or open its Install docs link. Claude Code, Codex, Cursor Agent
+and Grok Build install through their official installers (PowerShell on
+Windows). When an installer leaves its folder off PATH (Claude Code's does), Ghostex
+adds it to your user PATH so new terminals find the command; Add to PATH
+does the same for a CLI installed earlier. Installs run one at a time and wait
+their turn. Ghostex selects an updater for recognized installations; choose the
+original installation method when it cannot be detected. mise is offered for supported CLIs and is the
 default install choice when available. Existing mise tools, including custom
 backends, update through mise with their version pins bumped to the latest
 release; older versions remain available for running sessions. For example,
 ZCode can also be installed with `mise use --global 'npm:zcode-app-cli[prerelease=true]@latest'`.
 Install and update commands run on the
-selected computer and keep running if Settings closes. Start a new session to use the installed version. ZCode launches with `zcode`; install
+selected computer and keep running if Settings closes. From a terminal,
+`ghostex agent-cli status [agent]`, `ghostex agent-cli install <agent>`,
+`ghostex agent-cli update <agent>` and `ghostex agent-cli add-to-path <agent>`
+do the same. Start a new session to use the installed version. ZCode launches with `zcode`; install
 and update it with `npm install -g zcode-app-cli@latest`, as documented at
 [the ZCode installation docs](https://github.com/kingsword09/zcode-cli).
 Agent Hooks let gxserver watch agent status, questions, and
@@ -1168,7 +1191,7 @@ Agents Hub lets you browse and edit agent files in Skills, MDs, Hooks,
 Configs & MCPs, and Agent Sync. In MDs, expand Shared agent markdown to see the
 files in your shared agent folder, then select a filename to read or edit it.
 Expand the profile instruction groups the same way. Use Refresh to reload files
-from disk and Save to write your edits.
+from disk and Save (Cmd+S) to write your edits. Cmd+1 to Cmd+5 switch tabs.
 
 Agent Sync (the fifth Hub tab, Cmd+5) keeps one source of truth in `~/.agents`
 (skills, `main.md` and the other rule files, hook scripts, `.skill-lock.json`)
@@ -1593,7 +1616,8 @@ docs directory), `hideProjectHeaderDiffStats`,
   there is not listed, and Customize itself is always in the menu.
 - Welcome to Ghostex is the onboarding that opens the first time Ghostex
   runs. Its five panels cover: the agents found on this computer, with
-  Install buttons for Claude Code, Codex and Cursor Agent, an Install guide
+  Install buttons for Claude Code, Codex, Cursor Agent and Grok Build (an Add
+  to PATH button when an installed CLI is not on PATH), an Install guide
   that installs any other supported agent, the Ghostex helper (agent hooks)
   and Computer Use; which views to show (Browser and Files are on by default
   on a first run) and the browser skill; phone pairing and notifications;

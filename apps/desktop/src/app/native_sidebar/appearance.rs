@@ -128,6 +128,11 @@ fn sidebar_content_scale(window: &Window) -> f32 {
     {
         use ::cef::ImplDisplay;
 
+        // CEF is optional and starts only for web views (CDXC:CefRuntime 2026-09-28 in
+        // app/helpers/web_runtime.rs); until it runs there is no Chromium scale to match.
+        if !crate::cef::context_initialized() {
+            return 1.0;
+        }
         let scale = window.scale_factor();
         let bounds = window.bounds();
         let bounds = ::cef::Rect {

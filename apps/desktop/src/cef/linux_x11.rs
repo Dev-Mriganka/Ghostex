@@ -105,6 +105,8 @@ pub(super) fn prepare_application() {
     // at the CEF layer.
 }
 
+pub(super) fn activate_running_app() {}
+
 pub(super) fn install_application_hooks() {
     // The macOS CefAppProtocol/sendEvent swizzle and Edit-menu install have
     // no Linux counterpart: Chromium integrates with X11 directly (it opens

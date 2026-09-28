@@ -221,8 +221,17 @@ impl GhostexGpuiApp {
         }
     }
 
+    /// Starts CEF (`request_cef_runtime` decides when) and, once its context is up, creates the
+    /// web views that were waiting for it. A runtime that cannot start is reported on those views
+    /// (CDXC:CefRuntime 2026-09-28 in app/helpers/web_runtime.rs).
     pub(crate) fn initialize_cef(&mut self, cx: &mut gpui::Context<Self>) {
-        cef::initialize(cx).expect("failed to initialize CEF");
+        if let Err(error) = cef::initialize(cx) {
+            self.fail_web_runtime_start(format!("The web runtime could not start: {error:#}"), cx);
+            return;
+        }
+        crate::app::helpers::web_runtime::set_web_runtime_state(
+            crate::app::helpers::web_runtime::WebRuntimeState::Running,
+        );
         if !cef::context_initialized() {
             if self.cef_context_initialization_waiting {
                 return;
@@ -254,13 +263,10 @@ impl GhostexGpuiApp {
         }
         self.ensure_project_workarea_runtime_cef_surfaces_for_current_context(cx);
         self.update_active_mode_cef_child_visibility(cx);
-        // First-run onboarding may open the CEF app-modal host. Start it only
-        // after the required CEF runtime is ready;
-        // macOS release first launch can spend time in the native component
-        // window before CEF is available.
-        self.start_gpui_first_run_onboarding(cx);
+        self.retry_titlebar_extension_popup_after_cef_ready(cx);
         self.open_gpui_app_modal_deferred_for_cef(cx);
         self.schedule_gpui_app_modal_spare_preload(cx);
+        self.refresh_web_runtime_views(cx);
         cx.notify();
     }
 

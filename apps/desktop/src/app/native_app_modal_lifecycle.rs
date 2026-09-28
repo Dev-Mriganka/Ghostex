@@ -19,7 +19,7 @@ use std::rc::Rc;
 /// Native dialogs that close when the user clicks back into the main window.
 ///
 /// CDXC:AppModal 2026-09-27 DECISION:
-/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Settings and Agents Hub run in the React modal host, which keeps its current behaviour; Find by Prompt is native since 2026-09-27 and still stays open.
+/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Settings runs in the React modal host, which keeps its current behaviour; Find by Prompt (native since 2026-09-27) and Agents Hub (native since 2026-09-28) are left out of this list, so they stay open.
 /// Only dialogs where closing is a plain cancel of a short action are listed. Dialogs that hold typed work (Session Note, Delayed Send, Add Worktree, the space editor), run a flow (Remote Setup, gxserver install, Portless setup), cancel a running export when closed (Export Transcript) or open on their own and need an answer (Update Available, Missing Project Folder, Agent Hooks Required) stay open. Quick Access, the new-thread picker, Browser History and the Markdown and Mermaid viewers already close when they lose focus.
 /// "Clicking away" means the main window becoming key again; switching to another app (to copy a name or a token) never closes a dialog.
 fn native_app_modal_closes_when_clicked_away(kind: GpuiAppModalKind) -> bool {
@@ -212,7 +212,8 @@ impl GhostexGpuiApp {
             }
             // CDXC:AppModal 2026-09-27 DECISION:
             // User: "i want the easier to move to gpui ones to actually be switched now" (Browser History, the
-            // Markdown table popup and the Mermaid diagram popup; Settings and Agents Hub stay React for later),
+            // Markdown table popup and the Mermaid diagram popup; Settings and Agents Hub stayed React for later,
+            // and Agents Hub moved on 2026-09-28 below),
             // then "lets migrate find by prompt modal to gpui also please but make it stays exactly same as react
             // one we have now and make sure it's performant" (Search by Prompt).
             // Their React dialogs were deleted, so these kinds must not fall back to the modal host.
@@ -227,6 +228,36 @@ impl GhostexGpuiApp {
             }
             GpuiAppModalKind::FindPrompts => {
                 self.open_gpui_find_prompts_modal(cx);
+            }
+            GpuiAppModalKind::AddProject => {
+                self.open_gpui_add_project_modal(open_message, cx);
+            }
+            GpuiAppModalKind::AgentsHub => {
+                self.open_gpui_agents_hub_modal(open_message, cx);
+            }
+            GpuiAppModalKind::GitCommit => {
+                self.open_gpui_git_commit_modal(open_message, cx);
+            }
+            GpuiAppModalKind::GitFileDiff => {
+                self.open_gpui_git_file_diff_modal(open_message, cx);
+            }
+            // The first run, Tips > Setup and Quick Access > Setup all open the native onboarding (onboarding_modal_lifecycle.rs).
+            GpuiAppModalKind::Onboarding => {
+                self.open_gpui_onboarding_modal(open_message, cx);
+            }
+            // Settings goes native page by page; until every page is ported only behind
+            // GHOSTEX_NATIVE_SETTINGS=1 (settings_modal_lifecycle.rs), else the React modal opens.
+            // Without the web runtime the React modal cannot run, so the native one opens then
+            // (CDXC:CefRuntime 2026-09-28 in app/helpers/web_runtime.rs).
+            GpuiAppModalKind::Settings
+            | GpuiAppModalKind::Hotkeys
+            | GpuiAppModalKind::ConfigureAgents
+            | GpuiAppModalKind::ConfigureActions
+            | GpuiAppModalKind::OpenTargets
+                if crate::app::settings_modal_lifecycle::native_settings_modal_enabled()
+                    || !crate::app::helpers::web_runtime::web_runtime_available() =>
+            {
+                self.open_gpui_settings_modal(kind, open_message, cx);
             }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.
             _ => return false,
@@ -263,6 +294,11 @@ impl GhostexGpuiApp {
             GpuiAppModalKind::Worktree => {
                 self.receive_gpui_create_worktree_modal_message(message, cx)
             }
+            GpuiAppModalKind::GitCommit => self.receive_gpui_git_commit_modal_message(message, cx),
+            kind if kind.is_settings_modal_entry() => {
+                self.receive_native_settings_modal_payload(message, cx)
+            }
+            GpuiAppModalKind::Onboarding => self.receive_gpui_onboarding_modal_message(message, cx),
             // NATIVE-MODAL-MESSAGE-ARMS: one arm per modal kind that receives host messages.
             _ => {
                 let _ = cx;

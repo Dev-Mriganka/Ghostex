@@ -42,8 +42,8 @@ impl GhostexGpuiApp {
         CDXC:Settings 2026-06-24-12:22:
         Configure Agents, Configure Actions, and Open Targets are Settings-modal entry points in the shared React host. GPUI must preserve their modal ids, attach the latest Settings-compatible sidebar hydrate, and reuse this production CEF app-modal route instead of adding duplicate React UI, stubs, fallback routing, overlays, or hidden hit regions.
 
-        CDXC:AgentLauncher 2026-06-24-12:26:
-        Agents Hub opens through this same CEF app-modal host so command-palette bridge requests and titlebar menu actions present the existing shared React modal. Its catalog/content are separate sidebarCommand responses and should not be bundled into the open message.
+        CDXC:AgentLauncher 2026-09-28 WHY:
+        Agents Hub enters through this same launcher from the titlebar, the command palette and bridge requests, and leaves it for its native window (agents_hub_modal_lifecycle.rs), which fetches its catalog and file bodies itself; they are never bundled into the open message. This supersedes the 2026-06-24 note that it opened in the CEF host.
         */
         let sidebar_state_message = self.gpui_app_modal_sidebar_state_message_for_open(modal, cx);
         let mut open_message = modal.open_message();
@@ -613,6 +613,13 @@ impl GhostexGpuiApp {
         if let Some(surface) = gpui_telemetry_surface_for_app_modal(modal) {
             record_gpui_surface_opened_telemetry(surface, cx.background_executor());
         }
+        // Another app modal replacing the native onboarding counts as finishing setup, as the
+        // switch out of the React onboarding did (CDXC:Onboarding 2026-09-11 in the inner opener).
+        if modal != GpuiAppModalKind::Onboarding
+            && self.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding)
+        {
+            self.complete_first_launch_setup();
+        }
         if modal == GpuiAppModalKind::StashedPrompts {
             self.enrich_gpui_saved_prompts_quick_access_open_message(&mut open_message);
         }
@@ -688,9 +695,6 @@ impl GhostexGpuiApp {
 
         CDXC:Settings 2026-06-24-12:22:
         Settings sub-entry modal ids must share this launcher so bridge opens, command-palette commands, and titlebar actions all hydrate the same shared Settings modal while letting the React host choose the initial tab from the modal id.
-
-        CDXC:AgentLauncher 2026-06-24-12:26:
-        Agents Hub shares the launcher and receives the normal sidebar hydrate for settings-backed UI labels, but its filesystem catalog is not stored in that hydrate. The shared React Hub requests a fresh metadata catalog after open and then selected file content on demand through sidebarCommand.
 
         CDXC:FocusRouting 2026-06-25-22:13:
         Command-pane app modals need the same dismissal focus contract as native child windows. Capture only a runtime command group/session return target at modal open, then restore that exact command tab on close if it still exists; do not persist modal payloads, titles, command text, paths, URLs, stdout/stderr, or fallback to another command group.
@@ -953,6 +957,7 @@ impl GhostexGpuiApp {
                     modal,
                     ready_timeout_open_message,
                     ready_timeout_sidebar_state_message,
+                    Duration::ZERO,
                     cx,
                 );
             }
@@ -968,18 +973,23 @@ impl GhostexGpuiApp {
         modal: GpuiAppModalKind,
         open_message: serde_json::Value,
         sidebar_state_message: serde_json::Value,
+        waited: Duration,
         cx: &mut gpui::Context<Self>,
     ) {
+        let timeout = if self.app_modal_ready_retry_used {
+            APP_MODAL_HOST_READY_RETRY_TIMEOUT
+        } else {
+            APP_MODAL_HOST_READY_TIMEOUT
+        };
         cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(APP_MODAL_HOST_READY_TIMEOUT)
-                .await;
+            cx.background_executor().timer(timeout).await;
             let _ = this.update(cx, |this, cx| {
                 this.handle_gpui_app_modal_ready_timeout(
                     attempt_id,
                     modal,
                     open_message,
                     sidebar_state_message,
+                    waited + timeout,
                     cx,
                 );
             });
@@ -993,12 +1003,36 @@ impl GhostexGpuiApp {
         modal: GpuiAppModalKind,
         open_message: serde_json::Value,
         sidebar_state_message: serde_json::Value,
+        waited: Duration,
         cx: &mut gpui::Context<Self>,
     ) {
         if attempt_id != self.app_modal_open_attempt_id {
             return;
         }
         if self.app_modal_window.is_none() || self.gpui_app_modal_window_is_ready(cx) {
+            return;
+        }
+        /*
+        CDXC:Onboarding 2026-09-28 WHY:
+        A page that is still loading is slow, not dead. On a cold first launch (fresh install, antivirus scanning the new files) the modal page took tens of seconds to parse; replacing it at the timeout restarted that cold load, and after the one retry the first-run setup window was removed before it ever painted. Keep waiting while CEF reports the page loading (bounded), and retry only a page that finished loading without the ready handshake.
+        */
+        let still_loading = self
+            .app_modal_window
+            .and_then(|handle| {
+                handle
+                    .update(cx, |host, _window, cx| host.page_is_loading(cx))
+                    .ok()
+            })
+            .unwrap_or(false);
+        if still_loading && waited < APP_MODAL_HOST_LOADING_LIMIT {
+            self.schedule_gpui_app_modal_ready_timeout(
+                attempt_id,
+                modal,
+                open_message,
+                sidebar_state_message,
+                waited,
+                cx,
+            );
             return;
         }
 
@@ -1017,6 +1051,13 @@ impl GhostexGpuiApp {
         }
 
         self.remove_gpui_app_modal_window_without_focus_restore(cx);
+        // The first run counted this window as shown when it opened; it never painted, so show it next launch.
+        if modal == GpuiAppModalKind::Onboarding {
+            self.persist_gpui_first_run_onboarding_marker(
+                GpuiFirstRunOnboardingMarker::FirstLaunchSetupNotShown,
+                cx,
+            );
+        }
         cx.notify();
     }
 
@@ -1125,6 +1166,8 @@ impl GhostexGpuiApp {
         let modal = GpuiAppModalKind::Onboarding;
         let mut open_message = modal.open_message();
         open_message["firstRun"] = serde_json::Value::Bool(true);
+        // The native onboarding reads whether a project exists from the open message.
+        open_message["latestSidebarStateMessage"] = sidebar_state_message.clone();
         self.open_gpui_app_modal_window(modal, open_message, sidebar_state_message, None, cx);
     }
 
@@ -1407,6 +1450,7 @@ impl GhostexGpuiApp {
         self.reload_live_gpui_engine_terminal_config(cx);
         let sidebar_state_message =
             self.gpui_app_modal_sidebar_state_message_from_settings_snapshot(settings_snapshot);
+        self.reset_open_git_commit_prompt_agent(&sidebar_state_message, cx);
         self.refresh_open_gpui_app_modal_sidebar_state(sidebar_state_message, cx);
         self.sync_titlebar_account_privacy(cx);
         // Newly saved hotkey chords bind immediately. The save boundary first
@@ -1526,6 +1570,10 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) {
         let Some(handle) = self.app_modal_window.clone() else {
+            // The native Settings modal (settings_modal_lifecycle.rs) follows the same hydrate.
+            let sidebar_state_message =
+                self.with_gpui_command_pane_sidebar_indicators(sidebar_state_message);
+            self.refresh_native_settings_modal_sidebar_state(sidebar_state_message, cx);
             return;
         };
         let sidebar_state_message =
@@ -1561,7 +1609,15 @@ impl GhostexGpuiApp {
                 .is_some()
             {
                 self.quick_access_receive(payload, cx);
+                return;
             }
+            // The native onboarding reads the same detection, CLI and install answers (onboarding_modal_lifecycle.rs).
+            if self.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding) {
+                self.receive_gpui_onboarding_status_payload(payload, cx);
+                return;
+            }
+            // The native Settings modal takes the same status answers (settings_modal_lifecycle.rs).
+            self.receive_native_settings_modal_payload(&payload, cx);
             return;
         };
         let update_result = handle.update(cx, |host, modal_window, cx| {

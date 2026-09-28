@@ -37,6 +37,8 @@ mod terminal_surface_host;
 mod terminal_surface_lifecycle;
 mod terminal_wheel;
 mod ui_fonts;
+#[cfg(target_os = "windows")]
+mod windows_single_instance;
 mod windows_terminal_backend;
 #[cfg(target_os = "windows")]
 mod windows_updater;
@@ -200,14 +202,26 @@ fn main() {
             );
         }
     }
+    // A second launch brings the running Ghostex forward and exits (see
+    // windows_single_instance.rs for why this no longer waits for CEF).
+    #[cfg(target_os = "windows")]
+    if windows_single_instance::hand_off_to_running_instance() {
+        return;
+    }
     // Install missing `ghostex`/`gx` PATH wrappers and refresh stale
     // Ghostex-owned ones off the main thread so filesystem probing cannot
     // delay first paint, and only after the PATH normalization above so the
     // scan sees the user's standard tool directories.
     profiling::start();
     thread::spawn(gpui_auto_install_ghostex_cli_wrappers);
+    // Only finds the CEF runtime on disk; nothing starts or downloads it here
+    // (CDXC:CefRuntime 2026-09-28 in app/helpers/web_runtime.rs).
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-    cef_component_window::configure_cef_framework_path_for_process();
+    if cef_component_window::configure_cef_framework_path_for_process() {
+        app::helpers::web_runtime::set_web_runtime_state(
+            app::helpers::web_runtime::WebRuntimeState::Installed,
+        );
+    }
     // The Linux app is X11-only for v1 (CEF child-window embedding requires
     // an X11 host window), so backend selection must happen before framework
     // initialization or background work can read the environment.
@@ -421,10 +435,10 @@ fn main() {
 
         /*
         CDXC:CefRuntime 2026-06-14-13:10:
-        CEF is mandatory for the GPUI shell, but CEF surfaces need an actual GPUI platform window before they attach native AppKit children. Create the GPUI window first, then let the CEF bridge wait for non-zero layout bounds before creating browser hosts.
+        CEF surfaces need an actual GPUI platform window before they attach native AppKit children. Create the GPUI window first, then let the CEF bridge wait for non-zero layout bounds before creating browser hosts. (CEF is optional since 2026-09-28: see app/helpers/web_runtime.rs.)
 
         CDXC:CefRuntime 2026-06-14-13:09:
-        CEF startup must run after GPUI completes the first frame because initializing native Chromium children during root construction can stall the GPUI launch path without producing helper processes. Schedule CEF surface creation on the next frame, then explicitly refresh the window so the sidebar and browser elements enter the normal GPUI layout pass.
+        CEF startup must run after GPUI completes the first frame because initializing native Chromium children during root construction can stall the GPUI launch path without producing helper processes. The first frame only installs the listener that starts CEF when a web view is shown, then explicitly refreshes the window so the sidebar and browser elements enter the normal GPUI layout pass.
         */
         let main_window = cx
             .open_window(options, |window, cx| {

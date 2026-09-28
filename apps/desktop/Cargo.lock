@@ -2555,6 +2555,7 @@ dependencies = [
  "ghostex-gx-core",
  "ghostex-paths",
  "gpui",
+ "gpui-base",
  "gpui-component",
  "gpui-kit-assets",
  "gpui_platform",
@@ -2583,6 +2584,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "ureq",
+ "url",
  "uuid",
  "velopack",
  "web-time",
@@ -2837,7 +2839,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-base"
-version = "0.6.5"
+version = "0.7.0"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2850,9 +2852,11 @@ dependencies = [
  "gpui_macros",
  "html5ever 0.27.0",
  "instant",
+ "itertools 0.13.0",
  "lsp-types",
  "markdown",
  "markup5ever_rcdom",
+ "num-traits",
  "objc2 0.6.4",
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
@@ -2881,7 +2885,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-component"
-version = "0.6.5"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2958,7 +2962,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-component-macros"
-version = "0.6.5"
+version = "0.7.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2968,7 +2972,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-kit-assets"
-version = "0.6.5"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "gpui",

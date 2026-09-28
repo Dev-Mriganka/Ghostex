@@ -303,6 +303,11 @@ impl GhostexGpuiApp {
         else {
             return;
         };
+        self.open_gpui_agents_hub_path(path, cx);
+    }
+
+    /// Reveals an Agents Hub file, or opens one of its folders, in the OS file manager.
+    pub(crate) fn open_gpui_agents_hub_path(&mut self, path: String, cx: &mut gpui::Context<Self>) {
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let result = background
@@ -370,6 +375,15 @@ impl GhostexGpuiApp {
         else {
             return;
         };
+        self.open_gpui_agents_hub_file_path_in_built_in_editor(file_path, cx);
+    }
+
+    /// Opens an Agents Hub file in the Code view of its folder's project, closing the Hub first.
+    pub(crate) fn open_gpui_agents_hub_file_path_in_built_in_editor(
+        &mut self,
+        file_path: String,
+        cx: &mut gpui::Context<Self>,
+    ) {
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let result = background
@@ -389,13 +403,13 @@ impl GhostexGpuiApp {
                         // Close the Agents Hub modal first: the copy toast is a
                         // main-window toast, so it would sit behind the modal
                         // that is still covering the window.
-                        this.close_gpui_app_modal_window_and_restore_command_focus(cx);
+                        this.close_gpui_agents_hub_for_navigation(cx);
                         this.copy_path_for_disabled_project_workarea(&file_path, "Code", cx);
                         return;
                     }
                     let project_path = pending.project_path.clone();
                     this.pending_source_file_open = Some(pending);
-                    this.close_gpui_app_modal_window_and_restore_command_focus(cx);
+                    this.close_gpui_agents_hub_for_navigation(cx);
                     this.dispatch_gpui_os_integration_command_message(
                         serde_json::json!({
                             "action": "openProjectPaths",
