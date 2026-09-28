@@ -136,12 +136,29 @@ unsafe extern "system" fn mouse_message(code: i32, w_param: WPARAM, l_param: LPA
 }
 
 fn navigate(target: NavigationTarget, back: bool) {
-    let mut async_app = target.async_app;
+    let NavigationTarget {
+        view,
+        mut async_app,
+    } = target;
+    let direction = if back { "back" } else { "forward" };
     let foreground = async_app.foreground_executor().clone();
     foreground
         .spawn(async move {
-            let NavigationView::Main(app) = target.view else {
-                if let NavigationView::Modal(modal) = target.view {
+            match view {
+                NavigationView::Main(app) => {
+                    let _ = app.update_in(&mut async_app, |this, _, cx| {
+                        let enabled = if back {
+                            this.navigation_history_state.can_go_back
+                        } else {
+                            this.navigation_history_state.can_go_forward
+                        };
+                        if enabled && this.app_modal_window.is_none() {
+                            this.request_navigation_history_navigation(direction, cx);
+                        }
+                    });
+                }
+                // Only the pages drawn by the Settings modal keep a page history.
+                NavigationView::Modal(modal) => {
                     let _ = modal.update_in(&mut async_app, |this, _, cx| {
                         if matches!(
                             this.current_modal,
@@ -154,28 +171,14 @@ fn navigate(target: NavigationTarget, back: bool) {
                             this.dispatch_transient_message(
                                 serde_json::json!({
                                     "type": "navigateSettingsHistory",
-                                    "direction": if back { "back" } else { "forward" }
+                                    "direction": direction,
                                 }),
                                 cx,
                             );
                         }
                     });
                 }
-                return;
-            };
-            let _ = app.update_in(&mut async_app, |this, _, cx| {
-                let enabled = if back {
-                    this.navigation_history_state.can_go_back
-                } else {
-                    this.navigation_history_state.can_go_forward
-                };
-                if enabled && this.app_modal_window.is_none() {
-                    this.request_navigation_history_navigation(
-                        if back { "back" } else { "forward" },
-                        cx,
-                    );
-                }
-            });
+            }
         })
         .detach();
 }
