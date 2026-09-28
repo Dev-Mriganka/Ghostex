@@ -845,11 +845,8 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       DEFAULT_ghostex_SETTINGS.terminalWidthApplyToCommandPaneTerminals
     ),
     /**
-     * CDXC:Terminal 2026-06-25-21:27:
-     * Missing settings use the same 16px horizontal inset as Chat. Explicit
-     * values are integer pixels clamped to the Settings slider range so native
-     * layout receives bounded inner padding without adding spacing between
-     * adjacent panes.
+     * CDXC:Terminal 2026-09-28 DECISION:
+     * User: "make the padding 0 on the gpui app by default". Missing settings use no terminal inset (this replaces the 16px default that matched Chat's inset); Rust's `DEFAULT_TERMINAL_PANE_HORIZONTAL_PADDING_PX` in apps/desktop/src/shared_settings.rs must match. Explicit values are integer pixels clamped to the Settings slider range so native layout receives bounded inner padding without adding spacing between adjacent panes.
      */
     terminalPaneHorizontalPaddingPx: clampTerminalPanePaddingPx(
       readNumber(source, 'terminalPaneHorizontalPaddingPx', DEFAULT_ghostex_SETTINGS.terminalPaneHorizontalPaddingPx)

@@ -2139,7 +2139,7 @@ export function SettingsModal({
                                * CDXC:Terminal 2026-06-25-21:27:
                                * Horizontal terminal padding is a native pane content inset,
                                * not spacing between split panes. Keep the slider integer-pixel
-                               * based. The 16px default matches Chat's horizontal content inset.
+                               * based. The default is 0px (see the CDXC:Terminal decision in normalize.ts).
                                */
                               <SliderNumberField
                                 description='Add left and right inner padding inside the terminal content area.'

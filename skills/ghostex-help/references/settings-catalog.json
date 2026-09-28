@@ -1460,7 +1460,7 @@
       "section": "terminal",
       "sectionTitle": "Terminal",
       "type": "number",
-      "default": 16,
+      "default": 0,
       "min": 0,
       "max": 64,
       "agentWritable": true

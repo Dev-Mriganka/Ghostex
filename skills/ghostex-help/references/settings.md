@@ -103,7 +103,7 @@ How to use this file:
 - **Terminal width mode** `terminalViewWidthMode` (one of full | match-chat | custom; default full) [advanced]: Use the full pane, match the chat transcript, or set an independent terminal width. Option labels: full = Full, match-chat = Match Chat, custom = Custom.
 - **Terminal Width (%)** `terminalViewWidthPercent` (number 50 to 100 step 5 default 75) [advanced]: Set the centered terminal body width as a percentage.
 - **Apply Width to Command Pane Terminals** `terminalWidthApplyToCommandPaneTerminals` (boolean, default false) [advanced]: Apply the narrower terminal width to command pane terminals too.
-- **Horizontal Padding** `terminalPaneHorizontalPaddingPx` (number 0 to 64 default 16): Add left and right inner padding inside the terminal content area.
+- **Horizontal Padding** `terminalPaneHorizontalPaddingPx` (number 0 to 64 default 0): Add left and right inner padding inside the terminal content area.
 - **Vertical Padding** `terminalPaneVerticalPaddingPx` (number 0 to 64 default 0): Add top and bottom inner padding inside the terminal content area.
 - **Cursor Style** `terminalCursorStyle` (one of bar | block | underline; default bar): Choose the cursor shape. Option labels: bar = Line, block = Block, underline = Underline.
 - **Cursor blink** `terminalCursorStyleBlink` (boolean, default true) [advanced]: Blink the terminal cursor.
