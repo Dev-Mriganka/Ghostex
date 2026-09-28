@@ -199,6 +199,25 @@ printf '%s\n' \
     })
 }
 
+pub(super) fn ghostex_cli_invocation(args: &[&str]) -> Result<(PathBuf, Vec<String>), String> {
+    let ResolvedWindowsTerminalBackend::Wsl { distribution } =
+        resolve(super::current_preference())?
+    else {
+        return Err("Select a WSL distribution before installing WSL agent skills.".to_string());
+    };
+    let cli = ghostex_cli_status()?.ghostex_path.ok_or_else(|| {
+        "The Ghostex CLI is missing from the selected WSL distribution. Repair its Ghostex runtime before installing agent skills.".to_string()
+    })?;
+    let mut invocation = vec![
+        "--distribution".to_string(),
+        distribution,
+        "--exec".to_string(),
+        cli,
+    ];
+    invocation.extend(args.iter().map(|arg| (*arg).to_string()));
+    Ok((PathBuf::from("wsl.exe"), invocation))
+}
+
 fn validated_optional_wsl_path(line: Option<&str>) -> Result<Option<String>, String> {
     let Some(path) = line else {
         return Err("WSL returned an invalid Ghostex CLI status response.".to_string());

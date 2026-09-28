@@ -125,6 +125,22 @@ pub(crate) fn ghostex_cli_status() -> Result<WindowsWslGhostexCliStatus, String>
     platform::ghostex_cli_status()
 }
 
+/// CDXC:AgentSkills 2026-09-27 WHY:
+/// Settings must run the CLI in the same environment its status probe inspects: the bundled executable for PowerShell, or the owned CLI in the selected WSL distribution. The desktop's PATH cannot identify both.
+#[cfg(target_os = "windows")]
+pub(crate) fn ghostex_cli_invocation(
+    args: &[&str],
+) -> Result<(std::path::PathBuf, Vec<String>), String> {
+    if current_preference() == WindowsTerminalBackendPreference::PowerShell {
+        let path = native::cli_path().ok_or_else(|| {
+            "The bundled Ghostex CLI is missing. Reinstall Ghostex before installing agent skills."
+                .to_string()
+        })?;
+        return Ok((path, args.iter().map(|arg| (*arg).to_string()).collect()));
+    }
+    platform::ghostex_cli_invocation(args)
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) fn resolve_current() -> Result<ResolvedWindowsTerminalBackend, String> {
     platform::resolve(current_preference())
