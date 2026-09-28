@@ -655,21 +655,19 @@ impl NativeChatView {
 
     /// CDXC:SessionChat 2026-09-18 WHY:
     /// Retained chat views stay subscribed while parked, and every state frame (several a second across working sessions) notified, which redraws the whole window for a view nobody sees.
-    /// The state is applied either way; only a view that rendered recently asks for a redraw, and a parked one paints the latest state when it comes back.
+    /// The state is applied either way; only a visible view asks for a redraw, and a parked one paints the latest state when it comes back.
     /// CDXC:SessionChat 2026-09-19 WHY:
     /// A streaming agent produced a runtime output several times a frame, and each one redrew the whole window, which re-lays out every visible transcript row; with a few agents streaming that was most of the UI thread.
     /// Redraws from runtime output are coalesced to one per 50ms; the last output in a burst still paints, only never sooner than that.
     /// CDXC:SessionChat 2026-09-24 WHY:
     /// The model pop-up opened from terminal view belongs to a hidden chat view and repaints only by observing it, so an open pop-up counts as shown; otherwise its tab and search changes reached the runtime while the pop-up kept painting the state it opened with. Supersedes the same rule for the retired full-screen picker.
-    /// CDXC:SessionChat 2026-09-27 WHY:
-    /// A transcript-only view is its phone host's whole window and is never parked, so it counts as shown: with nothing else in that window redrawing every second (the desktop's sidebar does), an idle chat stopped painting the next message once its last draw was a second old.
+    /// CDXC:SessionChat 2026-09-28 WHY:
+    /// Elapsed time since a draw cannot tell whether a pane is hidden: an idle visible chat stopped painting model results after one second until a hover redrew it. Use the pane's existing visibility state and keep the phone's transcript-only view visible. Supersedes the timing exception made for the phone on 2026-09-27.
     fn notify_if_shown(&mut self, cx: &mut Context<Self>) {
         const NOTIFY_MIN_INTERVAL: Duration = Duration::from_millis(50);
         if self.option_menu.is_none()
             && !self.transcript_only
-            && !self
-                .last_render
-                .is_some_and(|at| at.elapsed() < Duration::from_secs(1))
+            && (self.pane_hidden || self.last_render.is_none())
         {
             return;
         }
