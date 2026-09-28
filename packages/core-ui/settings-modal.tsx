@@ -491,6 +491,7 @@ export function SettingsModal({
       normalizedInitialSettings.showAdvancedSettings
     )
   );
+  const pageHistoryRef = useRef({ pages: [activeTab], index: 0 });
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const showAdvancedSettingsId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -635,11 +636,59 @@ export function SettingsModal({
     const visibleTab = resolveSettingsModalTabForVisibility(nextTab, {
       showOSIntegrationSettingsTab,
     });
+    const history = pageHistoryRef.current;
+    if (history.pages[history.index] !== visibleTab) {
+      history.pages = [...history.pages.slice(0, history.index + 1), visibleTab].slice(-100);
+      history.index = history.pages.length - 1;
+    }
     rememberActiveScrollPosition();
     rememberSettingsModalTab(visibleTab);
     persistSettingsModalNavigation(visibleTab);
     setActiveTabState(visibleTab);
   };
+
+  /**
+   * CDXC:Settings 2026-09-28 DECISION:
+   * User: keep the current close behavior and use the mouse Back/Forward buttons to navigate between Settings pages.
+   */
+  const navigateSettingsHistory = (direction: 'back' | 'forward') => {
+    if (isFirstLaunchSetup) return;
+    const history = pageHistoryRef.current;
+    const step = direction === 'back' ? -1 : 1;
+    let index = history.index + step;
+    while (index >= 0 && index < history.pages.length) {
+      const tab = history.pages[index];
+      if (
+        tab !== activeTab &&
+        (tab !== 'osIntegration' || showOSIntegrationSettingsTab) &&
+        (tab !== 'debugging' || draft.showAdvancedSettings)
+      ) {
+        rememberActiveScrollPosition();
+        history.index = index;
+        setSettingsSearchQuery('');
+        rememberSettingsModalTab(tab);
+        persistSettingsModalNavigation(tab);
+        setActiveTabState(tab);
+        return;
+      }
+      index += step;
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onHostMessage = (event: Event) => {
+      const message = (event as CustomEvent).detail;
+      if (
+        message?.type === 'navigateSettingsHistory' &&
+        (message.direction === 'back' || message.direction === 'forward')
+      ) {
+        navigateSettingsHistory(message.direction);
+      }
+    };
+    window.addEventListener('ghostex-app-modal-host-message', onHostMessage);
+    return () => window.removeEventListener('ghostex-app-modal-host-message', onHostMessage);
+  });
 
   const toggleSettingsSidebarPage = (pageId: SettingsModalTab) => {
     setExpandedSettingsSidebarPages((expandedPages) => ({
@@ -661,6 +710,7 @@ export function SettingsModal({
     rememberActiveScrollPosition();
     rememberSettingsModalTab(nextTab);
     persistSettingsModalNavigation(nextTab);
+    pageHistoryRef.current = { pages: [nextTab], index: 0 };
     setActiveTabState(nextTab);
   }, [initialTab, isOpen]);
 
@@ -1980,7 +2030,9 @@ export function SettingsModal({
                                   applySettingsPatch({
                                     terminalBackgroundMode: value as TerminalBackgroundMode,
                                     ...(value === 'custom' && draft.workspaceBackgroundColor === ''
-                                      ? { workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR }
+                                      ? {
+                                          workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR,
+                                        }
                                       : {}),
                                   })
                                 }
@@ -2619,7 +2671,10 @@ export function SettingsModal({
                                   { label: 'Off', value: '0' },
                                   ...Array.from({ length: 17 }, (_, index) => {
                                     const percent = 10 + index * 5;
-                                    return { label: `${percent}%`, value: String(percent) };
+                                    return {
+                                      label: `${percent}%`,
+                                      value: String(percent),
+                                    };
                                   }),
                                 ]}
                                 value={String(draft.keepAwakeBatteryThresholdPercent)}
@@ -2821,7 +2876,10 @@ export function SettingsModal({
                         result.isSearching ? mainSettingVisible(result, settingKey) : true
                       }
                       searchEmptyState={settingsSearchEmptyState}
-                      searchResults={{ appIcon: settingsSearch.appIcon, theming: settingsSearch.theming }}
+                      searchResults={{
+                        appIcon: settingsSearch.appIcon,
+                        theming: settingsSearch.theming,
+                      }}
                       selectAppIcon={selectAppIcon}
                       showAppIcon={!appIconPickerUnavailable}
                       themingSectionRef={themingSectionRef}
