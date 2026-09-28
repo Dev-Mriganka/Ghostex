@@ -139,6 +139,9 @@ export type AgentAccountsRequest =
       shareHistory: true;
       accountId?: string;
       selector?: string;
+      /** Retry after sleeping these sessions and letting xswap end any other Codex it named. */
+      stopCodex?: true;
+      sleepSessions?: { projectId: string; sessionId: string }[];
     }
   | { operation: 'setupStatus'; owner: string }
   | { operation: 'setupInput'; owner: string; jobId: string; input: string }
@@ -165,6 +168,11 @@ export interface AccountSetupJob {
   url?: string;
   output: string;
   error?: string;
+  /** Codex processes that stopped an xswap login: Ghostex sessions to sleep, and how many run outside Ghostex. */
+  blockers?: {
+    sessions: { projectId: string; sessionId: string; title: string }[];
+    others: number;
+  };
   acknowledged: boolean;
 }
 

@@ -294,6 +294,9 @@ pub(crate) fn read_project_directory_browse_params(
 
 /// CDXC:AddProject 2026-09-23 WHY:
 /// The root chooser on a native Windows host lists all logical drives. Its isDriveList flag prevents clients from adding the virtual root or creating a folder there, and each fullPath belongs to the host regardless of the client's OS.
+/// CDXC:AddProject 2026-09-28 WHY:
+/// Local folder opens this list on native Windows hosts instead of `~/`, so the host's home folder leads it and stays one click away.
+/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-modal.tsx (source rows).
 pub(crate) fn browse_project_directories(
     params: &Map<String, Value>,
     home_dir: &Path,
@@ -309,13 +312,20 @@ pub(crate) fn browse_project_directories(
                 "Unable to list Windows drives.",
             ));
         }
-        let entries: Vec<Value> = (0..26)
-            .filter(|index| drives & (1 << index) != 0)
+        let home = path_to_string(home_dir);
+        let home_entry = (!home.is_empty() && home_dir.is_dir())
+            .then(|| json!({ "name": format!("Home ({home})"), "fullPath": home }));
+        let entries: Vec<Value> = home_entry
+            .into_iter()
+            .chain(
+                (0..26)
+                    .filter(|index| drives & (1 << index) != 0)
+                    .map(|index| {
+                        let path = format!("{}:/", char::from(b'A' + index as u8));
+                        json!({ "name": path, "fullPath": path })
+                    }),
+            )
             .take(limit)
-            .map(|index| {
-                let path = format!("{}:/", char::from(b'A' + index as u8));
-                json!({ "name": path, "fullPath": path })
-            })
             .collect();
         return Ok(json!({ "entries": entries, "parentPath": "/", "isDriveList": true }));
     }

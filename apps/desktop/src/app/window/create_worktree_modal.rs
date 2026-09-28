@@ -908,6 +908,16 @@ impl GpuiCreateWorktreeModalWindow {
         // `.worktree-create-modal-shadcn :is([data-slot='select-trigger'], [data-slot='textarea'])`
         // and its light override: #161616 / #f5f5f5 on rgba(255,255,255,.08) / rgba(0,0,0,.16),
         // focused on rgba(255,255,255,.28) / #525252.
+        //
+        // CDXC:Theming 2026-09-27 DECISION: User: "yes pls make all those that could be glass glass". Under window glass the dialog is a frosted surface, so its fields take the kit's glass washes (`raised`, `hairline`, `focus_border`) like every other native modal input instead of the solid #161616 / #f5f5f5 skin, which read as a dark slab on the glass (the "First prompt" box).
+        if p.glass {
+            return ModalFieldSkin {
+                background: p.raised,
+                border: p.hairline,
+                focus_border: p.focus_border,
+                text_size: 13.0,
+            };
+        }
         if p.light {
             ModalFieldSkin {
                 background: rgb(0xf5f5f5),

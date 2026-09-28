@@ -4901,19 +4901,25 @@ html:has(body.app-modal-host-native-window-body) {
   border: 1px solid color-mix(in srgb, var(--app-border) 92%, transparent);
 }
 
+/*
+ * CDXC:RemoteMachines 2026-09-27 DECISION:
+ * User: "no scroll should be shown when nothing expanded". The dialog grows to the Settings window's height and only the fields row scrolls, so a collapsed form never shows a scrollbar; the old fixed `min(60vh, 520px)` cap scrolled even with room to spare. The body clips sideways because the Show-in-sidebar switch's enlarged hit area (`after:-inset-x-3`) reaches past the right edge and otherwise turned on a horizontal scrollbar.
+ */
 .settings-remote-machine-dialog {
   gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: calc(100% - 2rem);
   max-width: calc(100% - 2rem);
   padding: 16px;
   width: 32rem;
 }
 
-/* The fields scroll inside the dialog so the title and the action row stay reachable in the fixed modal window. */
 .settings-remote-machine-dialog-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: min(60vh, 520px);
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-right: 2px;
 }

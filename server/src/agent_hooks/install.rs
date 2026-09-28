@@ -347,6 +347,13 @@ pub(crate) struct HookInspection {
     pub(crate) ghostex_hook_present: bool,
 }
 
+/// Plugin files (JSON string literals) and Kimi's TOML basic strings store the hook path with each backslash doubled, so a Windows path only matches in that escaped form.
+fn text_contains_hook_path(text: &str, path: &str) -> bool {
+    text.contains(path) || text.contains(&path.replace('\\', "\\\\"))
+}
+
+/// CDXC:AgentHooks 2026-09-27 WHY:
+/// Windows paths and commands contain backslashes and quotes. Compare decoded JSON commands and serialized JavaScript path literals so a fresh install is not reported as stale.
 pub(crate) fn inspect_agent_hook_installation(
     definition: &HookDefinition,
     hook_paths: &HookPaths,
@@ -366,8 +373,9 @@ pub(crate) fn inspect_agent_hook_installation(
                 .get(1)
                 .map(|path| read_file_text(path))
                 .unwrap_or_default();
+            let notify_hook_literal = json!(path_string(&hook_paths.notify_hook_path)).to_string();
             let current = plugin_text.contains(&current_plugin_marker(OPENCODE_PLUGIN_MARKER))
-                && plugin_text.contains(&path_string(&hook_paths.notify_hook_path))
+                && plugin_text.contains(&notify_hook_literal)
                 && config_text.contains(OPENCODE_PLUGIN_SPEC);
             HookInspection {
                 current_hook_installed: current,
@@ -395,7 +403,10 @@ pub(crate) fn inspect_agent_hook_installation(
                     let current = loader_visible
                         && !marker.is_empty()
                         && text.contains(&current_plugin_marker(marker))
-                        && text.contains(&path_string(&hook_paths.notify_hook_path));
+                        && text_contains_hook_path(
+                            &text,
+                            &path_string(&hook_paths.notify_hook_path),
+                        );
                     HookInspection {
                         current_hook_installed: current,
                         ghostex_hook_present: current
@@ -423,9 +434,9 @@ pub(crate) fn inspect_agent_hook_installation(
                 .map(|path| read_file_text(path))
                 .collect::<Vec<_>>();
             let current = !texts.is_empty()
-                && texts
-                    .iter()
-                    .all(|text| text.contains(&marker) && text.contains(&notify_hook_path));
+                && texts.iter().all(|text| {
+                    text.contains(&marker) && text_contains_hook_path(text, &notify_hook_path)
+                });
             HookInspection {
                 current_hook_installed: current,
                 ghostex_hook_present: texts.iter().any(|text| {
@@ -438,9 +449,10 @@ pub(crate) fn inspect_agent_hook_installation(
                 .first()
                 .map(|path| read_file_text(path))
                 .unwrap_or_default();
-            let current = text.contains(&command)
+            let data = read_json_object(&text);
+            let current = json_contains_hook_command(&data, &command)
                 && json_hook_event_coverage_is_current(
-                    &read_json_object(&text),
+                    &data,
                     definition.agent_id,
                     &command,
                     HookFormat::Antigravity,

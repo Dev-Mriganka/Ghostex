@@ -19,7 +19,7 @@ use std::rc::Rc;
 /// Native dialogs that close when the user clicks back into the main window.
 ///
 /// CDXC:AppModal 2026-09-27 DECISION:
-/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Those three run in the React modal host, which keeps its current behaviour.
+/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Settings and Agents Hub run in the React modal host, which keeps its current behaviour; Find by Prompt is native since 2026-09-27 and still stays open.
 /// Only dialogs where closing is a plain cancel of a short action are listed. Dialogs that hold typed work (Session Note, Delayed Send, Add Worktree, the space editor), run a flow (Remote Setup, gxserver install, Portless setup), cancel a running export when closed (Export Transcript) or open on their own and need an answer (Update Available, Missing Project Folder, Agent Hooks Required) stay open. Quick Access, the new-thread picker, Browser History and the Markdown and Mermaid viewers already close when they lose focus.
 /// "Clicking away" means the main window becoming key again; switching to another app (to copy a name or a token) never closes a dialog.
 fn native_app_modal_closes_when_clicked_away(kind: GpuiAppModalKind) -> bool {
@@ -212,7 +212,9 @@ impl GhostexGpuiApp {
             }
             // CDXC:AppModal 2026-09-27 DECISION:
             // User: "i want the easier to move to gpui ones to actually be switched now" (Browser History, the
-            // Markdown table popup and the Mermaid diagram popup; Settings and Agents Hub stay React for later).
+            // Markdown table popup and the Mermaid diagram popup; Settings and Agents Hub stay React for later),
+            // then "lets migrate find by prompt modal to gpui also please but make it stays exactly same as react
+            // one we have now and make sure it's performant" (Search by Prompt).
             // Their React dialogs were deleted, so these kinds must not fall back to the modal host.
             GpuiAppModalKind::BrowserHistory => {
                 self.open_gpui_browser_history_modal(open_message, cx);
@@ -222,6 +224,9 @@ impl GhostexGpuiApp {
             }
             GpuiAppModalKind::MermaidDiagram => {
                 self.open_gpui_mermaid_diagram_modal(open_message, cx);
+            }
+            GpuiAppModalKind::FindPrompts => {
+                self.open_gpui_find_prompts_modal(cx);
             }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.
             _ => return false,

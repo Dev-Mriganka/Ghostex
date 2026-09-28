@@ -286,7 +286,8 @@ pub fn compose(
         boundaried_transcript(state, catalog)
     };
     let queue = state.session.queue_prompts.clone().unwrap_or_default();
-    let startup_pending = pending_with_startup_sends(&state.pending.sends, &queue);
+    let startup_pending =
+        pending_with_startup_sends(&state.pending.sends, &queue, state.session.agent.as_deref());
     let against = pending_transcript(state, &boundaried);
     let pending_messages =
         pending_sends_as_messages(&visible_pending_sends(&startup_pending, &against));

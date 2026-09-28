@@ -55,36 +55,18 @@ impl GpuiAppModalHostWindow {
         let parent_ns_view = cef_parent_native_view(window)
             .expect("GPUI app-modal host requires a native parent view");
         let uses_react_modal_host = modal.uses_react_modal_host();
-        let is_find_prompts = modal == GpuiAppModalKind::FindPrompts;
         let (bridge_surface, event_handler) = if uses_react_modal_host {
             (
                 Some(cef::AppModalHostBridgeSurface::NativeWindow),
                 Some(event_handler),
             )
-        } else if is_find_prompts {
-            (
-                Some(cef::AppModalHostBridgeSurface::FindPrompts),
-                Some(event_handler),
-            )
         } else {
             (None, None)
         };
-        let find_theme_is_light = is_find_prompts.then(|| {
-            gpui_session_chat_uses_light_theme(
-                shared_settings::shared_sidebar_settings_snapshot().object(),
-            )
-        });
-        let (prepaint_background, background) = match find_theme_is_light {
-            Some(true) => (CEF_LIGHT_PREPAINT_BACKGROUND_COLOR, rgb(0xfdfdfd).into()),
-            Some(_) => (
-                CEF_FIND_PROMPTS_DARK_PREPAINT_BACKGROUND_COLOR,
-                rgb(0x111111).into(),
-            ),
-            None => (
-                pane_prepaint_background_color(),
-                app_modal_host_background(),
-            ),
-        };
+        let (prepaint_background, background) = (
+            pane_prepaint_background_color(),
+            app_modal_host_background(),
+        );
         // CDXC:AppModal 2026-09-14 WHY: modal-host.html needs the resolved app appearance before its first paint. Comparing prepaint colors sent "dark" even in light mode because pane white (#ffffff) differs from the chat/find light constant (#fdfdfd).
         let url = if uses_react_modal_host {
             gpui::http_client::Url::parse(&url)

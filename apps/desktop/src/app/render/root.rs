@@ -365,8 +365,11 @@ impl Render for GhostexGpuiApp {
                 CDXC:FocusRouting 2026-09-22 WHY:
                 A native chat pane has no child NSView, so a click on pane chrome or a blurred window leaves GPUI focus outside the chat while shell focus still names the chat pane.
                 Route the key to that chat's background typing so it lands in the composer, the way the composited terminal gets its committed text below. The chat's own fields already see keys through the pane's capture listener and are skipped.
+                CDXC:FocusRouting 2026-09-27 WHY:
+                Only when nothing in the window holds GPUI focus. A focused field elsewhere (the Docs "Add a comment" box, a view's own inputs) also bubbles its key-downs here, and routing them to the chat stole every keystroke typed into it.
                 */
-                if let ShellKeyboardOwner::ChatComposer(session_id) = this.shell_keyboard_owner()
+                if window.focused(cx).is_none()
+                    && let ShellKeyboardOwner::ChatComposer(session_id) = this.shell_keyboard_owner()
                     && let Some(chat) = this.native_chat_views.get(&session_id).cloned()
                     && !chat.read(cx).chat_text_field_focused(window, cx)
                 {
@@ -1197,6 +1200,7 @@ impl Render for GhostexGpuiApp {
                 and nothing is drawn across it.
                 */
                 h_flex()
+                    .track_focus(&self.root_action_focus_handle)
                     .flex_1()
                     .w_full()
                     .min_h_0()

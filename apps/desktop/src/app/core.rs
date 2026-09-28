@@ -939,6 +939,10 @@ pub struct GhostexGpuiApp {
     pub(crate) agents_delayed_send_countdown_ticker_active: bool,
     pub(crate) agents_delayed_send_persistence_ticker_active: bool,
     pub(crate) titlebar_dropdown_focus_handle: FocusHandle,
+    /// Drawn on the window body row, inside the root element that owns the app's `on_action`
+    /// listeners, and never focused. A menu row whose opener's focus is no longer drawn dispatches
+    /// from here (see `GpuiContextMenu::popup_menu_item`).
+    pub(crate) root_action_focus_handle: FocusHandle,
     pub(crate) titlebar_dropdown_previous_focus_handle: Option<FocusHandle>,
     pub(crate) titlebar_popup_menu: Option<GpuiTitlebarPopupState>,
     pub(crate) context_menu: Option<crate::app::context_menu::GpuiContextMenu>,
@@ -948,6 +952,9 @@ pub struct GhostexGpuiApp {
     /// The trailing ⋯ button's last painted bounds. Its menu rows and the Ghostex
     /// Help hotkey both anchor their panels here.
     pub(crate) titlebar_more_button_bounds: Rc<std::cell::Cell<Option<Bounds<Pixels>>>>,
+    /// A header dropdown asked to open before its trigger button had painted (a hotkey, a menu row
+    /// or the first frame); the trigger's own prepaint opens it once its bounds exist.
+    pub(crate) pending_titlebar_popup_open: Option<GpuiTitlebarPopupKind>,
     pub(crate) titlebar_extension_popup_generation: u64,
     pub(crate) titlebar_extension_popup: Option<GpuiTitlebarExtensionPopupState>,
     pub(crate) titlebar_tips_cli_status: Option<serde_json::Value>,

@@ -584,7 +584,18 @@ export const Agents: Story = {
  * pairing code and two paired devices, Tailscale detected, SSH access on.
  */
 export const Remote: Story = {
-  render: () => <SettingsModalStory initialTab='remote' remoteRpc={createRemoteStoryRpc({ sshEnabled: true })} />,
+  render: () => (
+    <SettingsModalStory
+      initialSettings={{
+        ...modalSettings,
+        remoteMachines: [
+          { id: 'story-remote', name: 'Remote', sshHost: '100.105.82.19', sshPasswordSaved: true, sshUser: 'madda' },
+        ],
+      }}
+      initialTab='remote'
+      remoteRpc={createRemoteStoryRpc({ sshEnabled: true })}
+    />
+  ),
 };
 
 export const Debugging: Story = {

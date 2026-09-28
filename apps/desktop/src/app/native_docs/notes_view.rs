@@ -64,6 +64,15 @@ fn probe(cell: &'static std::thread::LocalKey<Cell<Bounds<Pixels>>>) -> impl Int
     .size_full()
 }
 
+/// Where a finished Send landed, in the words the Send button shows.
+fn sent_label(delivery: &str) -> &'static str {
+    match delivery {
+        "chat" => "Added to chat",
+        "terminal" => "Added to terminal",
+        _ => "Copied to clipboard",
+    }
+}
+
 /// A markdown wrap the formatting toolbar applies, removed again when the selection already has it.
 fn wrap_selection(selected: &str, before: &str, after: &str) -> String {
     if selected.len() >= before.len() + after.len()
@@ -83,8 +92,8 @@ impl GhostexGpuiApp {
     /// CDXC:Docs 2026-09-14 DECISION:
     /// User: keep the actions ordered from right to left as files-list toggle, Reload, Clear, Copy, Add global comment, and Annotations list; use a trash icon for Clear and label the annotations tooltip "Annotations list".
     ///
-    /// CDXC:Docs 2026-09-16 DECISION:
-    /// User: do not show the long destination on the Send button; keep that in the tooltip. The button reads "Send 5" or "Copy 5" when there is room, and is icon-only below 560px. The Review menu beside it carries Resend all and, with notes in several files, Send new across all files. There is no Finish review, Undo finish, or Archive: Docs is a side pane, not a review session.
+    /// CDXC:Docs 2026-09-28 DECISION:
+    /// User: Send is a plain header icon in the same color as the others, with no "Send 5"/"Copy 5" label (supersedes the 2026-09-16 label). The number of new notes sits next to the icon, and with no notes the button looks disabled. Once every note has been sent the number goes away and a click sends them all again (the 2026-09-15 Send decision). The destination stays in the tooltip. The Review menu beside it carries Resend all and, with notes in several files, Send new across all files. There is no Finish review, Undo finish, or Archive: Docs is a side pane, not a review session.
     pub(crate) fn render_native_docs_note_actions(
         &mut self,
         p: &DocsPalette,
@@ -115,26 +124,28 @@ impl GhostexGpuiApp {
         } else {
             counts.pending
         };
-        let verb = if target.is_some() { "Send" } else { "Copy" };
-        let (send_label, send_color): (String, gpui::Hsla) = match &status {
-            Some(DocsSendStatus::Sending) => ("Sending".into(), p.muted),
-            Some(DocsSendStatus::Sent { delivery, .. }) => (
-                match *delivery {
-                    "chat" => "Added to chat",
-                    "terminal" => "Added to terminal",
-                    _ => "Copied to clipboard",
-                }
-                .into(),
-                p.green,
-            ),
-            Some(DocsSendStatus::Error(_)) => ("Couldn't send".into(), p.danger),
-            Some(DocsSendStatus::Notice(message)) => (message.clone(), p.muted),
-            None => (format!("{verb} {send_count}"), p.send),
-        };
-        let send_tooltip: SharedString = match (&status, &target) {
-            (Some(DocsSendStatus::Sent { count, files, .. }), _) => {
-                format!("{send_label}: {count} annotations across {files} files").into()
+        // Beside the icon: the count of new notes, or for a few seconds after a click, where they
+        // went (dropped on a narrow pane).
+        let send_label: Option<(String, gpui::Hsla)> = match &status {
+            Some(DocsSendStatus::Sending) => Some(("Sending".into(), p.muted)),
+            Some(DocsSendStatus::Sent { delivery, .. }) => {
+                Some((sent_label(delivery).into(), p.green))
             }
+            Some(DocsSendStatus::Error(_)) => Some(("Couldn't send".into(), p.danger)),
+            Some(DocsSendStatus::Notice(message)) => Some((message.clone(), p.muted)),
+            None => (!resending).then(|| (counts.pending.to_string(), p.toolbar_icon)),
+        }
+        .filter(|_| status.is_none() || !compact);
+        let send_tooltip: SharedString = match (&status, &target) {
+            (Some(DocsSendStatus::Sent {
+                count,
+                files,
+                delivery,
+            }), _) => format!(
+                "{}: {count} annotations across {files} files",
+                sent_label(delivery)
+            )
+            .into(),
             (Some(DocsSendStatus::Error(error)), _) => error.clone().into(),
             (_, _) if total == 0 => "No annotations to send".into(),
             (_, Some(target)) => format!(
@@ -211,25 +222,27 @@ impl GhostexGpuiApp {
                 this.native_docs_open_composer(Some(anchor), None, "", cx);
             }))
             .into_any_element(),
-            div()
-                .id("native-docs-send")
-                .flex()
-                .flex_none()
-                .items_center()
-                .gap(px(6.0))
-                .h(px(27.0))
-                .px(px(8.0))
-                .rounded(px(7.0))
-                .cursor_pointer()
-                .text_size(px(12.0))
-                .font_weight(FontWeight::MEDIUM)
-                .text_color(send_color)
-                .hover(|style| style.bg(p.control_hover))
-                .child(titlebar_svg_icon("docs/t-send-2.svg", 16.0, send_color))
-                .when(!compact, |this| this.child(send_label))
-                .tooltip(move |window, cx| titlebar_tooltip(send_tooltip.clone(), window, cx))
-                .on_click(cx.listener(|this, _, _, cx| this.native_docs_send_notes(false, cx)))
-                .into_any_element(),
+            header_tile(
+                "native-docs-send",
+                header_icon("docs/t-send-2.svg", total == 0, p),
+                false,
+                total == 0,
+                p,
+            )
+            .when_some(send_label, |this, (label, color)| {
+                this.w_auto()
+                    .gap(px(5.0))
+                    .px(px(7.0))
+                    .text_size(px(12.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(color)
+                    .child(label)
+            })
+            .tooltip(move |window, cx| titlebar_tooltip(send_tooltip.clone(), window, cx))
+            .when(total > 0, |this| {
+                this.on_click(cx.listener(|this, _, _, cx| this.native_docs_send_notes(false, cx)))
+            })
+            .into_any_element(),
             header_tile(
                 "native-docs-review",
                 header_icon("docs/t-checklist-2.svg", false, p),

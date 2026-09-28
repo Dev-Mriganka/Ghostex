@@ -185,6 +185,20 @@ pub(super) fn resolve_command_path(command: &str, home_dir: &Path) -> Option<Str
         .map(ToString::to_string)
 }
 
+/// Stdout of a one-line CLI script run the way `resolve_command_path` finds CLIs, so a probe reaches the same binary a session would launch.
+pub(crate) fn cli_script_stdout(script: &str, home_dir: &Path, timeout: Duration) -> Option<String> {
+    let shell = command_shell();
+    let mut command_process = Command::new(&shell.executable);
+    command_process.args(shell.profileless_script_args(script));
+    apply_hook_command_environment(&mut command_process, home_dir);
+    #[cfg(not(windows))]
+    command_process.env(
+        "PATH",
+        normalize_gxserver_process_path(std::env::var("PATH").ok().as_deref(), home_dir),
+    );
+    run_command_stdout_with_timeout(command_process, timeout)
+}
+
 pub(crate) fn normalize_gxserver_process_path(
     current_path: Option<&str>,
     home_dir: &Path,

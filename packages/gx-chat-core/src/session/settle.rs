@@ -32,7 +32,11 @@ pub fn before_compose(state: &mut ChatState, context: &ChatContext) {
     // Keep hydrated sends until the transcript replaces them, including the gap between terminal
     // delivery and the agent flushing its transcript to disk.
     if let Some(queue) = state.session.queue_prompts.clone() {
-        let hydrated = pending_with_startup_sends(&state.pending.sends, &queue);
+        let hydrated = pending_with_startup_sends(
+            &state.pending.sends,
+            &queue,
+            state.session.agent.as_deref(),
+        );
         state.pending.sends = prune_pending_sends(&hydrated, &transcript);
     }
 

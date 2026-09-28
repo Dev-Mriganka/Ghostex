@@ -200,9 +200,9 @@ view from the strip.
   numbered feedback with line numbers to the session last clicked in the
   sidebar for the active project: into its chat composer when the chat is
   showing, or into the agent's terminal when its input box is available. The
-  Send button reads Send plus the count, or Copy plus the count when notes
-  will go to the clipboard, and is icon-only on a narrow Files pane; the
-  tooltip names the session it will land in. When no agent session is
+  Send button shows how many new notes are waiting next to its icon and looks
+  disabled when there are no notes; its tooltip names the session they will
+  land in. When no agent session is
   selected, the agent's input box is busy, or Ghostex cannot tell for that
   agent, the feedback is copied to the clipboard instead and a toast says so.
   Sending leaves Files on screen. Sent notes stay visible with a Sent mark;
@@ -274,10 +274,13 @@ button that an empty project list or empty Space shows, or by right-clicking
 the empty sidebar area) joins the Space that is open at the time and appears at
 the top of it; add a project while Other is selected to leave it out of every
 Space.
-In Add Project, select the computer whose folders you want to browse. External
-drives and other folders shows that computer's filesystem root, or its drives
-on native Windows. You can paste a Windows drive or UNC path when the selected
-computer runs native Windows, even from a Linux or macOS client.
+In Add Project, select the computer whose folders you want to browse. Local
+folder starts in your home folder, and External drives and other folders shows
+that computer's filesystem root. On a computer running native Windows
+(PowerShell), the two are a single Local folder row that opens the list of
+drives, with your home folder at the top. You can paste a Windows drive or UNC
+path when the selected computer runs native Windows, even from a Linux or macOS
+client.
 Right-click a Space icon for its menu: Manage (Edit Space, New Space) and
 Sleep. Sleep Inactive sleeps only the Space's sessions that are awake but
 neither working nor waiting on you. Sessions stay where they are, asleep, and
@@ -892,9 +895,9 @@ Clicking a model or a reasoning level applies it to this session and saves it as
 the agent's default for new sessions. Right-clicking applies it to this session
 only and leaves the saved default alone, so new sessions still start where they
 did before; waking the session later brings it back on the model you chose.
-Right-click session-only picks work for Claude and OpenCode: other agents' own
-model pickers always save the choice as the default, except Hermes, whose picks
-never change a default (below).
+Right-click session-only picks work for Claude, Codex (version 0.157 or newer)
+and OpenCode: other agents' own model pickers always save the choice as the
+default, except Hermes, whose picks never change a default (below).
 
 In a Hermes chat the picker has one tab, named after the bot (for example Harry):
 the bot's default model first, then the other models its sessions have used, most
@@ -1009,6 +1012,10 @@ last reading with its age ("Usage is from 3 hours ago") and Ghostex keeps
 retrying on its own. Automatic switching and the Account for new sessions rule
 skip that account until its usage refreshes. A login problem shows what to do
 instead, such as "The saved login expired. Reconnect this account."
+Reconnecting a Codex account works while that account's sessions keep running.
+When Codex still has to stop first, Settings lists the sessions in the way and
+offers Sleep sessions and continue; sleeping keeps them in the sidebar and they
+resume when you open them.
 
 Hide emails in Settings > Accounts keeps the first and last characters before
 `@` and shows the same `•••••.•••` for every domain, with no blur effect.
@@ -1608,7 +1615,8 @@ Window glass lets the blurred desktop show through the sidebar, the work area,
 terminals, and chat on macOS, Windows and Linux. On macOS and Windows, menus and most dialogs (Rename
 Session, Quick Access and the like) turn frosted to match. The Transparency group's Enable
 transparency switch turns it on (Dark only, the default) or off, and
-Strength (0 to 100) sets how see-through it is. More transparency options goes
+Strength sets how see-through it is, from 0 (fully solid) to 100 (fully clear); the default
+is 20. More transparency options goes
 in the order you decide: 1 what shows behind the glass, 2 the pictures or videos,
 3 their position, then Fine-tune the tints and Use transparency (Dark only,
 Always, or Never). With Dark only, light mode stays opaque, so the light-mode
@@ -1618,7 +1626,7 @@ transparency in the macOS accessibility settings, or turning off Transparency ef
 in Windows Settings > Personalization > Colors, always makes the window opaque. On
 Windows, turning glass on takes effect the next time Ghostex starts, and the corners of
 menus and pop-ups follow Windows' own rounding.
-What shows behind the glass (macOS and Linux) is four cards: Desktop and windows (the default) shows everything behind Ghostex. Wallpaper only shows just your desktop wallpaper, so other windows never show through; built-in wallpapers such as Sequoia show as a still picture of that wallpaper, and a solid color wallpaper shows everything behind the window. Picture shows a picture you choose instead, one for dark mode and one for light mode, side by side with Choose and Clear buttons; a mode with no picture shows everything behind the window. Live shows something moving behind the glass, chosen for dark mode and for light mode (only dark mode with Use transparency set to Dark only): one of eight calm animations drawn in your theme's colours (Aurora, Ink, Drift, Nebula, Silk, Bokeh, Waves, Mesh), so switching themes or Colourfulness recolours it at once, or Your video, a .mov, .mp4 or .m4v file you choose, which plays muted, looping and blurred (a mode set to Your video with no file shows everything behind the window). Speed sets how fast the animation moves (a quarter of its pace to twice as fast) and Brightness how bright it glows (45% by default, a subtle glow; every animation is about as bright as the others at the same setting); your own video plays as it is. An animation loops every two minutes without a seam, and changing the animation, theme or brightness, or switching between an animation and your video, fades rather than jumping. Nothing is downloaded. Live pauses whenever Ghostex is in the background, hidden or minimized, while the display sleeps and in Low Power Mode; Reduce Motion shows a still frame; and Play only when plugged in (on by default) pauses it on battery. For Wallpaper, Picture and Your video, Picture position picks Moves with the window (the default: the picture covers the window and moves with it) or Stays with the desktop (the picture stays put while the window moves over it, and can trail the window while you drag it) (`windowGlassSource`, `windowGlassImagePlacement`, `windowGlassImageDark`, `windowGlassImageLight`, `windowGlassLiveStyleDark`, `windowGlassLiveStyleLight`, `windowGlassVideoDark`, `windowGlassVideoLight`, `windowGlassLiveSpeed`, `windowGlassLiveBrightness`, `windowGlassVideoOnlyOnPower`).
+What shows behind the glass (on macOS, Windows and Linux) is four cards: Desktop and windows (the default) shows everything behind Ghostex. Wallpaper only shows just your desktop wallpaper, so other windows never show through; built-in wallpapers such as Sequoia show as a still picture of that wallpaper, and a solid color wallpaper shows everything behind the window. Picture shows a picture you choose instead, one for dark mode and one for light mode, side by side with Choose and Clear buttons; a mode with no picture shows everything behind the window. Live shows something moving behind the glass, chosen for dark mode and for light mode (only dark mode with Use transparency set to Dark only): one of eight calm animations drawn in your theme's colours (Aurora, Ink, Drift, Nebula, Silk, Bokeh, Waves, Mesh), so switching themes or Colourfulness recolours it at once, or, on macOS and Linux, Your video, a .mov, .mp4 or .m4v file you choose, which plays muted, looping and blurred (a mode set to Your video with no file shows everything behind the window). On Windows, Live pauses when Show animations is off in Windows Settings > Accessibility > Visual effects (showing a still frame) and in battery saver. Speed sets how fast the animation moves (a quarter of its pace to twice as fast) and Brightness how bright it glows (60% by default, a soft glow that shows through the tints; every animation is about as bright as the others at the same setting); your own video plays as it is. An animation loops every two minutes without a seam, and changing the animation, theme or brightness, or switching between an animation and your video, fades rather than jumping. Nothing is downloaded. Live pauses whenever Ghostex is in the background, hidden or minimized, while the display sleeps and in Low Power Mode; Reduce Motion shows a still frame; and Play only when plugged in (on by default) pauses it on battery. For Wallpaper, Picture and Your video, Picture position picks Moves with the window (the default: the picture covers the window and moves with it) or Stays with the desktop (the picture stays put while the window moves over it, and can trail the window while you drag it) (`windowGlassSource`, `windowGlassImagePlacement`, `windowGlassImageDark`, `windowGlassImageLight`, `windowGlassLiveStyleDark`, `windowGlassLiveStyleLight`, `windowGlassVideoDark`, `windowGlassVideoLight`, `windowGlassLiveSpeed`, `windowGlassLiveBrightness`, `windowGlassVideoOnlyOnPower`).
 On Linux, transparency works on Xorg and Wayland desktops (the desktop app currently uses XWayland for its embedded pages). Desktop and windows uses your compositor's blur: on Hyprland, keep background blur enabled; on Xorg, run a compositor with transparency and blur support. The compositor controls the blur's strength. Picture and Live animations work without compositor blur. Wallpaper only reads the picture reported by Hyprpaper, swww/awww, GNOME, Cinnamon, MATE or a single-screen Plasma desktop; when no readable picture is available it shows Desktop and windows. Stays with the desktop works on X11 and Hyprland; other native Wayland compositors cannot report the position needed for this mode, so use Moves with the window. Your video requires FFmpeg (included as a Linux package dependency). Live respects battery power, the power-saver profile, and disabled desktop animations (`windowGlass`, `windowGlassSource`, `windowGlassImagePlacement`, `windowGlassVideoOnlyOnPower`).
 While glass is on, four sliders tune it, each in dark mode and in light mode: Sidebar tint and Work area tint set how much of the desktop each area hides, independently, so either can be the darker one; lower shows more of your desktop.
 Keep Awake (Power)

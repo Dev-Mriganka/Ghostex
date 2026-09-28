@@ -103,6 +103,7 @@ impl GhostexGpuiApp {
         if self.focus_existing_gpui_remote_attach_terminal(&key, true, cx) {
             return;
         }
+        self.show_rearming_gpui_remote_attach_tab(&key, cx);
         let open_chat_early = placement == AgentsWorkspaceNewTerminalPlacement::Tab
             && self
                 .pending_agents_chat_launch_intents
@@ -119,6 +120,31 @@ impl GhostexGpuiApp {
             },
             cx,
         );
+    }
+
+    /// Selects the tab a remote session already owns while its SSH client is re-armed in the
+    /// background (a restored tab with no runtime, a sleeping one, or a chat tab still mounting).
+    ///
+    /// CDXC:RemoteMachines 2026-09-27 WHY:
+    /// Such a click used to change nothing on screen until `/api/wakeSession` answered over the tunnel, which takes from a few milliseconds to several seconds, so a second click in that gap dropped the first open and the session never switched. The tab is selected in the click's own frame, as a local restored tab is (CDXC:FocusRouting 2026-07-11), and the prepared plan re-arms this same tab when it lands (`open_gpui_remote_attach_terminal`). The keep-view intent is left for that re-arm to consume.
+    fn show_rearming_gpui_remote_attach_tab(
+        &mut self,
+        key: &GpuiRemoteAttachSessionKey,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let Some(session_id) = self.remote_attach_sessions.get(key).copied() else {
+            return;
+        };
+        let Some(pane_id) = self.agents_workspace.pane_id_for_session(session_id) else {
+            return;
+        };
+        self.agents_workspace.select_tab(pane_id, session_id);
+        if !self.pending_keep_view_remote_focus.contains(key) {
+            self.focus_shell_target(ShellFocusTarget::AgentsPane(pane_id), cx);
+        }
+        self.scroll_workspace_pane_active_tab(pane_id);
+        self.persist_shell_layout_state();
+        cx.notify();
     }
 
     /// Consumes the keep-view intent parked for this remote session by the native open action.

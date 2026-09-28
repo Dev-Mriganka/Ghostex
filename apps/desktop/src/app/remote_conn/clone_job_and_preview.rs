@@ -98,11 +98,24 @@ impl GhostexGpuiApp {
         } else {
             "This Computer"
         };
-        let mut machines = vec![serde_json::json!({
+        let local = serde_json::json!({
             "label": local_label,
             "machineId": GPUI_ADD_PROJECT_DIALOG_LOCAL_MACHINE_ID,
             "platform": gpui_add_project_dialog_local_platform(),
-        })];
+        });
+        // Only the PowerShell backend browses Windows drives; the WSL backend's gxserver sees Linux paths.
+        #[cfg(target_os = "windows")]
+        let local = {
+            let mut local = local;
+            if matches!(
+                crate::windows_terminal_backend::resolve_current(),
+                Ok(crate::windows_terminal_backend::ResolvedWindowsTerminalBackend::PowerShell)
+            ) {
+                local["startsAtDriveList"] = serde_json::json!(true);
+            }
+            local
+        };
+        let mut machines = vec![local];
         if let Some(saved_machines) = shared_settings::shared_sidebar_settings_snapshot()
             .object()
             .get("remoteMachines")
@@ -127,6 +140,12 @@ impl GhostexGpuiApp {
                         GpuiRemoteExecutionTarget::WindowsWsl { .. } => "Linux",
                         GpuiRemoteExecutionTarget::PosixHost => "POSIX",
                     });
+                    if matches!(
+                        target.execution_target,
+                        GpuiRemoteExecutionTarget::WindowsPowerShell
+                    ) {
+                        option["startsAtDriveList"] = serde_json::json!(true);
+                    }
                 } else {
                     option["platform"] = serde_json::json!("unknown");
                     option["description"] = serde_json::json!("Not connected");

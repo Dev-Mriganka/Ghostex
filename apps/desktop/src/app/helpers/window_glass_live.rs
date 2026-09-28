@@ -13,14 +13,14 @@ pub(crate) const LIVE_STYLE_VIDEO: &str = "video";
 /// User: "let's hide videos and merge videos with live / make videos just take from custom video user picks or the animations we did / also remove the ability to read from macos flyovers, they don't look good blurred". Live holds both: each mode's slot is one of the animations or `video`, the user's own file, which plays in the same backdrop and cross-fades with the animations (`retire_backdrop_view` in the GPUI macOS window). Speed and Brightness apply to the animations only; a video plays as the user made it. Supersedes the separate Video choice and its aerial wallpapers; a saved Video choice is carried into Live (`live_slot_style`).
 ///
 /// CDXC:Theming 2026-09-26 DECISION:
-/// User, after rendering the glass videos live was proposed instead of downloading mp4 files ("how about if we just render them in the bg behind the app? not as mp4 vids?"): "pls implement the shaders thing"; then "the animations can't jump at all they need to loop and never break", "can just be 2 mins only as long as it loops", and "the brightness of those animations is too high btw we need a way to control dim them and they need to be dimmer by default not so bright by default". Glass shows has a Live choice: one of the app's animated styles (`windowGlassLiveStyleDark` / `windowGlassLiveStyleLight`, "Dark only" shows only the dark one) drawn behind the glass at `windowGlassLiveSpeed` and `windowGlassLiveBrightness` (45% by default, every style evened out to the same brightness), in the current theme's colours and Colourfulness, so switching themes recolours it. It loops every two minutes without a seam and never jumps: speed changes the rate, pauses hold it, and a new style, colours or brightness cross-fade (`window_live.rs` in the GPUI macOS crate). It pauses under the same rules as a video (`windowGlassVideoOnlyOnPower` covers both) and shows a still frame under Reduce Motion.
+/// User, after rendering the glass videos live was proposed instead of downloading mp4 files ("how about if we just render them in the bg behind the app? not as mp4 vids?"): "pls implement the shaders thing"; then "the animations can't jump at all they need to loop and never break", "can just be 2 mins only as long as it loops", and "the brightness of those animations is too high btw we need a way to control dim them and they need to be dimmer by default not so bright by default". Glass shows has a Live choice: one of the app's animated styles (`windowGlassLiveStyleDark` / `windowGlassLiveStyleLight`, "Dark only" shows only the dark one) drawn behind the glass at `windowGlassLiveSpeed` and `windowGlassLiveBrightness` (60% by default since 2026-09-27, when 45% proved invisible behind the default tints; every style evened out to the same brightness), in the current theme's colours and Colourfulness, so switching themes recolours it. It loops every two minutes without a seam and never jumps: speed changes the rate, pauses hold it, and a new style, colours or brightness cross-fade (`window_live.rs` in the GPUI macOS crate). It pauses under the same rules as a video (`windowGlassVideoOnlyOnPower` covers both) and shows a still frame under Reduce Motion.
 static WINDOW_GLASS_LIVE: std::sync::Mutex<WindowGlassLive> =
     std::sync::Mutex::new(WindowGlassLive {
         live: false,
         style_dark: String::new(),
         style_light: String::new(),
         speed: 1.0,
-        brightness: 0.45,
+        brightness: 0.60,
         only_on_power: true,
         colors_dark: [[0.0; 3]; 3],
         colors_light: [[0.0; 3]; 3],
@@ -75,7 +75,7 @@ pub(crate) fn refresh_window_glass_live(object: &serde_json::Map<String, serde_j
         .get("windowGlassLiveBrightness")
         .and_then(serde_json::Value::as_f64)
         .filter(|brightness| brightness.is_finite())
-        .map_or(0.45, |brightness| {
+        .map_or(0.60, |brightness| {
             (brightness.clamp(10.0, 100.0) / 100.0) as f32
         });
     live.only_on_power = object
@@ -192,8 +192,8 @@ fn live_background_colors(
     } else {
         [
             rgb_of_hsl(hue, saturation * 0.5, 0.09),
-            rgb_of_hsl(hue, saturation, 0.36),
-            rgb_of_hsl(second_hue, saturation, 0.55),
+            rgb_of_hsl(hue, saturation, 0.46),
+            rgb_of_hsl(second_hue, saturation, 0.66),
         ]
     }
 }

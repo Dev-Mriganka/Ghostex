@@ -21,7 +21,6 @@ build_cef_sidebar_bundle_if_needed() {
 		--path "$SCRIPT_DIR/build-macos-sidebar.sh" \
 		--path "$GPUI_DIR/vite.config.ts" \
 		--path "$GPUI_DIR/tsconfig.json" \
-		--path "$GPUI_DIR/find.html" \
 		--path "$GPUI_DIR/kanban.html" \
 		--path "$GPUI_DIR/manage.html" \
 		--path "$GPUI_DIR/modal-host.html" \
@@ -37,7 +36,6 @@ build_cef_sidebar_bundle_if_needed() {
 		--path "$REPO_ROOT/tsconfig.json")"
 	bundle_outputs=(
 		"$REPO_ROOT/packages/core-ui/styles/shadcn.generated.css"
-		"$GPUI_DIR/dist/sidebar/find.html"
 		"$GPUI_DIR/dist/sidebar/kanban.html"
 		"$GPUI_DIR/dist/sidebar/manage.html"
 		"$GPUI_DIR/dist/sidebar/modal-host.html"

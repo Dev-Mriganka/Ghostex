@@ -254,18 +254,38 @@ export function ColourfulnessPreview({ scheme, settings }: { scheme: ThemeScheme
 }
 
 /**
+ * Window glass is drawn by the macOS, Windows and Linux apps, so surfaces that can hide the switch elsewhere ask here.
+ *
+ * CDXC:Theming 2026-09-25 DECISION:
+ * User: "let's enable transparency on windows please also if possible. like it works on mac exactly." The glass
+ * controls show on macOS and Windows, and on Windows turning glass on takes effect at the next launch (see
+ * `note_main_window_background` in apps/desktop/src/app/helpers/window_glass.rs).
+ *
  * CDXC:Theming 2026-09-27 DECISION:
  * User: unhide every transparency setting on Linux and match macOS on Wayland and X11.
- * Supersedes the Linux exclusion in the 2026-09-25 Windows rollout. Linux and macOS implement
- * pictures and Live; Windows retains its desktop blur and restart requirement.
+ * Supersedes the Linux exclusion in the 2026-09-25 Windows rollout.
  */
 export function windowGlassAvailable(): boolean {
   const platform = detectghostexHotkeyPlatform();
   return platform === 'mac' || platform === 'windows' || platform === 'linux';
 }
 
-/** Backends that implement wallpaper, pictures, and Live behind the shared glass tints. */
+/**
+ * Whether the glass can show the wallpaper, a chosen picture or a Live animation instead of what is behind the window.
+ *
+ * CDXC:Theming 2026-09-27 DECISION:
+ * User answered "Build now" to Wallpaper, Picture and Live on Windows, so Glass shows offers them on macOS and
+ * Windows, and the Linux rollout of the same day offers them on Linux. The user's own video stays off Windows
+ * (`windowGlassVideoAvailable`): the Windows backdrop has no video player. Supersedes the 2026-09-25 rule that kept
+ * Glass shows macOS-only.
+ */
 export function windowGlassPicturesAvailable(): boolean {
+  const platform = detectghostexHotkeyPlatform();
+  return platform === 'mac' || platform === 'windows' || platform === 'linux';
+}
+
+/** Whether Live can play the user's own video file (macOS, and Linux through FFmpeg). */
+export function windowGlassVideoAvailable(): boolean {
   const platform = detectghostexHotkeyPlatform();
   return platform === 'mac' || platform === 'linux';
 }
@@ -327,29 +347,59 @@ export function colourfulnessStepIndex(settings: ghostexSettings): number {
 }
 
 /**
- * CDXC:Theming 2026-09-23 DECISION:
+ * CDXC:Theming 2026-09-27 DECISION:
  * User: "add transparency strength selection" to the setup and the Theme page, then "it needs to make the sidebar
- * darker than main not vice versa", then "make it 7 point difference and make it a slider with more options".
- * Transparency strength is one 0-100 slider in steps of 5 (higher shows more of the desktop) that sets the four glass
- * tint sliders at once: the sidebar's tint falls from 95 (dark) / 98 (light) as it rises, and the work area is always
- * 7 points more see-through than the sidebar. The tint sliders under Settings -> Theme -> More transparency options stay the exact
- * controls.
+ * darker than main not vice versa", "make it 7 point difference and make it a slider with more options", and then
+ * "Full range" (the slider must reach fully solid and fully clear). Transparency strength is one 0-100 slider in
+ * steps of 5 that sets the four glass tint sliders at once: 0 is fully solid (both areas 100%), 100 is fully clear
+ * (both 0%), and 20 is the shipped default (sidebar 88 / work area 81 in dark, 93 / 86 in light). The sidebar tint
+ * falls linearly from 100 to the default at 20 and from there to 0 at 100; the work area stays 7 points more
+ * see-through than the sidebar, a gap that narrows to 0 at both ends. Supersedes the middle-range mapping (sidebar
+ * 95 to 60). The tint sliders under Settings -> Theme -> More transparency options stay the exact controls.
  */
 export const TRANSPARENCY_STRENGTH_MIN = 0;
 export const TRANSPARENCY_STRENGTH_MAX = 100;
 export const TRANSPARENCY_STRENGTH_STEP = 5;
 const TRANSPARENCY_WORK_AREA_GAP = 7;
+/** The slider point the shipped default tints sit on. */
+const TRANSPARENCY_STRENGTH_DEFAULT = 20;
+const TRANSPARENCY_SIDEBAR_AT_DEFAULT = { dark: 88, light: 93 } as const;
+
+/** The sidebar tint at `strength`: 100 at 0, the default at 20, 0 at 100, linear between. */
+function transparencySidebarTint(strength: number, atDefault: number): number {
+  if (strength <= TRANSPARENCY_STRENGTH_DEFAULT) {
+    return 100 - ((100 - atDefault) * strength) / TRANSPARENCY_STRENGTH_DEFAULT;
+  }
+  return (
+    (atDefault * (TRANSPARENCY_STRENGTH_MAX - strength)) / (TRANSPARENCY_STRENGTH_MAX - TRANSPARENCY_STRENGTH_DEFAULT)
+  );
+}
+
+/** How much more see-through the work area is: the full gap across the middle, narrowing to 0 at both ends. */
+function transparencyWorkAreaGap(strength: number): number {
+  const ramp = Math.min(
+    1,
+    strength / TRANSPARENCY_STRENGTH_DEFAULT,
+    (TRANSPARENCY_STRENGTH_MAX - strength) / TRANSPARENCY_STRENGTH_DEFAULT
+  );
+  return TRANSPARENCY_WORK_AREA_GAP * Math.max(0, ramp);
+}
 
 /** The four tint sliders one strength sets. */
 export function transparencyStrengthPatch(strength: number): Partial<ghostexSettings> {
   const value = Math.max(TRANSPARENCY_STRENGTH_MIN, Math.min(TRANSPARENCY_STRENGTH_MAX, strength));
-  const sidebarDark = Math.round(95 - value * 0.35);
-  const sidebarLight = Math.round(98 - value * 0.25);
+  const gap = transparencyWorkAreaGap(value);
+  const tints = (atDefault: number) => {
+    const sidebar = transparencySidebarTint(value, atDefault);
+    return { sidebar: Math.round(sidebar), workArea: Math.max(0, Math.round(sidebar - gap)) };
+  };
+  const dark = tints(TRANSPARENCY_SIDEBAR_AT_DEFAULT.dark);
+  const light = tints(TRANSPARENCY_SIDEBAR_AT_DEFAULT.light);
   return {
-    windowGlassSidebarOpacityDark: sidebarDark,
-    windowGlassWorkAreaTintDark: sidebarDark - TRANSPARENCY_WORK_AREA_GAP,
-    windowGlassSidebarOpacityLight: sidebarLight,
-    windowGlassWorkAreaTintLight: sidebarLight - TRANSPARENCY_WORK_AREA_GAP,
+    windowGlassSidebarOpacityDark: dark.sidebar,
+    windowGlassWorkAreaTintDark: dark.workArea,
+    windowGlassSidebarOpacityLight: light.sidebar,
+    windowGlassWorkAreaTintLight: light.workArea,
   };
 }
 
@@ -358,7 +408,12 @@ export function transparencyStrengthPatch(strength: number): Partial<ghostexSett
  * slider sits in that case, read from the dark sidebar tint.
  */
 export function transparencyStrengthFromSettings(settings: ghostexSettings): { exact?: number; nearest: number } {
-  const raw = (95 - settings.windowGlassSidebarOpacityDark) / 0.35;
+  const sidebar = settings.windowGlassSidebarOpacityDark;
+  const atDefault = TRANSPARENCY_SIDEBAR_AT_DEFAULT.dark;
+  const raw =
+    sidebar >= atDefault
+      ? ((100 - sidebar) * TRANSPARENCY_STRENGTH_DEFAULT) / (100 - atDefault)
+      : TRANSPARENCY_STRENGTH_MAX - (sidebar * (TRANSPARENCY_STRENGTH_MAX - TRANSPARENCY_STRENGTH_DEFAULT)) / atDefault;
   const nearest = Math.max(
     TRANSPARENCY_STRENGTH_MIN,
     Math.min(TRANSPARENCY_STRENGTH_MAX, Math.round(raw / TRANSPARENCY_STRENGTH_STEP) * TRANSPARENCY_STRENGTH_STEP)

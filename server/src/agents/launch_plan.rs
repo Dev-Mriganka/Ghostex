@@ -454,13 +454,14 @@ pub(crate) fn resolve_agent_launch_command(
         Some("disabled") => false,
         _ => global_accept_all_enabled,
     };
-    apply_accept_all_spec(
+    let command = apply_accept_all_spec(
         command,
         agent_id,
         enabled,
         icon,
         accept_all_mode == Some("disabled"),
-    )
+    );
+    with_codex_no_daemon(agent_id, icon, &command)
 }
 
 /// Validate supplied launch options before an empty or non-string value can be mistaken for an omitted option.

@@ -14,7 +14,14 @@ fn queue_field<'a>(prompt: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 /// Reconstructs accepted sends and reconciles each receipt with the immediate local echo.
-pub fn pending_with_startup_sends(pending: &[PendingSend], queue: &[Value]) -> Vec<PendingSend> {
+///
+/// CDXC:SessionChat 2026-09-27 WHY:
+/// A queued row holds the draft as written, so a Claude skill pill is still its `[/name](…/SKILL.md)` link, while the local echo and the turn Claude records carry the bare `/name` gxserver types. Comparing the raw row left the first message of a new chat unpaired: the core built a second "Waiting for agent…" echo from the row, which never matched the recorded turn and stayed under it for good. The row is read as the agent receives it, like the echo.
+pub fn pending_with_startup_sends(
+    pending: &[PendingSend],
+    queue: &[Value],
+    agent: Option<&str>,
+) -> Vec<PendingSend> {
     let queue_ids: Vec<&str> = queue
         .iter()
         .filter_map(|row| queue_field(row, "id"))
@@ -47,7 +54,11 @@ pub fn pending_with_startup_sends(pending: &[PendingSend], queue: &[Value]) -> V
         }
         // A queue broadcast can beat the send response. Pair identical local sends one at a time
         // until their receipts arrive; the persisted identity is the row id.
-        let prompt_text = queue_field(prompt, "text").unwrap_or_default();
+        let prompt_text = crate::composer::skill_invocation::agent_skill_text(
+            queue_field(prompt, "text").unwrap_or_default(),
+            agent,
+        );
+        let prompt_text = prompt_text.as_ref();
         let at = by_receipt.or_else(|| {
             entries.iter().position(|entry| {
                 entry.queued_prompt_id.is_none()
