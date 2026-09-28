@@ -12,6 +12,9 @@ const STALE_CHILD_SECONDS: f64 = 600.0;
 
 /// `Err` is unreadable evidence, so callers show the last roster as unavailable, with no running animation.
 pub(crate) fn read_hermes_fleet(session: &Value) -> anyhow::Result<Option<SessionChatAgentFleet>> {
+    if session.get("lifecycleState").and_then(Value::as_str) != Some("running") {
+        return Ok(None);
+    }
     let Some(root_id) = session
         .pointer("/runtimeSettings/agentSessionId")
         .and_then(Value::as_str)
