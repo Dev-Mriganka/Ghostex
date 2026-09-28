@@ -14,10 +14,38 @@ pub(crate) fn background_command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
+/// The process's creation time as a Windows FILETIME (100ns ticks since 1601), or `None` once it has exited or cannot be opened.
+#[cfg(windows)]
+pub(crate) fn process_creation_filetime(process_id: i64) -> Option<u64> {
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, FILETIME},
+        System::Threading::{GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION},
+    };
+    let pid = u32::try_from(process_id).ok().filter(|pid| *pid != 0)?;
+    unsafe {
+        let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if process.is_null() {
+            return None;
+        }
+        let mut created: FILETIME = std::mem::zeroed();
+        let mut exited: FILETIME = std::mem::zeroed();
+        let mut kernel: FILETIME = std::mem::zeroed();
+        let mut user: FILETIME = std::mem::zeroed();
+        let read = GetProcessTimes(process, &mut created, &mut exited, &mut kernel, &mut user);
+        CloseHandle(process);
+        (read != 0)
+            .then(|| (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
+    }
+}
+
 /// CDXC:RemoteMachines 2026-09-14 WHY:
 /// A server started over Windows SSH must outlive the exec channel without keeping
 /// that channel's inheritable handles open. Otherwise the CLI exits but the phone
 /// waits forever for EOF. Spawn this detached control plane without handle inheritance.
+///
+/// CDXC:PlatformSupport 2026-09-28 WHY:
+/// The server gets its own windowless console (CREATE_NO_WINDOW), not DETACHED_PROCESS: with no console at all, every console child it started without its own flag opened a Windows Terminal window. The new console is still separate from the launcher's, so it outlives an SSH channel or terminal too.
+/// SEE-ALSO: `gpui_spawn_local_gxserver_daemon` in apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs.
 #[cfg(windows)]
 pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> {
     use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
@@ -36,7 +64,8 @@ pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> 
     let mut startup: STARTUPINFOW = unsafe { std::mem::zeroed() };
     startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
     let mut process: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
-    for flags in [0x0100_0208, 0x0000_0208] {
+    // CREATE_BREAKAWAY_FROM_JOB (dropped when the job denies it) | CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP.
+    for flags in [0x0900_0200, 0x0800_0200] {
         let mut command_line = arguments.clone();
         let created = unsafe {
             match &standard_user {
