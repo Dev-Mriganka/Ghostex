@@ -666,14 +666,16 @@ fn is_model_version_suffix(rest: &str) -> bool {
     }
 }
 
-/// CDXC:AgentProviders 2026-09-22 WHY:
-/// Claude Code 2.1.280 moved the `opus` alias onto Opus 5.5, leaving the older
-/// Opus 5 reachable only as `claude-opus-5`, which is the catalog id for it.
-/// Both print as "Opus <version>", so the version digits are the only thing
-/// that tells the two rows apart.
+/// CDXC:AgentProviders 2026-09-29 WHY:
+/// Claude Code moved the `opus` alias onto Opus 5.5 (2.1.280) and `sonnet` onto
+/// Sonnet 5.5 (2.1.284), leaving Opus 5 and Sonnet 5 reachable only as
+/// `claude-opus-5` and `claude-sonnet-5`. Each pair prints as "<Family>
+/// <version>", so the version digits are the only thing that keeps a session
+/// still on the older model from reading as the alias's row.
 fn claude_model_value(family_value: &str, version: &str) -> &'static str {
     match (family_value, version) {
         ("opus", "5") => "claude-opus-5",
+        ("sonnet", "5") => "claude-sonnet-5",
         _ => match family_value {
             "fable" => "fable",
             "opus" => "opus",
@@ -686,10 +688,17 @@ fn claude_model_value(family_value: &str, version: &str) -> &'static str {
 
 fn match_claude_model(segment: &str) -> Option<SessionChatDetectedChoice> {
     let says_long_context = segment.ends_with(" (1M)") || segment.ends_with(" (1M context)");
-    // Opus 5.5's `opus` and `opus[1m]` rows share the bare label "Opus 5.5", so
-    // a footer without the 1M marker must never be read as the `[1m]` row.
+    // While the catalog lists both a `[1m]` row and its standard twin under one
+    // label, a footer without the 1M marker is the twin, never the `[1m]` row.
+    // Opus 5.5 is a single `opus[1m]` row since Claude Code 2.1.284 offers no
+    // 200K Opus, so its bare "Opus 5.5" is that row.
     if let Some(value) = crate::agent_model_catalog::model_value_for_label("claude", segment)
-        .filter(|value| says_long_context || !value.ends_with("[1m]"))
+        .filter(|value| {
+            says_long_context
+                || value.strip_suffix("[1m]").is_none_or(|base| {
+                    crate::agent_model_catalog::catalog_model("claude", base).is_none()
+                })
+        })
     {
         return Some(SessionChatDetectedChoice {
             value,
@@ -1691,6 +1700,14 @@ pub(crate) fn claude_transcript_model_choice(model: &str) -> Option<SessionChatD
             format!("{id}[{variant}]"),
             format!("{label} ({})", variant.to_ascii_uppercase()),
         ),
+        // Opus 5.5 is one `opus[1m]` row (Claude Code 2.1.284 offers no 200K
+        // Opus), so a bare id the catalog lists only as its 1M row reads as it.
+        None if crate::agent_model_catalog::catalog_model("claude", id).is_none()
+            && crate::agent_model_catalog::catalog_model("claude", &format!("{id}[1m]"))
+                .is_some() =>
+        {
+            (format!("{id}[1m]"), label)
+        }
         None => (id.to_string(), label),
     };
     Some(SessionChatDetectedChoice {
@@ -2673,7 +2690,8 @@ mod tests {
         for (segment, value) in [
             ("Opus 4.5", "opus"),
             ("Opus", "opus"),
-            ("Sonnet 5", "sonnet"),
+            ("Sonnet 5.5", "sonnet"),
+            ("Sonnet 5", "claude-sonnet-5"),
             ("Haiku", "haiku"),
         ] {
             let text = format!("  Ctx Used: 1.0% | 2.0% | $1.00 | {segment} | max\n");
