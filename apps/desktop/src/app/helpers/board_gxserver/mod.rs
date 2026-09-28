@@ -14,6 +14,7 @@ pub(crate) mod git_actions_and_project_paths;
 pub(crate) mod gxserver_health_and_daemon;
 #[cfg(target_os = "macos")]
 pub(crate) mod launchd_job;
+pub(crate) mod managed_tools_client;
 pub(crate) mod os_integration;
 pub(crate) mod project_board_bridge;
 pub(crate) mod project_board_images;
@@ -29,6 +30,7 @@ pub(crate) use git_actions_and_project_paths::*;
 pub(crate) use gxserver_health_and_daemon::*;
 #[cfg(target_os = "macos")]
 pub(crate) use launchd_job::*;
+pub(crate) use managed_tools_client::*;
 pub(crate) use os_integration::*;
 pub(crate) use project_board_bridge::*;
 pub(crate) use project_board_images::*;

@@ -14,6 +14,7 @@ pub(crate) mod gxserver_stop_and_workspace_sleep;
 pub(crate) mod keep_awake_automation;
 pub(crate) mod keep_awake_core;
 pub(crate) mod keep_awake_lid_sleep;
+pub(crate) mod managed_tool_terminal;
 pub(crate) mod notifications_and_portless;
 pub(crate) mod toast_and_status_dispatch;
 pub(crate) mod updater;

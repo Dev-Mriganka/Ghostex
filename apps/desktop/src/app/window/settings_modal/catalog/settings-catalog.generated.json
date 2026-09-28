@@ -6509,6 +6509,41 @@
                 "subtitle": "Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup."
               },
               {
+                "key": "managedTools",
+                "title": "Tools",
+                "subtitle": "Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.",
+                "options": [
+                  {
+                    "label": "Node.js and npm",
+                    "value": "node"
+                  },
+                  {
+                    "label": "uv (Python)",
+                    "value": "uv"
+                  },
+                  {
+                    "label": "Homebrew",
+                    "value": "homebrew"
+                  },
+                  {
+                    "label": "System tools (curl, unzip, git)",
+                    "value": "systemTools"
+                  },
+                  {
+                    "label": "Beads (bd)",
+                    "value": "beads"
+                  },
+                  {
+                    "label": "GitHub CLI (gh)",
+                    "value": "gh"
+                  },
+                  {
+                    "label": "GitLab CLI (glab)",
+                    "value": "glab"
+                  }
+                ]
+              },
+              {
                 "key": "bundledAgentSkills",
                 "title": "Bundled Agent Skills",
                 "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
@@ -15937,7 +15972,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           0,
           "label"
@@ -15951,7 +15986,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           1,
           "label"
@@ -15965,7 +16000,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           2,
           "label"
@@ -15979,7 +16014,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           3,
           "label"
@@ -15993,7 +16028,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           4,
           "label"
@@ -16973,7 +17008,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           0,
           "label"
@@ -16987,7 +17022,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           1,
           "label"
@@ -17001,7 +17036,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           2,
           "label"
@@ -17015,7 +17050,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           3,
           "label"
@@ -17029,7 +17064,7 @@
           "sections",
           0,
           "settings",
-          2,
+          3,
           "options",
           4,
           "label"

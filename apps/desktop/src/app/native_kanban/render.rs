@@ -109,6 +109,8 @@ impl GhostexGpuiApp {
             let derived = self.native_kanban.derived();
             (derived.nothing_matches, derived.filter_count)
         };
+        // Before `state` borrows the board: the notice may ask gxserver about Install Beads.
+        let notice = self.render_native_kanban_notice(&p, cx);
         let state = &self.native_kanban;
         // The first load draws skeleton cards in the lanes instead of a status line.
         let status = (nothing_matches && !state.loading_first())
@@ -123,7 +125,6 @@ impl GhostexGpuiApp {
             None => None,
         };
         let toolbar = self.render_native_kanban_toolbar(&p, filter_count, window, cx);
-        let notice = self.render_native_kanban_notice(&p, cx);
         let display_name = state.display_name.clone();
         div()
             .id("native-kanban")

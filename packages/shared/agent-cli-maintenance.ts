@@ -29,7 +29,17 @@ export type AgentCliCatalogEntry = {
     env?: Record<string, string>;
     /** Lowercase `/`-separated path fragments only the official installer produces. */
     pathMarkers?: string[];
+    /** Commands the official installer needs besides curl, per platform family. */
+    requires?: { windows?: string[]; unix?: string[] };
+    /** The macOS installer copies an app into /Applications. */
+    needsApplicationsFolder?: boolean;
+    /** Tooltip wording for an inline script not worth showing verbatim. */
+    plan?: string;
   };
+  /** A sentence every install method's tooltip adds. */
+  installNote?: string;
+  /** The update kills running processes of the CLI. */
+  updateStopsSessions?: boolean;
   /** Folders the official installer uses (`~` and `%VAR%` expanded by gxserver), searched even when not on PATH. */
   installDirs?: { windows?: string[]; unix?: string[] };
   /** The vendor's release channel for "update available": plain text, or one field of a JSON reply. */
@@ -66,6 +76,12 @@ export type AgentCliMethod = {
   label: string;
   command: string;
   unavailableReason?: string;
+  /** Tooltip text: exactly what one click does, including anything Ghostex installs first (absent from older gxservers). */
+  plan?: string;
+  /** A tool Ghostex installs before running `command` (see packages/shared/managed-tools.ts). */
+  prerequisite?: 'node' | 'homebrew' | 'systemTools';
+  /** Linux commands `systemTools` installs first. */
+  systemTools?: string[];
 };
 
 export type AgentCliJob = {
@@ -94,6 +110,40 @@ export type AgentCliState = {
   methods: AgentCliMethod[];
   job?: AgentCliJob;
 };
+
+/**
+ * The tooltip of a method's Install or Update button: why it cannot run, otherwise gxserver's plan (what one click
+ * does, including anything Ghostex installs first), otherwise the bare command from an older gxserver.
+ * SEE-ALSO: apps/desktop/src/app/window/settings_modal/tabs/agents/cli.rs and window/onboarding/agent_cli.rs repeat it.
+ */
+export function agentCliMethodTooltip(method: AgentCliMethod | undefined): string | undefined {
+  if (!method) return undefined;
+  return method.unavailableReason ?? method.plan ?? method.command;
+}
+
+/** The short note after a method's name when Ghostex installs a tool first ("npm, installs Node.js first"). */
+export function agentCliPrerequisiteSuffix(method: AgentCliMethod | undefined): string | undefined {
+  switch (method?.prerequisite) {
+    case 'node':
+      return 'installs Node.js first';
+    case 'homebrew':
+      return 'installs Homebrew first';
+    case 'systemTools': {
+      const tools = (method.systemTools?.length ? method.systemTools : ['curl'])
+        .map((tool) => (tool === 'ca-certificates' ? 'certificates' : tool))
+        .join(', ');
+      return `installs ${tools} first`;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** A method's name with its prerequisite note, as the method pickers and status lines show it. */
+export function agentCliMethodLabel(method: AgentCliMethod): string {
+  const suffix = agentCliPrerequisiteSuffix(method);
+  return suffix ? `${method.label}, ${suffix}` : method.label;
+}
 
 /** A job that has not finished yet: waiting its turn or running. */
 export function isAgentCliJobActive(job: AgentCliJob | undefined): boolean {

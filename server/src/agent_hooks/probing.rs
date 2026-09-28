@@ -226,6 +226,12 @@ pub(crate) fn normalize_gxserver_process_path(
         "/usr/sbin".to_string(),
         "/sbin".to_string(),
     ]);
+    // The tools Ghostex installed itself come last (user decision 1A in managed_tools/paths.rs).
+    entries.extend(
+        crate::managed_tools::paths::path_dirs()
+            .iter()
+            .map(|dir| path_string(dir)),
+    );
     unique_path_entries(entries).join(":")
 }
 
@@ -253,6 +259,11 @@ fn run_login_shell_path_probe(shell_path: &str, home_dir: &Path) -> Vec<String> 
         shell.interactive_script_args(&format!("printf '\\n{SHELL_PATH_SENTINEL}%s\\n' \"$PATH\"")),
     );
     apply_hook_command_environment(&mut command, home_dir);
+    // A new terminal starts without the tool folders gxserver appended to its own PATH.
+    command.env(
+        "PATH",
+        crate::managed_tools::paths::process_path_without_tools(),
+    );
     let Some(stdout) = run_command_stdout_with_timeout(command, Duration::from_millis(2_000))
     else {
         return Vec::new();

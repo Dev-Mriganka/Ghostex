@@ -1626,6 +1626,19 @@ docs directory), `hideProjectHeaderDiffStats`,
   button that runs the official installer again, and an uninstall button
   that removes Trycua but keeps its Accessibility and Screen Recording
   permissions. Hover them to see the installed and latest versions.
+- Settings > Integrations > Tools lists the tools Ghostex can install for you
+  when something you set up needs them: Node.js and npm, uv, Homebrew (Mac),
+  System tools (curl, certificates, unzip and git on Linux), Beads, and the
+  GitHub and GitLab CLIs. Each Install button installs with one click and its
+  tooltip says exactly how. When you already have a tool (for example Node.js
+  from nvm or Homebrew), Ghostex uses yours and shows it as installed by you;
+  otherwise it downloads the official release, checks its checksum and keeps
+  it in its own tools folder, added to the end of your PATH. Homebrew asks for
+  your Mac password once; Linux system tools ask for your password once, or
+  open a terminal that asks for it where there is no password dialog (WSL).
+  Tools Ghostex installed get Update (or a check mark to check again),
+  Reinstall and Uninstall buttons, and installing an agent that needs npm
+  installs Node.js first on its own.
 - The header's ⋯ menu holds Ask Ghostex, Tips & Tricks, Resources, Dev
   servers, Extensions and Customize. Each of the first five opens a panel
   under the ⋯ button that closes when you click away. Ask Ghostex, Tips &

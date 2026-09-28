@@ -260,10 +260,14 @@ pub(crate) enum GpuiAddProjectDialogOperation {
     CancelCloneJob,
     CreateDirectory,
     DiscoverSourceControl,
+    /// Starts gxserver's managed install of a provider CLI (`gh`, `glab`) from its row.
+    InstallSourceControlTool,
     ListMachines,
     LookupRepository,
     PreviewClone,
     ReadCloneJob,
+    /// Reads that install's progress.
+    ReadSourceControlTool,
     StartClone,
 }
 
@@ -275,6 +279,8 @@ impl GpuiAddProjectDialogOperation {
             "cancelCloneJob" => Some(Self::CancelCloneJob),
             "createDirectory" => Some(Self::CreateDirectory),
             "discoverSourceControl" => Some(Self::DiscoverSourceControl),
+            "installSourceControlTool" => Some(Self::InstallSourceControlTool),
+            "readSourceControlTool" => Some(Self::ReadSourceControlTool),
             "listMachines" => Some(Self::ListMachines),
             "lookupRepository" => Some(Self::LookupRepository),
             "previewClone" => Some(Self::PreviewClone),
@@ -291,6 +297,8 @@ impl GpuiAddProjectDialogOperation {
             Self::CancelCloneJob => "cancelCloneJob",
             Self::CreateDirectory => "createDirectory",
             Self::DiscoverSourceControl => "discoverSourceControl",
+            Self::InstallSourceControlTool => "installSourceControlTool",
+            Self::ReadSourceControlTool => "readSourceControlTool",
             Self::ListMachines => "listMachines",
             Self::LookupRepository => "lookupRepository",
             Self::PreviewClone => "previewClone",
@@ -306,6 +314,9 @@ impl GpuiAddProjectDialogOperation {
             Self::CancelCloneJob => Some("/api/cancelRepositoryCloneJob"),
             Self::CreateDirectory => Some("/api/createProjectDirectory"),
             Self::DiscoverSourceControl => Some("/api/discoverSourceControl"),
+            Self::InstallSourceControlTool | Self::ReadSourceControlTool => {
+                Some("/api/managedTools")
+            }
             Self::ListMachines => None,
             Self::LookupRepository => Some("/api/lookupRepository"),
             Self::PreviewClone => Some("/api/previewRepositoryClone"),
@@ -323,6 +334,8 @@ impl GpuiAddProjectDialogOperation {
             Self::CancelCloneJob
             | Self::CreateDirectory
             | Self::ReadCloneJob
+            | Self::InstallSourceControlTool
+            | Self::ReadSourceControlTool
             | Self::ListMachines => GPUI_ADD_PROJECT_DIALOG_JOB_TIMEOUT,
         }
     }

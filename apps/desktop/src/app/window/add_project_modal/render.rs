@@ -114,8 +114,20 @@ impl GpuiAddProjectModalWindow {
             FocusSlot::CloneMainOnly => self.set_clone_option(true, window, cx),
             FocusSlot::ShallowClone => self.set_clone_option(false, window, cx),
             FocusSlot::FooterClone => self.submit_clone(window, cx),
-            // The host never wired `onOpenSourceControlSettings`; the button only explains itself.
-            FocusSlot::SetupRequired(_) | FocusSlot::PathInput | FocusSlot::BranchInput => {}
+            // An Install button installs the provider's CLI; the host never wired
+            // `onOpenSourceControlSettings`, so Setup Required only explains itself.
+            FocusSlot::SetupRequired(index) => {
+                let install = self
+                    .derive()
+                    .rows
+                    .get(index)
+                    .and_then(|row| row.setup_required.clone())
+                    .and_then(|(source, _, tool)| tool.map(|tool| (source, tool)));
+                if let Some((source, tool)) = install {
+                    self.start_tool_install(source, tool, cx);
+                }
+            }
+            FocusSlot::PathInput | FocusSlot::BranchInput => {}
         }
     }
 
@@ -464,42 +476,67 @@ impl GpuiAddProjectModalWindow {
     ) -> AnyElement {
         let highlighted = self.highlight.as_deref() == Some(row.value.as_str());
         let disabled = row.disabled;
-        let trailing = row.setup_required.as_ref().map(|(source, hint)| {
-            let handle = self.chrome_focus_handle(FocusSlot::SetupRequired(index), cx);
-            let focused = handle.is_focused(window);
-            let muted_fill = skin.muted_fill;
-            let hint: SharedString = hint.clone().into();
-            let button = div()
-                .id(SharedString::from(format!(
-                    "add-project-setup-{}",
-                    source.wire()
-                )))
-                .track_focus(&handle)
-                .ml_auto()
-                .flex_shrink_0()
-                .flex()
-                .items_center()
-                .h(px(24.0))
-                .px(px(8.0))
-                .rounded(px(6.0))
-                .border_1()
-                .border_color(hsla(skin.border))
-                .bg(hsla(skin.p.surface))
-                .text_size(px(14.0))
-                .line_height(px(20.0))
-                .font_weight(FontWeight::MEDIUM)
-                .text_color(hsla(skin.fg()))
-                .whitespace_nowrap()
-                .hover(move |this| this.bg(hsla(muted_fill)))
-                .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                .on_mouse_down(MouseButton::Left, |_, window, cx| {
-                    window.prevent_default();
-                    cx.stop_propagation();
-                })
-                .on_click(|_, _, cx| cx.stop_propagation())
-                .child("Setup Required");
-            skin.focus_ring(button, focused).into_any_element()
-        });
+        let installing_source = self
+            .tool_install
+            .as_ref()
+            .filter(|install| install.running)
+            .map(|install| install.source);
+        let trailing = row
+            .setup_required
+            .as_ref()
+            .map(|(source, hint, install_tool)| {
+                let handle = self.chrome_focus_handle(FocusSlot::SetupRequired(index), cx);
+                let focused = handle.is_focused(window);
+                let muted_fill = skin.muted_fill;
+                let hint: SharedString = hint.clone().into();
+                let installing = installing_source == Some(*source);
+                let label: SharedString = match install_tool {
+                    Some(_) if installing => "Installing…".into(),
+                    Some(tool) => {
+                        format!("Install {}", super::tool_install::tool_label(tool)).into()
+                    }
+                    None => "Setup Required".into(),
+                };
+                let install = install_tool
+                    .clone()
+                    .filter(|_| installing_source.is_none())
+                    .map(|tool| (*source, tool));
+                let button = div()
+                    .id(SharedString::from(format!(
+                        "add-project-setup-{}",
+                        source.wire()
+                    )))
+                    .track_focus(&handle)
+                    .ml_auto()
+                    .flex_shrink_0()
+                    .flex()
+                    .items_center()
+                    .h(px(24.0))
+                    .px(px(8.0))
+                    .rounded(px(6.0))
+                    .border_1()
+                    .border_color(hsla(skin.border))
+                    .bg(hsla(skin.p.surface))
+                    .text_size(px(14.0))
+                    .line_height(px(20.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(hsla(skin.fg()))
+                    .whitespace_nowrap()
+                    .hover(move |this| this.bg(hsla(muted_fill)))
+                    .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
+                    .on_mouse_down(MouseButton::Left, |_, window, cx| {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        cx.stop_propagation();
+                        if let Some((source, tool)) = install.clone() {
+                            this.start_tool_install(source, tool, cx);
+                        }
+                    }))
+                    .child(label);
+                skin.focus_ring(button, focused).into_any_element()
+            });
         let value = row.value.clone();
         let action = row.action.clone();
         h_flex()

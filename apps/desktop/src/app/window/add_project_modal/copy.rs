@@ -63,6 +63,8 @@ pub(crate) fn source_row_description(source: AddProjectSourceId) -> String {
 pub(crate) struct AddProjectSourceReadiness {
     pub(crate) hint: Option<String>,
     pub(crate) ready: bool,
+    /// The managed tool that installs this provider's missing CLI with one click.
+    pub(crate) install_tool: Option<String>,
 }
 
 /// Readiness per source, indexed by [`AddProjectSourceId::index`].
@@ -83,11 +85,13 @@ pub(crate) fn build_source_readiness(
     let unavailable = AddProjectSourceReadiness {
         hint: Some(PROVIDER_UNAVAILABLE_HINT.to_string()),
         ready: false,
+        install_tool: None,
     };
     let mut readiness: AddProjectReadiness = [
         AddProjectSourceReadiness {
             hint: None,
             ready: true,
+            install_tool: None,
         },
         unavailable.clone(),
         unavailable.clone(),
@@ -112,6 +116,7 @@ pub(crate) fn build_source_readiness(
                         .unwrap_or_else(|| PROVIDER_UNAVAILABLE_HINT.to_string()),
                 ),
                 ready: false,
+                install_tool: provider.install_tool.clone(),
             }
         } else if let Some((AddProjectProviderAuthStatus::Unauthenticated, detail)) = &provider.auth
         {
@@ -123,11 +128,13 @@ pub(crate) fn build_source_readiness(
                     )
                 })),
                 ready: false,
+                install_tool: None,
             }
         } else {
             AddProjectSourceReadiness {
                 hint: None,
                 ready: true,
+                install_tool: None,
             }
         };
     }

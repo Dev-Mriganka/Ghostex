@@ -95,11 +95,20 @@ impl AccountsTab {
             if let Some(helper) =
                 helper.filter(|helper| helper["installed"].as_bool() != Some(true))
             {
-                let command = helper["installCommand"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_string();
-                parts.push(self.copy_command_block(p, format!("guide-{id}-install"), &command, cx));
+                if let Some(button) = self.render_helper_install_button(p, id, "guide", cx) {
+                    parts.push(h_flex().child(button).into_any_element());
+                } else {
+                    let command = helper["installCommand"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string();
+                    parts.push(self.copy_command_block(
+                        p,
+                        format!("guide-{id}-install"),
+                        &command,
+                        cx,
+                    ));
+                }
             }
             providers.push(
                 v_flex()

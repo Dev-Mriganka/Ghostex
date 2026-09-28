@@ -466,17 +466,6 @@ pub(crate) const GPUI_MACOS_NOTIFICATION_SETTINGS_URL: &str =
 /// release.
 /// SEE-ALSO: the cask body and `validateGhostexCask` in tooling/release-ghostex.mjs.
 pub(crate) const GPUI_GHOSTEX_CLI_WRAPPER_MARKER: &str = "CDXC:CliInstall 2026-06-12-09:31";
-pub(crate) const GPUI_GTE_INSTALL_ACTION_ID: &str = "installGte";
-pub(crate) const GPUI_GTE_HOMEBREW_INSTALL_SCRIPT: &str = concat!(
-    "if command -v brew >/dev/null 2>&1; then BREW=$(command -v brew); ",
-    "elif [ -x /opt/homebrew/bin/brew ]; then BREW=/opt/homebrew/bin/brew; ",
-    "elif [ -x /usr/local/bin/brew ]; then BREW=/usr/local/bin/brew; ",
-    "else echo 'Homebrew was not found on PATH, /opt/homebrew/bin, or /usr/local/bin.' >&2; exit 127; fi; ",
-    "\"$BREW\" install maddada/tap/gte"
-);
-pub(crate) const GPUI_GTE_INSTALL_SUCCESS_MESSAGE: &str = "gte installed from Homebrew.";
-pub(crate) const GPUI_GTE_INSTALL_FAILURE_MESSAGE: &str =
-    "gte install failed. Install Homebrew or run brew install maddada/tap/gte in a terminal.";
 pub(crate) const GPUI_BUNDLED_GHOSTEX_AGENT_SKILL_NAMES: &[&str] = &[
     /*
     CDXC:AgentSkills 2026-06-26-13:47:

@@ -39,15 +39,48 @@ type StoryCli = 'none' | 'ready' | 'installing' | 'failed';
 
 const STORY_METHODS: Record<string, AgentCliMethod[]> = {
   claude: [
-    { id: 'native', label: 'Official installer', command: 'curl -fsSL https://claude.ai/install.sh | bash' },
-    { id: 'npm', label: 'npm', command: 'npm install -g @anthropic-ai/claude-code@latest' },
-    { id: 'brew', label: 'Homebrew', command: 'brew install --cask claude-code' },
+    {
+      id: 'native',
+      label: 'Official installer',
+      command: 'curl -fsSL https://claude.ai/install.sh | bash',
+      plan: 'Runs the official installer: curl -fsSL https://claude.ai/install.sh | bash. No password needed.',
+    },
+    {
+      id: 'npm',
+      label: 'npm',
+      command: 'npm install -g @anthropic-ai/claude-code@latest',
+      plan: 'Runs npm install -g @anthropic-ai/claude-code@latest.',
+    },
+    {
+      id: 'brew',
+      label: 'Homebrew',
+      command: 'brew install --cask claude-code',
+      plan: 'Runs brew install --cask claude-code with Homebrew.',
+    },
   ],
   codex: [
-    { id: 'npm', label: 'npm', command: 'npm install -g @openai/codex@latest' },
-    { id: 'brew', label: 'Homebrew', command: 'brew install --cask codex' },
+    {
+      id: 'npm',
+      label: 'npm',
+      command: 'npm install -g @openai/codex@latest',
+      prerequisite: 'node',
+      plan: 'Ghostex first downloads Node.js (LTS) from nodejs.org into its tools folder and adds it to the end of your PATH, then runs npm install -g @openai/codex@latest. No password needed.',
+    },
+    {
+      id: 'brew',
+      label: 'Homebrew',
+      command: 'brew install --cask codex',
+      plan: 'Runs brew install --cask codex with Homebrew.',
+    },
   ],
-  cursor: [{ id: 'native', label: 'Official installer', command: 'curl -fsSL https://cursor.com/install | bash' }],
+  cursor: [
+    {
+      id: 'native',
+      label: 'Official installer',
+      command: 'curl -fsSL https://cursor.com/install | bash',
+      plan: 'Runs the official installer: curl -fsSL https://cursor.com/install | bash. No password needed. Grok and Cursor both install a command named agent; the one installed last is the one that runs.',
+    },
+  ],
 };
 const STORY_OUTPUT = [
   'Resolving latest release…',

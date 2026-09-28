@@ -8,6 +8,8 @@ import { type SidebarGhostexCliStatusMessage } from '../../../shared/session-gri
 import { APP_SHOTS_HOTKEY_OPTIONS, type AppShotsHotkey } from '../../../shared/ghostex-settings';
 import { type BundledGhostexAgentSkillId } from '../../../shared/ghostex-agent-skills';
 import { AgentSkillsSection, DesktopControlSection, IntegrationRowTitle } from './integration-skills';
+import { ManagedToolsSection } from './managed-tools-section';
+import type { ManagedToolId } from '../../../shared/managed-tools';
 import {
   SettingButton,
   SettingRow,
@@ -113,6 +115,7 @@ export function IntegrationsSettingsTab({
   onOpenAccessibilityPreferences,
   onOpenScreenRecordingPreferences,
   onRequestGhostexCliStatus,
+  onRunManagedToolTerminalCommand,
   search,
   searchEmptyState,
 }: {
@@ -143,6 +146,8 @@ export function IntegrationsSettingsTab({
   onOpenAccessibilityPreferences?: () => void;
   onOpenScreenRecordingPreferences?: () => void;
   onRequestGhostexCliStatus?: () => void;
+  /** Runs a managed tool's install in a command-pane terminal (Linux system tools without a password dialog). */
+  onRunManagedToolTerminalCommand?: (tool: ManagedToolId) => void;
   search: SettingsTabSearch;
   searchEmptyState?: ReactNode;
 }) {
@@ -231,6 +236,9 @@ export function IntegrationsSettingsTab({
             Keep setup access owned by first-launch and other explicit entry points instead of listing it as an integration setting.
           */}
           </SettingsSection>
+        ) : null}
+        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('managedTools') ? (
+          <ManagedToolsSection onRunTerminalCommand={onRunManagedToolTerminalCommand} />
         ) : null}
         {shouldShowSettingsSection(search.sections.integrations) ? (
           <DesktopControlSection

@@ -28,6 +28,7 @@ pub mod http_client;
 pub mod identity;
 pub mod ids;
 pub mod logging;
+pub(crate) mod managed_tools;
 pub mod navigation_history;
 pub mod notification_feed;
 pub mod open_conversation;
@@ -170,3 +171,8 @@ pub mod worktree_sessions;
 pub mod zmx;
 
 mod external_sessions;
+
+/// Process-wide setup that must run before gxserver starts any thread.
+pub fn prepare_process_environment() {
+    managed_tools::paths::extend_process_path();
+}

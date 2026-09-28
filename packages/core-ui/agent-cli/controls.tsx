@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { IconDownload, IconExternalLink, IconRefresh } from '@tabler/icons-react';
 import { Button } from '@/packages/components/ui/button';
 import { SelectItem, SelectTrigger, SelectValue } from '@/packages/components/ui/select';
-import { AGENT_CLI_CATALOG, type AgentCliConnection } from '@/packages/shared/agent-cli-maintenance';
+import {
+  AGENT_CLI_CATALOG,
+  agentCliMethodLabel,
+  agentCliMethodTooltip,
+  type AgentCliConnection,
+} from '@/packages/shared/agent-cli-maintenance';
 import { SettingsSelect, SettingsSelectContent } from '../settings-modal/fields';
 import type { WebviewApi } from '../webview-api';
 import { defaultAgentCliInstallMethod, useAgentCliJob } from './use-agent-cli-job';
@@ -126,7 +131,7 @@ export function AgentCliControls({
           <div className='flex flex-wrap items-center gap-2'>
             <SettingsSelect
               items={methods.map((entry) => ({
-                label: entry.label,
+                label: agentCliMethodLabel(entry),
                 value: entry.id,
               }))}
               disabled={running}
@@ -139,7 +144,7 @@ export function AgentCliControls({
               <SettingsSelectContent>
                 {methods.map((entry) => (
                   <SelectItem key={entry.id} value={entry.id}>
-                    {entry.label}
+                    {agentCliMethodLabel(entry)}
                   </SelectItem>
                 ))}
               </SettingsSelectContent>
@@ -148,6 +153,7 @@ export function AgentCliControls({
               disabled={running || loading || !connection || !method || Boolean(method.unavailableReason)}
               onClick={start}
               size='sm'
+              title={agentCliMethodTooltip(method)}
               variant='outline'
             >
               {running ? (
@@ -173,6 +179,8 @@ export function AgentCliControls({
           ) : null}
           {method?.unavailableReason ? (
             <p className='text-xs text-muted-foreground'>{method.unavailableReason}</p>
+          ) : method?.plan ? (
+            <p className='text-xs text-muted-foreground'>{method.plan}</p>
           ) : null}
         </>
       ) : null}

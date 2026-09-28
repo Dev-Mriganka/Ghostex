@@ -382,6 +382,7 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         // above; the resume command is built by the daemon that owns the row.
         | "/api/switchSessionAgent"
         | "/api/agentCliMaintenance"
+        | "/api/managedTools"
         | "/api/agentAccounts"
         | "/api/readAgentLaunchPlan"
         | "/api/readAgentResumePlan"

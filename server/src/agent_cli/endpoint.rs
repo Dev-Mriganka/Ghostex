@@ -21,10 +21,6 @@ static JOBS: LazyLock<Mutex<HashMap<(PathBuf, String), Job>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static PROBES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(4);
 
-/// CDXC:AgentProviders 2026-09-28 WHY:
-/// Installs and updates run one at a time (installers can share an npm prefix, the user PATH and the shell profile), but a second request waits in the queue instead of being refused, so onboarding can install Claude, Codex, Cursor and Grok from one pass.
-static RUNNER: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
 pub(crate) async fn dispatch(
     paths: &GxserverPaths,
     params: &Map<String, Value>,
@@ -148,11 +144,25 @@ async fn start(
         .as_str()
         .ok_or_else(|| error("Missing CLI command."))?
         .to_string();
-    let env = if method_id == "native" {
+    let mut env = if method_id == "native" {
         definition.native_env()
     } else {
         BTreeMap::new()
     };
+    let prerequisite = method["prerequisite"].as_str().map(str::to_string);
+    let system_tools: Vec<String> = method["systemTools"]
+        .as_array()
+        .map(|tools| {
+            tools
+                .iter()
+                .filter_map(|tool| tool.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    // An npm CLI Ghostex installed with its own Node.js updates through that same npm.
+    let managed_node = state["executablePath"]
+        .as_str()
+        .is_some_and(|path| Path::new(path).starts_with(crate::managed_tools::paths::node_dir()));
     let id = uuid::Uuid::new_v4().to_string();
     let progress =
         json!({"id":id,"operation":operation,"command":script,"status":"queued","output":""});
@@ -169,13 +179,42 @@ async fn start(
     state["job"] = progress;
     let home = home.to_path_buf();
     tokio::spawn(async move {
-        let _turn = RUNNER.lock().await;
+        /*
+        CDXC:AgentProviders 2026-09-28 WHY:
+        Installs and updates run one at a time (installers can share an npm prefix, the user PATH and the shell profile), but a second request waits in the queue instead of being refused, so onboarding can install Claude, Codex, Cursor and Grok from one pass. The queue is shared with the tools Ghostex installs itself (managed_tools::INSTALL_LOCK).
+        */
+        let _turn = crate::managed_tools::INSTALL_LOCK.lock().await;
         set_job_status(&key, "running");
-        let result = process::run(&script, &home, &env, Duration::from_secs(900), {
+        let log = crate::managed_tools::Log::new({
             let key = key.clone();
             move |chunk| append_output(&key, &chunk)
-        })
+        });
+        let prepared = prepare_prerequisite(
+            prerequisite.as_deref(),
+            &system_tools,
+            managed_node,
+            &home,
+            &log,
+        )
         .await;
+        let result = match prepared {
+            Ok(prefix) => {
+                if !prefix.is_empty() {
+                    env.insert(
+                        "PATH".into(),
+                        crate::managed_tools::run::job_path(&prefix)
+                            .to_string_lossy()
+                            .into_owned(),
+                    );
+                }
+                process::run(&script, &home, &env, Duration::from_secs(900), {
+                    let key = key.clone();
+                    move |chunk| append_output(&key, &chunk)
+                })
+                .await
+            }
+            Err(error) => Err(error),
+        };
         let result = match result {
             Ok(()) => finish(definition, &home, &key).await,
             Err(error) => Err(error),
@@ -194,6 +233,36 @@ async fn start(
         }
     });
     Ok(state)
+}
+
+/// Installs what the chosen method needs first and returns the folders to put first on its PATH.
+async fn prepare_prerequisite(
+    prerequisite: Option<&str>,
+    system_tools: &[String],
+    managed_node: bool,
+    home: &Path,
+    log: &crate::managed_tools::Log,
+) -> Result<Vec<PathBuf>, String> {
+    if managed_node {
+        return Ok(vec![crate::managed_tools::paths::node_bin_dir()]);
+    }
+    match prerequisite {
+        Some("node") => crate::managed_tools::ensure_npm(home, log).await,
+        Some("homebrew") => crate::managed_tools::ensure_homebrew(home, log)
+            .await
+            .map(|brew| brew.parent().map(Path::to_path_buf).into_iter().collect()),
+        Some("systemTools") => {
+            let wanted: &'static [&'static str] = if system_tools.is_empty() {
+                &["curl", "ca-certificates"]
+            } else {
+                &["curl", "ca-certificates", "unzip", "git"]
+            };
+            crate::managed_tools::ensure_system_tools(home, wanted, log)
+                .await
+                .map(|()| Vec::new())
+        }
+        _ => Ok(Vec::new()),
+    }
 }
 
 /// Re-checks the CLI after its installer exited successfully, and puts its folder on PATH when the

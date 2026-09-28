@@ -8446,6 +8446,47 @@
       "agentWritable": false
     },
     {
+      "key": "managedTools",
+      "title": "Tools",
+      "subtitle": "Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.",
+      "tab": "integrations",
+      "tabTitle": "Integrations",
+      "section": "integrations",
+      "sectionTitle": "Integrations",
+      "type": "ui",
+      "options": [
+        {
+          "label": "Node.js and npm",
+          "value": "node"
+        },
+        {
+          "label": "uv (Python)",
+          "value": "uv"
+        },
+        {
+          "label": "Homebrew",
+          "value": "homebrew"
+        },
+        {
+          "label": "System tools (curl, unzip, git)",
+          "value": "systemTools"
+        },
+        {
+          "label": "Beads (bd)",
+          "value": "beads"
+        },
+        {
+          "label": "GitHub CLI (gh)",
+          "value": "gh"
+        },
+        {
+          "label": "GitLab CLI (glab)",
+          "value": "glab"
+        }
+      ],
+      "agentWritable": false
+    },
+    {
       "key": "bundledAgentSkills",
       "title": "Bundled Agent Skills",
       "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",

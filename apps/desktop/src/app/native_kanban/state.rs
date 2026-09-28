@@ -115,6 +115,21 @@ pub(crate) struct KanbanMenuAnchors {
     pub(crate) card_view: Rc<Cell<Bounds<Pixels>>>,
 }
 
+/// The notice's Install Beads button: gxserver's managed Beads tool and the install it runs.
+#[derive(Default)]
+pub(crate) struct KanbanBeadsInstall {
+    /// `/api/managedTools` `read` for beads was asked for (answered or not).
+    pub(crate) requested: bool,
+    /// Tooltip: how Ghostex installs Beads.
+    pub(crate) plan: Option<String>,
+    /// Why Beads cannot be installed here (glibc too old, unsupported CPU, older gxserver…).
+    pub(crate) blocked_reason: Option<String>,
+    pub(crate) running: bool,
+    /// The job's latest output line while it runs.
+    pub(crate) progress: std::sync::Arc<std::sync::Mutex<Option<String>>>,
+    pub(crate) error: Option<String>,
+}
+
 #[derive(Default)]
 pub(crate) struct NativeKanbanState {
     pub(crate) project: Option<KanbanProjectKey>,
@@ -160,6 +175,7 @@ pub(crate) struct NativeKanbanState {
     pub(crate) palette: Option<super::palette::KanbanPalette>,
     /// Window glass and light chrome as last drawn; a change redraws the board.
     pub(crate) appearance_signature: Option<(bool, bool)>,
+    pub(crate) beads_install: KanbanBeadsInstall,
 }
 
 impl NativeKanbanState {

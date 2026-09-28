@@ -68,15 +68,19 @@ export interface AccountHelper {
   installCommand: string;
   loginCommand: string;
 }
-export type AccountHelperToolAction = 'update' | 'reinstall' | 'uninstall';
+export type AccountHelperToolAction = 'install' | 'update' | 'reinstall' | 'uninstall';
 /** Claude Swap or Codex Swap as installed on the machine, from gxserver's `helperStatus`. */
 export interface AccountHelperTool {
   provider: AccountProvider;
   installed: boolean;
   path?: string;
-  installMethod?: 'uv' | 'pipx' | 'homebrew' | 'cargo' | 'windowsInstaller' | 'unknown';
-  /** The actions gxserver can run for this install; empty when it cannot tell how it was installed. */
+  installMethod?: 'uv' | 'pipx' | 'homebrew' | 'cargo' | 'script' | 'windowsInstaller' | 'unknown';
+  /** The actions gxserver can run now: `install` when missing, otherwise those the install method allows (empty when it cannot tell how it was installed). */
   actions: AccountHelperToolAction[];
+  /** Tooltip for Install: exactly how Ghostex installs the helper. */
+  installPlan?: string;
+  /** Why Install cannot run here. */
+  unavailableReason?: string | null;
   version?: string | null;
   latestVersion?: string | null;
   updateAvailable?: boolean | null;

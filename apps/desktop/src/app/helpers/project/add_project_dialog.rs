@@ -98,6 +98,21 @@ pub(crate) fn gpui_add_project_dialog_params(
             let job_id = gpui_add_project_dialog_bounded_text(params, "jobId", 256)?;
             forwarded.insert("jobId".to_string(), serde_json::json!(job_id));
         }
+        // Only the two provider CLIs the dialog offers to install, never another managed tool.
+        GpuiAddProjectDialogOperation::InstallSourceControlTool
+        | GpuiAddProjectDialogOperation::ReadSourceControlTool => {
+            let tool = gpui_add_project_dialog_bounded_text(params, "tool", 16)?;
+            if !matches!(tool.as_str(), "gh" | "glab") {
+                return None;
+            }
+            forwarded.insert("tool".to_string(), serde_json::json!(tool));
+            if operation == GpuiAddProjectDialogOperation::InstallSourceControlTool {
+                forwarded.insert("action".to_string(), serde_json::json!("start"));
+                forwarded.insert("operation".to_string(), serde_json::json!("install"));
+            } else {
+                forwarded.insert("action".to_string(), serde_json::json!("read"));
+            }
+        }
     }
     Some(serde_json::Value::Object(forwarded))
 }
@@ -126,6 +141,8 @@ pub(crate) fn gpui_add_project_dialog_translate_local_windows_paths(
         GpuiAddProjectDialogOperation::CreateDirectory => &["parentPath"],
         GpuiAddProjectDialogOperation::CancelCloneJob
         | GpuiAddProjectDialogOperation::DiscoverSourceControl
+        | GpuiAddProjectDialogOperation::InstallSourceControlTool
+        | GpuiAddProjectDialogOperation::ReadSourceControlTool
         | GpuiAddProjectDialogOperation::ListMachines
         | GpuiAddProjectDialogOperation::LookupRepository
         | GpuiAddProjectDialogOperation::ReadCloneJob => &[],

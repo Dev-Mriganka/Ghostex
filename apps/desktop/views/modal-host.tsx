@@ -1506,7 +1506,7 @@ function AppModalHost() {
   }, [ghostexCliStatus]);
   useEffect(() => {
     /*
-     * The Trycua installer runs as a command-pane Action; its exit reaches the modal host as the
+     * The Trycua installer runs as a background job of the desktop app; its exit reaches the modal host as the
      * `installCuaDriver` settings-action status (`FinishDesktopControlSetup`). A failed report ends the
      * onboarding's "installing" state; native already shows the failure toast for it.
      */

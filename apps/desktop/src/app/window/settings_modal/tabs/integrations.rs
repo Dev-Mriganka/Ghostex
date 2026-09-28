@@ -27,6 +27,8 @@ use gpui_component::{h_flex, v_flex};
 use serde_json::{Value, json};
 use std::time::Duration;
 
+mod tools;
+
 const SKILLS_MODULE: &str = "shared/ghostex-agent-skills";
 
 const ICON_TERMINAL: &str = "modals/settings/terminal-2.svg";
@@ -41,6 +43,7 @@ const ICON_CIRCLE_CHECK_FILLED: &str = "modals/settings/circle-check-filled.svg"
 const ICON_CIRCLE_ARROW_UP: &str = "modals/settings/circle-arrow-up.svg";
 const ICON_CLOUD_SEARCH: &str = "modals/settings/cloud-search.svg";
 const ICON_INFO_CIRCLE: &str = "modals/settings/info-circle.svg";
+const ICON_LOADER: &str = "modals/settings/loader-2.svg";
 
 /// `copied` stays on for 1.2s after a copy, as the React copy buttons did.
 const COPIED_FEEDBACK: Duration = Duration::from_millis(1200);
@@ -142,6 +145,73 @@ fn visible_skills() -> Vec<Skill> {
         .unwrap_or_default()
 }
 
+/// `trycuaJobView` (packages/core-ui/trycua-job.ts): the background job the desktop app runs for
+/// Trycua's Install, Update, Reinstall and Uninstall, as the rows show it.
+struct TrycuaJob {
+    running: bool,
+    /// The running job's operation.
+    operation: Option<String>,
+    /// Progress while running, or why the last one failed.
+    detail: Option<String>,
+    /// Its recent output, for the progress row's hover.
+    output: String,
+    running_reason: Option<String>,
+    plan: Option<String>,
+    blocked_reason: Option<String>,
+}
+
+fn trycua_job(status: Option<&Value>) -> TrycuaJob {
+    let name = trycua_name();
+    let job = status
+        .and_then(|status| status.get("cuaDriverJob"))
+        .filter(|job| job.is_object());
+    let field = |key: &str| job.and_then(|job| job.get(key)).and_then(Value::as_str);
+    let running = field("status") == Some("running");
+    let operation = field("operation").unwrap_or("install").to_string();
+    let verb = match operation.as_str() {
+        "update" => "Updating",
+        "reinstall" => "Reinstalling",
+        "uninstall" => "Uninstalling",
+        _ => "Installing",
+    };
+    let output = field("output").unwrap_or_default().to_string();
+    let progress = output
+        .lines()
+        .rev()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(str::to_string);
+    let detail = if running {
+        Some(format!(
+            "{verb} {name}…{}",
+            progress
+                .as_ref()
+                .map(|line| format!(" {line}"))
+                .unwrap_or_default()
+        ))
+    } else if field("status") == Some("failed") {
+        Some(format!(
+            "The last {operation} did not finish: {}",
+            field("error")
+                .filter(|error| !error.is_empty())
+                .map(str::to_string)
+                .or(progress)
+                .unwrap_or_else(|| "no output".to_string())
+        ))
+    } else {
+        None
+    };
+    TrycuaJob {
+        running,
+        operation: running.then_some(operation),
+        detail,
+        output,
+        running_reason: running.then(|| format!("{verb} {name}…")),
+        plan: text(status, "cuaDriverInstallPlan").map(str::to_string),
+        blocked_reason: text(status, "cuaDriverApplicationsBlockedReason").map(str::to_string),
+    }
+}
+
 /// `GHOSTEX_TRYCUA_PRODUCT_NAME`.
 fn trycua_name() -> String {
     let name = settings_catalog().text(SKILLS_MODULE, "GHOSTEX_TRYCUA_PRODUCT_NAME");
@@ -220,6 +290,8 @@ pub(crate) struct IntegrationsTab {
     /// The copy button's `copied` state, and the task that turns it off.
     copied: bool,
     copied_task: Option<Task<()>>,
+    /// The Tools section (tools.rs).
+    managed: tools::ManagedToolsState,
 }
 
 impl IntegrationsTab {
@@ -245,12 +317,17 @@ impl IntegrationsTab {
             })
             .detach();
         }
+        cx.spawn(async move |page, cx| {
+            let _ = page.update(cx, |page, cx| page.load_managed_tools(cx));
+        })
+        .detach();
         Self {
             store,
             fields: FieldStates::default(),
             loading: missing,
             copied: false,
             copied_task: None,
+            managed: tools::ManagedToolsState::default(),
         }
     }
 
@@ -516,7 +593,17 @@ impl IntegrationsTab {
         let installed_suffix = current
             .map(|current| format!(" (installed v{current})"))
             .unwrap_or_default();
-        let checking_reason = format!("{name} status is being checked.");
+        let job = trycua_job(status);
+        let checking_reason = job
+            .running_reason
+            .clone()
+            .unwrap_or_else(|| format!("{name} status is being checked."));
+        let busy = checking || job.running;
+        let running = |operations: &[&str]| {
+            job.operation
+                .as_deref()
+                .is_some_and(|operation| operations.contains(&operation))
+        };
         let mut actions = Vec::new();
         if flag(status, "cuaDriverManagedUpdatesSupported") == Some(true) {
             let (icon, color, tooltip, message) = match flag(status, "cuaDriverUpdateAvailable") {
@@ -551,10 +638,14 @@ impl IntegrationsTab {
             actions.push(ghost_icon_button(
                 p,
                 "integrations-trycua-update",
-                icon,
+                if running(&["update"]) {
+                    ICON_LOADER
+                } else {
+                    icon
+                },
                 color,
                 tooltip,
-                checking,
+                busy,
                 checking_reason.clone(),
                 move |page, _window, cx| page.post(message, cx),
                 cx,
@@ -563,21 +654,38 @@ impl IntegrationsTab {
         actions.push(ghost_icon_button(
             p,
             "integrations-trycua-reinstall",
-            ICON_REFRESH,
+            if running(&["reinstall", "install"]) {
+                ICON_LOADER
+            } else {
+                ICON_REFRESH
+            },
             p.foreground,
-            format!("Reinstall the latest {name} with the official installer{installed_suffix}"),
-            checking,
-            checking_reason.clone(),
+            format!(
+                "Reinstall the latest {name}{installed_suffix}. {}",
+                job.plan.clone().unwrap_or_default()
+            )
+            .trim()
+            .to_string(),
+            busy || job.blocked_reason.is_some(),
+            if busy {
+                checking_reason.clone()
+            } else {
+                job.blocked_reason.clone().unwrap_or_default()
+            },
             |page, _window, cx| page.post("reinstallCuaDriver", cx),
             cx,
         ));
         actions.push(ghost_icon_button(
             p,
             "integrations-trycua-uninstall",
-            ICON_TRASH,
+            if running(&["uninstall"]) {
+                ICON_LOADER
+            } else {
+                ICON_TRASH
+            },
             p.foreground,
             format!("Uninstall {name} (keeps Accessibility and Screen Recording permissions)"),
-            checking,
+            busy,
             checking_reason,
             |page, _window, cx| page.post("uninstallCuaDriver", cx),
             cx,
@@ -602,22 +710,49 @@ impl IntegrationsTab {
         let installed = flag(status, "cuaDriverInstalled") == Some(true);
         let version = text(status, "cuaDriverVersion");
         let install_command = text(status, "cuaDriverInstallCommand").map(str::to_string);
+        let job = trycua_job(status);
         let mut rows = Vec::new();
         if show_trycua {
             let controls = if installed {
                 self.trycua_installed_actions(p, status, checking, cx)
             } else {
-                vec![settings_button(
+                let disabled = checking || job.running || job.blocked_reason.is_some();
+                let reason = if checking {
+                    format!("{name} status is being checked.")
+                } else {
+                    job.running_reason
+                        .clone()
+                        .or(job.blocked_reason.clone())
+                        .unwrap_or_default()
+                };
+                let button = settings_button(
                     p,
                     "integrations-trycua-install",
-                    format!("Install {name}"),
-                    Some(ICON_DOWNLOAD),
+                    if job.running {
+                        format!("Installing {name}…")
+                    } else {
+                        format!("Install {name}")
+                    },
+                    Some(if job.running {
+                        ICON_LOADER
+                    } else {
+                        ICON_DOWNLOAD
+                    }),
                     ButtonVariant::Outline,
-                    checking,
-                    Some(format!("{name} status is being checked.").into()),
+                    disabled,
+                    Some(reason.into()),
                     |page: &mut Self, _window, cx| page.post("installCuaDriver", cx),
                     cx,
-                )]
+                );
+                // The plan is the enabled button's tooltip; a disabled one shows its reason.
+                vec![match job.plan.clone().filter(|_| !disabled) {
+                    Some(plan) => div()
+                        .id("integrations-trycua-install-plan")
+                        .tooltip(tooltip_text(plan))
+                        .child(button)
+                        .into_any_element(),
+                    None => button,
+                }]
             };
             let installed_prefix = if installed {
                 match version {
@@ -648,6 +783,34 @@ impl IntegrationsTab {
                 },
                 controls,
             ));
+            if let Some(detail) = job.detail.clone() {
+                let output = job.output.trim();
+                rows.push(integration_row(
+                    p,
+                    "trycua-job",
+                    None,
+                    None,
+                    RowTitle {
+                        label: detail,
+                        description: if output.is_empty() {
+                            job.plan.clone().unwrap_or_default()
+                        } else {
+                            output
+                                .lines()
+                                .rev()
+                                .take(12)
+                                .collect::<Vec<_>>()
+                                .into_iter()
+                                .rev()
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        },
+                        badge: None,
+                        pill: None,
+                    },
+                    Vec::new(),
+                ));
+            }
         }
         if show_trycua
             && !installed
@@ -697,7 +860,7 @@ impl IntegrationsTab {
                 RowTitle {
                     label: "Install command".to_string(),
                     description: format!(
-                        "Install {name} runs this command in a command pane terminal so you can watch it finish. You can also run it yourself."
+                        "Install {name} runs this command in the background and shows its progress here. You can also run it yourself."
                     ),
                     badge: None,
                     pill: None,
@@ -1083,6 +1246,12 @@ impl Render for IntegrationsTab {
                 blocks.extend(
                     self.cli_section(&p, status, checking, cx)
                         .map(|element| PageBlock::section("ghostexCli", element)),
+                );
+            }
+            if search.row_visible(section, "managedTools") {
+                blocks.extend(
+                    self.managed_tools_section(&p, cx)
+                        .map(|element| PageBlock::section("managedTools", element)),
                 );
             }
             let show_trycua = search.row_visible(section, "bundledAgentSkills");

@@ -5,15 +5,20 @@
 //!
 //! CDXC:AgentProviders 2026-09-28 DECISION (see the React twin): each provider's helper gets these
 //! three icon buttons, with update checking like the Trycua row, and Uninstall asks first.
+//!
+//! CDXC:ManagedTools 2026-09-29 SEE-ALSO: `AccountHelperInstallButton` (accounts/helper-tools.tsx)
+//! holds the user's "1 click installs it for them" decision; `render_helper_install_button` is its
+//! twin, used by the helper row, the Add account flow (manager.rs) and the guide (guide.rs).
 use super::super::super::fields::{
     ListItemStatus, SizedButtonSize, SizedButtonVariant, settings_list_item, settings_sized_button,
-    settings_square_button,
+    settings_square_button, tooltip_text,
 };
 use super::super::super::palette::SettingsPalette;
 use super::AccountsTab;
 use super::data::{HelperTool, action_words, helper_command, helper_label};
 use gpui::{
-    AnyElement, Context, IntoElement, ParentElement as _, SharedString, Styled as _, Task, div, px,
+    AnyElement, Context, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
+    StatefulInteractiveElement as _, Styled as _, Task, div, px,
 };
 use gpui_component::h_flex;
 use serde_json::{Value, json};
@@ -264,6 +269,82 @@ impl AccountsTab {
         );
     }
 
+    /// `accountHelperOffersInstall`.
+    pub(crate) fn helper_offers_install(&self, provider: &str) -> bool {
+        self.helpers
+            .tools
+            .iter()
+            .find(|tool| tool.provider() == provider)
+            .is_some_and(HelperTool::offers_install)
+    }
+
+    /// `AccountHelperInstallButton` without its copy-command fallback (callers keep theirs):
+    /// Install with gxserver's plan as the tooltip, or the running install. `None` when gxserver
+    /// cannot install the helper.
+    pub(crate) fn render_helper_install_button(
+        &mut self,
+        p: &SettingsPalette,
+        provider: &'static str,
+        id_prefix: &str,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let tool = self
+            .helpers
+            .tools
+            .iter()
+            .find(|tool| tool.provider() == provider)
+            .cloned()
+            .filter(HelperTool::offers_install)?;
+        let name = helper_label(provider);
+        let running = tool.running_action();
+        let installing = running.as_deref() == Some("install");
+        let unavailable = tool.unavailable_reason();
+        let tooltip: SharedString = unavailable
+            .clone()
+            .or_else(|| tool.install_plan())
+            .unwrap_or_else(|| format!("Install {name}"))
+            .into();
+        let button = settings_sized_button(
+            p,
+            SharedString::from(format!("{id_prefix}-{provider}-install")),
+            if installing {
+                format!("Installing {name}…")
+            } else {
+                format!("Install {name}")
+            },
+            Some(if installing {
+                "modals/settings/loader-2.svg"
+            } else {
+                "modals/settings/download.svg"
+            }),
+            None,
+            SizedButtonVariant::Outline,
+            SizedButtonSize::Sm,
+            installing || unavailable.is_some() || running.is_some(),
+            Some(if installing {
+                format!("Installing {name}…").into()
+            } else {
+                unavailable
+                    .map(SharedString::from)
+                    .unwrap_or_else(|| format!("Installing {name}…").into())
+            }),
+            move |page: &mut Self, _window, cx| {
+                page.run_helper_action(provider.to_string(), "install", cx)
+            },
+            cx,
+        );
+        Some(
+            div()
+                .id(SharedString::from(format!(
+                    "{id_prefix}-{provider}-install-tip"
+                )))
+                .flex_shrink_0()
+                .tooltip(tooltip_text(tooltip))
+                .child(button)
+                .into_any_element(),
+        )
+    }
+
     /// `AccountHelperToolRow`: the helper's row and, while asked, the Uninstall confirmation.
     pub(crate) fn render_helper_tool_rows(
         &mut self,
@@ -281,6 +362,31 @@ impl AccountsTab {
             return Vec::new();
         };
         let running = tool.running_action();
+        if tool.offers_install() {
+            let name = helper_label(provider);
+            let command = helper_command(provider);
+            let detail = if running.is_some() {
+                format!("Installing {name}…")
+            } else {
+                format!(
+                    "Not installed. Needed to add and switch {} accounts.",
+                    if provider == "claude" {
+                        "Claude"
+                    } else {
+                        "Codex"
+                    }
+                )
+            };
+            let button = self.render_helper_install_button(p, provider, "helper-row", cx);
+            return vec![settings_list_item(
+                p,
+                Some(ListItemStatus::Warning),
+                None,
+                format!("{name} ({command})"),
+                Some(div().child(detail).into_any_element()),
+                button,
+            )];
+        }
         if !tool.installed() && running.is_none() {
             return Vec::new();
         }

@@ -34,8 +34,8 @@ const REPOSITORY_LOOKUP_TIMEOUT_MS: u64 = 15_000;
 const PROBE_OUTPUT_LIMIT_BYTES: usize = 8_000;
 const REPOSITORY_INPUT_LIMIT: usize = 512;
 
-const GITHUB_INSTALL_HINT: &str = "Install the GitHub command-line tool (`gh`) from https://cli.github.com/ or with your package manager (for example `brew install gh`).";
-const GITLAB_INSTALL_HINT: &str = "Install the GitLab command-line tool (`glab`) from https://gitlab.com/gitlab-org/cli or with your package manager (for example `brew install glab`).";
+const GITHUB_INSTALL_HINT: &str = "Needs the GitHub CLI (`gh`). Click Install and Ghostex downloads it from GitHub's official releases; no password needed.";
+const GITLAB_INSTALL_HINT: &str = "Needs the GitLab CLI (`glab`). Click Install and Ghostex downloads it from GitLab's official releases; no password needed.";
 const BITBUCKET_UNSUPPORTED_HINT: &str = "Ghostex cannot clone Bitbucket repositories by name yet. Choose Git URL and paste the repository's clone URL instead.";
 const AZURE_DEVOPS_UNSUPPORTED_HINT: &str = "Ghostex cannot clone Azure DevOps repositories by name yet. Choose Git URL and paste the repository's clone URL instead.";
 
@@ -264,6 +264,13 @@ fn provider_discovery_item(
         item.insert("executable".to_string(), json!(executable));
     }
     item.insert("installHint".to_string(), json!(provider.install_hint()));
+    // CDXC:ManagedTools 2026-09-29 DECISION:
+    // User (6B): a missing gh or glab gets a one-click Install in Add Project instead of instructions; `installTool` names the `/api/managedTools` tool that installs it.
+    if status == "missing" {
+        if let Some(tool) = executable {
+            item.insert("installTool".to_string(), json!(tool));
+        }
+    }
     item.insert("label".to_string(), json!(provider.label()));
     item.insert("provider".to_string(), json!(provider.wire_name()));
     item.insert("status".to_string(), json!(status));
@@ -548,6 +555,9 @@ async fn run_probe(
     command
         .args(args)
         .current_dir(cwd)
+        // gxserver's own PATH can be launchd's minimal one; the session PATH also has Homebrew and
+        // the tools Ghostex installed, so an installed `gh` is not reported missing.
+        .env("PATH", crate::managed_tools::run::job_path(&[]))
         .kill_on_drop(true)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
