@@ -78,7 +78,7 @@ CDXC:Build 2026-07-08-04:55:
 `bun run start` builds the staged GPUI package and installs it to a stable,
 platform-appropriate location before launch. macOS refreshes shared resources,
 then installs to /Applications and opens through LaunchServices. Windows installs
-the staged CEF package to Program Files (or INSTALL_DIR), creates a Start Menu shortcut,
+the staged CEF package to Program Files (or GHOSTEX_INSTALL_DIR), creates a Start Menu shortcut,
 and launches that installed copy. Linux installs the flat CEF package under XDG
 data (or INSTALL_DIR), preserves gxserver/zmx sessions across the relaunch, and
 runs the installed executable.
@@ -467,9 +467,19 @@ function resolveGpuiInstallDir() {
   return xdgDataHome || path.join(homedir(), '.local', 'share');
 }
 
+/**
+ * CDXC:Build 2026-09-28 WHY:
+ * Windows reads GHOSTEX_INSTALL_DIR, not the generic INSTALL_DIR that Linux honours: toolchains and shells set
+ * INSTALL_DIR for their own use, and inheriting it would silently move the Windows install (macOS ignores it for the
+ * same reason). Under WSL the value may be a Windows path (`D:/Ghostex/build/local`) or a WSL path.
+ */
 function resolveWindowsInstallPaths() {
-  const configured = process.env.INSTALL_DIR?.trim();
+  const configured = process.env.GHOSTEX_INSTALL_DIR?.trim();
   if (configured) {
+    if (isWsl && /^(?:[A-Za-z]:[\\/]|\\\\)/.test(configured)) {
+      const windowsPath = path.win32.resolve(configured);
+      return { hostPath: wslHostPathForWindowsPath(windowsPath), windowsPath };
+    }
     const hostPath = path.resolve(configured);
     return { hostPath, windowsPath: windowsPathForHostPath(hostPath, process.env) };
   }
@@ -498,6 +508,10 @@ function resolveWindowsInstallPaths() {
   if (!isWsl) {
     return { hostPath: windowsPath, windowsPath };
   }
+  return { hostPath: wslHostPathForWindowsPath(windowsPath), windowsPath };
+}
+
+function wslHostPathForWindowsPath(windowsPath) {
   const converted = spawnSync('wslpath', ['-u', windowsPath], {
     cwd: repoRoot,
     encoding: 'utf8',
@@ -511,7 +525,7 @@ function resolveWindowsInstallPaths() {
   if (converted.status !== 0 || !hostPath) {
     throw new Error(converted.stderr?.trim() || `Could not map the Windows path ${windowsPath} into WSL.`);
   }
-  return { hostPath, windowsPath };
+  return hostPath;
 }
 
 /**

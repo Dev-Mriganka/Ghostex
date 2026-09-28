@@ -266,13 +266,17 @@ pub(super) fn select_prompt_editor_command_with(
 }
 
 /// CDXC:PromptEditor 2026-09-23 WHY:
-/// The managed Windows CLI lives under Data/gxserver, separate from the installed app's native Code payload. Prefer the installer's Program Files payload over legacy per-user copies, matching the remote Code launcher.
-/// SEE-ALSO: apps/desktop/src/app/helpers/remote/windows_code.rs.
+/// The managed Windows CLI lives under Data/gxserver, separate from the installed app's native Code payload. Prefer the folder the app recorded (a custom install directory), then the installer's Program Files payload, over legacy per-user copies, matching the remote Code launcher.
+/// SEE-ALSO: apps/desktop/src/app/helpers/remote/windows_code.rs, ghostex_paths::GhostexPaths::windows_app_dir_file.
 pub(super) fn code_server_prompt_editor_command(file_path: &str) -> Vec<String> {
     let code_root = rpc::ghostex_data_home().join("code-server");
     let package = code_root.join("package");
     #[cfg(windows)]
     let package = [
+        std::fs::read_to_string(rpc::storage_paths().windows_app_dir_file())
+            .ok()
+            .filter(|app_dir| !app_dir.trim().is_empty())
+            .map(|app_dir| PathBuf::from(app_dir.trim()).join("code-server")),
         std::env::var_os("ProgramW6432")
             .filter(|root| !root.is_empty())
             .or_else(|| std::env::var_os("ProgramFiles"))

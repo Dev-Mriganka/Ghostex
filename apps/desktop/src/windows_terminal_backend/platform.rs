@@ -268,6 +268,7 @@ pub(super) fn prepare_gxserver(
     progress: &mut dyn FnMut(WindowsWslSetupPhase),
 ) -> Result<ResolvedWindowsTerminalBackend, String> {
     progress(WindowsWslSetupPhase::Checking);
+    super::native_package::record_app_dir();
     let backend = resolve(preference)?;
     let ResolvedWindowsTerminalBackend::Wsl { distribution } = &backend else {
         super::native_package::refresh_existing()?;

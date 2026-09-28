@@ -6,6 +6,35 @@ use windows_sys::Win32::Storage::FileSystem::ReplaceFileW;
 static REFRESH_LOCK: Mutex<()> = Mutex::new(());
 const BINARIES: [&str; 3] = ["gxserver.exe", "ghostex.exe", "wmx.exe"];
 
+/// Records the installed app folder for CLIs and scripts that cannot derive it (see `GhostexPaths::windows_app_dir_file`).
+pub(super) fn record_app_dir() {
+    let Ok(executable) = std::env::current_exe() else {
+        return;
+    };
+    let Some(app_dir) = executable.parent() else {
+        return;
+    };
+    // Unbundled development executables are not an installed app.
+    if !app_dir.join("resources/native/gxserver.exe").is_file() {
+        return;
+    }
+    let target = crate::shared_settings::ghostex_storage_paths().windows_app_dir_file();
+    let contents = app_dir.to_string_lossy();
+    if fs::read_to_string(&target).is_ok_and(|current| current == contents) {
+        return;
+    }
+    let written = target
+        .parent()
+        .map_or(Ok(()), fs::create_dir_all)
+        .and_then(|()| fs::write(&target, contents.as_bytes()));
+    if let Err(error) = written {
+        eprintln!(
+            "Ghostex could not record its install folder in {}: {error}",
+            target.display()
+        );
+    }
+}
+
 /// CDXC:PlatformSupport 2026-09-23 WHY:
 /// An older managed CLI can replace the app's current server with its own sibling server long after app startup.
 /// Refresh the existing managed package from the installed bundle before connecting, retaining replaced images because Windows session hosts may still map them.
