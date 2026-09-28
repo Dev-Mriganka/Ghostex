@@ -127,12 +127,10 @@ impl GpuiTerminalEngineConfig {
             // GPUI retains ANSI foreground colors in selected text; Ghostty's opaque selection background assumes a separate selection foreground.
             // Use the renderer's adaptive translucent selection tint so light palettes remain readable.
             self.view.selection_background = None;
-            self.apply_terminal_background(theme_background);
-        } else {
-            self.apply_terminal_background(
-                settings.terminal_background_rgb.unwrap_or(theme_background),
-            );
         }
+        self.apply_terminal_background(
+            settings.grid_background_rgb(self.view.light_theme, theme_background),
+        );
     }
 
     pub(crate) fn apply_terminal_background(&mut self, [r, g, b]: [u8; 3]) {

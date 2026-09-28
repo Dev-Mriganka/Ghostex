@@ -335,6 +335,17 @@ impl SharedGpuiTerminalEngineSettings {
     pub fn uses_light_theme(&self, system_is_light: bool) -> bool {
         self.color_scheme == "light" || (self.color_scheme == "system" && system_is_light)
     }
+
+    /// The colour a terminal paints behind its cells: the theme's colour for the terminal's
+    /// appearance, or in dark mode the Terminal background the user chose. The pane body paints
+    /// this same colour around the grid (`GPUI_TERMINAL_PADDING_BACKGROUND_RGB`).
+    pub fn grid_background_rgb(&self, light: bool, theme_background: [u8; 3]) -> [u8; 3] {
+        if light {
+            theme_background
+        } else {
+            self.terminal_background_rgb.unwrap_or(theme_background)
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

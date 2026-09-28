@@ -111,12 +111,16 @@ pub(crate) fn refresh_gpui_visual_settings(
     */
     let workspace = gpui_terminal_theme_background_rgb(object, terminal_is_light);
     GPUI_WORKSPACE_BACKGROUND_RGB.store(u64::from(workspace), Ordering::Relaxed);
+    let [red, green, blue] = terminal_settings.grid_background_rgb(
+        terminal_is_light,
+        [
+            (workspace >> 16) as u8,
+            (workspace >> 8) as u8,
+            workspace as u8,
+        ],
+    );
     GPUI_TERMINAL_PADDING_BACKGROUND_RGB.store(
-        if terminal_is_light {
-            u64::from(workspace)
-        } else {
-            0
-        },
+        u64::from(u32::from_be_bytes([0, red, green, blue])),
         Ordering::Relaxed,
     );
 
@@ -214,9 +218,8 @@ pub(crate) fn workspace_drop_feedback_text_color() -> Hsla {
     rgb(0xe7f3ff).into()
 }
 
-/// CDXC:Theming 2026-09-13 WHY:
-/// The terminal grid excludes its padding and width gutters, so the parent must paint the selected light terminal palette there too.
-/// Cache this separately from app chrome so terminal overrides work, preserving the existing black padding in dark mode.
+/// CDXC:Theming 2026-09-28 DECISION:
+/// User: "it's hard to match the color of the padding to the color of the terminal's bg". The terminal grid excludes its padding and width gutters, so the pane body paints exactly the colour behind the terminal's cells there (`SharedGpuiTerminalEngineSettings::grid_background_rgb`, which `apply_color_scheme` also uses), in dark mode as well as light. Supersedes the 2026-09-13 black padding in dark mode, which stopped matching once the dark grid followed the theme.
 pub(crate) fn workspace_terminal_placeholder_color() -> Hsla {
     rgb(GPUI_TERMINAL_PADDING_BACKGROUND_RGB.load(Ordering::Relaxed) as u32).into()
 }
@@ -314,16 +317,13 @@ pub(crate) fn workspace_terminal_body_color(
             | TerminalSessionPresentationState::Sleeping
             | TerminalSessionPresentationState::Mounting,
         ) if window_glass_active() => gpui::transparent_black(),
-        Some(TerminalSessionPresentationState::Running) => workspace_terminal_placeholder_color(),
+        // A sleeping or starting terminal shows the colour it will paint once running, in light
+        // and dark alike, so waking it does not flash.
         Some(
-            TerminalSessionPresentationState::Sleeping | TerminalSessionPresentationState::Mounting,
-        ) => {
-            if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
-                rgb(0xffffff).into()
-            } else {
-                workspace_terminal_placeholder_color()
-            }
-        }
+            TerminalSessionPresentationState::Running
+            | TerminalSessionPresentationState::Sleeping
+            | TerminalSessionPresentationState::Mounting,
+        ) => workspace_terminal_placeholder_color(),
         Some(TerminalSessionPresentationState::StartupFailed) => {
             chrome_color(0x140908, 0xffffff).into()
         }

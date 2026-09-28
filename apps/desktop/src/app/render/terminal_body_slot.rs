@@ -408,8 +408,8 @@ impl GhostexGpuiApp {
                             this.child(crate::app::view_skeletons::render_view_skeleton(
                                 crate::app::view_skeletons::ViewSkeletonKind::Terminal,
                                 format!("terminal-skeleton-{}", session_id.0),
-                                // Under window glass the terminal it stands in for is see-through, so it is too.
-                                glass_clear(gpui_session_chat_background_color()),
+                                // The colour the terminal it stands in for paints; see-through under window glass like it.
+                                glass_clear(workspace_terminal_placeholder_color()),
                             ))
                         } else if presentation_state == Some(TerminalSessionPresentationState::Sleeping) {
                             this
