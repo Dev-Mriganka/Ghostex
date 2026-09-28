@@ -549,6 +549,9 @@ pub struct TerminalView {
     /// client and keeps owning editing keys mid-composition, and places the
     /// caret inside the preedit overlay.
     marked_selection_utf16: Option<Range<usize>>,
+    /// CDXC:Terminal 2026-09-27 WHY:
+    /// Windows dead keys need both the accent and the following text key to reach TranslateMessage; encoding the following key directly would leave Windows' dead-key state pending even after sending the composed character.
+    pending_character_input: bool,
     focus_handle: FocusHandle,
     /// Focus state as of the last prepaint; edges send focus reports
     /// (mode 1004) and switch the cursor to hollow.
@@ -720,6 +723,7 @@ impl TerminalView {
             selection: None,
             marked_text: None,
             marked_selection_utf16: None,
+            pending_character_input: false,
             focus_handle: cx.focus_handle(),
             focused: false,
             last_modifiers: Modifiers::default(),
@@ -1472,6 +1476,13 @@ impl TerminalView {
             return;
         }
 
+        if keystroke.key_char.is_some()
+            && (event.prefer_character_input || self.pending_character_input)
+        {
+            self.pending_character_input = true;
+            return;
+        }
+
         /*
         CDXC:Terminal 2026-07-12:
         The composited libghostty-vt path owns terminal encoding but not the
@@ -1741,6 +1752,7 @@ impl TerminalView {
     /// borrowed platform string is written immediately and never retained
     /// (AppKit reuses IME insert buffers; gpui also copies before this).
     fn commit_ime_text(&mut self, text: &str, cx: &mut Context<Self>) {
+        self.pending_character_input = false;
         if self.input_suppressed {
             self.marked_text = None;
             self.marked_selection_utf16 = None;
