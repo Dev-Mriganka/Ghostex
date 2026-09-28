@@ -1,0 +1,22 @@
+diff --git a/crates/gpui_windows/src/events.rs b/crates/gpui_windows/src/events.rs
+index 113c074..a890e0d 100644
+--- a/crates/gpui_windows/src/events.rs
++++ b/crates/gpui_windows/src/events.rs
+@@ -93,7 +93,16 @@ impl WindowsWindowInner {
+             // whichever window was active before the click. If that handler consumes the
+             // press, `DefWindowProc` never sees it, so the window is never activated at all.
+             // So, let's eagerly activate the window.
+-            WM_MOUSEACTIVATE => Some(MA_ACTIVATE as isize),
++            WM_MOUSEACTIVATE => {
++                // Non-activating menus keep keyboard focus in their owner; a
++                // click must not deactivate that owner and dismiss the menu.
++                let style = unsafe { GetWindowLongW(handle, GWL_EXSTYLE) } as u32;
++                Some(if style & WS_EX_NOACTIVATE.0 != 0 {
++                    MA_NOACTIVATE as isize
++                } else {
++                    MA_ACTIVATE as isize
++                })
++            }
+             WM_ACTIVATE => self.handle_activate_msg(wparam),
+             WM_CREATE => self.handle_create_msg(handle),
+             WM_MOVE => self.handle_move_msg(handle, lparam),
