@@ -125,6 +125,9 @@ pub struct SessionChatTerminalActivity {
     /// RFC3339 millis. The client interpolates its own clock from this, so a
     /// 3s probe cadence still reads as a smoothly ticking timer.
     pub detected_at: String,
+    /// The token counter Claude paints after the compaction clock
+    /// (`↓ 901 tokens`), exactly as shown, only when it painted one.
+    pub tokens: Option<String>,
     /// The tool block Claude painted under a `claude-tool` row (the `⎿` gutter
     /// and its continuation rows), exactly as shown on the terminal.
     pub detail: Option<String>,
@@ -164,6 +167,7 @@ impl SessionChatTerminalActivity {
             label: label.into(),
             percent: None,
             elapsed_seconds: None,
+            tokens: None,
             detected_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
             detail: None,
             text: None,
@@ -188,6 +192,7 @@ impl SessionChatTerminalActivity {
             self.same_activity(Some(other))
                 && self.percent == other.percent
                 && self.elapsed_seconds == other.elapsed_seconds
+                && self.tokens == other.tokens
                 && self.detail == other.detail
                 && self.text == other.text
         })
@@ -224,6 +229,9 @@ impl SessionChatTerminalActivity {
         }
         if let Some(elapsed_seconds) = self.elapsed_seconds {
             map.insert("elapsedSeconds".to_string(), json!(elapsed_seconds));
+        }
+        if let Some(tokens) = &self.tokens {
+            map.insert("tokens".to_string(), json!(tokens));
         }
         map.insert("detectedAt".to_string(), json!(self.detected_at));
         if let Some(detail) = &self.detail {
@@ -534,7 +542,21 @@ fn compacting_activity_from_line(line: &str) -> Option<SessionChatTerminalActivi
                 SESSION_CHAT_ACTIVITY_COMPACTING,
                 "Compacting conversation",
             );
-            activity.elapsed_seconds = trailing_parenthetical(line).and_then(parse_elapsed_seconds);
+            /*
+            CDXC:AgentScreenDetection 2026-09-29 DECISION:
+            User: the chat's compaction card must show the same details as the terminal row
+            (`✢ Compacting conversation… (17s · ↓ 901 tokens)`). Claude now appends the token
+            counter after the clock, and parsing the whole parenthetical as a duration dropped
+            the clock too, so the card showed neither.
+            */
+            if let Some(metadata) = trailing_parenthetical(line) {
+                let mut parts = metadata.split(" · ");
+                activity.elapsed_seconds = parts.next().and_then(parse_elapsed_seconds);
+                activity.tokens = parts
+                    .map(str::trim)
+                    .find(|part| part.ends_with(" tokens"))
+                    .map(str::to_owned);
+            }
             return Some(activity);
         }
     }

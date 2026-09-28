@@ -244,6 +244,9 @@ impl NativeChatView {
         if let Some(elapsed) = activity["elapsedLabel"].as_str() {
             trailing = trailing.child(elapsed.to_owned());
         }
+        if let Some(tokens) = activity["tokens"].as_str() {
+            trailing = trailing.child(tokens.to_owned());
+        }
         let percent = activity["percent"].as_f64();
         if let Some(percent) = percent {
             trailing = trailing.child(

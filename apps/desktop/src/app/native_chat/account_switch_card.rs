@@ -7,7 +7,7 @@ account-switch-card.css, drawn from the core's `accountSwitchCard` projection
 usage levels come from `menus/accounts_presentation.rs` in the core.
 
 CDXC:AgentProviders 2026-09-25 DECISION:
-User: drop the bars under the usage tiles, stop the tile name (Fable) looking the same as its reset time (3d 4h), and show the agent icon once, left of the title, not on both account rows (docs/2026-09-24/account-switch-card-roomy/01-no-bars.html). 2026-09-29: "reduce this one's size when the chat view is large by 30%": in a pane 760px or wider the card is 30% smaller than the former 576px, so about 404px with its text scaled to match; narrower panes keep the 430px card. This supersedes the 2026-09-25 growth to 516px / 576px. Each tile shows a semibold name, a smaller muted reset line with a clock, and a large percent; the tile at 100% keeps its stronger outline. This supersedes the 2026-09-23 tile-edge bars and "smaller" card; the rest of that decision (neutral ink, accent for the target and progress, numbered steps with the moving line) stands, as does the 2026-09-16 backdrop that blocks the pointer until the switch finishes.
+User: drop the bars under the usage tiles, stop the tile name (Fable) looking the same as its reset time (3d 4h), and show the agent icon once, left of the title, not on both account rows (docs/2026-09-24/account-switch-card-roomy/01-no-bars.html). 2026-09-29: "reduce this one's size when the chat view is large by 30%", then "make it bigger by 15%": in a pane 760px or wider the card is the former 576px card at 70%, then 15% larger, so about 464px with its text scaled to match; narrower panes keep the 430px card. This supersedes the 2026-09-25 growth to 516px / 576px. Each tile shows a semibold name, a smaller muted reset line with a clock, and a large percent; the tile at 100% keeps its stronger outline. This supersedes the 2026-09-23 tile-edge bars and "smaller" card; the rest of that decision (neutral ink, accent for the target and progress, numbered steps with the moving line) stands, as does the 2026-09-16 backdrop that blocks the pointer until the switch finishes.
 */
 
 use super::{
@@ -337,9 +337,14 @@ impl NativeChatView {
             return None;
         }
         let zoom = appearance.scale;
-        // A wide pane draws the card, text and all, 30% smaller than the former 1.34 scale.
+        // A wide pane draws the card, text and all, at the former 1.34 scale shrunk 30% then grown 15%.
         let pane_width = f32::from(self.bounds.get().size.width) / zoom;
-        let s = zoom * if pane_width >= 760.0 { 1.34 * 0.7 } else { 1.0 };
+        let s = zoom
+            * if pane_width >= 760.0 {
+                1.34 * 0.7 * 1.15
+            } else {
+                1.0
+            };
         let palette = Palette::new(appearance);
         let id = text(card, "id");
         let provider = card["provider"].as_str().unwrap_or("claude");
