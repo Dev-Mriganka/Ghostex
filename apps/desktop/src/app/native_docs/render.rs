@@ -255,7 +255,7 @@ impl GhostexGpuiApp {
                 if self.native_docs.composer.is_none()
                     && !self.native_docs_active_notes().is_empty() =>
             {
-                self.native_docs_send_notes(false, cx);
+                self.native_docs_send_notes(cx);
                 cx.stop_propagation();
             }
             "s" => {

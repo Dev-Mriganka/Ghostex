@@ -173,8 +173,6 @@ impl GhostexGpuiApp {
             "rename" => self.native_docs_begin_rename(&path, window, cx),
             "delete" => self.native_docs_confirm_delete(&path, window, cx),
             "refresh" => self.native_docs_refresh(cx),
-            "sendAcrossFiles" => self.native_docs_send_across_files(cx),
-            "resendAll" => self.native_docs_send_notes(true, cx),
             "configureFolders" => self.native_docs_open_folders_settings(window, cx),
             "barItem" => {
                 if let Some(item) = super::format_bar::DocsBarItem::from_command(&text("item")) {
