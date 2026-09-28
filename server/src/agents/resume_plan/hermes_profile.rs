@@ -3,8 +3,9 @@ use std::path::Path;
 
 use super::read_text_from_map;
 
-/// CDXC:Bots 2026-09-26 DECISION:
-/// User: resuming a Hermes conversation started outside Ghostex passes `-p <profile>` when its store is a profile's (`HERMES_HOME/profiles/<profile>`), so it resumes under the right bot; the default profile's stays `{cmd} --resume <id>`.
+/// CDXC:Bots 2026-09-28 DECISION:
+/// User: resuming a Hermes conversation started outside Ghostex passes `-p <profile>` for the store it came from, so it resumes under the right bot: `-p <profile>` for `HERMES_HOME/profiles/<profile>` and `-p default` for `HERMES_HOME` itself, since plain `hermes` follows the sticky profile `hermes profile use` sets.
+/// Supersedes the 2026-09-26 rule that left the default profile's as `{cmd} --resume <id>`.
 /// A command that already picks a profile (a bot project's `hermes -p <profile>`) is kept as it is.
 pub(super) fn with_external_hermes_profile(
     agent_id: Option<&str>,
@@ -14,11 +15,10 @@ pub(super) fn with_external_hermes_profile(
     if agent_id != Some("hermes-agent") {
         return command;
     }
-    let Some(profile) = read_text_from_map(runtime_settings, "externalAgentHome")
-        .and_then(|home| hermes_profile_name(Path::new(&home)))
-    else {
+    let Some(home) = read_text_from_map(runtime_settings, "externalAgentHome") else {
         return command;
     };
+    let profile = hermes_profile_name(Path::new(&home)).unwrap_or_else(|| "default".to_string());
     let picks_profile = command
         .split_whitespace()
         .any(|token| matches!(token, "-p" | "--profile") || token.starts_with("--profile="));
@@ -75,7 +75,7 @@ mod tests {
                 json!({ "path": "/Users/me/.hermes", "customAgents": [], "launchSettings": {} }),
                 "/Users/me/.hermes",
             ),
-            json!("hermes --resume \"20260926_111001_e55ebd\""),
+            json!("hermes -p default --resume \"20260926_111001_e55ebd\""),
         );
     }
 }

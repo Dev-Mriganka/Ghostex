@@ -564,8 +564,8 @@ when you open it.
   are excluded from discovery. With Bots on, Hermes conversations started
   outside Ghostex (in a terminal, the Hermes app, Discord, or Telegram) are
   discovered from every Hermes profile and listed under their bot; opening one
-  runs `hermes -p <profile> --resume <session-id>` (plain `hermes --resume` for
-  the default profile). A Discord or Telegram chat continues in that terminal,
+  runs `hermes -p <profile> --resume <session-id>` (`-p default` for the default
+  profile). A Discord or Telegram chat continues in that terminal,
   and replies there do not reach the chat app. Other chat apps, cron, empty
   sessions, Discord threads only bots wrote in, and scripted one-shot runs
   (`hermes chat -q`) are left out.
@@ -1309,8 +1309,8 @@ before.
   minute). A bot is not a repository, so git stats and the worktree, pull
   request, history, browser, and terminal buttons are left off.
 - **New sessions**: the row's **+** starts a new session with that bot, running
-  `hermes -p <profile>` in the profile folder (plain `hermes` for the default
-  profile), in chat or terminal as your agent interface setting says. There is
+  `hermes -p <profile>` in the profile folder (`hermes -p default` for the
+  default profile), in chat or terminal as your agent interface setting says. There is
   no agent, model, or terminal picker. A bot with no sessions shows a New
   Session row that does the same. A new session is titled after the bot until
   Hermes names it.
