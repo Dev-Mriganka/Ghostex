@@ -201,6 +201,21 @@
       "agentWritable": true
     },
     {
+      "key": "highlightPendingQuestions",
+      "title": "Highlight unanswered questions",
+      "subtitle": "Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "sidebar",
+      "groupTitle": "Sidebar",
+      "section": "sidebar",
+      "sectionTitle": "Sidebar",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "agentWritable": true
+    },
+    {
       "key": "hideProjectHeaderDiffStats",
       "title": "Hide project git stats",
       "subtitle": "Hide +added/-removed line counts in sidebar project rows.",
