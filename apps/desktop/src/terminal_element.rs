@@ -415,6 +415,7 @@ struct RowLayout {
     bg_spans: Vec<CellSpan>,
     overline_spans: Vec<CellSpan>,
     runs: Vec<PositionedRun>,
+    graphics: Vec<(Bounds<Pixels>, Hsla)>,
 }
 
 struct CursorLayout {
@@ -3539,6 +3540,18 @@ impl Element for TerminalElement {
 
             for (row, layout_row) in layout.rows.iter().enumerate() {
                 let y = origin.y + line_height * (row as f32);
+                let scale = window.scale_factor();
+                let snap = |value: Pixels| (value * scale).round() / scale;
+                for (rect, color) in &layout_row.graphics {
+                    let left = snap(origin.x + rect.origin.x);
+                    let top = snap(y + rect.origin.y);
+                    let right = snap(origin.x + rect.origin.x + rect.size.width);
+                    let bottom = snap(y + rect.origin.y + rect.size.height);
+                    window.paint_quad(fill(
+                        Bounds::new(point(left, top), size(right - left, bottom - top)),
+                        *color,
+                    ));
+                }
                 for run in &layout_row.runs {
                     let run_origin = point(origin.x + cell_width * f32::from(run.col), y);
                     let _ = run.shaped.paint(
@@ -3899,6 +3912,80 @@ fn push_span(spans: &mut Vec<CellSpan>, col: u16, color: Hsla) {
     spans.push(CellSpan { col, len: 1, color });
 }
 
+/// CDXC:Terminal 2026-09-28 WHY:
+/// Font bearings and line spacing leave seams between terminal block glyphs and straight borders. Draw their geometry against the cell edges on desktop and web, snapping shared edges to the same device pixel.
+fn push_cell_graphics(
+    ch: char,
+    col: u16,
+    color: Hsla,
+    metrics: CellMetrics,
+    graphics: &mut Vec<(Bounds<Pixels>, Hsla)>,
+) -> bool {
+    let mut rect = |x: f32, y: f32, width: f32, height: f32| {
+        graphics.push((
+            Bounds::new(
+                point(
+                    metrics.cell_width * (f32::from(col) + x),
+                    metrics.line_height * y,
+                ),
+                size(metrics.cell_width * width, metrics.line_height * height),
+            ),
+            color,
+        ));
+    };
+    match ch {
+        '▀' => rect(0., 0., 1., 0.5),
+        '▁'..='█' => {
+            let height = (ch as u32 - 0x2580) as f32 / 8.;
+            rect(0., 1. - height, 1., height);
+        }
+        '▉'..='▏' => rect(0., 0., (0x2590 - ch as u32) as f32 / 8., 1.),
+        '▐' => rect(0.5, 0., 0.5, 1.),
+        '▔' => rect(0., 0., 1., 0.125),
+        '▕' => rect(0.875, 0., 0.125, 1.),
+        '▖'..='▟' => {
+            let quadrants = match ch {
+                '▖' => 0b0100,
+                '▗' => 0b1000,
+                '▘' => 0b0001,
+                '▙' => 0b1101,
+                '▚' => 0b1001,
+                '▛' => 0b0111,
+                '▜' => 0b1011,
+                '▝' => 0b0010,
+                '▞' => 0b0110,
+                '▟' => 0b1110,
+                _ => unreachable!(),
+            };
+            for index in 0..4 {
+                if quadrants & (1 << index) != 0 {
+                    rect((index % 2) as f32 * 0.5, (index / 2) as f32 * 0.5, 0.5, 0.5);
+                }
+            }
+        }
+        '─' | '━' | '│' | '┃' | '╴'..='╻' => {
+            let heavy = matches!(ch, '━' | '┃' | '╸'..='╻');
+            let vertical = matches!(ch, '│' | '┃' | '╵' | '╷' | '╹' | '╻');
+            let thickness = if heavy { 2. } else { 1. };
+            let width = thickness / f32::from(metrics.cell_width);
+            let height = thickness / f32::from(metrics.line_height);
+            let start = if matches!(ch, '╶' | '╷' | '╺' | '╻') {
+                0.5
+            } else {
+                0.
+            };
+            let length = if matches!(ch, '╴'..='╻') { 0.5 } else { 1. };
+            if vertical {
+                rect((1. - width) / 2., start, width, length);
+            } else {
+                rect(start, (1. - height) / 2., length, height);
+            }
+        }
+        _ => return false,
+    }
+    true
+}
+
 /// Shape one row into cached layout: merged background/overline spans plus
 /// batched same-style text runs with forced cell advance.
 fn build_row_layout(
@@ -3911,6 +3998,7 @@ fn build_row_layout(
     let mut bg_spans: Vec<CellSpan> = Vec::new();
     let mut overline_spans: Vec<CellSpan> = Vec::new();
     let mut runs: Vec<PositionedRun> = Vec::new();
+    let mut graphics = Vec::new();
 
     let mut batch_col: u16 = 0;
     let mut batch_cells: u16 = 0;
@@ -3956,6 +4044,14 @@ fn build_row_layout(
             VtCellWide::Narrow | VtCellWide::Wide => {}
         }
         if cell_is_blank(cell) {
+            continue;
+        }
+        if cell.width == VtCellWide::Narrow
+            && cell.combining.is_none()
+            && cell.underline == CellUnderline::None
+            && !cell.strikethrough
+            && push_cell_graphics(cell.base, col, rgb_to_hsla(fg), metrics, &mut graphics)
+        {
             continue;
         }
 
@@ -4022,6 +4118,7 @@ fn build_row_layout(
         bg_spans,
         overline_spans,
         runs,
+        graphics,
     }
 }
 

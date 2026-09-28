@@ -1,0 +1,32 @@
+diff --git a/crates/gpui_windows/src/events.rs b/crates/gpui_windows/src/events.rs
+index e9bceaa..113c074 100644
+--- a/crates/gpui_windows/src/events.rs
++++ b/crates/gpui_windows/src/events.rs
+@@ -1216,15 +1216,13 @@ impl WindowsWindowInner {
+     }
+ 
+     fn handle_cursor_changed(&self, lparam: LPARAM) -> Option<isize> {
+-        let had_cursor = self.state.current_cursor.get().is_some();
+-
+         self.state.current_cursor.set(if lparam.0 == 0 {
+             None
+         } else {
+             Some(HCURSOR(lparam.0 as _))
+         });
+ 
+-        if had_cursor != self.state.current_cursor.get().is_some() {
++        if self.state.hovered.get() && self.state.cursor_visible.load(Ordering::Relaxed) {
+             unsafe { SetCursor(self.state.current_cursor.get()) };
+         }
+ 
+@@ -1255,7 +1253,9 @@ impl WindowsWindowInner {
+         unsafe {
+             SetCursor(cursor);
+         };
+-        Some(0)
++        // WM_SETCURSOR must return TRUE once handled; FALSE lets default
++        // processing replace this cursor with the window class's cursor.
++        Some(1)
+     }
+ 
+     fn handle_system_settings_changed(

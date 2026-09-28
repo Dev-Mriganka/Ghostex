@@ -461,7 +461,39 @@ pub(crate) fn resolve_agent_launch_command(
         icon,
         accept_all_mode == Some("disabled"),
     );
-    with_codex_no_daemon(agent_id, icon, &command)
+    let command = with_codex_no_daemon(agent_id, icon, &command);
+    #[cfg(windows)]
+    let command = native_cli_command(&command);
+    command
+}
+
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// PowerShell picks an agent's .ps1 shim before its vendor-supplied .cmd launcher, which fails under the default Restricted policy. Resolve known bare agent commands before adding launch or resume wrappers so both paths use the native launcher selected by CLI discovery, preserving custom shell commands and arguments.
+#[cfg(windows)]
+fn native_cli_command(command: &str) -> String {
+    // Unit tests assert exact commands, which must not depend on the CLIs installed on the machine.
+    if cfg!(test) {
+        return command.to_string();
+    }
+    let trimmed = command.trim_start();
+    let binary = trimmed.split_whitespace().next().unwrap_or_default();
+    if crate::agent_cli::catalog::CATALOG
+        .iter()
+        .any(|agent| agent.binary == binary)
+    {
+        if let Some(path) = crate::platform::live_path::find(binary, &[]) {
+            if let Some(extension @ ("cmd" | "bat")) =
+                path.extension().and_then(|extension| extension.to_str())
+            {
+                return format!(
+                    "{}{binary}.{extension}{}",
+                    &command[..command.len() - trimmed.len()],
+                    &trimmed[binary.len()..]
+                );
+            }
+        }
+    }
+    command.to_string()
 }
 
 /// Validate supplied launch options before an empty or non-string value can be mistaken for an omitted option.

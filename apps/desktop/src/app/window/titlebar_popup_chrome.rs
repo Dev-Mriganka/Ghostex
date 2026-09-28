@@ -26,6 +26,13 @@ pub(crate) fn prepare_gpui_titlebar_popup_window_chrome(window: &mut Window) {
 /// The Windows counterpart of the macOS `becomesKeyOnlyIfNeeded` panel. GPUI creates these popups with `focus: false`, which gives them WS_EX_NOACTIVATE and SW_SHOWNOACTIVATE, but its shared window procedure answers every WM_MOUSEACTIVATE with SetActiveWindow(handle) to keep `active_window` current. That activated the popup on the mouse-down before the click, deactivated the main window, and let the main window's observer close the popup before the click reached a row, so every titlebar dropdown row (Quick Actions "Configure" included) did nothing on Windows. Answering WM_MOUSEACTIVATE with MA_NOACTIVATE ahead of GPUI keeps the mouse message and leaves activation on the main window.
 #[cfg(target_os = "windows")]
 pub(crate) fn prepare_gpui_titlebar_popup_window_chrome(window: &mut Window) {
+    make_gpui_popup_window_non_activating(window);
+}
+
+/// Keeps a pointer-only pop-up (a titlebar dropdown or a frosted host) from taking activation from
+/// its owner when it is clicked, for the reason above.
+#[cfg(target_os = "windows")]
+pub(crate) fn make_gpui_popup_window_non_activating(window: &mut Window) {
     let Ok(handle) = window.window_handle() else {
         return;
     };
@@ -52,8 +59,8 @@ mod windows_chrome {
 
     /// GPUI's own window procedure for each popup window we subclassed, kept as
     /// a raw address because a `WNDPROC` is not `Send`. Entries are added on the
-    /// main thread at window creation and dropped on WM_NCDESTROY; a popup is
-    /// short-lived and only one is open at a time, so this stays tiny.
+    /// main thread at window creation and dropped on WM_NCDESTROY; only a few
+    /// popups exist at a time, so this stays tiny.
     static CHAINED_WINDOW_PROCS: Mutex<Vec<(isize, isize)>> = Mutex::new(Vec::new());
 
     pub(super) fn make_popup_window_non_activating(hwnd: Hwnd) {

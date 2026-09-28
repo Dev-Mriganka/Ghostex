@@ -524,6 +524,8 @@ fn main() {
                                 cef::report_sidebar_pointer_outside();
                                 app.dispatch_gpui_sidebar_dismiss_context_menus(cx);
                             }
+                            #[cfg(not(target_os = "macos"))]
+                            app.dismiss_native_sidebar_menu(cx);
                         } else {
                             /*
                             CDXC:Sidebar 2026-08-20:

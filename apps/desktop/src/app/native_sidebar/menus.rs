@@ -861,7 +861,12 @@ pub(super) fn measure_menu_panel(
                 .is_none_or(|measured| (measured - height).abs() > px(0.5))
             {
                 panel.measured_height = Some(height);
-                cx.notify();
+                // GPUI suppresses invalidation during prepaint. Apply the new
+                // bounds on a fresh frame even if the user stops interacting.
+                let view = cx.weak_entity();
+                cx.defer(move |cx| {
+                    let _ = view.update(cx, |_, cx| cx.notify());
+                });
             }
         });
     }
