@@ -47,6 +47,7 @@ import { AccountConnectionGuide } from './connection-guide';
 import { useAccounts } from './use-accounts';
 import { AccountIdentity, AccountLogo } from './controls';
 import { PolicySettingRows } from './policy-setting-rows';
+import { AccountHelperToolRow, useAccountHelperTools } from './helper-tools';
 type Mutation = (request: AgentAccountsRequest) => Promise<boolean>;
 const providerLabel = (provider: AccountProvider) => (provider === 'claude' ? 'Claude' : 'Codex');
 const helperLabel = (provider: AccountProvider) => (provider === 'claude' ? 'Claude Swap' : 'Codex Swap');
@@ -219,6 +220,7 @@ function AccountManager({
   const [highlighted, setHighlighted] = useState<string>();
   const [pendingJob, setPendingJob] = useState<import('@/packages/shared/agent-accounts').AccountSetupJob>();
   const completedJob = useRef('');
+  const helperTools = useAccountHelperTools(machineId, () => void request({ operation: 'list', refresh: true }));
   useEffect(() => {
     let closed = false;
     const poll = async () => {
@@ -480,6 +482,12 @@ function AccountManager({
                 title='Current CLI login'
               />
             )}
+            <AccountHelperToolRow
+              checking={helperTools.checking}
+              onCheckForUpdates={() => void helperTools.checkForUpdates(provider)}
+              onRun={(action) => void helperTools.run(provider, action)}
+              tool={helperTools.tools.find((tool) => tool.provider === provider)}
+            />
           </SettingsSection>
         );
       })}

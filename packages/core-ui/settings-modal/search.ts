@@ -351,7 +351,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             key: 'accounts',
             title: 'Accounts, usage stats and automatic continuation',
             subtitle:
-              'Current CLI login, Claude cswap, Codex xswap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.',
+              'Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.',
           },
         ],
       },

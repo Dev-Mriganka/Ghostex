@@ -7,6 +7,7 @@ pub(crate) mod drafts;
 pub(crate) mod endpoint;
 pub(crate) mod exit;
 pub(crate) mod helpers;
+mod helper_tools;
 mod history;
 mod history_parser;
 pub(crate) mod launch;
