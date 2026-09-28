@@ -70,7 +70,11 @@ pub(crate) fn quick_access_menu_stand_in<V: 'static>(
                 }
             }
             if let Some(view) = view.upgrade() {
-                view.update(cx, |_, cx| cx.notify());
+                // The floating picker needs the measured frame after prepaint;
+                // notifying during this draw can leave its old bounds on screen.
+                cx.defer(move |cx| {
+                    view.update(cx, |_, cx| cx.notify());
+                });
             }
         })
         .child(panel)
