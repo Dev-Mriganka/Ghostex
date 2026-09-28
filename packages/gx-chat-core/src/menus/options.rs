@@ -229,6 +229,17 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
                     .as_ref()
                     .is_some_and(|catalog| options_may_resolve(catalog, can_send_key))),
     };
+    // A completed screen read without a model is an unset control, not a
+    // pending read. Keep the same settled state on every chat renderer.
+    if state.session.screen_probed {
+        if option_labels.show_model && option_labels.model.is_none() {
+            option_labels.model = Some("Model".to_string());
+            option_labels.model_display = option_labels.model.clone();
+        }
+        if option_labels.show_options && option_labels.options.is_none() {
+            option_labels.options = Some("Options".to_string());
+        }
+    }
     let bot = state
         .session
         .selected_options
