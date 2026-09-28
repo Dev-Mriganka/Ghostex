@@ -699,9 +699,9 @@ pub(crate) fn switch_draft_agent(
         update.insert("launchSettings".to_string(), value);
     }
     /*
-    The rebuild's own default would start this row at "working", because a
-    create that carries launch startup text treats the launch as work. That is
-    right for a session being created to run a first prompt and wrong for a
+    The rebuild's own default starts this row at "working" whenever the
+    runtime settings it is rebuilt from still carry a `firstUserMessage`. That
+    is right for a session being created to run a first prompt and wrong for a
     draft, which is being relaunched with nothing to do — and it would hand the
     new CLI's startup spinner an already-expired suppression stamp to promote
     the draft through. Seed the idle default instead: it names the NEW agent and

@@ -2447,10 +2447,7 @@ pub fn detect_session_chat_terminal_state(
                     activity,
                 ))
         });
-    let (fleet, fleet_observed) = if matches!(
-        agent,
-        Some(SessionChatOptionAgent::Codex | SessionChatOptionAgent::Claude)
-    ) {
+    let (fleet, fleet_observed) = if crate::session_chat_fleet_status::has_fleet_reader(agent) {
         match repository
             .get_session(project_id, session_id)
             .ok()

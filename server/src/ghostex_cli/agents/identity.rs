@@ -1,3 +1,4 @@
+use crate::bot_projects;
 use crate::ghostex_cli::{
     args::Flags,
     rpc::{self, CliError, CliResult},
@@ -68,7 +69,7 @@ pub(super) fn caller() -> CliResult<Value> {
 pub(crate) fn resolve_names(rows: &mut [Value], flags: &Flags) {
     if let Ok(hud) = rpc::call_gxserver_rpc("/api/readSidebarHud", &json!({}), flags) {
         if let Some(agents) = hud["agents"].as_array() {
-            for row in rows {
+            for row in rows.iter_mut() {
                 if let Some(agent) = agents
                     .iter()
                     .find(|agent| text(agent, "agentId") == text(row, "agentId"))
@@ -78,6 +79,34 @@ pub(crate) fn resolve_names(rows: &mut [Value], flags: &Flags) {
                     }
                 }
             }
+        }
+    }
+    name_bot_sessions(rows, flags);
+}
+
+/// CDXC:Bots 2026-09-27 WHY:
+/// Every bot session runs the built-in `hermes-agent`, so the roster lookup names it after whichever roster agent owns that id ("Harry" for a Dobby session). A session in a bot project is that bot, named as `bot_agent_config` names its launch. gxserver keeps publishing the agent id as the row's `agentName` because clients look transcripts up by it.
+fn name_bot_sessions(rows: &mut [Value], flags: &Flags) {
+    if !rows
+        .iter()
+        .any(|row| text(row, "agentId") == "hermes-agent")
+    {
+        return;
+    }
+    let Ok(response) = rpc::call_gxserver_rpc("/api/listProjects", &json!({}), flags) else {
+        return;
+    };
+    let Some(projects) = response["projects"].as_array() else {
+        return;
+    };
+    for row in rows {
+        if let Some(name) = projects
+            .iter()
+            .find(|project| text(project, "projectId") == text(row, "projectId"))
+            .and_then(|project| bot_projects::bot_agent_config(project, text(row, "agentId")))
+            .and_then(|config| config.get("name").cloned())
+        {
+            row["agentName"] = name;
         }
     }
 }

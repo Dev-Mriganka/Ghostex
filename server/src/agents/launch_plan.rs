@@ -103,17 +103,15 @@ pub(crate) fn create_agent_session_params_for_project(
             "Ghostex has no launch command for agent \"{agent_id}\", so it did not create the session. Use a built-in agent id (for example claude, codex or hermes-agent) or one configured for this project."
         )));
     }
-    let has_launch_startup_text = launch_plan_object
-        .get("startupText")
-        .and_then(Value::as_str)
-        .is_some_and(|value| !value.trim().is_empty());
+    /*
+    CDXC:SessionStatus 2026-09-27 WHY: A new session starts "working" only when its launch submits a first prompt (`firstUserMessage`). The launch plan's startup text is the agent command alone and every agent launch has one, so keying on it started every session "working". Claude and Codex hide that by projection and settle it with their own titles and hooks, but an agent that fires nothing before its first turn (Hermes runs `on_session_start` from its first conversation turn) read "working" at an empty prompt until the user typed.
+    */
+    let launch_submits_prompt =
+        read_text_from_map(&launch_plan_object, "firstUserMessage").is_some();
     let agent_activity = if runtime_settings.get("agentActivity").is_some() {
         normalize_agent_activity_value(runtime_settings.get("agentActivity"), "idle")
     } else {
-        default_activity(
-            Some(&agent_id),
-            has_launch_startup_text.then_some("working"),
-        )
+        default_activity(Some(&agent_id), launch_submits_prompt.then_some("working"))
     };
     runtime_settings.insert("agentActivity".to_string(), agent_activity);
     runtime_settings.insert(

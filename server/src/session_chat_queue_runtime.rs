@@ -835,10 +835,15 @@ pub(crate) async fn send_session_chat_message_with_draft(
     }
     // The draft was checked against the text as written; the terminal, the delivery watchdog and
     // the local-command archive see what the agent is actually handed (a Claude skill pill typed as
-    // its bare `/name`).
+    // its bare `/name`, a Hermes `/rename` as `/title`).
     let drafted_text = text;
     let agent_text =
         crate::session_chat_skill_invocation::agent_skill_text(terminal_agent.as_deref(), text);
+    let agent_text = crate::server::title_generation::chat_rename_as_agent_title_command(
+        terminal_agent.as_deref(),
+        &agent_text,
+    )
+    .map_or(agent_text, std::borrow::Cow::Owned);
     let text = agent_text.as_ref();
     /*
     CDXC:AgentScreenDetection 2026-08-19:

@@ -132,6 +132,28 @@ struct HermesMessageRow {
     finish_reason: Option<String>,
     reasoning: Option<String>,
     reasoning_content: Option<String>,
+    message_items: Option<String>,
+}
+
+/// CDXC:SessionChat 2026-09-27 WHY:
+/// The OpenAI Responses models Hermes runs (Dobby's gpt-6-sol) store a tool-calling step's message ("Using beads-board to claim the card…") only in `codex_message_items`, as `commentary`, and leave `content` empty, so chat showed tool rows and no messages while Discord showed every one. A final answer repeats its text in both columns, so the items are read only when `content` is empty.
+fn hermes_row_text(row: &HermesMessageRow) -> Option<String> {
+    if let Some(content) = row.content.as_ref().filter(|text| !text.trim().is_empty()) {
+        return Some(content.clone());
+    }
+    let items = serde_json::from_str::<Value>(row.message_items.as_deref()?).ok()?;
+    let text = items
+        .as_array()?
+        .iter()
+        .filter(|item| item["type"] == "message")
+        .filter_map(|item| item["content"].as_array())
+        .flatten()
+        .filter(|part| part["type"] == "output_text")
+        .filter_map(|part| part["text"].as_str())
+        .filter(|text| !text.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    (!text.is_empty()).then_some(text)
 }
 
 fn hermes_row_json_line(row: &HermesMessageRow) -> String {
@@ -141,8 +163,8 @@ fn hermes_row_json_line(row: &HermesMessageRow) -> String {
         "timestamp": row.timestamp,
     });
     let object = record.as_object_mut().expect("literal object");
-    if let Some(content) = &row.content {
-        object.insert("content".into(), Value::String(content.clone()));
+    if let Some(content) = hermes_row_text(row).or_else(|| row.content.clone()) {
+        object.insert("content".into(), Value::String(content));
     }
     if let Some(tool_calls) = &row.tool_calls {
         let parsed = serde_json::from_str::<Value>(tool_calls)
@@ -172,7 +194,7 @@ fn hermes_row_json_line(row: &HermesMessageRow) -> String {
     line
 }
 
-fn open_hermes_state_db(session_id: &str) -> Option<Connection> {
+pub(crate) fn open_hermes_state_db(session_id: &str) -> Option<Connection> {
     open_read_only_state_db(&hermes_state_db_path(&hermes_home(), session_id))
 }
 
@@ -238,11 +260,19 @@ fn read_hermes_active_rows(
     session_id: &str,
     after_row_id: i64,
 ) -> rusqlite::Result<Vec<HermesMessageRow>> {
-    let mut statement = connection.prepare(
+    // Older Hermes stores have no `codex_message_items` column.
+    let message_items = connection
+        .query_row(
+            "SELECT 1 FROM pragma_table_info('messages') WHERE name = 'codex_message_items'",
+            [],
+            |_| Ok(()),
+        )
+        .map_or("NULL", |()| "codex_message_items");
+    let mut statement = connection.prepare(&format!(
         "SELECT id, role, content, tool_calls, tool_name, tool_call_id, timestamp, \
-                finish_reason, reasoning, reasoning_content \
+                finish_reason, reasoning, reasoning_content, {message_items} \
          FROM messages WHERE session_id = ?1 AND active != 0 AND id > ?2 ORDER BY id",
-    )?;
+    ))?;
     let rows = statement.query_map(rusqlite::params![session_id, after_row_id], |row| {
         Ok(HermesMessageRow {
             row_id: row.get(0)?,
@@ -255,6 +285,7 @@ fn read_hermes_active_rows(
             finish_reason: row.get(7)?,
             reasoning: row.get(8)?,
             reasoning_content: row.get(9)?,
+            message_items: row.get(10)?,
         })
     })?;
     rows.collect()
