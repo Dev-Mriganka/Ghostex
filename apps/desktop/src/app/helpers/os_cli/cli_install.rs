@@ -17,6 +17,20 @@ use anyhow::Result;
 
 use crate::app::helpers::*;
 
+const GPUI_GHOSTEX_CLI_BINARY_NAME: &str = if cfg!(windows) {
+    "ghostex.exe"
+} else {
+    "ghostex"
+};
+
+fn gpui_cli_wrapper_name(command: &str) -> String {
+    if cfg!(windows) {
+        format!("{command}.cmd")
+    } else {
+        command.to_string()
+    }
+}
+
 pub(crate) fn gpui_finish_desktop_control_setup(
     driver_installed: bool,
     was_update: bool,
@@ -62,10 +76,10 @@ pub(crate) fn gpui_repair_ghostex_cli_commands() -> Result<String, String> {
     }
     /*
     CDXC:Cli 2026-06-24-12:56:
-    CLI repair is real only when GPUI is running from a packaged app that ships the native `Contents/Resources/CLI/ghostex` binary. Development binaries must report unavailable status instead of synthesizing wrappers to a source checkout, while packaged repair writes public wrappers outside the app and replaces only marked Ghostex wrappers, app-owned CLI symlinks, or broken symlinks.
+    CLI repair is real only when GPUI is running from a packaged app that ships the native CLI binary. Development binaries must report unavailable status instead of synthesizing wrappers to a source checkout, while packaged repair writes public wrappers outside the app and replaces only marked Ghostex wrappers, app-owned CLI symlinks, or broken symlinks.
     */
     let cli_dir = gpui_bundled_ghostex_cli_resource_dir()?;
-    let cli_binary_path = cli_dir.join("ghostex");
+    let cli_binary_path = cli_dir.join(GPUI_GHOSTEX_CLI_BINARY_NAME);
     let path_entries = gpui_cli_path_entries();
     let common_dirs = gpui_common_cli_install_dirs();
     let install_dirs = gpui_cli_install_dirs(&path_entries, &common_dirs, &cli_dir);
@@ -125,7 +139,7 @@ pub(crate) fn gpui_auto_install_ghostex_cli_wrappers() {
     let Ok(cli_dir) = gpui_bundled_ghostex_cli_resource_dir() else {
         return;
     };
-    let cli_binary_path = cli_dir.join("ghostex");
+    let cli_binary_path = cli_dir.join(GPUI_GHOSTEX_CLI_BINARY_NAME);
     let wrapper = gpui_ghostex_cli_wrapper_content(&cli_binary_path);
     let path_entries = gpui_cli_path_entries();
     let common_dirs = gpui_common_cli_install_dirs();
@@ -205,7 +219,11 @@ pub(crate) fn gpui_bundled_ghostex_cli_resource_dir() -> Result<PathBuf, String>
     let cli_dir = executable
         .parent()
         .map(|executable_dir| executable_dir.join("gxserver/bin"));
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(target_os = "windows")]
+    let cli_dir = executable
+        .parent()
+        .map(|executable_dir| executable_dir.join("resources/native"));
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
     let cli_dir: Option<PathBuf> = None;
     let Some(cli_dir) = cli_dir else {
         return Err(
@@ -213,7 +231,7 @@ pub(crate) fn gpui_bundled_ghostex_cli_resource_dir() -> Result<PathBuf, String>
                 .to_string(),
         );
     };
-    if gpui_is_file(&cli_dir.join("ghostex")) {
+    if gpui_is_file(&cli_dir.join(GPUI_GHOSTEX_CLI_BINARY_NAME)) {
         Ok(cli_dir)
     } else {
         Err(
@@ -241,8 +259,14 @@ pub(crate) fn gpui_install_ghostex_cli_command(
     be shadowed by it and status would still say the CLI is unusable.
     */
     let wrapper = gpui_ghostex_cli_wrapper_content(cli_binary_path);
+    #[cfg(windows)]
+    if let Some(existing_path) = gpui_which_command(command) {
+        if !gpui_can_replace_existing_ghostex_command(command, &existing_path, cli_dir) {
+            return GpuiCliCommandInstallResult::Blocked { existing_path };
+        }
+    }
     for directory in install_dirs {
-        let link_path = directory.join(command);
+        let link_path = directory.join(gpui_cli_wrapper_name(command));
         let exists = gpui_path_exists_or_is_symlink(&link_path);
         if exists && !gpui_can_replace_existing_ghostex_command(command, &link_path, cli_dir) {
             if gpui_is_executable_file(&link_path) {
@@ -275,6 +299,15 @@ pub(crate) fn gpui_install_ghostex_cli_command(
     GpuiCliCommandInstallResult::Unavailable
 }
 
+#[cfg(windows)]
+pub(crate) fn gpui_ghostex_cli_wrapper_content(cli_binary_path: &Path) -> String {
+    format!(
+        "@echo off\r\nsetlocal DisableDelayedExpansion\r\nrem {GPUI_GHOSTEX_CLI_WRAPPER_MARKER}\r\n\"{}\" %*\r\nexit /b %errorlevel%\r\n",
+        gpui_path_string(cli_binary_path).replace('%', "%%")
+    )
+}
+
+#[cfg(not(windows))]
 pub(crate) fn gpui_ghostex_cli_wrapper_content(cli_binary_path: &Path) -> String {
     /*
     CDXC:Cli 2026-07-13:
@@ -310,11 +343,15 @@ pub(crate) fn gpui_cli_path_entries() -> Vec<PathBuf> {
 }
 
 pub(crate) fn gpui_common_cli_install_dirs() -> Vec<PathBuf> {
-    gpui_unique_paths([
+    #[cfg(windows)]
+    let directories = vec![gpui_home_dir().join(".local/bin")];
+    #[cfg(not(windows))]
+    let directories = vec![
         PathBuf::from("/opt/homebrew/bin"),
         PathBuf::from("/usr/local/bin"),
         gpui_home_dir().join(".local/bin"),
-    ])
+    ];
+    gpui_unique_paths(directories)
 }
 
 pub(crate) fn gpui_cli_install_dirs(
@@ -334,6 +371,13 @@ pub(crate) fn gpui_cli_install_dirs(
             }
         }
     }
+    #[cfg(windows)]
+    owned_dirs.extend(
+        common_dirs
+            .iter()
+            .filter(|directory| path_entries.contains(directory))
+            .cloned(),
+    );
     gpui_unique_paths(
         owned_dirs
             .into_iter()
@@ -348,10 +392,19 @@ pub(crate) fn gpui_cli_command_path_candidates(
     common_dirs: &[PathBuf],
 ) -> Vec<PathBuf> {
     let found = gpui_which_command(command).into_iter();
+    let wrapper_name = gpui_cli_wrapper_name(command);
     gpui_unique_paths(
         found
-            .chain(path_entries.iter().map(|directory| directory.join(command)))
-            .chain(common_dirs.iter().map(|directory| directory.join(command))),
+            .chain(
+                path_entries
+                    .iter()
+                    .map(|directory| directory.join(&wrapper_name)),
+            )
+            .chain(
+                common_dirs
+                    .iter()
+                    .map(|directory| directory.join(&wrapper_name)),
+            ),
     )
 }
 
@@ -556,17 +609,26 @@ pub(crate) fn gpui_install_bundled_ghostex_skill(
 ) -> Result<String, String> {
     /*
     CDXC:AgentSkills 2026-06-24-12:56:
-    GPUI Settings installs bundled Ghostex skills by resolving the fixed `ghostex` command on PATH and running only the known `ghostex <namespace> install-skill` argv. Command text never comes from React, child stdout/stderr are suppressed, failures are reported generically, and status is refreshed from disk afterward.
+    GPUI Settings installs bundled Ghostex skills through the platform's owned CLI and only the known `ghostex <namespace> install-skill` argv. Command text never comes from React, child stdout/stderr are suppressed, failures are reported generically, and status is refreshed from disk afterward.
 
     CDXC:AgentSkills 2026-06-24-13:08:
     Executing a PATH `ghostex` command from Settings requires strict Ghostex ownership evidence: a repair marker plus `ghostex-cli.mjs`, or an app-owned realpath recognized by the CLI repair ownership helper. Broad read-only status strings are not sufficient for process execution.
     */
+    #[cfg(windows)]
+    let (ghostex_path, platform_args) =
+        crate::windows_terminal_backend::ghostex_cli_invocation(args)?;
+    #[cfg(windows)]
+    let platform_args = platform_args.iter().map(String::as_str).collect::<Vec<_>>();
+    #[cfg(windows)]
+    let args = platform_args.as_slice();
+    #[cfg(not(windows))]
     let Some(ghostex_path) = gpui_which_command("ghostex") else {
         return Err(
             "Ghostex CLI was not found on PATH. Repair the Ghostex CLI before installing bundled skills."
                 .to_string(),
         );
     };
+    #[cfg(not(windows))]
     if !gpui_is_probably_ghostex_command(&ghostex_path, "ghostex") {
         return Err(
             "A ghostex command exists on PATH, but GPUI could not prove it belongs to Ghostex. Repair the Ghostex CLI before installing bundled skills."

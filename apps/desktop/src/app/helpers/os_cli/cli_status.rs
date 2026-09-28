@@ -159,10 +159,13 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
                 parts.push(probe_error.clone());
             } else if ghostex_usable {
                 #[cfg(target_os = "windows")]
-                parts.push(
-                    "Ghostex CLI is installed in the selected WSL2 distribution and matches this app's managed gxserver package."
-                        .to_string(),
-                );
+                parts.push(if crate::windows_terminal_backend::current_preference()
+                    == crate::windows_terminal_backend::WindowsTerminalBackendPreference::PowerShell
+                {
+                    "The bundled Ghostex CLI is ready for native Windows agents.".to_string()
+                } else {
+                    "Ghostex CLI is installed in the selected WSL2 distribution and matches this app's managed gxserver package.".to_string()
+                });
                 #[cfg(not(target_os = "windows"))]
                 parts.push(
                     "Ghostex CLI was found on PATH and appears to be Ghostex-owned.".to_string(),
@@ -171,16 +174,17 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
                 parts.push("A ghostex command was found on PATH, but GPUI could not prove it is the Ghostex-owned wrapper or app command.".to_string());
             } else {
                 #[cfg(target_os = "windows")]
-                parts.push(
-                    "Ghostex CLI was not found in the selected WSL2 distribution.".to_string(),
-                );
+                parts.push(if crate::windows_terminal_backend::current_preference()
+                    == crate::windows_terminal_backend::WindowsTerminalBackendPreference::PowerShell
+                {
+                    "The bundled Windows Ghostex CLI is missing. Reinstall Ghostex.".to_string()
+                } else {
+                    "Ghostex CLI was not found in the selected WSL2 distribution.".to_string()
+                });
                 #[cfg(not(target_os = "windows"))]
                 parts.push("Ghostex CLI was not found on PATH.".to_string());
             }
             if gx_usable {
-                #[cfg(target_os = "windows")]
-                parts.push("The gx alias in WSL is linked to the managed Ghostex CLI.".to_string());
-                #[cfg(not(target_os = "windows"))]
                 parts.push("The gx alias appears to be Ghostex-owned.".to_string());
             } else if gx_blocked {
                 parts.push("A gx command exists on PATH, but GPUI could not prove it belongs to Ghostex.".to_string());

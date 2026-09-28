@@ -951,6 +951,9 @@ fn is_existing_file(path: &Path) -> bool {
 }
 
 fn is_uri_like(value: &str) -> bool {
+    if Path::new(value).is_absolute() {
+        return false;
+    }
     let mut chars = value.chars();
     let Some(first) = chars.next() else {
         return false;

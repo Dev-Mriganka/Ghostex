@@ -288,6 +288,10 @@ foreach ($binary in @("gxserver.exe", "ghostex.exe")) {
     Copy-Item (Join-Path $RepoRoot "server/target/release/$binary") $NativeResources
 }
 Copy-Item (Join-Path $RepoRoot ".dependencies/wmx/target/release/wmx.exe") $NativeResources
+# CDXC:AgentSkills 2026-09-27 WHY:
+# The native CLI resolves its offline skill catalog next to resources/native.
+# First-run setup must work without a source checkout or a GitHub download.
+Copy-Item -LiteralPath (Join-Path $RepoRoot "skills") -Destination (Join-Path $AppDir "resources/skills") -Recurse
 # CDXC:PlatformSupport 2026-09-14 WHY:
 # Native gxserver survives app exit. Seal its runtime identity so an updated app replaces an older control plane while preserving session hosts.
 $NativeHashes = @("gxserver.exe", "ghostex.exe", "wmx.exe") | ForEach-Object {
