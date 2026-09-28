@@ -370,6 +370,11 @@ fn side_question_screen(styled: &str) -> Option<SideQuestionScreen> {
     })
 }
 
+/// Whether Claude's `/btw` panel is on screen (plain or VT capture), for the send path to close it.
+pub(crate) fn side_question_on_screen(screen: &str) -> bool {
+    side_question_screen(screen).is_some()
+}
+
 // ---------------------------------------------------------------------------
 // The answer as Markdown
 // ---------------------------------------------------------------------------

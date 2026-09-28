@@ -91,6 +91,7 @@ impl NativeChatView {
             "Copy",
             Some("C"),
             answering || answer.is_empty(),
+            None,
             p,
             cx.listener(move |_, _, _, cx| {
                 crate::app::helpers::gpui_copy_to_clipboard(
@@ -112,6 +113,7 @@ impl NativeChatView {
                 "Fork",
                 Some("F"),
                 false,
+                Some("Continue this side question as a background Claude agent; its answer comes back to this chat."),
                 p,
                 cx.listener(move |this, _, _, cx| {
                     this.invoke(
@@ -129,6 +131,7 @@ impl NativeChatView {
                 "Close",
                 Some("Esc"),
                 false,
+                None,
                 p,
                 cx.listener(move |this, _, _, cx| {
                     this.invoke(
@@ -368,6 +371,7 @@ impl NativeChatView {
                                 "Copy",
                                 None,
                                 false,
+                                None,
                                 p,
                                 cx.listener(move |_, _, _, cx| {
                                     crate::app::helpers::gpui_copy_to_clipboard(
@@ -454,6 +458,7 @@ fn side_button(
     label: &'static str,
     key_hint: Option<&'static str>,
     disabled: bool,
+    tooltip: Option<&'static str>,
     p: &ChatAppearance,
     on_click: impl Fn(&gpui::ClickEvent, &mut Window, &mut gpui::App) + 'static,
 ) -> AnyElement {
@@ -472,6 +477,11 @@ fn side_button(
         .border_color(p.border)
         .text_color(p.primary)
         .when(disabled, |button| button.opacity(0.45))
+        .when_some(tooltip, |button, tooltip| {
+            button.tooltip(move |window, cx| {
+                gpui_component::tooltip::Tooltip::new(tooltip).build(window, cx)
+            })
+        })
         .when(!disabled, |button| {
             button
                 .chat_cursor_pointer()

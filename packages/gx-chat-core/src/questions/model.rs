@@ -131,6 +131,15 @@ impl TerminalNotice {
 
     /// Whether this notice owns the agent's input line, so a message sent now would land in it.
     pub fn holds_input(&self) -> bool {
+        // A side question panel does not: gxserver closes it with Escape before a send lands
+        // (server/src/session_chat_composer.rs).
+        if self
+            .dialog
+            .as_ref()
+            .is_some_and(|dialog| dialog.side_question.is_some())
+        {
+            return false;
+        }
         self.choices.as_ref().is_some_and(|rows| !rows.is_empty())
             || self.dialog.is_some()
             || self.conversation_lock.is_some()
