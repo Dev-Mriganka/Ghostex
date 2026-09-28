@@ -607,6 +607,28 @@ impl NativeChatView {
             Bounds::new(at, size(px(0.0), px(0.0))),
             width,
             true,
+            false,
+            window,
+            cx,
+        );
+    }
+
+    /// A menu at the pointer inside one of the chat's own child windows (the image preview), kept
+    /// inside that window rather than the pane's frame, which is measured in the main window.
+    pub(in crate::app::native_chat) fn show_chat_menu_in_window_at(
+        &mut self,
+        rows: Vec<Value>,
+        at: Point<Pixels>,
+        width: f32,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_chat_menu(
+            rows,
+            Bounds::new(at, size(px(0.0), px(0.0))),
+            width,
+            true,
+            true,
             window,
             cx,
         );
@@ -620,7 +642,7 @@ impl NativeChatView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.open_chat_menu(rows, trigger, width, false, window, cx);
+        self.open_chat_menu(rows, trigger, width, false, false, window, cx);
     }
 
     fn open_chat_menu(
@@ -629,6 +651,7 @@ impl NativeChatView {
         trigger: Bounds<Pixels>,
         width: f32,
         below: bool,
+        within_window: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -647,11 +670,12 @@ impl NativeChatView {
         // that window's content; in a page it is one pane beside the sidebar, and clamping to the
         // page let a menu opened from the model pill cover the sidebar.
         let view = self.bounds.get();
-        let source_bounds = if view.size.width > px(0.0) && view.size.height > px(0.0) {
-            Bounds::new(content_bounds.origin + view.origin, view.size)
-        } else {
-            content_bounds
-        };
+        let source_bounds =
+            if !within_window && view.size.width > px(0.0) && view.size.height > px(0.0) {
+                Bounds::new(content_bounds.origin + view.origin, view.size)
+            } else {
+                content_bounds
+            };
         let chat = cx.weak_entity();
         let source = window.window_handle();
         let source_focus = window.focused(cx);

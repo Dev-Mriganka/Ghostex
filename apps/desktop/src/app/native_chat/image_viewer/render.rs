@@ -2,15 +2,13 @@ use super::super::images::ChatImageSource;
 use super::super::{appearance::ChatAppearance, transcript::text};
 use super::window::ImageViewerWindow;
 use crate::app::native_chat::cursor::ChatCursor as _;
-use base64::Engine as _;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, Context, InteractiveElement as _, IntoElement, ParentElement as _, Render,
     StatefulInteractiveElement as _, Styled as _, StyledImage as _, Window, div, img, px, svg,
 };
 use gpui_component::tooltip::{ManagedTooltipExt as _, ManagedTooltipPlacement, Tooltip};
-use serde_json::{Value, json};
-use std::sync::atomic::{AtomicU64, Ordering};
+use serde_json::Value;
 
 /**
  * Three steps between the fitted size and the picture's own pixels, spaced geometrically so the
@@ -22,8 +20,6 @@ const UNMEASURED_ZOOM_STEPS: [f32; ZOOM_LEVEL_COUNT] = [1.5, 2.25, 3.375];
 /// React caps the fitted picture at 75% of the window height; the same cap keeps the toolbar clear.
 const FIT_HEIGHT: f32 = 0.75;
 const FIT_WIDTH: f32 = 0.9;
-/// The app-bridge image transfer moves already-base64 bytes in ordered 256 KiB messages.
-const SAVE_CHUNK_CHARS: usize = 256 * 1024;
 
 /**
  * The picture's own pixel size, read from the header of the bytes the viewer already holds.
@@ -93,12 +89,10 @@ fn painted_size(
 }
 
 /**
- * CDXC:SessionChat 2026-09-19 DECISION:
- * User: right-clicking the previewed image closes the preview, and the close button's tooltip says so, shown below and to the left so it stays inside the overlay. Matches React's session-chat-image-viewer.tsx.
+ * CDXC:SessionChat 2026-09-28 DECISION:
+ * User: the close button's tooltip names the other ways out, shown below and to the left so it stays inside the overlay. Right-clicking the picture opens its menu (actions.rs), so only a right-click around it closes the preview; this supersedes the 2026-09-19 tooltip that offered a right-click on the image.
  */
-const IMAGE_VIEWER_CLOSE_TOOLTIP: &str = "Close (or right-click the image)";
-
-static SAVE_REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+const IMAGE_VIEWER_CLOSE_TOOLTIP: &str = "Close (or right-click outside the image)";
 
 impl super::window::ImageViewerRequest {
     pub(super) fn current(&self) -> &Value {
@@ -195,86 +189,6 @@ impl ImageViewerWindow {
             _ => None,
         }
     }
-
-    fn current_image(&self, cx: &Context<Self>) -> Option<Value> {
-        self.chat
-            .read(cx)
-            .image_viewer
-            .request
-            .as_ref()
-            .map(|request| request.current().clone())
-    }
-
-    fn copy_image(&mut self, cx: &mut Context<Self>) {
-        let Some(image) = self.current_image(cx) else {
-            return;
-        };
-        let bytes = self
-            .chat
-            .update(cx, |chat, cx| match chat.chat_image(&image, cx) {
-                ChatImageSource::Bytes(bytes) => Some(bytes),
-                _ => None,
-            });
-        if let Some(bytes) = bytes {
-            crate::app::helpers::gpui_copy_to_clipboard(gpui::ClipboardItem::new_image(&bytes), cx);
-            self.chat.update(cx, |chat, cx| {
-                chat.note_image_viewer_action("Image copied", cx)
-            });
-        }
-    }
-
-    fn copy_path(&mut self, cx: &mut Context<Self>) {
-        let Some(path) = self
-            .current_image(cx)
-            .map(|image| text(&image, "copyPath"))
-            .filter(|path| !path.is_empty())
-        else {
-            return;
-        };
-        crate::app::helpers::gpui_copy_to_clipboard(gpui::ClipboardItem::new_string(path), cx);
-        self.chat.update(cx, |chat, cx| {
-            chat.note_image_viewer_action("Path copied", cx)
-        });
-    }
-
-    /// Hands the bytes to the host's Downloads writer, the route React's Save image also takes.
-    fn save_image(&mut self, cx: &mut Context<Self>) {
-        let Some(image) = self.current_image(cx) else {
-            return;
-        };
-        self.chat.update(cx, |chat, cx| {
-            let ChatImageSource::Bytes(bytes) = chat.chat_image(&image, cx) else {
-                return;
-            };
-            let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes.bytes);
-            let request_id = format!(
-                "native-image-{}",
-                SAVE_REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed)
-            );
-            let name = text(&image, "fileName");
-            chat.host(
-                "saveImageStart",
-                json!({
-                    "requestId": request_id,
-                    "suggestedName": if name.is_empty() { "image.png".to_string() } else { name },
-                }),
-                cx,
-            );
-            for (index, chunk) in encoded.as_bytes().chunks(SAVE_CHUNK_CHARS).enumerate() {
-                chat.host(
-                    "saveImageChunk",
-                    json!({
-                        "requestId": request_id,
-                        "chunkIndex": index,
-                        "base64Chunk": String::from_utf8_lossy(chunk),
-                    }),
-                    cx,
-                );
-            }
-            chat.host("saveImageFinish", json!({ "requestId": request_id }), cx);
-            chat.note_image_viewer_action("Saving image", cx);
-        });
-    }
 }
 
 impl Render for ImageViewerWindow {
@@ -308,6 +222,7 @@ impl Render for ImageViewerWindow {
         // A picture painted at its own pixels already shows everything it has, so clicking it is
         // not a zoom; one nothing here can measure is enlarged by the steps below instead.
         let zooms = natural.is_none_or(|natural| zoom_widths(natural, viewport).is_some());
+        let zoomed = zooms && zoom > 0;
         // The caps stand in for the pictures that cannot be measured (vector bytes, an address
         // still being fetched), and a zoom step enlarges the fitted box itself.
         let step = if zoom == 0 {
@@ -361,6 +276,13 @@ impl Render for ImageViewerWindow {
                     cx.listener(|this, event: &gpui::MouseDownEvent, _, cx| {
                         cx.stop_propagation();
                         this.press_picture(event.position);
+                    }),
+                )
+                .on_mouse_down(
+                    gpui::MouseButton::Right,
+                    cx.listener(move |this, event: &gpui::MouseDownEvent, window, cx| {
+                        cx.stop_propagation();
+                        this.show_picture_menu(event.position, copyable, zoomed, window, cx);
                     }),
                 )
                 .child(picture)
@@ -441,7 +363,7 @@ impl Render for ImageViewerWindow {
                 completed == Some("Path copied"),
                 &p,
                 cx,
-                |this, cx| this.copy_path(cx),
+                |this, cx| this.chat.update(cx, |chat, cx| chat.copy_viewer_path(cx)),
             ))
         })
         .child(self.action_button(
@@ -451,7 +373,7 @@ impl Render for ImageViewerWindow {
             completed == Some("Saving image"),
             &p,
             cx,
-            |this, cx| this.save_image(cx),
+            |this, cx| this.chat.update(cx, |chat, cx| chat.save_viewer_image(cx)),
         ))
         .child(self.action_button(
             "chat-image-copy",
@@ -460,7 +382,7 @@ impl Render for ImageViewerWindow {
             completed == Some("Image copied"),
             &p,
             cx,
-            |this, cx| this.copy_image(cx),
+            |this, cx| this.chat.update(cx, |chat, cx| chat.copy_viewer_image(cx)),
         ));
         let close = stop(
             div()
@@ -524,7 +446,7 @@ impl Render for ImageViewerWindow {
                     this.chat.update(cx, |chat, cx| chat.close_image_viewer(cx));
                 }),
             )
-            // Right-clicking anywhere in the preview, the picture included, closes it.
+            // Right-clicking around the picture closes the preview; the picture opens its menu.
             .on_mouse_down(
                 gpui::MouseButton::Right,
                 cx.listener(|this, _, _, cx| {
