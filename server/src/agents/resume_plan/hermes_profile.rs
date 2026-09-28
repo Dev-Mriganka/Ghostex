@@ -1,6 +1,6 @@
 use serde_json::{Map, Value};
 use std::ops::Range;
-use std::path::Path;
+use std::path::PathBuf;
 
 use super::{command_word, infer_agent_id_from_command, is_option_word, read_text_from_map};
 
@@ -9,6 +9,8 @@ use super::{command_word, infer_agent_id_from_command, is_option_word, read_text
 /// Supersedes the 2026-09-26 rule that left the default profile's as `{cmd} --resume <id>`.
 /// CDXC:Bots 2026-09-28 DECISION:
 /// User: a woken Hermes session resumes under the profile it was launched with, replacing a different `-p`/`--profile` in the project's Hermes command (a `hermes -p dobby` session woken in a project whose Hermes agent is `hermes -p harry` had resumed Dobby's conversation under Harry). Supersedes the note that a command already picking a profile is kept as it is.
+/// CDXC:Bots 2026-09-29 WHY:
+/// The store that holds the conversation decides first (`hermes_session_store`, the lookup chat reads use), since the launch command cannot say which store a plain `hermes` launch wrote to: that follows whatever sticky profile `hermes profile use` had set, and default-bot sessions launched before 2026-09-28 recorded plain `hermes`. The launch command decides only while no store holds the conversation yet.
 pub(super) fn with_session_hermes_profile(
     agent_id: Option<&str>,
     mut command: String,
@@ -39,8 +41,18 @@ fn session_hermes_profile(
     runtime_settings: &Map<String, Value>,
     launch_settings: &Map<String, Value>,
 ) -> Option<Option<String>> {
-    let profile = if let Some(home) = read_text_from_map(runtime_settings, "externalAgentHome") {
-        let home = Path::new(&home);
+    let stored_home = || {
+        let session_id = read_text_from_map(runtime_settings, "agentSessionId")?;
+        let store = crate::session_chat_hermes::hermes_session_store(
+            &crate::session_chat_hermes::hermes_home(),
+            &session_id,
+        )?;
+        Some(store.parent()?.to_path_buf())
+    };
+    let home = read_text_from_map(runtime_settings, "externalAgentHome")
+        .map(PathBuf::from)
+        .or_else(stored_home);
+    let profile = if let Some(home) = home {
         if home.parent()?.file_name()? != "profiles" {
             return Some(Some("default".to_string()));
         }

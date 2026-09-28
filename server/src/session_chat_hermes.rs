@@ -78,15 +78,19 @@ const SESSION_STORE_MISS_TTL: Duration = Duration::from_secs(1);
 /// CDXC:Bots 2026-09-26 WHY:
 /// Each Hermes profile keeps its sessions in its own `profiles/<name>/state.db`, so a `hermes -p harry` session never reaches the root store. The store is found by session id, not parsed from the launch command, because chat reads arrive with only the id; ids are unique across profiles, and a hit is cached because a session never moves. A miss is cached for a second: Hermes writes the row only on the first turn, and until then the title, detect and follower passes would each rescan every store several times a second.
 pub(crate) fn hermes_state_db_path(hermes_home: &Path, session_id: &str) -> PathBuf {
+    hermes_session_store(hermes_home, session_id).unwrap_or_else(|| hermes_home.join("state.db"))
+}
+
+/// The store that holds this session, or `None` while no store does (Hermes writes the row on the
+/// first turn). [`hermes_state_db_path`] answers a miss with the root store.
+pub(crate) fn hermes_session_store(hermes_home: &Path, session_id: &str) -> Option<PathBuf> {
     let cached = SESSION_STORES
         .lock()
         .ok()
         .and_then(|stores| stores.as_ref()?.get(session_id).cloned());
     match cached {
-        Some((Some(path), _)) if path.is_file() => return path,
-        Some((None, looked_at)) if looked_at.elapsed() < SESSION_STORE_MISS_TTL => {
-            return hermes_home.join("state.db");
-        }
+        Some((Some(path), _)) if path.is_file() => return Some(path),
+        Some((None, looked_at)) if looked_at.elapsed() < SESSION_STORE_MISS_TTL => return None,
         _ => {}
     }
     let found = hermes_state_db_paths(hermes_home).into_iter().find(|path| {
@@ -105,7 +109,7 @@ pub(crate) fn hermes_state_db_path(hermes_home: &Path, session_id: &str) -> Path
             .get_or_insert_with(HashMap::new)
             .insert(session_id.to_string(), (found.clone(), Instant::now()));
     }
-    found.unwrap_or_else(|| hermes_home.join("state.db"))
+    found
 }
 
 fn hermes_mirror_dir() -> PathBuf {
