@@ -468,10 +468,18 @@ fn attach_host_window(window: &mut Window, parent: *mut std::ffi::c_void, kind: 
     }
 }
 
-/// On Windows a host is a non-activating pop-up owned by the window that was active when it opened
-/// (`WindowKind::PopUp` with `focus: false`), which is all the attachment it needs. A tooltip's
-/// window is clipped to its bubble (`set_frosted_surface`), so it covers nothing it could catch.
-#[cfg(not(target_os = "macos"))]
+/// On Windows a host is a pop-up owned by the window that was active when it opened
+/// (`WindowKind::PopUp` with `focus: false`). A tooltip's window is clipped to its bubble
+/// (`set_frosted_surface`), so it covers nothing it could catch.
+///
+/// CDXC:ContextMenus 2026-09-28 WHY:
+/// GPUI activates even a `focus: false` pop-up when it is clicked, so a click on a frosted menu row deactivated the owner window first, and the owner's deactivation observer (which closes the sidebar menu when Ghostex loses focus) took the menu down before the click reached the row. The host keeps activation on its owner, as the macOS host and the titlebar dropdowns do, and as every frosted surface expects: the owner keeps the keyboard.
+#[cfg(target_os = "windows")]
+fn attach_host_window(window: &mut Window, _: *mut std::ffi::c_void, _: FrostedHostKind) {
+    super::make_gpui_popup_window_non_activating(window);
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn attach_host_window(_: &mut Window, _: *mut std::ffi::c_void, _: FrostedHostKind) {}
 
 #[cfg(target_os = "macos")]
