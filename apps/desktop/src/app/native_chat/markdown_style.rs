@@ -143,6 +143,7 @@ pub(crate) fn text_style(p: &ChatAppearance) -> TextViewStyle {
         .pb(px(VISUAL.paragraph_gap * p.scale));
     style.inline_code_style = Some(inline_code(p));
     style.prose_swatch = Some(prose_swatch(p));
+    style.link = super::markdown_links::transcript_link_color(p);
     style
 }
 

@@ -57,6 +57,17 @@ fn hex_color(hex: &str) -> Option<Hsla> {
     Some(rgb(u32::from_str_radix(hex.trim_start_matches('#'), 16).ok()?).into())
 }
 
+/// A plain markdown link's color: the transcript's web-reference tone for this chat's own light or
+/// dark mode, not the app theme's, which a chat drawn in the other mode paints near-invisible.
+pub(super) fn transcript_link_color(appearance: &ChatAppearance) -> Option<Hsla> {
+    let palette = if appearance.light {
+        &VISUAL.transcript.light
+    } else {
+        &VISUAL.transcript.dark
+    };
+    hex_color(palette.get("url")?)
+}
+
 /// The color a reference pill uses inside an editable composer.
 ///
 /// CDXC:SessionChat 2026-09-18 WHY:
