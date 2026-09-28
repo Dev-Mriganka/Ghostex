@@ -12,7 +12,7 @@ through one handler; rows and overlays select on mousedown with the default
 prevented rather than taking focus.
 */
 
-import { IconCalendarWeek, IconCopy, IconEye, IconGitFork, IconStar, IconStarFilled } from '@tabler/icons-react';
+import { IconCalendarWeek, IconCopy, IconEye, IconGitFork, IconStar } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FindPromptAgent, FindPromptRow } from '../../shared/agent-prompt-search';
 import { Button } from '@/packages/components/ui/button';
@@ -379,6 +379,10 @@ export function FindPromptsView({ acceptAll, hostActions, onReady, transport }: 
          */}
         <div className='hidden shrink-0 items-center gap-1.5 md:flex'>
           {FIND_PROMPTS_HINTS.map((hint) => {
+            // The Fav and View buttons are hidden here; their hotkeys and actions still work.
+            if (hint.action === 'toggleFavorite' || hint.action === 'viewPrompt') {
+              return null;
+            }
             const state = hintState(hint.action);
             const key = hotkeyLabel(hint.key);
             if (hint.action === 'openAgentPicker') {
@@ -409,15 +413,12 @@ export function FindPromptsView({ acceptAll, hostActions, onReady, transport }: 
               );
             }
             const isToggle = hint.action !== 'copyPrompt';
-            const Icon = hint.action === 'toggleFavorite' && state.active ? IconStarFilled : HINT_ICONS[hint.action];
+            const Icon = HINT_ICONS[hint.action];
             return (
               <AppTooltip content={`${hintTooltip(hint.action, state.active)} (${key})`} key={hint.key}>
                 <Button
                   aria-pressed={isToggle ? state.active : undefined}
-                  className={cn(
-                    FIND_TOOLBAR_BUTTON_CLASS,
-                    hint.action === 'toggleFavorite' && state.active && 'text-amber-400 hover:text-amber-300'
-                  )}
+                  className={FIND_TOOLBAR_BUTTON_CLASS}
                   data-active={isToggle && state.active ? 'true' : 'false'}
                   disabled={state.disabled}
                   onClick={() => runAction({ type: hint.action })}
