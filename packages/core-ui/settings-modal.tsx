@@ -2030,9 +2030,7 @@ export function SettingsModal({
                                   applySettingsPatch({
                                     terminalBackgroundMode: value as TerminalBackgroundMode,
                                     ...(value === 'custom' && draft.workspaceBackgroundColor === ''
-                                      ? {
-                                          workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR,
-                                        }
+                                      ? { workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR }
                                       : {}),
                                   })
                                 }
@@ -2671,10 +2669,7 @@ export function SettingsModal({
                                   { label: 'Off', value: '0' },
                                   ...Array.from({ length: 17 }, (_, index) => {
                                     const percent = 10 + index * 5;
-                                    return {
-                                      label: `${percent}%`,
-                                      value: String(percent),
-                                    };
+                                    return { label: `${percent}%`, value: String(percent) };
                                   }),
                                 ]}
                                 value={String(draft.keepAwakeBatteryThresholdPercent)}
@@ -2876,10 +2871,7 @@ export function SettingsModal({
                         result.isSearching ? mainSettingVisible(result, settingKey) : true
                       }
                       searchEmptyState={settingsSearchEmptyState}
-                      searchResults={{
-                        appIcon: settingsSearch.appIcon,
-                        theming: settingsSearch.theming,
-                      }}
+                      searchResults={{ appIcon: settingsSearch.appIcon, theming: settingsSearch.theming }}
                       selectAppIcon={selectAppIcon}
                       showAppIcon={!appIconPickerUnavailable}
                       themingSectionRef={themingSectionRef}
