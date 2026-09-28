@@ -240,6 +240,8 @@ pub(crate) struct GpuiFirstRunOnboardingState {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GpuiFirstRunOnboardingMarker {
     FirstLaunchSetupSeen,
+    /// The first-launch window was given up before its page was ready, so the next launch shows it again.
+    FirstLaunchSetupNotShown,
     OsIntegrationOnboardingSeen,
 }
 

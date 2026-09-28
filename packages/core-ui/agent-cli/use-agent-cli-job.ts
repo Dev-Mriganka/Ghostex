@@ -68,6 +68,8 @@ export function useAgentCliJob({
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
+  /** Advances after every finished read, so a poll is always followed by the next one while a job is active. */
+  const [readCount, setReadCount] = useState(0);
   const completedJob = useRef<string | undefined>(undefined);
   const onInstalledRef = useRef(onInstalled);
   onInstalledRef.current = onInstalled;
@@ -95,7 +97,10 @@ export function useAgentCliJob({
       } catch (cause) {
         if (signal.active && mounted.current) setError(cause instanceof Error ? cause.message : String(cause));
       } finally {
-        if (signal.active && mounted.current) setLoading(false);
+        if (signal.active && mounted.current) {
+          setLoading(false);
+          setReadCount((value) => value + 1);
+        }
       }
     },
     [agentId, connection]
@@ -111,10 +116,14 @@ export function useAgentCliJob({
     };
   }, [connection, eager, read, refreshCount]);
 
-  const jobId = state?.job?.id;
-  const jobStatus = state?.job?.status;
-  const jobOutput = state?.job?.output;
   const jobActive = isAgentCliJobActive(state?.job);
+  /*
+   * CDXC:AgentProviders 2026-09-28 WHY:
+   * The next poll used to be keyed on the job's id, status and output, so a queued job (nothing changes while it
+   * waits) or an installer that printed nothing for 1.5 s stopped polling after one read, and onboarding showed
+   * "Installing…" long after the install had finished. Keying on the finished-read counter keeps polling until the
+   * job ends.
+   */
   useEffect(() => {
     if (!connection || !jobActive) return;
     const signal = { active: true };
@@ -123,8 +132,7 @@ export function useAgentCliJob({
       signal.active = false;
       clearTimeout(timer);
     };
-    // Every poll returns a new state object; keying on the job fields restarts the timer only after a read landed.
-  }, [connection, jobActive, jobId, jobStatus, jobOutput, read]);
+  }, [connection, jobActive, readCount, read]);
 
   const refresh = useCallback(() => setRefreshCount((value) => value + 1), []);
 

@@ -176,6 +176,10 @@ fn gpui_local_process_is_alive(pid: u32) -> Result<bool, String> {
 }
 
 pub(crate) const GPUI_GXSERVER_DAEMON_TOAST_ID: &str = "toast-gxserver-daemon";
+
+/// How long a freshly spawned gxserver may take to answer its health check before startup counts as failed.
+/// A cold first launch on Windows spends most of a minute in the antivirus scan of the new executable.
+pub(crate) const GPUI_GXSERVER_START_PATIENCE: Duration = Duration::from_secs(180);
 pub(crate) const GPUI_MISSING_MONACO_PROMPT_EDITOR_TOAST_ID: &str =
     "toast-monaco-prompt-editor-missing";
 pub(crate) const GPUI_GXSERVER_EXPECTED_PRODUCT: &str = "gxserver";

@@ -11,8 +11,8 @@ import { useAgentCliJob } from './use-agent-cli-job';
  * CDXC:AgentProviders 2026-09-28 WHY:
  * A collapsed Agents row whose CLI is missing offered "Install hook", which cannot work until the CLI exists, and
  * installing the CLI meant expanding the row first. The row now carries the next useful action itself: Install CLI
- * when it is missing, Update CLI when the vendor has a newer release. Both run the same gxserver job the expanded
- * controls show in detail.
+ * when it is missing, Add to PATH when it is installed where new terminals cannot find it, Update CLI when the vendor
+ * has a newer release. They run the same gxserver jobs the expanded controls show in detail.
  */
 export function AgentCliRowAction({
   agentId,
@@ -61,6 +61,21 @@ export function AgentCliRowAction({
       >
         <IconDownload aria-hidden='true' data-icon='inline-start' />
         {error ? 'Retry install' : 'Install CLI'}
+      </Button>
+    );
+  }
+  if (state?.pathDirectory) {
+    return (
+      <Button
+        className='shrink-0'
+        onClick={() => void job.addToPath().then(onChanged)}
+        size='sm'
+        title={error ?? `Add ${state.pathDirectory} to your PATH so new terminals find ${definition.binary}`}
+        type='button'
+        variant='outline'
+      >
+        <IconDownload aria-hidden='true' data-icon='inline-start' />
+        Add to PATH
       </Button>
     );
   }

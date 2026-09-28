@@ -241,7 +241,7 @@ fn custom_ghostty_theme_source(name: &str) -> Option<String> {
     if path.is_absolute() {
         return std::fs::read_to_string(path).ok();
     }
-    let home = PathBuf::from(std::env::var_os("HOME")?);
+    let home = PathBuf::from(crate::shared_settings::user_home_dir()?);
     if let Some(relative) = name.strip_prefix("~/") {
         return std::fs::read_to_string(home.join(relative)).ok();
     }

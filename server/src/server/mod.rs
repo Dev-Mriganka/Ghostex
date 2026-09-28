@@ -810,9 +810,11 @@ async fn handle_http_request(
             client,
             duration_ms: Some(started_at.elapsed().as_millis()),
             error: None,
+            // The API route under `route`: the log sanitizer redacts every `path` field as a file path,
+            // which hid which endpoint was failing.
             details: Some(json!({
                 "method": "http",
-                "path": routed.endpoint_path,
+                "route": routed.endpoint_path,
                 "statusCode": status,
             })),
         },

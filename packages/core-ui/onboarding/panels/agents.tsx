@@ -303,6 +303,7 @@ export function AgentsPanel({ props, flow, setFlow, go, toast }: PanelProps) {
             scanning={scanning}
             height={rowHeight}
             compact={compactRows}
+            onRescan={props.onRescanAgents}
             onEvent={onInstallEvent}
             onOpenGuide={() => setGuideOpen(true)}
           />
@@ -477,6 +478,7 @@ function MissingAgentRow({
   scanning,
   height,
   compact,
+  onRescan,
   onEvent,
   onOpenGuide,
 }: {
@@ -486,6 +488,7 @@ function MissingAgentRow({
   scanning: boolean;
   height: number;
   compact: boolean;
+  onRescan: () => void;
   onEvent: (event: AgentInstallEvent) => void;
   onOpenGuide: () => void;
 }) {
@@ -496,11 +499,13 @@ function MissingAgentRow({
       ? 'Waiting for the other installs…'
       : row.running
         ? `Installing${row.method ? ` with ${row.method.label}` : ''}…`
-        : row.installed
-          ? 'Installed, press Rescan'
-          : row.method
-            ? `Not installed · ${row.method.label}`
-            : 'Not installed';
+        : row.installed && row.pathDirectory
+          ? 'Installed, but new terminals cannot find it'
+          : row.installed
+            ? 'Installed, press Rescan'
+            : row.method
+              ? `Not installed · ${row.method.label}`
+              : 'Not installed';
   const action = scanning ? (
     <span className='detpill wait'>Scanning…</span>
   ) : row.running ? (
@@ -509,6 +514,16 @@ function MissingAgentRow({
     </span>
   ) : row.checking ? (
     <span className='detpill wait'>Checking…</span>
+  ) : row.installed && row.pathDirectory ? (
+    <button
+      type='button'
+      className='install-btn'
+      title={`Add ${row.pathDirectory} to your PATH`}
+      onClick={() => void row.addToPath().then(onRescan)}
+    >
+      <Icon n='plus' size={15} sw={2} />
+      Add to PATH
+    </button>
   ) : row.installed ? null : connection && row.method ? (
     <button
       type='button'

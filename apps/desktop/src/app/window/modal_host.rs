@@ -213,6 +213,13 @@ impl GpuiAppModalHostWindow {
         self.is_ready
     }
 
+    /// The modal page is still loading, so a missing ready handshake means "slow", not "dead".
+    pub(crate) fn page_is_loading(&self, cx: &App) -> bool {
+        self.surface
+            .as_ref()
+            .is_some_and(|surface| surface.read(cx).is_loading())
+    }
+
     pub(crate) fn open_modal(
         &mut self,
         open_message: serde_json::Value,

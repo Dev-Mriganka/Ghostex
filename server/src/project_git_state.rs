@@ -20,15 +20,15 @@
 //! apps/desktop/src/app/gx_store/git/ (the callers), server/src/git_ship_workflow.rs.
 
 use axum::http::StatusCode;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 
-use crate::domain::{DomainRepository, DomainStateError, read_domain_rpc_params};
+use crate::domain::{read_domain_rpc_params, DomainRepository, DomainStateError};
 use crate::protocol::rpc_success;
 use crate::server::{
-    AppState, RoutedResponse, domain_error_response, routed_json, typed_operation_error_response,
+    domain_error_response, routed_json, typed_operation_error_response, AppState, RoutedResponse,
 };
 use crate::storage::open_gxserver_database;
-use crate::typed_operations::{TypedOperationError, dispatch_typed_operation_endpoint};
+use crate::typed_operations::{dispatch_typed_operation_endpoint, TypedOperationError};
 
 pub const READ_PROJECT_GIT_STATE_ENDPOINT: &str = "/api/readProjectGitState";
 
@@ -126,9 +126,16 @@ pub async fn read_project_git_state(
         return Ok(json!({ "gitHub": read_git_hub_state(&projects, &project_id).await? }));
     }
     if flag("diffStatsOnly") {
-        return read_diff_stats(&projects, &project_id, flag("countUntrackedWhenClean")).await;
+        return match read_diff_stats(&projects, &project_id, flag("countUntrackedWhenClean")).await
+        {
+            Err(error) if error.is_command_not_found() => Ok(not_a_repo_diff_stats()),
+            result => result,
+        };
     }
-    let state = read_git_state(&projects, &project_id).await?;
+    let state = match read_git_state(&projects, &project_id).await {
+        Err(error) if error.is_command_not_found() => None,
+        result => result?,
+    };
     let Some(mut state) = state else {
         return Ok(json!({ "isRepo": false }));
     };
@@ -205,8 +212,30 @@ pub(crate) async fn read_git_state(
     })))
 }
 
-/// `gh --version` and `gh pr view`, parsed.
+/// CDXC:Git 2026-09-28 WHY:
+/// A computer without Git (a fresh Windows install) answered every background Git read with HTTP 503, so the desktop's 15 second poll logged a server error for each open project forever. Without the program the project simply has no Git state; an action the user asks for still says Git is not installed.
+fn not_a_repo_diff_stats() -> Value {
+    json!({
+        "diffStats": { "additions": 0, "deletions": 0, "files": 0, "isRepo": false },
+        "isRepo": false,
+    })
+}
+
+/// `gh --version` and `gh pr view`, parsed. Without the GitHub CLI there is neither.
 pub(crate) async fn read_git_hub_state(
+    projects: &[Value],
+    project_id: &str,
+) -> Result<Value, TypedOperationError> {
+    match read_git_hub_cli(projects, project_id).await {
+        Err(error) if error.is_command_not_found() => Ok(json!({
+            "hasGitHubCli": false,
+            "pr": Value::Null,
+        })),
+        result => result,
+    }
+}
+
+async fn read_git_hub_cli(
     projects: &[Value],
     project_id: &str,
 ) -> Result<Value, TypedOperationError> {
@@ -241,10 +270,7 @@ async fn read_diff_stats(
     if exit_code(&diff) != 0 {
         let repo = git(projects, project_id, "isInsideWorkTree").await?;
         if exit_code(&repo) != 0 || stdout(&repo).trim() != "true" {
-            return Ok(json!({
-                "diffStats": { "additions": 0, "deletions": 0, "files": 0, "isRepo": false },
-                "isRepo": false,
-            }));
+            return Ok(not_a_repo_diff_stats());
         }
         // A repository whose numbers cannot be read now (no commit yet, a lock): the client
         // keeps the numbers it has.

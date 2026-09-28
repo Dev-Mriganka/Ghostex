@@ -18,7 +18,8 @@ pub(crate) fn directories() -> Vec<PathBuf> {
         .unwrap_or_default();
     let mut unique: Vec<PathBuf> = Vec::new();
     for directory in registry.into_iter().chain(process) {
-        if directory.is_absolute() && !unique.iter().any(|known| same_directory(known, &directory)) {
+        if directory.is_absolute() && !unique.iter().any(|known| same_directory(known, &directory))
+        {
             unique.push(directory);
         }
     }
@@ -26,7 +27,6 @@ pub(crate) fn directories() -> Vec<PathBuf> {
 }
 
 /// `directories()` joined, for a child process that must find tools installed after gxserver started.
-#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn value() -> OsString {
     std::env::join_paths(directories())
         .unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default())

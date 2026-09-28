@@ -899,7 +899,7 @@ export function SettingsAgentRow({
   const showCliAction =
     Boolean(cliConnection) &&
     AGENT_CLI_CATALOG.some((entry) => entry.agentId === cliAgentId) &&
-    (cliMissing || Boolean(cliListState?.updateAvailable));
+    (cliMissing || Boolean(cliListState?.pathDirectory) || Boolean(cliListState?.updateAvailable));
   // A hook cannot be installed for a CLI that is not there; the row offers Install CLI instead.
   const showInlineInstall =
     supportsHooks && !hookInstalled && hookStatus?.status !== 'notRequired' && !isHookStatusPending && !cliMissing;

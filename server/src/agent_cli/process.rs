@@ -48,11 +48,12 @@ fn command(script: &str, home: &Path, env: &BTreeMap<String, String>) -> Command
     command.creation_flags(0x0800_0000);
     /*
     CDXC:AgentProviders 2026-09-28 WHY:
-    A fresh Windows keeps the Restricted execution policy, which refuses npm's `npm.ps1` shim and scripts an installer starts, so the job runs with a process-scoped Bypass as the installers' own instructions do. `$ErrorActionPreference = 'Stop'` is not set around the command: it leaks into `irm … | iex` vendor scripts and turned Cursor's harmless `Get-WmiObject` warning into an abort after its installer had already deleted the previous install. Success is the command's own result plus the re-check that follows every job. Progress bars are off (they slow downloads in 5.1), TLS 1.2 is forced for 5.1, and output is UTF-8 so installer check marks survive.
+    A fresh Windows keeps the Restricted execution policy, which refuses npm's `npm.ps1` shim and scripts an installer starts, so the job runs with a process-scoped Bypass as the installers' own instructions do. `$ErrorActionPreference = 'Stop'` is not set around the command: it leaks into `irm … | iex` vendor scripts and turned Cursor's harmless `Get-WmiObject` warning into an abort after its installer had already deleted the previous install. A terminating error (a failed download) or a non-zero exit code fails the job, and every job is re-checked afterwards. Progress bars are off (they slow downloads in 5.1), TLS 1.2 is forced for 5.1, and output is UTF-8 so installer check marks survive.
+    Every stream is merged and printed as text: under -EncodedCommand with redirected output, PowerShell 5.1 serialized the installers' Write-Host lines as CLIXML, which the job output then showed as XML.
     */
     #[cfg(windows)]
     let script = format!(
-        "$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $global:LASTEXITCODE = 0; {script}; if (-not $?) {{ if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}; exit 1 }}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}"
+        "$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $global:LASTEXITCODE = 0; $global:GhostexJobFailed = $false; & {{ try {{ {script} }} catch {{ $_; $global:GhostexJobFailed = $true }} }} *>&1 | Out-String -Stream -Width 240; if ($global:GhostexJobFailed) {{ exit 1 }}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}"
     );
     #[cfg(not(windows))]
     let script = if script.contains('|') {
@@ -119,7 +120,10 @@ pub(crate) async fn run_executable(
         let script = format!(
             "& {} {}",
             quote(executable),
-            args.iter().map(|arg| quote(arg)).collect::<Vec<_>>().join(" ")
+            args.iter()
+                .map(|arg| quote(arg))
+                .collect::<Vec<_>>()
+                .join(" ")
         );
         return run(&script, home, &BTreeMap::new(), timeout, output).await;
     }

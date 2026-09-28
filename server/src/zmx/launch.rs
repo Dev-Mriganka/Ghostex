@@ -38,6 +38,11 @@ pub(crate) fn run_zmx_interaction_command(
     Ok(result)
 }
 
+/// wmx's start waits up to 20 s for a slow first host (`START_READY_TIMEOUT` in
+/// .dependencies/wmx/src/client.rs); cutting it off sooner failed starts that then succeeded.
+#[cfg(not(target_os = "macos"))]
+const ZMX_START_COMMAND_TIMEOUT_MS: u64 = 25_000;
+
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn run_zmx_start_command(
     _session_name: &str,
@@ -50,11 +55,13 @@ pub(crate) fn run_zmx_start_command(
     the command was accepted, NOT that the session is registered. Report no
     observation; the caller keeps its authoritative probe.
     */
-    run_zmx_interaction_command(script, ZmxCommandOptions::default()).map(|result| {
-        ZmxStartOutcome {
-            observed_alive: false,
-            result,
-        }
+    let options = ZmxCommandOptions {
+        timeout_ms: Some(ZMX_START_COMMAND_TIMEOUT_MS),
+        ..ZmxCommandOptions::default()
+    };
+    run_zmx_interaction_command(script, options).map(|result| ZmxStartOutcome {
+        observed_alive: false,
+        result,
     })
 }
 

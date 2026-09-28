@@ -55,10 +55,9 @@ pub(crate) async fn dispatch(
 
 /// Every catalog agent's state in one reply, for the Agents page and `ghostex agent-cli status`.
 async fn list(home: &Path) -> Result<Value, DomainStateError> {
-    let states = futures_util::future::join_all(
-        CATALOG.iter().map(|definition| read(definition, home)),
-    )
-    .await;
+    let states =
+        futures_util::future::join_all(CATALOG.iter().map(|definition| read(definition, home)))
+            .await;
     let agents = states.into_iter().collect::<Result<Vec<_>, _>>()?;
     Ok(json!({ "agents": agents }))
 }
@@ -204,7 +203,7 @@ async fn finish(
     home: &Path,
     key: &(PathBuf, String),
 ) -> Result<(), String> {
-    let mut verified = read_state(definition, home)
+    let mut verified = read_state_with(definition, home, VERSION_TIMEOUT_AFTER_INSTALL)
         .await
         .map_err(|error| error.message)?;
     if !verified["executablePath"].is_string() {
@@ -212,16 +211,17 @@ async fn finish(
     }
     if let Some(directory) = verified["pathDirectory"].as_str().map(PathBuf::from) {
         let owned_home = home.to_path_buf();
-        let outcome =
-            tokio::task::spawn_blocking(move || path_setup::ensure_on_path(&directory, &owned_home))
-                .await
-                .map_err(|error| error.to_string())?;
+        let outcome = tokio::task::spawn_blocking(move || {
+            path_setup::ensure_on_path(&directory, &owned_home)
+        })
+        .await
+        .map_err(|error| error.to_string())?;
         match outcome {
             Ok(Some(message)) => append_output(key, &format!("\n{message}\n")),
             Ok(None) => {}
             Err(message) => append_output(key, &format!("\n{message}\n")),
         }
-        verified = read_state(definition, home)
+        verified = read_state_with(definition, home, VERSION_TIMEOUT_AFTER_INSTALL)
             .await
             .map_err(|error| error.message)?;
     }
@@ -265,14 +265,26 @@ async fn read_state(
     definition: &'static Definition,
     home: &Path,
 ) -> Result<Value, DomainStateError> {
+    read_state_with(definition, home, VERSION_TIMEOUT).await
+}
+
+/// A version check normally answers in well under a second; the first start of a freshly installed binary on
+/// Windows waits for the antivirus scan (Cursor's Node launcher took longer than 5 s in a clean VM).
+const VERSION_TIMEOUT: Duration = Duration::from_secs(15);
+const VERSION_TIMEOUT_AFTER_INSTALL: Duration = Duration::from_secs(60);
+
+async fn read_state_with(
+    definition: &'static Definition,
+    home: &Path,
+    version_timeout: Duration,
+) -> Result<Value, DomainStateError> {
     let _permit = PROBES.acquire().await.map_err(error)?;
     let owned_home = home.to_path_buf();
     let (executable, methods, detected_method, path_directory) =
         tokio::task::spawn_blocking(move || {
             crate::agent_hooks::probing::refresh_cli_environment(&owned_home);
             let install_dirs = definition.install_dirs(&owned_home);
-            let executable =
-                process::resolve_agent(&definition.binary, &install_dirs, &owned_home);
+            let executable = process::resolve_agent(&definition.binary, &install_dirs, &owned_home);
             let mise = mise::installation(definition, executable.as_deref(), &owned_home);
             let executable = mise
                 .as_ref()
@@ -328,7 +340,7 @@ async fn read_state(
         .clone()
         .unwrap_or_else(|| vec!["--version".into()]);
     let (version, latest_version) = tokio::join!(
-        process::run_executable(&path, &args, home, Duration::from_secs(5), move |chunk| {
+        process::run_executable(&path, &args, home, version_timeout, move |chunk| {
             if let Ok(mut output) = capture.lock() {
                 if output.len() < 4096 {
                     output.push_str(&chunk);

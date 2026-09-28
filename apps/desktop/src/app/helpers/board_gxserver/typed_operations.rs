@@ -5,6 +5,7 @@
 // bootstrap, auth token reads, and HTTP response parsing helpers.
 // See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
+use crate::app::helpers::web_bridge_types::SidebarGxserverBootstrap;
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -310,7 +311,7 @@ pub(crate) fn gpui_sidebar_gxserver_bootstrap(
     latest_snapshot: Option<&GpuiProjectSnapshot>,
     focus_state: &GpuiGxserverPresentationFocusState,
     local_focus_key: Option<&GpuiLocalWorkspaceSessionKey>,
-) -> Option<cef::SidebarGxserverBootstrap> {
+) -> Option<SidebarGxserverBootstrap> {
     /*
     CDXC:ServerDaemon 2026-06-24-11:17:
     Build the GPUI sidebar bootstrap only from real local gxserver facts: the selected loopback API port, the existing auth-token helper, protocol version 1, a stable GPUI sidebar client id, and the explicit active project id already stored from the live sidebar snapshot. Do not infer optional session ids from project paths, titles, shell terminal ids, Browser tabs, fixtures, or fallback state.
@@ -330,7 +331,7 @@ pub(crate) fn gpui_sidebar_gxserver_bootstrap(
         .or_else(|| gpui_active_project_id_from_snapshot(latest_snapshot))
         .or(focus_state.active_project_id.as_deref())
         .map(str::to_string);
-    Some(cef::SidebarGxserverBootstrap {
+    Some(SidebarGxserverBootstrap {
         base_url: format!(
             "http://{GPUI_GXSERVER_LOCAL_API_HOST}:{}",
             gpui_local_gxserver_api_port()

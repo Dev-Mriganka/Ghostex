@@ -707,6 +707,11 @@ impl CefBrowser {
         self.browser.borrow().can_go_back() != 0
     }
 
+    /// The main frame is still loading its document or subresources.
+    pub fn is_loading(&self) -> bool {
+        self.browser.borrow().is_loading() != 0
+    }
+
     pub fn go_back(&self) {
         if !self.can_go_back() {
             return;

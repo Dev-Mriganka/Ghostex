@@ -148,25 +148,31 @@ pub(crate) fn methods(
             Some(native.install.as_str())
         };
         if let Some(install) = install {
-            let command = if installed {
-                native.update.as_deref().unwrap_or(install)
-            } else {
-                install
+            // The self-updater runs by the installed binary's own path, so a CLI whose installer never put
+            // its folder on PATH (Claude's) can still update.
+            let command = match (executable, native.update.as_deref()) {
+                (Some(path), Some(update)) => update
+                    .strip_prefix(definition.binary.as_str())
+                    .filter(|rest| rest.is_empty() || rest.starts_with(' '))
+                    .map(|rest| {
+                        let invoke = if cfg!(windows) { "& " } else { "" };
+                        format!("{invoke}{}{rest}", super::process::quote(path))
+                    })
+                    .unwrap_or_else(|| update.to_string()),
+                _ => install.to_string(),
             };
-            let prerequisite = if command.starts_with("curl ") {
-                "curl"
+            let unavailable_reason = if command.starts_with("curl ") {
+                missing_command("curl", home)
+            } else if installed && command.starts_with(definition.binary.as_str()) {
+                missing_command(&definition.binary, home)
             } else {
-                &definition.binary
+                None
             };
             methods.push(Method {
                 id: "native".into(),
                 label: "Official installer".into(),
-                command: command.into(),
-                unavailable_reason: if installed || command.starts_with("curl ") {
-                    missing_command(prerequisite, home)
-                } else {
-                    None
-                },
+                command,
+                unavailable_reason,
             });
         }
     }
@@ -287,11 +293,9 @@ pub(crate) fn detected_method(path: &str, definition: &Definition) -> Option<Str
         }
     }
     if let Some(native) = &definition.native {
-        if native
-            .path_markers
-            .iter()
-            .any(|marker| normalized.contains(marker.as_str()) || original.contains(marker.as_str()))
-        {
+        if native.path_markers.iter().any(|marker| {
+            normalized.contains(marker.as_str()) || original.contains(marker.as_str())
+        }) {
             return Some("native".into());
         }
     }

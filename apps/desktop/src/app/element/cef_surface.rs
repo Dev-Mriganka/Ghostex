@@ -258,6 +258,10 @@ impl CefSurface {
         self.browser.send_fullscreen_toggle_key();
     }
 
+    pub(crate) fn is_loading(&self) -> bool {
+        self.browser.is_loading()
+    }
+
     /// The surface's CEF child view, for the AppKit pointer observer that turns
     /// pointer crossings of the sidebar frame into page-side hover state.
     #[cfg(target_os = "macos")]

@@ -34,9 +34,13 @@ export type AgentInstallRow = {
   queued: boolean;
   /** gxserver already finds the CLI on PATH even though detection has not caught up yet. */
   installed: boolean;
+  /** The CLI is installed in this folder, which is not on PATH, so new terminals will not find it. */
+  pathDirectory: string | undefined;
   /** The failure to show under the row: a start that was refused, or the job's own error / last line. */
   error: string | undefined;
   install: () => void;
+  /** Put `pathDirectory` on the user's PATH; resolves once gxserver answered. */
+  addToPath: () => Promise<void>;
 };
 
 /**
@@ -111,10 +115,12 @@ export function useAgentInstallRow({
     running: job.running,
     queued: jobStatus === 'queued',
     installed: Boolean(state?.executablePath),
+    pathDirectory: state?.pathDirectory,
     error: actionError ?? (jobStatus === 'failed' ? (jobError ?? line ?? 'The install failed.') : undefined),
     install: () => {
       if (job.running) return;
       void job.install();
     },
+    addToPath: job.addToPath,
   };
 }

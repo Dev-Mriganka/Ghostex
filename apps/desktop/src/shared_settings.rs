@@ -1962,8 +1962,21 @@ where
 }
 
 pub(crate) fn selected_ghostty_config_path() -> Result<PathBuf, SharedGhosttyConfigFileError> {
-    selected_ghostty_config_path_from_home(env::var_os("HOME"))
+    selected_ghostty_config_path_from_home(user_home_dir())
         .ok_or(SharedGhosttyConfigFileError::HomeUnavailable)
+}
+
+/// CDXC:PlatformSupport 2026-09-28 WHY:
+/// Windows sets USERPROFILE, not HOME, so every settings save that touched a terminal value showed "Could not update Ghostty config" during first-run setup, and Ghostty themes were never found. HOME still wins where it is set (Git Bash, WSL-style shells).
+pub(crate) fn user_home_dir() -> Option<OsString> {
+    env::var_os("HOME")
+        .filter(|home| !home.is_empty())
+        .or_else(|| {
+            cfg!(windows)
+                .then(|| env::var_os("USERPROFILE"))
+                .flatten()
+                .filter(|home| !home.is_empty())
+        })
 }
 
 fn selected_ghostty_config_path_from_home(home: Option<OsString>) -> Option<PathBuf> {
