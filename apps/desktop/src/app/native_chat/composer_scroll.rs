@@ -45,8 +45,9 @@ impl NativeChatView {
         // With the box kept expanded while scrolling, the only collapse left is a short pane's,
         // and it changes shape at once rather than animating.
         let reduce_motion = cx.reduce_motion() || keep_composer_expanded();
+        let scale = super::appearance::ChatAppearance::current(&self.snapshot).scale;
         self.composer_animation
-            .set_collapsed(self.composer_collapsed(), reduce_motion);
+            .set_collapsed(self.composer_collapsed(), reduce_motion, scale);
         self.composer_animation.advance(reduce_motion)
     }
 

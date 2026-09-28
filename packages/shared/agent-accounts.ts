@@ -68,6 +68,27 @@ export interface AccountHelper {
   installCommand: string;
   loginCommand: string;
 }
+export type AccountHelperToolAction = 'update' | 'reinstall' | 'uninstall';
+/** Claude Swap or Codex Swap as installed on the machine, from gxserver's `helperStatus`. */
+export interface AccountHelperTool {
+  provider: AccountProvider;
+  installed: boolean;
+  path?: string;
+  installMethod?: 'uv' | 'pipx' | 'homebrew' | 'cargo' | 'windowsInstaller' | 'unknown';
+  /** The actions gxserver can run for this install; empty when it cannot tell how it was installed. */
+  actions: AccountHelperToolAction[];
+  version?: string | null;
+  latestVersion?: string | null;
+  updateAvailable?: boolean | null;
+  checkError?: string | null;
+  job?: {
+    action: AccountHelperToolAction;
+    status: 'running' | 'complete' | 'failed';
+    output: string;
+    error?: string | null;
+    finishedAt?: string | null;
+  } | null;
+}
 /** Real account-switch stages carried by chat reads, snapshots and state frames. Omission leaves the last value; null clears it. */
 export interface AccountSwitchProgress {
   id: string;
@@ -103,6 +124,7 @@ export interface AgentAccountsState {
   setupJobs?: AccountSetupJob[];
   accounts: AgentAccount[];
   helpers: AccountHelper[];
+  helperTools?: AccountHelperTool[];
   defaults: Record<AccountProvider, AccountPolicy>;
   /** Effective account for new sessions per provider, resolved by gxserver from the provider's rule. */
   defaultAccounts: Partial<Record<AccountProvider, string>>;
@@ -156,7 +178,9 @@ export type AgentAccountsRequest =
   | { operation: 'session'; refresh?: boolean }
   | { operation: 'sessionPolicy'; policy: AccountPolicy | null }
   | { operation: 'select'; accountId: string | null }
-  | { operation: 'stopRecovery' };
+  | { operation: 'stopRecovery' }
+  | { operation: 'helperStatus'; fresh?: boolean }
+  | { operation: 'helperAction'; provider: AccountProvider; action: AccountHelperToolAction };
 export type AccountsTransport = (request: AgentAccountsRequest) => Promise<AgentAccountsState>;
 export interface AccountSetupJob {
   createdAt: number;

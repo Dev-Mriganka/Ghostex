@@ -104,10 +104,10 @@ pub(crate) fn refresh_gpui_visual_settings(
     The work area always paints the theme's content colour for the terminal's own appearance (the
     chrome in light mode, one step off it in dark), so the theme's tint and Background contrast
     always reach it, superseding the Ghostty config background and the light palette's background.
-    The Terminal background setting no longer touches the work area: it follows the theme by
-    default, and a chosen colour only replaces the colour behind terminal cells in dark mode
-    (`GpuiTerminalConfig::apply_color_scheme`). Supersedes the 2026-09-22 rule that an explicit
-    Terminal Background won for the whole dark work area.
+    The Terminal background setting never touches the work area; it only chooses the colour behind
+    terminal cells (`GpuiTerminalEngineConfig::apply_color_scheme`, which holds the 2026-09-28
+    Black / white default decision). Supersedes the 2026-09-22 rule that an explicit Terminal
+    Background won for the whole dark work area.
     */
     let workspace = gpui_terminal_theme_background_rgb(object, terminal_is_light);
     GPUI_WORKSPACE_BACKGROUND_RGB.store(u64::from(workspace), Ordering::Relaxed);
@@ -219,7 +219,7 @@ pub(crate) fn workspace_drop_feedback_text_color() -> Hsla {
 }
 
 /// CDXC:Theming 2026-09-28 DECISION:
-/// User: "it's hard to match the color of the padding to the color of the terminal's bg". The terminal grid excludes its padding and width gutters, so the pane body paints exactly the colour behind the terminal's cells there (`SharedGpuiTerminalEngineSettings::grid_background_rgb`, which `apply_color_scheme` also uses), in dark mode as well as light. Supersedes the 2026-09-13 black padding in dark mode, which stopped matching once the dark grid followed the theme.
+/// User: "it's hard to match the color of the padding to the color of the terminal's bg". The terminal grid excludes its padding and width gutters, so the pane body paints exactly the colour behind the terminal's cells there (`SharedGpuiTerminalEngineSettings::grid_background_rgb`, which `apply_color_scheme` also uses), in dark mode as well as light. Supersedes the 2026-09-13 black padding in dark mode, which mismatched whenever the dark grid was not pure black (Follow theme, or a Custom colour).
 pub(crate) fn workspace_terminal_placeholder_color() -> Hsla {
     rgb(GPUI_TERMINAL_PADDING_BACKGROUND_RGB.load(Ordering::Relaxed) as u32).into()
 }

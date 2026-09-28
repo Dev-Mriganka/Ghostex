@@ -1325,6 +1325,21 @@ make the TUI read them as text) and no trailing Enter (the key IS the
 submission). Unknown names return None so the handler can reject them instead
 of writing something arbitrary.
 */
+/// CDXC:SessionChat 2026-09-28 WHY:
+/// The Escape that ends a running turn, shared by Stop (`interruptSessionChat`) and the queued prompt's play button (`sendKey` `escape`), with the agent's guard in front: Claude's drops a second Escape inside its rewind window, and Codex's first clears a selection, a search or a scrolled-up view in its fullscreen transcript, each of which takes one Escape before the turn does. The play button wrote a bare Escape, so while the user had scrolled Codex's view it only returned to the bottom and the queued prompt kept waiting.
+pub(crate) fn session_chat_interrupt_escape_steps(agent: Option<&str>) -> Vec<SessionChatSendStep> {
+    let mut steps = Vec::new();
+    match agent {
+        Some("codex") => steps.push(SessionChatSendStep::GuardCodexInterrupt),
+        Some("claude") => steps.push(SessionChatSendStep::GuardClaudeInterrupt),
+        _ => {}
+    }
+    steps.push(SessionChatSendStep::Write(
+        SESSION_CHAT_INTERRUPT.to_string(),
+    ));
+    steps
+}
+
 pub fn build_session_chat_key_steps(key: &str) -> Option<Vec<SessionChatSendStep>> {
     if key == "enter" {
         return Some(vec![
@@ -1333,6 +1348,8 @@ pub fn build_session_chat_key_steps(key: &str) -> Option<Vec<SessionChatSendStep
         ]);
     }
     let payload = match key {
+        // The chat's play button on a prompt the agent queued: one Escape ends the running turn so the agent takes it now.
+        "escape" => SESSION_CHAT_INTERRUPT,
         "shift-tab" => SESSION_CHAT_SHIFT_TAB,
         "shift-up" => SESSION_CHAT_SHIFT_UP,
         "shift-down" => SESSION_CHAT_SHIFT_DOWN,
@@ -2021,6 +2038,40 @@ async fn run_session_chat_send_worker(
                     if crate::session_chat_codex_pager::codex_escape_would_open_transcript_pager(
                         &screen,
                     ) {
+                        break;
+                    }
+                    // A selection, a search and a scrolled-up view each take one Escape before the turn does.
+                    let mut screen = screen;
+                    for _ in 0..3 {
+                        if !crate::session_chat_codex_pager::codex_escape_would_dismiss_transcript_interaction(&screen) {
+                            break;
+                        }
+                        if let Err(error) = write_session_chat_payload(
+                            &project_id,
+                            &session_id,
+                            &zmx_name,
+                            &source,
+                            SESSION_CHAT_INTERRUPT,
+                        )
+                        .await
+                        {
+                            outcome = Err(SessionChatSendError::new(
+                                SessionChatSendFailure::Write,
+                                error,
+                            ));
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(120)).await;
+                        let Some(next) = capture_session_terminal_text(&zmx_name).await else {
+                            break;
+                        };
+                        screen = next;
+                    }
+                    if outcome.is_err()
+                        || crate::session_chat_codex_pager::codex_escape_would_open_transcript_pager(
+                            &screen,
+                        )
+                    {
                         break;
                     }
                 }
@@ -3476,7 +3527,14 @@ pub(crate) async fn handle_send_session_chat_message_http(
                 },
             );
         }
-        let Some(steps) = crate::session_chat_send::build_session_chat_key_steps(key) else {
+        let steps = if key == "escape" {
+            Some(session_chat_interrupt_escape_steps(
+                session_chat_agent_for_session(&target.session).as_deref(),
+            ))
+        } else {
+            crate::session_chat_send::build_session_chat_key_steps(key)
+        };
+        let Some(steps) = steps else {
             return domain_error_response(
                 endpoint_path,
                 request_id,
@@ -4586,15 +4644,9 @@ pub(crate) async fn handle_interrupt_session_chat_http(
             Err(error) => domain_error_response(endpoint_path, request_id, error),
         };
     }
-    let mut steps = Vec::new();
-    match session_chat_agent_for_session(&target.session).as_deref() {
-        Some("codex") => steps.push(SessionChatSendStep::GuardCodexInterrupt),
-        Some("claude") => steps.push(SessionChatSendStep::GuardClaudeInterrupt),
-        _ => {}
-    }
-    steps.push(SessionChatSendStep::Write(
-        SESSION_CHAT_INTERRUPT.to_string(),
-    ));
+    let steps = session_chat_interrupt_escape_steps(
+        session_chat_agent_for_session(&target.session).as_deref(),
+    );
     crate::session_chat_send::enqueue_session_chat_send(
         &target.project_id,
         &target.session_id,

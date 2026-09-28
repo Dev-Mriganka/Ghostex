@@ -247,7 +247,6 @@ impl NativeChatView {
         let s = p.scale;
         self.sync_composer_references(p, cx);
         let maximized = self.maximized_window.is_some();
-        let collapsed = self.composer_collapsed();
         // CDXC:SessionChat 2026-09-19 SEE-ALSO:
         // The chat box's tween, React's `use-session-chat-composer-transition.ts`. Timing, easing and
         // the collapsed and expanded metrics are shared through
@@ -255,6 +254,7 @@ impl NativeChatView {
         // holds the interpolation.
         let metrics = &*super::composer_animation::METRICS;
         let frame = self.composer_frame(cx);
+        let collapsed = frame.collapsed;
         if frame.running && !maximized {
             window.request_animation_frame();
         }

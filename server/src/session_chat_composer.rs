@@ -750,6 +750,15 @@ pub fn detect_session_chat_composer_ready(
             screen_tail,
         );
     }
+    // CDXC:SessionChat 2026-09-27 DECISION: User: sending a message while a side answer card is open closes the card first, then sends; the answer is already kept in the chat. Claude's `/btw` panel takes Escape like the popups below.
+    if matches!(agent.as_str(), "claude" | "openclaude")
+        && crate::session_chat_claude_panel::side_question_on_screen(screen_text)
+    {
+        return SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+            "Claude Code's side question is open instead of the input box.".to_string(),
+            screen_tail,
+        );
+    }
     if matches!(agent.as_str(), "claude" | "openclaude") {
         if let Some(popup) =
             crate::session_chat_claude_popups::claude_escape_safe_popup(screen_text)

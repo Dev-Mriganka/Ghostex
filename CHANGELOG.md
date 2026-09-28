@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+## 10.5.0 - 2026-09-28
+
+**Ghostex 10.5.0 is out.** Bots turns the sidebar into your Hermes agents with a feed of every scheduled run, glass backdrops come to Windows and Linux, terminals start on pure black or white, chat shows a delivery icon beside each prompt, Codex's fullscreen view works everywhere, and a large batch of Windows fixes.
+
+### 🤖 Bots for your Hermes agents
+- **Bots switches the sidebar to your Hermes agents,** one row per Hermes profile with its gateway status, Edit SOUL and Edit config, pinned Actions and a + that starts a new chat with that bot, thanks to @banozz0. Turn it on in Settings > Extensions under Planning and automation; it appears only on a computer with the Hermes CLI installed.
+- **Hermes conversations started elsewhere show up under their bot.** Chats begun in a terminal, the Hermes app, Discord or Telegram are listed with the bot that had them and resume with one click.
+- **Bot automations collects every Hermes cron run in one feed,** thanks to @banozz0. An Automations row at the top of Bots opens a channel per scheduled job, an all-runs channel, your own groups, unread counts and a bot filter, with failed runs marked.
+
+### 🪟 Glass on Windows and Linux
+- **Wallpaper, Picture and Live backdrops now work on Windows,** so the glass can show your wallpaper, a picture you choose or a calm animation behind the window.
+- **Every transparency setting works on Linux,** thanks to @alp82.
+
+### 💬 Chat
+- **A delivery icon beside your prompt replaces Waiting and QUEUED.** A spinner means the message is waiting for the agent; a play button means it is queued behind the running turn, and clicking it interrupts the agent so it takes your message now. The phone shows the same.
+- **The chat box slides closed over its draft** instead of fading, on the computer and the phone.
+- **Right-click a previewed image** for Copy Image, Copy Path, Save Image, Reset Zoom and Dismiss.
+- **Sending closes Claude's open side question first,** so the message is never stuck behind the side-question panel, and the side question's Fork button explains what it does.
+- **Codex's fullscreen view works with Ghostex.** Command-click still opens links, Stop works while you are scrolled up or selecting text, and automations and model picks keep working with Codex 0.157 and later.
+
+### 🖥 Terminals and accounts
+- **Terminals start on pure black or white.** Settings > Terminal > Terminal background offers Black / white (the new default), Follow theme, or Custom color, and a custom colour you set before is kept.
+- **Terminal panes start without side padding,** so the terminal uses the pane's full width.
+- **Update, reinstall or uninstall Claude Swap and Codex Swap from Settings > Accounts.** Hover a button to see the installed and latest versions; uninstalling keeps your saved logins.
+- **Reconnecting a Codex account no longer has to stop its sessions first;** when Codex still needs them stopped, Settings offers Sleep sessions and continue.
+- **Find by Prompt opens in a native window** that matches the rest of the app.
+
+### 🔧 Windows fixes
+- **Chat messages send reliably on Windows** now that the background service no longer freezes on a send.
+- **No more flashing console windows** when Ghostex starts helpers in the background.
+- **Windows sessions take their agent's title again,** instead of staying "Claude Session".
+- **Onboarding installs agent CLIs and skills correctly, and a custom install folder is found everywhere,** thanks to @gvastethecreator. Onboarding and Settings > Agents install and update Claude, Codex, Cursor and Grok, and newly installed CLIs are found without restarting.
+- **Codex runs without administrator rights,** and Add Project's Local folder opens the list of drives with your home folder first.
+- **Settings sliders show their thumbs** as soon as the window opens.
+
+### 🩹 Fixes
+- **The Linux browser keeps WebGL working** after a browser view closes, thanks to @alp82.
+- **The Files view's Send button shows how many new notes are waiting,** and the separate Review menu is gone: Send covers the open file's notes.
+- **The sidebar's Search button is always an icon,** with its label and shortcut in the tooltip.
+- **Claude chats show the context size Claude reports,** and server errors show the actual reason instead of a bare error code.
+
 ## 10.4.0 - 2026-09-27
 
 **Ghostex 10.4.0 is out.** Docs becomes Files and opens your whole project, including pictures, video and audio; side questions and Claude's panels in chat; Hermes chats that name their bot and switch models; a red dot when a model change fails; Shift+Esc for the Commands panel; and a batch of chat and Windows fixes.
@@ -39,7 +80,7 @@
 - **Closing a side panel's last tab now closes the panel.** Turn off Close side panel with its last tab in Settings > Sidebar to get the view picker back.
 - **Saved Prompts and other dialogs stay in front** when a tooltip or menu appears behind them, and table previews, Mermaid diagrams and browser history open in native windows.
 
-### 🪟 Windows
+### 🔧 Windows fixes
 - **Dragging the titlebar moves the window reliably,** and the project breadcrumb sits centred.
 - **The Settings window comes to the front when you open it** and draws its sliders at full size.
 - **Messages sent to PowerShell sessions arrive intact,** and the Code view shows its editor again, thanks to @gvastethecreator.

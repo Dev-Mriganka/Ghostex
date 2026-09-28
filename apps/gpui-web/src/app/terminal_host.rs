@@ -3,7 +3,7 @@ use ghostex_gx_core::SessionKey;
 use gpui::{AppContext as _, Entity, px};
 
 use crate::GhostexGpuiApp;
-use crate::terminal_element::{TerminalFontConfig, TerminalView};
+use crate::terminal_element::{TerminalFontConfig, TerminalView, TerminalViewEvent};
 use crate::terminal_model::{TerminalAttachConfig, TerminalModel};
 
 impl GhostexGpuiApp {
@@ -46,6 +46,19 @@ impl GhostexGpuiApp {
                 cx,
             )
         });
+        /*
+        CDXC:WebGpui 2026-09-28 WHY:
+        Command-click on a terminal link opens it in a new browser tab. The desktop routes `OpenUrlRequested` through its own opener; the page never subscribed, so a link click did nothing, and in Codex's fullscreen view (which captures the mouse) the click used to reach Codex, which opened the URL on the computer running the session instead of the one holding the page.
+        */
+        cx.subscribe(&view, |_, _, event: &TerminalViewEvent, _| {
+            if let TerminalViewEvent::OpenUrlRequested(url) = event
+                && (url.starts_with("https://") || url.starts_with("http://"))
+                && let Some(window) = web_sys::window()
+            {
+                let _ = window.open_with_url_and_target(url, "_blank");
+            }
+        })
+        .detach();
         self.terminals.insert(session.clone(), view.clone());
         Some(view)
     }

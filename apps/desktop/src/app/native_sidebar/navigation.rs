@@ -61,18 +61,15 @@ impl GhostexGpuiApp {
         let owns_window_corner = !footer && !self.sidebar_collapsed;
         /*
         CDXC:Sidebar 2026-09-21 DECISION:
-        User: once the sidebar is narrower than its row's threshold (`SIDEBAR_COMPACT_SEARCH_WIDTH`,
-        `SIDEBAR_COMPACT_COMMANDS_WIDTH`), the Search and the Commands rows drop their label and their shortcut hint and become icon-only buttons with the
+        User: once the sidebar is narrower than its row's threshold (`SIDEBAR_COMPACT_COMMANDS_WIDTH`), the Search and the Commands rows drop their label and their shortcut hint and become icon-only buttons with the
         same icon they already show, the label and shortcut move into the tooltip ("Search (⌘P)",
         "Commands (⌘⇧P)"), and every button in both rows aligns right, against the sidebar's
         trailing edge. This supersedes the 2026-09-20 rule that aligned them left.
+        CDXC:Sidebar 2026-09-28 DECISION:
+        User: the Search button is always icon-only, at every sidebar width, with the label and
+        shortcut in its tooltip. Only the Commands row still switches at its width threshold.
         */
-        let compact_below = if footer {
-            SIDEBAR_COMPACT_COMMANDS_WIDTH
-        } else {
-            SIDEBAR_COMPACT_SEARCH_WIDTH
-        };
-        let compact = self.sidebar_width < compact_below * scale;
+        let compact = !footer || self.sidebar_width < SIDEBAR_COMPACT_COMMANDS_WIDTH * scale;
         /*
         CDXC:Sidebar 2026-09-23 DECISION:
         User: when the top row has no room for all its buttons, Search and Notifications leave the

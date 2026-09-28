@@ -872,9 +872,20 @@ export function getSettingsSearchSectionDefinitions() {
           title: 'Ghostty settings actions',
         },
         {
-          key: 'workspaceBackgroundColor',
-          subtitle: 'Only changes the terminal panes. Leave on Follow theme to match your theme.',
+          key: 'terminalBackgroundMode',
+          options: [
+            { label: 'Black / white', value: 'pure' },
+            { label: 'Follow theme', value: 'theme' },
+            { label: 'Custom color', value: 'custom' },
+          ],
+          subtitle:
+            'Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.',
           title: 'Terminal background',
+        },
+        {
+          key: 'workspaceBackgroundColor',
+          subtitle: 'Custom terminal background, painted behind terminal text in dark mode.',
+          title: 'Terminal background color',
         },
         {
           key: 'terminalBackgroundImage',

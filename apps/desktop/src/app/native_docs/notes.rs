@@ -449,7 +449,7 @@ impl GhostexGpuiApp {
     ///
     /// CDXC:Docs 2026-09-15 DECISION:
     /// User: the Send button can be pressed again and again. It sends the new notes while there are any, and once everything has been sent it sends all the notes again, instead of going dark with "Nothing new to send".
-    pub(crate) fn native_docs_send_notes(&mut self, force_all: bool, cx: &mut Context<Self>) {
+    pub(crate) fn native_docs_send_notes(&mut self, cx: &mut Context<Self>) {
         let Some(path) = self.native_docs.active.clone() else {
             return;
         };
@@ -462,7 +462,7 @@ impl GhostexGpuiApp {
             return;
         }
         let counts = annotation_review_counts(&notes);
-        let scope = if !force_all && counts.pending > 0 {
+        let scope = if counts.pending > 0 {
             DocsFeedbackScope::Pending
         } else {
             DocsFeedbackScope::All
@@ -489,92 +489,6 @@ impl GhostexGpuiApp {
             feedback.document_count,
             ids_by_path,
             origin,
-            cx,
-        );
-    }
-
-    /// Send new across all files: every file's pending notes in one message, each file read fresh
-    /// (the open one from its editor).
-    pub(crate) fn native_docs_send_across_files(&mut self, cx: &mut Context<Self>) {
-        let paths = self.native_docs.notes.paths_with_notes(true);
-        let active = self.native_docs.active.clone();
-        let active_text = self.native_docs_active_text(cx);
-        self.native_docs_set_send_status(DocsSendStatus::Sending, cx);
-        let mut contents: Vec<(String, Option<String>)> = Vec::new();
-        self.native_docs_read_all(paths, active, active_text, &mut contents, cx);
-    }
-
-    fn native_docs_read_all(
-        &mut self,
-        mut remaining: Vec<String>,
-        active: Option<String>,
-        active_text: Option<String>,
-        contents: &mut Vec<(String, Option<String>)>,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(path) = (!remaining.is_empty()).then(|| remaining.remove(0)) else {
-            let contents = std::mem::take(contents);
-            self.native_docs_send_combined(contents, cx);
-            return;
-        };
-        if active.as_deref() == Some(path.as_str()) {
-            contents.push((path, active_text.clone()));
-            return self.native_docs_read_all(remaining, active, active_text, contents, cx);
-        }
-        let mut collected = std::mem::take(contents);
-        let request = self.native_docs_request("read", json!({ "path": path }));
-        self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
-            collected.push((
-                path,
-                response["file"]["content"].as_str().map(str::to_string),
-            ));
-            this.native_docs_read_all(remaining, active, active_text, &mut collected, cx);
-        });
-    }
-
-    fn native_docs_send_combined(
-        &mut self,
-        contents: Vec<(String, Option<String>)>,
-        cx: &mut Context<Self>,
-    ) {
-        let mut names = DocsFeedbackDocumentNames::new();
-        let named: Vec<(String, Option<String>, Vec<DocsAnnotation>)> = contents
-            .into_iter()
-            .map(|(path, content)| {
-                let name = names.add(&path, &self.native_docs_display_path(&path));
-                let notes = self
-                    .native_docs
-                    .notes
-                    .get(&path)
-                    .map(<[_]>::to_vec)
-                    .unwrap_or_default();
-                (name, content, notes)
-            })
-            .collect();
-        let documents: Vec<DocsFeedbackDocument<'_>> = named
-            .iter()
-            .map(|(name, content, notes)| DocsFeedbackDocument {
-                name,
-                content: content.as_deref(),
-                annotations: notes,
-            })
-            .collect();
-        let feedback = format_annotation_feedback(&documents, DocsFeedbackScope::Pending);
-        let ids_by_path = names.ids_by_path(&feedback);
-        if feedback.count == 0 {
-            self.native_docs_set_send_status(
-                DocsSendStatus::Notice("Nothing new to send".to_string()),
-                cx,
-            );
-            return;
-        }
-        // Notes from several files have no single origin: the sidebar decides.
-        self.native_docs_deliver_feedback(
-            feedback.text,
-            feedback.count,
-            feedback.document_count,
-            ids_by_path,
-            None,
             cx,
         );
     }

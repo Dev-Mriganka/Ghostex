@@ -20,8 +20,8 @@ use serde_json::Value;
 use super::model::{
     DOCS_ANNOTATION_ID_PREFIX, DOCS_ANNOTATION_IMAGE_ID_PREFIX, DOCS_ANNOTATION_IMAGE_MAX_BYTES,
     DOCS_ANNOTATION_MAX_IMAGES, DOCS_ANNOTATION_NOTE_MAX_LEN, DocsAnnotation, DocsAnnotationImage,
-    DocsAnnotationScope, DocsAnnotationType, DocsQuickLabelId, annotation_review_counts,
-    is_valid_annotation, iso_timestamp_from_ms, js_date_parse_ms, js_trim, mark_annotations_sent,
+    DocsAnnotationScope, DocsAnnotationType, DocsQuickLabelId, is_valid_annotation,
+    iso_timestamp_from_ms, js_date_parse_ms, js_trim, mark_annotations_sent,
     normalize_annotation_quote, normalize_attachment_name, truncate_utf16,
 };
 
@@ -145,26 +145,6 @@ impl DocsAnnotationsByPath {
             }
         }
         changed
-    }
-
-    /// Paths holding something to send for `send_all` ("Send new across all files" and its
-    /// `all` twin): at least one note, or at least one pending note, in `Array.prototype.sort`
-    /// order (UTF-16 code units).
-    pub(crate) fn paths_with_notes(&self, pending_only: bool) -> Vec<String> {
-        let mut paths: Vec<String> = self
-            .entries
-            .iter()
-            .filter(|(_, annotations)| {
-                if pending_only {
-                    annotation_review_counts(annotations).pending > 0
-                } else {
-                    !annotations.is_empty()
-                }
-            })
-            .map(|(path, _)| path.clone())
-            .collect();
-        paths.sort_by(|left, right| left.encode_utf16().cmp(right.encode_utf16()));
-        paths
     }
 
     /// `JSON.stringify(annotationsByPath)`: compare against the last saved key to decide whether

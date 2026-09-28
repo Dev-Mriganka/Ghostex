@@ -32,6 +32,9 @@ pub(crate) fn dispatch(
     if operation.starts_with("setup") {
         return super::setup::dispatch(state, params);
     }
+    if operation.starts_with("helper") {
+        return super::helper_tools::dispatch(state, params);
+    }
     if operation == "redeemReset" {
         return super::reset_claim::redeem(state, params);
     }

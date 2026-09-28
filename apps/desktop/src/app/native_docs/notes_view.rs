@@ -18,7 +18,6 @@ use super::notes::{DocsSendStatus, SEND_STATUS_DURATION, hex};
 use super::notes_windows::{COMPOSER_RADIUS, notes_frosted};
 use super::palette::DocsPalette;
 use crate::GhostexGpuiApp;
-use crate::app::context_menu::GpuiContextMenu;
 use crate::app::helpers::{
     frosted_menu_fill, titlebar_popup_menu_background, titlebar_popup_menu_border_color,
     titlebar_svg_icon, titlebar_tooltip,
@@ -28,7 +27,6 @@ use crate::app::window::frosted_host::DOCS_SELECTION_TOOLBAR_RADIUS;
 thread_local! {
     static NOTES_LIST_ANCHOR: Cell<Bounds<Pixels>> = Cell::new(Bounds::default());
     static GLOBAL_COMMENT_ANCHOR: Cell<Bounds<Pixels>> = Cell::new(Bounds::default());
-    static REVIEW_MENU_ANCHOR: Cell<Bounds<Pixels>> = Cell::new(Bounds::default());
 }
 
 const TOOLBAR_BUTTON: f32 = 32.0;
@@ -87,13 +85,13 @@ fn wrap_selection(selected: &str, before: &str, after: &str) -> String {
 
 impl GhostexGpuiApp {
     /// The note buttons in a Markdown document's header, left to right: Annotations list, Add
-    /// global comment, Send, Review, Copy feedback and Clear.
+    /// global comment, Send, Copy feedback and Clear.
     ///
     /// CDXC:Docs 2026-09-14 DECISION:
     /// User: keep the actions ordered from right to left as files-list toggle, Reload, Clear, Copy, Add global comment, and Annotations list; use a trash icon for Clear and label the annotations tooltip "Annotations list".
     ///
     /// CDXC:Docs 2026-09-28 DECISION:
-    /// User: Send is a plain header icon in the same color as the others, with no "Send 5"/"Copy 5" label (supersedes the 2026-09-16 label). The number of new notes sits next to the icon, and with no notes the button looks disabled. Once every note has been sent the number goes away and a click sends them all again (the 2026-09-15 Send decision). The destination stays in the tooltip. The Review menu beside it carries Resend all and, with notes in several files, Send new across all files. There is no Finish review, Undo finish, or Archive: Docs is a side pane, not a review session.
+    /// User: Send is a plain header icon in the same color as the others, with no "Send 5"/"Copy 5" label (supersedes the 2026-09-16 label). The number of new notes sits next to the icon, and with no notes the button looks disabled. Once every note has been sent the number goes away and a click sends them all again (the 2026-09-15 Send decision). The destination stays in the tooltip. There is no Review menu (Resend all and Send new across all files were removed the same day), and no Finish review, Undo finish, or Archive: Docs is a side pane, not a review session.
     pub(crate) fn render_native_docs_note_actions(
         &mut self,
         p: &DocsPalette,
@@ -240,21 +238,8 @@ impl GhostexGpuiApp {
             })
             .tooltip(move |window, cx| titlebar_tooltip(send_tooltip.clone(), window, cx))
             .when(total > 0, |this| {
-                this.on_click(cx.listener(|this, _, _, cx| this.native_docs_send_notes(false, cx)))
+                this.on_click(cx.listener(|this, _, _, cx| this.native_docs_send_notes(cx)))
             })
-            .into_any_element(),
-            header_tile(
-                "native-docs-review",
-                header_icon("docs/t-checklist-2.svg", false, p),
-                false,
-                false,
-                p,
-            )
-            .child(probe(&REVIEW_MENU_ANCHOR))
-            .tooltip(|window, cx| titlebar_tooltip("Review actions", window, cx))
-            .on_click(
-                cx.listener(|this, _, window, cx| this.show_native_docs_review_menu(window, cx)),
-            )
             .into_any_element(),
             header_tile(
                 "native-docs-copy-feedback",
@@ -292,41 +277,6 @@ impl GhostexGpuiApp {
             })
             .into_any_element(),
         ]
-    }
-
-    /// The Review menu: Resend all, and Send new across all files when notes wait in several.
-    fn show_native_docs_review_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let counts = annotation_review_counts(self.native_docs_active_notes());
-        let pending_paths = self.native_docs.notes.paths_with_notes(true);
-        let pending_total: usize = pending_paths
-            .iter()
-            .map(|path| {
-                annotation_review_counts(self.native_docs.notes.get(path).unwrap_or(&[])).pending
-            })
-            .sum();
-        let mut menu = GpuiContextMenu::new();
-        if pending_paths.len() > 1 {
-            menu = menu.menu_with_icon(
-                format!(
-                    "Send new across all files ({pending_total} new in {} files)",
-                    pending_paths.len()
-                ),
-                "titlebar/folders.svg",
-                false,
-                Box::new(super::actions::NativeDocsAction {
-                    command: serde_json::json!({ "type": "sendAcrossFiles" }),
-                }),
-            );
-        }
-        menu.menu_with_icon(
-            format!("Resend all ({} sent, {} new)", counts.sent, counts.pending),
-            "docs/t-send-2.svg",
-            counts.sent + counts.pending == 0,
-            Box::new(super::actions::NativeDocsAction {
-                command: serde_json::json!({ "type": "resendAll" }),
-            }),
-        )
-        .toggle_below(REVIEW_MENU_ANCHOR.with(|cell| cell.get()), window, cx);
     }
 
     /// The toolbar over selected text: note buttons, or formatting buttons.

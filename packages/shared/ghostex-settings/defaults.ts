@@ -586,11 +586,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   windowGlassWorkAreaTintDark: DEFAULT_WINDOW_GLASS_WORK_AREA_TINT_DARK_PERCENT,
   windowGlassSidebarOpacityLight: DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_LIGHT_PERCENT,
   windowGlassWorkAreaTintLight: DEFAULT_WINDOW_GLASS_WORK_AREA_TINT_LIGHT_PERCENT,
-  /**
-   * CDXC:Workarea 2026-06-07-16:53:
-   * A near-black workspace background avoids platform compositor handling of
-   * literal transparent black while keeping pane chrome visually black.
-   */
+  terminalBackgroundMode: 'pure',
   workspaceBackgroundColor: '',
   clickToWakeSleepingSessions: true,
   customViews: [],

@@ -88,7 +88,7 @@ impl GpuiTerminalEngineConfig {
             confirm_close_surface: settings.confirm_close_surface,
         };
         config.apply_ghostty_theme(&settings.ghostty_theme);
-        if let Some(background) = settings.terminal_background_rgb {
+        if let Some(background) = settings.terminal_background.override_rgb(false) {
             config.apply_terminal_background(background);
         }
         config
@@ -112,25 +112,24 @@ impl GpuiTerminalEngineConfig {
     /// CDXC:Theming 2026-09-13 DECISION:
     /// User: terminals can follow the system with a separate light theme. Only light mode replaces the finalized color palette; returning to dark restores the existing Ghostty config palette.
     ///
-    /// CDXC:Theming 2026-09-23 DECISION:
-    /// User: the terminal background follows the theme like the chat does, in both appearances, then "wtf does terminal color have to do with workarea theme??? pls make this more intuitive pls". This supersedes the 2026-09-13 "dark mode stays exactly as it is" for the background only: the palette still comes from the Ghostty config or the light theme, while the background is the theme's content colour (`theme_background`). The Terminal background setting follows the theme by default (an empty value); a chosen colour replaces it behind terminal cells in dark mode only and never colours the work area (SEE-ALSO `refresh_gpui_visual_settings` in app/helpers/project/colors.rs).
+    /// CDXC:Theming 2026-09-28 DECISION:
+    /// User: "allow us to set terminal background color to full black/white and make it black by default not the background color from the theme". The palette still comes from the Ghostty config or the light theme; the background is the Terminal background choice: Black / white (the default) paints pure black behind dark terminals and pure white behind light ones, Follow theme paints the theme's content colour (`theme_background`), and Custom replaces it in dark mode only. It never colours the work area (SEE-ALSO `refresh_gpui_visual_settings` in app/helpers/project/colors.rs, `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize.ts). Supersedes the 2026-09-23 decision that the background follows the theme by default.
     pub(crate) fn apply_color_scheme(
         &mut self,
         settings: &SharedGpuiTerminalEngineSettings,
         system_is_light: bool,
         theme_background: [u8; 3],
     ) {
-        self.view.light_theme = settings.uses_light_theme(system_is_light);
-        if self.view.light_theme {
+        let light = settings.uses_light_theme(system_is_light);
+        self.view.light_theme = light;
+        if light {
             self.apply_ghostty_theme(&settings.light_theme);
             // CDXC:Theming 2026-09-13 WHY:
             // GPUI retains ANSI foreground colors in selected text; Ghostty's opaque selection background assumes a separate selection foreground.
             // Use the renderer's adaptive translucent selection tint so light palettes remain readable.
             self.view.selection_background = None;
         }
-        self.apply_terminal_background(
-            settings.grid_background_rgb(self.view.light_theme, theme_background),
-        );
+        self.apply_terminal_background(settings.grid_background_rgb(light, theme_background));
     }
 
     pub(crate) fn apply_terminal_background(&mut self, [r, g, b]: [u8; 3]) {

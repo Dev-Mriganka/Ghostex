@@ -451,7 +451,7 @@ pub fn session_chat_local_command_output(
     after: &str,
 ) -> Option<String> {
     if agent == Some("codex") {
-        return crate::session_chat_codex_dialog::codex_command_output(before, after);
+        return crate::session_chat_codex_dialog::codex_command_output(command, before, after);
     }
     let before = normalize_local_command_screen(agent, before);
     let after = normalize_local_command_screen(agent, after);

@@ -69,7 +69,7 @@ impl NativeChatView {
         };
         // React footed this card with the send's delivery status; a waiting send says so here too.
         let actions = self
-            .render_startup_delivery(message, p, cx)
+            .render_startup_delivery(message, true, p, cx)
             .map_or_else(Vec::new, |status| vec![status]);
         self.status_card_with_header(header, body, actions, p)
     }

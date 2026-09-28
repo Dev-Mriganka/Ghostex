@@ -30,6 +30,9 @@ struct Link {
     socket: WebSocket,
     open: bool,
     waiting: Vec<Vec<u8>>,
+    /// CDXC:WebGpui 2026-09-28 WHY:
+    /// The grid this view last laid out, announced when the socket opens. The first layout resizes the view before the socket is open, and that resize control cannot be sent yet; announcing the attach-time 80x24 instead left the session's PTY at 80x24 in a full-size pane until the window was resized, which a full-screen TUI such as Codex's fullscreen view draws as a small box in the corner.
+    size: (u16, u16),
 }
 
 impl Link {
@@ -102,6 +105,7 @@ impl TerminalModel {
             socket: socket.clone(),
             open: false,
             waiting: Vec::new(),
+            size: (config.cols, config.rows),
         }))));
 
         let mut vt = VtTerminal::new(config.cols, config.rows, config.max_scrollback)?;
@@ -132,10 +136,10 @@ impl TerminalModel {
         let exit: Arc<Mutex<Option<TerminalExit>>> = Arc::new(Mutex::new(None));
 
         let open_link = Arc::clone(&link);
-        let (cols, rows) = (config.cols, config.rows);
         let on_open = Closure::<dyn FnMut()>::new(move || {
             let mut link = open_link.0.borrow_mut();
             link.open = true;
+            let (cols, rows) = link.size;
             // The same visibility contract every other client keeps with zmx: a visible client names its real grid (server/src/terminal_ws.rs translates it into ZMX_VISIBLE).
             link.send_control(
                 serde_json::json!({"type": "visibility", "state": "visible", "cols": cols, "rows": rows}),
@@ -229,10 +233,9 @@ impl TerminalModel {
             .ok_or_else(|| anyhow::anyhow!("terminal viewer retired"))?
             .resize(cols, rows, cell_width_px, cell_height_px)?;
         if (cols, rows) != self.size {
-            self.link
-                .0
-                .borrow()
-                .send_control(serde_json::json!({"type": "resize", "cols": cols, "rows": rows}));
+            let mut link = self.link.0.borrow_mut();
+            link.size = (cols, rows);
+            link.send_control(serde_json::json!({"type": "resize", "cols": cols, "rows": rows}));
         }
         self.size = (cols, rows);
         self.cell_size_px = (cell_width_px, cell_height_px);

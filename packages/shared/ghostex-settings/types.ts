@@ -22,6 +22,8 @@ export type GhosttyCopyOnSelect = 'false' | 'true' | 'clipboard';
 export type GhosttyScrollbar = 'system' | 'never';
 export type TerminalCursorStyle = 'bar' | 'block' | 'underline';
 export type TerminalBackgroundImageFit = 'cover' | 'contain' | 'stretch' | 'natural';
+/** `pure` paints pure black in dark mode and pure white in light mode; `custom` uses `workspaceBackgroundColor`. */
+export type TerminalBackgroundMode = 'pure' | 'theme' | 'custom';
 export type TerminalViewWidthMode = 'full' | 'match-chat' | 'custom';
 export type PortlessProtocol = 'https' | 'http';
 /**
@@ -817,6 +819,7 @@ export type ghostexSettings = {
    */
   showActivePaneOutline: boolean;
   workspaceActivePaneBorderColor: string;
+  terminalBackgroundMode: TerminalBackgroundMode;
   workspaceBackgroundColor: string;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:

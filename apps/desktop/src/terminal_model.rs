@@ -287,6 +287,8 @@ pub struct TerminalSnapshot {
     pub cursor_color: Option<Rgb>,
     /// Active viewport scrollbar state in rows.
     pub scrollbar: VtScrollbar,
+    /// The alternate screen (a full-screen TUI's own buffer) is the active screen.
+    pub alternate_screen: bool,
     /// Active 256-color palette (for palette-indexed consumers).
     #[allow(dead_code)]
     // snapshot shape: mirrors the libghostty-vt palette even where the gpui renderer resolves colours itself
@@ -1161,13 +1163,16 @@ impl TerminalModel {
         let render_state = self.render_state.as_mut().ok_or(VtError {
             code: ffi::GHOSTTY_INVALID_VALUE,
         })?;
-        let scrollbar = {
+        let (scrollbar, alternate_screen) = {
             let mut terminal = self.terminal.lock().expect("terminal lock poisoned");
             let terminal = terminal.as_mut().ok_or(VtError {
                 code: ffi::GHOSTTY_INVALID_VALUE,
             })?;
             render_state.update(terminal)?;
-            terminal.scrollbar()?
+            (
+                terminal.scrollbar()?,
+                terminal.alternate_screen_active().unwrap_or(false),
+            )
         };
 
         let (cols, rows) = render_state.size()?;
@@ -1241,6 +1246,7 @@ impl TerminalModel {
             foreground: colors.foreground,
             cursor_color: colors.cursor_has_value.then_some(colors.cursor),
             scrollbar,
+            alternate_screen,
             palette: colors.palette,
         })
     }

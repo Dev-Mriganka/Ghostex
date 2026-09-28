@@ -5,8 +5,8 @@
 //! CDXC:Bots 2026-09-26 DECISION:
 //! User: while Bots is on, gxserver adds a missing bot project for `HERMES_HOME` (shown as Hermes) and for each `HERMES_HOME/profiles/*`, and never deletes one: a profile that vanished leaves an ordinary project the user can close.
 //!
-//! CDXC:Bots 2026-09-26 DECISION:
-//! User: "+" on a bot is the one way to start a session with it: the Hermes agent, run as `hermes -p <profile>` (plain `hermes` for the default profile) in the profile's folder, with no agent, model or terminal picker.
+//! CDXC:Bots 2026-09-28 DECISION:
+//! User: "+" on a bot is the one way to start a session with it: the Hermes agent, run as `hermes -p <profile>` in the profile's folder, with no agent, model or terminal picker. The default profile's bot runs `hermes -p default`, because plain `hermes` follows the sticky profile `hermes profile use` sets and would open another bot. Supersedes the 2026-09-26 rule that ran plain `hermes` for the default profile.
 //!
 //! CDXC:Bots 2026-09-26 WHY:
 //! gxserver swaps the bot's command in for a Hermes launch into a bot project (`resolve_project_agent_config` calls [`bot_agent_config`]), so every client, a remote machine's included, launches a bot through the ordinary agent launch.
@@ -71,11 +71,7 @@ pub(crate) fn bot_profile_home(hermes_home: &Path, profile: &str) -> PathBuf {
 
 /// The command a bot's "+" runs.
 fn bot_launch_command(profile: &str) -> String {
-    if profile == DEFAULT_BOT_PROFILE {
-        "hermes".to_string()
-    } else {
-        format!("hermes -p {profile}")
-    }
+    format!("hermes -p {profile}")
 }
 
 /// The Hermes profile a bot project stands for. `None` for any other project, and for a stored
@@ -379,7 +375,7 @@ mod tests {
         );
         assert_eq!(
             command(&bot(DEFAULT_BOT_PROFILE), "hermes-agent"),
-            Some(json!("hermes"))
+            Some(json!("hermes -p default"))
         );
         assert_eq!(command(&bot("harry"), "claude"), None);
         assert_eq!(command(&bot("harry; rm -rf ~"), "hermes-agent"), None);
