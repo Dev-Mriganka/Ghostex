@@ -2095,24 +2095,11 @@ fn launch_plan_keeps_typescript_custom_agent_lookup_and_empty_shape() {
 
 #[test]
 fn accept_all_specs_match_typescript_aliases_and_icon_mapping() {
-    // This case checks approval flags and aliases; the native launcher suffix
-    // varies with the Windows CLI installation, while the arguments must match exactly.
-    let assert_command = |actual: String, expected: &str| {
-        let (binary, arguments) = actual.split_once(' ').unwrap_or((&actual, ""));
-        #[cfg(windows)]
-        let binary = binary
-            .strip_suffix(".cmd")
-            .or_else(|| binary.strip_suffix(".bat"))
-            .unwrap_or(binary);
-        let (expected_binary, expected_arguments) =
-            expected.split_once(' ').unwrap_or((expected, ""));
-        assert_eq!((binary, arguments), (expected_binary, expected_arguments));
-    };
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command("cursor", "cursor-agent --allow-all", None, true, None),
-        "cursor-agent --allow-all --yolo",
+        "cursor-agent --allow-all --yolo"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command(
             "cursor",
             "cursor-agent --force --yolo",
@@ -2120,27 +2107,27 @@ fn accept_all_specs_match_typescript_aliases_and_icon_mapping() {
             true,
             None,
         ),
-        "cursor-agent",
+        "cursor-agent"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command("gemini", "gemini --allow-all", None, true, None),
-        "gemini --allow-all --yolo",
+        "gemini --allow-all --yolo"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command("copilot", "copilot -y", None, true, None),
-        "copilot -y --yolo",
+        "copilot -y --yolo"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command(
             "custom-cursor",
             "cursor-agent",
             None,
             true,
-            Some("cursor-cli"),
+            Some("cursor-cli")
         ),
-        "cursor-agent --yolo",
+        "cursor-agent --yolo"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command(
             "grok",
             "grok --permission-mode bypassPermissions --always-approve",
@@ -2148,9 +2135,9 @@ fn accept_all_specs_match_typescript_aliases_and_icon_mapping() {
             true,
             None,
         ),
-        "grok --permission-mode bypassPermissions",
+        "grok --permission-mode bypassPermissions"
     );
-    assert_command(
+    assert_eq!(
         resolve_agent_launch_command(
             "grok",
             "grok --permission-mode=bypassPermissions --always-approve",
@@ -2158,7 +2145,7 @@ fn accept_all_specs_match_typescript_aliases_and_icon_mapping() {
             true,
             None,
         ),
-        "grok",
+        "grok"
     );
 }
 

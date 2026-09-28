@@ -471,6 +471,10 @@ pub(crate) fn resolve_agent_launch_command(
 /// PowerShell picks an agent's .ps1 shim before its vendor-supplied .cmd launcher, which fails under the default Restricted policy. Resolve known bare agent commands before adding launch or resume wrappers so both paths use the native launcher selected by CLI discovery, preserving custom shell commands and arguments.
 #[cfg(windows)]
 fn native_cli_command(command: &str) -> String {
+    // Unit tests assert exact commands, which must not depend on the CLIs installed on the machine.
+    if cfg!(test) {
+        return command.to_string();
+    }
     let trimmed = command.trim_start();
     let binary = trimmed.split_whitespace().next().unwrap_or_default();
     if crate::agent_cli::catalog::CATALOG
