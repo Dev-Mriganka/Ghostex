@@ -1206,7 +1206,6 @@ impl Render for GhostexGpuiApp {
                 and nothing is drawn across it.
                 */
                 h_flex()
-                    .track_focus(&self.root_action_focus_handle)
                     .flex_1()
                     .w_full()
                     .min_h_0()
@@ -1214,6 +1213,16 @@ impl Render for GhostexGpuiApp {
                     .relative()
                     .overflow_hidden()
                     .bg(window_body_row_background())
+                    /*
+                    CDXC:FocusRouting 2026-09-28 WHY:
+                    GPUI focuses a `track_focus` element on every mouse-down no child claims, so tracking the context menus' fallback handle on the whole body row took keyboard focus from a terminal on any click beside or around it (its margins, the agent bar). Keys then went through the root fallback, which forwards only committed text: Backspace did nothing and Pinyin never composed (reported on 10.5.0). The handle only has to be drawn inside the root that owns the app's `on_action` listeners, so it sits on a zero-size child that can never be hovered or clicked.
+                    */
+                    .child(
+                        div()
+                            .absolute()
+                            .size_0()
+                            .track_focus(&self.root_action_focus_handle),
+                    )
                     .when(sidebar_frame.animating, |this| {
                         this.child(
                             crate::app::panel_motion::clip_panel_horizontally(
