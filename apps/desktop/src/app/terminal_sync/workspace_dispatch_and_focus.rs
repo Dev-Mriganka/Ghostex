@@ -58,7 +58,6 @@ impl GhostexGpuiApp {
             .border_b_1()
             .border_color(terminal_search_bar_divider_color())
             .on_key_down(cx.listener(move |this, event: &KeyDownEvent, window, cx| {
-                #[cfg(target_os = "macos")]
                 match event.keystroke.key.as_str() {
                     "escape" => {
                         cx.stop_propagation();
@@ -82,8 +81,6 @@ impl GhostexGpuiApp {
                     }
                     _ => {}
                 }
-                #[cfg(not(target_os = "macos"))]
-                let _ = (this, event, window, cx);
             }))
             .child(
                 h_flex()
@@ -133,14 +130,11 @@ impl GhostexGpuiApp {
                                 "↑",
                                 FIND_BAR_NAV_BUTTON_WIDTH,
                                 move |this, _window, cx| {
-                                    #[cfg(target_os = "macos")]
                                     let _ = this.perform_terminal_search_binding_action(
                                         runtime_session_id,
                                         "navigate_search:previous",
                                         cx,
                                     );
-                                    #[cfg(not(target_os = "macos"))]
-                                    let _ = (this, cx);
                                 },
                                 cx,
                             ))
@@ -149,14 +143,11 @@ impl GhostexGpuiApp {
                                 "↓",
                                 FIND_BAR_NAV_BUTTON_WIDTH,
                                 move |this, _window, cx| {
-                                    #[cfg(target_os = "macos")]
                                     let _ = this.perform_terminal_search_binding_action(
                                         runtime_session_id,
                                         "navigate_search:next",
                                         cx,
                                     );
-                                    #[cfg(not(target_os = "macos"))]
-                                    let _ = (this, cx);
                                 },
                                 cx,
                             ))
@@ -165,10 +156,7 @@ impl GhostexGpuiApp {
                                 "✕",
                                 FIND_BAR_CLOSE_BUTTON_WIDTH,
                                 move |this, window, cx| {
-                                    #[cfg(target_os = "macos")]
                                     this.close_terminal_search(runtime_session_id, window, cx);
-                                    #[cfg(not(target_os = "macos"))]
-                                    let _ = (this, window, cx);
                                 },
                                 cx,
                             )),

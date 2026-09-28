@@ -220,6 +220,19 @@ impl GhostexGpuiApp {
         false
     }
 
+    /// Off macOS every terminal is a GPUI-engine terminal, so the shared
+    /// search-bar actions drive only the element's viewport find.
+    #[cfg(not(target_os = "macos"))]
+    pub(crate) fn perform_terminal_search_binding_action(
+        &mut self,
+        runtime_session_id: AgentsTerminalRuntimeSessionId,
+        action: &str,
+        cx: &mut gpui::Context<Self>,
+    ) -> bool {
+        self.perform_gpui_engine_terminal_search_action(runtime_session_id, action, cx)
+            .unwrap_or(false)
+    }
+
     /// Typing in the GPUI search bar mirrors macOS ownership: the local search
     /// state's needle is the source of truth updated from the field, then the
     /// needle is pushed into Ghostty via the `search:<needle>` keybind action.
@@ -250,7 +263,6 @@ impl GhostexGpuiApp {
         event: &InputEvent,
         cx: &mut gpui::Context<Self>,
     ) {
-        #[cfg(target_os = "macos")]
         match event {
             InputEvent::Change => {
                 let needle = input.read(cx).value().to_string();
@@ -273,11 +285,8 @@ impl GhostexGpuiApp {
             InputEvent::Focus => self.reclaim_gpui_root_for_chrome_input_focus(),
             InputEvent::Blur => {}
         }
-        #[cfg(not(target_os = "macos"))]
-        let _ = (runtime_session_id, input, event, cx);
     }
 
-    #[cfg(target_os = "macos")]
     pub(crate) fn close_terminal_search(
         &mut self,
         runtime_session_id: AgentsTerminalRuntimeSessionId,
@@ -297,51 +306,75 @@ impl GhostexGpuiApp {
         if !closed {
             return;
         }
-        if let Some(slot_id) = self
-            .agents_terminal_ghostty_surfaces
-            .iter()
-            .find_map(|(slot_id, surface)| {
-                (surface.runtime_session_id() == runtime_session_id).then_some(*slot_id)
-            })
-            .or_else(|| {
-                self.agents_gpui_engine_terminals
-                    .iter()
-                    .find(|(_, record)| record.runtime_session_id == runtime_session_id)
-                    .and_then(|(session_id, _)| {
-                        let pane_id = self.agents_workspace.pane_id_for_session(*session_id)?;
-                        Some(AgentsTerminalBodyMountSlotId {
-                            pane_id,
-                            session_id: *session_id,
-                        })
-                    })
-            })
-        {
+        if let Some(slot_id) = self.agents_terminal_search_owner_slot(runtime_session_id) {
             self.focus_agents_terminal_mount_slot(slot_id, window, cx);
-        } else if let Some(slot_id) = self
-            .command_terminal_ghostty_surfaces
-            .iter()
-            .find_map(|(slot_id, surface)| {
-                (surface.runtime_session_id() == runtime_session_id).then_some(*slot_id)
-            })
-            .or_else(|| {
-                self.command_gpui_engine_terminals
-                    .iter()
-                    .find(|(_, record)| record.runtime_session_id == runtime_session_id)
-                    .and_then(|(session_id, _)| {
-                        self.command_pane
-                            .flat_tab_ids()
-                            .into_iter()
-                            .find(|(_, tab_session_id)| tab_session_id == session_id)
-                            .map(|(group_id, session_id)| CommandTerminalBodyMountSlotId {
-                                group_id,
-                                session_id,
-                            })
-                    })
-            })
-        {
+        } else if let Some(slot_id) = self.command_terminal_search_owner_slot(runtime_session_id) {
             self.focus_command_terminal_mount_slot(slot_id, window, cx);
         }
         cx.notify();
+    }
+
+    /// The Agents mount slot whose terminal runs `runtime_session_id`: a
+    /// native Ghostty surface (macOS only) or a GPUI-engine terminal.
+    fn agents_terminal_search_owner_slot(
+        &self,
+        runtime_session_id: AgentsTerminalRuntimeSessionId,
+    ) -> Option<AgentsTerminalBodyMountSlotId> {
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(slot_id) =
+                self.agents_terminal_ghostty_surfaces
+                    .iter()
+                    .find_map(|(slot_id, surface)| {
+                        (surface.runtime_session_id() == runtime_session_id).then_some(*slot_id)
+                    })
+            {
+                return Some(slot_id);
+            }
+        }
+        self.agents_gpui_engine_terminals
+            .iter()
+            .find(|(_, record)| record.runtime_session_id == runtime_session_id)
+            .and_then(|(session_id, _)| {
+                let pane_id = self.agents_workspace.pane_id_for_session(*session_id)?;
+                Some(AgentsTerminalBodyMountSlotId {
+                    pane_id,
+                    session_id: *session_id,
+                })
+            })
+    }
+
+    /// The command-pane mount slot whose terminal runs `runtime_session_id`:
+    /// a native Ghostty surface (macOS only) or a GPUI-engine terminal.
+    fn command_terminal_search_owner_slot(
+        &self,
+        runtime_session_id: AgentsTerminalRuntimeSessionId,
+    ) -> Option<CommandTerminalBodyMountSlotId> {
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(slot_id) =
+                self.command_terminal_ghostty_surfaces
+                    .iter()
+                    .find_map(|(slot_id, surface)| {
+                        (surface.runtime_session_id() == runtime_session_id).then_some(*slot_id)
+                    })
+            {
+                return Some(slot_id);
+            }
+        }
+        self.command_gpui_engine_terminals
+            .iter()
+            .find(|(_, record)| record.runtime_session_id == runtime_session_id)
+            .and_then(|(session_id, _)| {
+                self.command_pane
+                    .flat_tab_ids()
+                    .into_iter()
+                    .find(|(_, tab_session_id)| tab_session_id == session_id)
+                    .map(|(group_id, session_id)| CommandTerminalBodyMountSlotId {
+                        group_id,
+                        session_id,
+                    })
+            })
     }
 
     /// Whether any live terminal search input currently holds GPUI keyboard
