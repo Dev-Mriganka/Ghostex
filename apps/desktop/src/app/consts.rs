@@ -62,14 +62,10 @@ pub(crate) const SIDEBAR_MAX_WIDTH: f32 = 520.0;
 
 pub(crate) const SIDEBAR_RESET_WIDTH: f32 = 235.0;
 
-/// CDXC:Sidebar 2026-09-21 DECISION:
-/// User: the Search row collapses to an icon-only button below a 340px sidebar and the Commands
-/// row below 260px, each with its label and shortcut moved into a tooltip and its buttons aligned
-/// right. Search goes first because the traffic-light reserve and the sidebar toggle leave it the
-/// least room. This supersedes the 300px Search threshold and the single 220px threshold both
-/// rows shared, so at the 235px default both rows are compact.
-pub(crate) const SIDEBAR_COMPACT_SEARCH_WIDTH: f32 = 340.0;
-
+/// CDXC:Sidebar 2026-09-28 DECISION:
+/// User: the Commands row collapses to an icon-only button below a 260px sidebar, with its label
+/// and shortcut moved into a tooltip and its buttons aligned right. The Search button is always
+/// icon-only, which supersedes the 2026-09-21 340px Search threshold.
 pub(crate) const SIDEBAR_COMPACT_COMMANDS_WIDTH: f32 = 260.0;
 
 /*
