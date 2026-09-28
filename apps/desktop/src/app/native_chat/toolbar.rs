@@ -89,7 +89,7 @@ impl NativeChatView {
             .gap(px(6.0 * p.scale))
             .child(self.host_button("moreActions", "titlebar/dots.svg", p, cx));
         for (id, action, _, icon) in COMPOSER_CONTROLS {
-            if self.composer_collapsed()
+            if self.composer_animation.shown_collapsed()
                 || self.composer_control_overflowed(id)
                 || !self.composer_control_available(id)
             {
