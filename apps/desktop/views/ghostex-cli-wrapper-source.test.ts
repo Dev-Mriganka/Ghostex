@@ -22,11 +22,17 @@ describe('Ghostex CLI command wrappers', () => {
 
     expect(renderer).toContain('function renderGhostexCask');
     expect(renderer).toContain('function validateGhostexCask');
-    expect(renderer).toContain('postflight do');
-    expect(renderer).toContain('command_path.write <<~EOS');
-    expect(renderer).toContain('exec "#{cli_binary}" "$@"');
-    expect(renderer).toContain('system "/usr/bin/xattr", "-d", attribute, command_path.to_s');
-    expect(renderer).toContain('uninstall_preflight do');
+    // Homebrew 7.0.6 shape (CDXC:Release 2026-09-21): command_wrapper stanzas and *_steps blocks.
+    expect(renderer).toContain('postflight_steps do');
+    expect(renderer).toContain('command_wrapper "ghostex", content: <<~EOS');
+    expect(renderer).toContain('command_wrapper "gx", content: <<~EOS');
+    expect(renderer).toContain('exec "#{appdir}/ghostex.app/Contents/Resources/CLI/ghostex" "$@"');
+    for (const command of ['ghostex', 'gx']) {
+      for (const attribute of ['com.apple.provenance', 'com.apple.quarantine']) {
+        expect(renderer).toContain(`["-d", "${attribute}", "{{HOMEBREW_PREFIX}}/bin/${command}"]`);
+      }
+    }
+    expect(renderer).toContain('uninstall_preflight_steps do');
     expect(renderer).toContain('Ghostex cask must install wrapper files, not Homebrew binary aliases.');
     expect(releaseGhostexSource).not.toContain('--except-cops Homebrew/OSDependsOn');
     expect(releaseGhostexSource).toContain('HOMEBREW_NO_INSTALL_FROM_API=1 brew style --fix');
