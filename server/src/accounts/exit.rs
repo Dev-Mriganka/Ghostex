@@ -10,6 +10,9 @@ use crate::session_chat_send::{
 
 /// Account switching deliberately cancels the old agent regardless of its screen.
 /// Each interrupt is a separate stdin write; consecutive Ctrl+C presses must land inside the CLI's double-interrupt window.
+///
+/// CDXC:AgentProviders 2026-09-29 WHY:
+/// With a background shell or agent running, Claude's second Ctrl+C opens an "Exit and stop tasks / Move to background and exit / Stay" dialog that needs two more Ctrl+C presses to exit (stopping the tasks). The old three-Ctrl+C cycle sent its Escape right after the third press, cancelling that dialog every round, so the switch looped until it timed out. Each round therefore sends four Ctrl+C presses before its Escape.
 pub(crate) async fn interrupt_until_exited(
     home: &Path,
     project_id: &str,
@@ -20,7 +23,7 @@ pub(crate) async fn interrupt_until_exited(
     cancelled: &(dyn Fn() -> bool + Send + Sync),
 ) -> Result<(), SessionChatSendError> {
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
-    let keys = [SESSION_CHAT_INTERRUPT, "\u{3}", "\u{3}", "\u{3}"];
+    let keys = [SESSION_CHAT_INTERRUPT, "\u{3}", "\u{3}", "\u{3}", "\u{3}"];
     let mut next_key = 0;
     let mut shell_ready_since = None;
     loop {

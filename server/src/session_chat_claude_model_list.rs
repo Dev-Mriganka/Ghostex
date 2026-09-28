@@ -20,6 +20,15 @@ const CLAUDE_CANCEL_ONLY_FOOTER: &str = "Esc to cancel";
 pub(super) const CLAUDE_SESSION_ONLY_KEY: &str = "s";
 const CLAUDE_APPLIED_PREFIX: &str = "⎿ Set model to ";
 const CLAUDE_SESSION_ONLY_SUFFIX: &str = " for this session only";
+/// Option+P (Escape, `p`): Claude's shortcut to the same list, which opens over a draft.
+const CLAUDE_MODEL_SHORTCUT: &str = "\u{1b}p";
+/// The notice above the input after a pick from the list the shortcut opened:
+/// "Model set to opus (claude-opus-5-5) for this session only". No `/model` was echoed, so there
+/// is no reply line, and the notice clears itself after a few seconds.
+const CLAUDE_SHORTCUT_PICK_PREFIX: &str = "Model set to ";
+const CLAUDE_SHORTCUT_DEFAULT_SUFFIX: &str = " and saved as your default for new sessions";
+/// The notice sits above the input box, which the status line can push this far from the tail.
+const CLAUDE_SHORTCUT_NOTICE_TAIL_LINES: usize = 12;
 const CLAUDE_CURSOR: char = '\u{276f}';
 /// Scroll hints the cursor column shows on the first painted row (`↑ 3.`) and the last (`↓ 10.`)
 /// when the window hides rows beyond them.
@@ -41,7 +50,9 @@ const CLAUDE_EFFORT_ORDER: [&str; 6] = ["low", "medium", "high", "xhigh", "max",
 /// window on a short chat pane makes it a bound on rows, and Claude Code 2.1.283 lists 22.
 const CLAUDE_WINDOW_JUMP_LIMIT: usize = 64;
 /// How long a list without its footer must stay unchanged before it counts as clipped by the pane.
-const CLAUDE_CLIPPED_SETTLE_MS: u64 = 400;
+/// A clipped list never changes; Claude repaints slowly while a turn runs, so a half-painted frame
+/// can hold still for a moment.
+const CLAUDE_CLIPPED_SETTLE_MS: u64 = 1_500;
 /// The rail wraps, so every supported level is reachable; the bound stops a stuck rail.
 pub(super) const CLAUDE_EFFORT_STEP_LIMIT: usize = 8;
 /// The footer is the last line the open list draws; a closed one is followed by Claude's
@@ -305,6 +316,44 @@ fn claude_session_only_applied(screen: &str, model: &str, effort: Option<&str>) 
         && effort.is_none_or(|effort| tail.trim() == format!("with {effort} effort"))
 }
 
+/// Claude's notice of a pick from the list Option+P opened, once the list has closed.
+fn claude_shortcut_pick_applied(screen: &str, model: &str, session_only: bool) -> bool {
+    if claude_model_picker_open(screen)
+        || crate::session_chat_composer::detect_session_chat_composer_readiness(
+            Some("claude"),
+            screen,
+            None,
+        )
+        .state
+            != crate::session_chat_composer::SessionChatComposerState::Ready
+    {
+        return false;
+    }
+    let suffix = if session_only {
+        CLAUDE_SESSION_ONLY_SUFFIX
+    } else {
+        CLAUDE_SHORTCUT_DEFAULT_SUFFIX
+    };
+    screen_lines(screen)
+        .iter()
+        .rev()
+        .filter(|line| !line.trim().is_empty())
+        .take(CLAUDE_SHORTCUT_NOTICE_TAIL_LINES)
+        .any(|line| {
+            let Some(rest) = line
+                .split_once(CLAUDE_SHORTCUT_PICK_PREFIX)
+                .and_then(|(_, rest)| rest.trim_end().strip_suffix(suffix))
+            else {
+                return false;
+            };
+            // The alias Claude took, then the full model id in parentheses.
+            let (alias, id) = rest
+                .split_once(" (")
+                .map_or((rest, ""), |(alias, id)| (alias, id.trim_end_matches(')')));
+            alias == model || (!id.is_empty() && claude_model_label_matches(id, model))
+        })
+}
+
 fn effort_rank(effort: &str) -> Option<usize> {
     CLAUDE_EFFORT_ORDER
         .iter()
@@ -450,6 +499,9 @@ impl PickerDriver<'_> {
     /// `/model <name>` and `/effort <name>` always save the pick as Claude's default for new
     /// sessions, so a session-only pick drives the bare `/model` list instead: move to the row,
     /// set the effort on its rail, and answer `s`.
+    ///
+    /// CDXC:SessionChat 2026-09-29 DECISION:
+    /// User: when Claude Code's terminal input holds text and the user picks the model with the mouse, simulate Option+P and pick the model that way, since typing `/model` is blocked then. Option+P opens this same list over the draft and the draft stays in the input after `s` or Enter (verified live on Claude Code 2.1.284). The default scope comes here only then, with its effort cleared: Enter on the list saves the model but not the effort, so `/effort` still waits for the input. Ultracode waits too: its switch is only on the `/effort` slider.
     pub(super) async fn drive_claude_session_only(
         &self,
         plan: &CodexPickerPlan,
@@ -468,14 +520,12 @@ impl PickerDriver<'_> {
         {
             return Err(agent_busy("Waiting for Claude's input box."));
         }
-        // Never replace a terminal draft while applying a queued setting.
-        if crate::session_chat_composer::claude_composer_input_text(&screen)
+        let over_draft = crate::session_chat_composer::claude_composer_input_text(&screen)
             .is_some_and(|text| !text.trim().is_empty())
-            && self.claude_input_holds_draft().await
-        {
-            return Err(agent_busy(
-                "Waiting for the text in Claude's terminal input to be sent or cleared.",
-            ));
+            && self.claude_input_holds_draft().await;
+        if !plan.session_only && !over_draft {
+            // The draft went: the default scope's own `/model` path takes the pick on the retry.
+            return Err(agent_busy("Waiting to apply the model with /model."));
         }
         let (model, effort) = super::claude_effort_slider::claude_live_selection(plan, &screen);
         let applied = |current: Option<&String>, value: &str| {
@@ -485,21 +535,35 @@ impl PickerDriver<'_> {
         if model_applied && applied(effort.as_ref(), &plan.effort) {
             return Ok(());
         }
-        if model_applied {
-            return self.drive_claude_effort_session_only(&plan.effort).await;
+        if over_draft
+            && (plan.effort == "ultracode"
+                || (!plan.effort.is_empty() && effort.as_deref() == Some("ultracode")))
+        {
+            return Err(agent_busy(
+                "Waiting for the text in Claude's terminal input to be sent or cleared.",
+            ));
+        }
+        if model_applied && !over_draft {
+            return self
+                .drive_claude_effort_slider(&plan.effort, CLAUDE_SESSION_ONLY_KEY)
+                .await;
         }
 
-        self.write(&crate::session_chat_send::build_session_chat_paste_bytes(
-            CLAUDE_MODEL_COMMAND,
-        ))
-        .await?;
-        self.wait_for("type Claude model command", |screen| {
-            crate::session_chat_composer::claude_composer_input_text(screen)
-                .is_some_and(|text| text.trim() == CLAUDE_MODEL_COMMAND)
-                .then_some(())
-        })
-        .await?;
-        self.write(CODEX_SUBMIT).await?;
+        if over_draft {
+            self.write(CLAUDE_MODEL_SHORTCUT).await?;
+        } else {
+            self.write(&crate::session_chat_send::build_session_chat_paste_bytes(
+                CLAUDE_MODEL_COMMAND,
+            ))
+            .await?;
+            self.wait_for("type Claude model command", |screen| {
+                crate::session_chat_composer::claude_composer_input_text(screen)
+                    .is_some_and(|text| text.trim() == CLAUDE_MODEL_COMMAND)
+                    .then_some(())
+            })
+            .await?;
+            self.write(CODEX_SUBMIT).await?;
+        }
         let list = self.claude_model_list("open Claude model list").await?;
         /*
         CDXC:AgentProviders 2026-09-28 WHY:
@@ -526,6 +590,14 @@ impl PickerDriver<'_> {
             )));
         }
 
+        // Ultracode is a switch beside the effort slider since Claude Code 2.1.284, not a level on
+        // this rail: the rail takes Max and the slider below sets the switch.
+        let requested_effort = plan.effort.clone();
+        let mut rail_plan = plan.clone();
+        if rail_plan.effort == "ultracode" {
+            rail_plan.effort = "max".to_string();
+        }
+        let plan = &rail_plan;
         // A model without effort levels (Haiku) takes the pick without one.
         let mut effort_adjusted = false;
         if !plan.effort.is_empty() && !list.effort_unsupported {
@@ -542,11 +614,41 @@ impl PickerDriver<'_> {
         }
 
         let effort = effort_adjusted.then_some(plan.effort.as_str());
-        self.write(CLAUDE_SESSION_ONLY_KEY).await?;
-        self.wait_for("applied Claude session model", |screen| {
-            claude_session_only_applied(screen, &applied_model, effort).then_some(())
+        self.write(if plan.session_only {
+            CLAUDE_SESSION_ONLY_KEY
+        } else {
+            super::claude_effort_slider::CLAUDE_CONFIRM_KEY
         })
         .await?;
+        let screen = self
+            .await_claude_switch("applied Claude session model", |screen| {
+                if over_draft {
+                    claude_shortcut_pick_applied(screen, &applied_model, plan.session_only)
+                } else {
+                    // While a turn runs Claude switches at once but prints no "Set model to …" under
+                    // the `/model` it echoed; its own model report then proves the pick, which
+                    // differed from it before the key was pressed.
+                    claude_session_only_applied(screen, &applied_model, effort)
+                        || super::claude_effort_slider::claude_live_selection(plan, screen)
+                            .0
+                            .is_some_and(|live| {
+                                live == applied_model
+                                    || live.strip_suffix("[1m]") == Some(applied_model.as_str())
+                            })
+                }
+            })
+            .await?;
+        // The Ultracode switch survives a model change, so the level alone is not the whole pick.
+        // Over a draft Ultracode was ruled out above, and `/effort` would type into the draft.
+        let wanted = requested_effort.as_str();
+        if !over_draft && !wanted.is_empty() && !list.effort_unsupported {
+            let (_, live) = super::claude_effort_slider::claude_live_selection(plan, &screen);
+            if live.as_deref() != Some(wanted) {
+                return self
+                    .drive_claude_effort_slider(wanted, CLAUDE_SESSION_ONLY_KEY)
+                    .await;
+            }
+        }
         Ok(())
     }
 

@@ -1582,6 +1582,15 @@ pub fn detect_session_chat_selection(
             break;
         }
     }
+    if agent == SessionChatOptionAgent::Claude
+        && claude_ultracode_on_lines(&scanned_lines) == Some(true)
+    {
+        found.effort = Some(SessionChatDetectedChoice {
+            value: "ultracode".to_string(),
+            label: "ultracode".to_string(),
+            source: SessionChatOptionEvidence::Terminal,
+        });
+    }
     if found.model.is_none() && found.effort.is_none() && found.mode.is_none() {
         return None;
     }
@@ -1604,6 +1613,33 @@ pub fn detect_session_chat_selection(
         }
     }
     Some(found)
+}
+
+/// CDXC:AgentProviders 2026-09-29 WHY:
+/// Claude Code 2.1.284 made Ultracode a switch beside the effort level ("high · ultracode"), and
+/// neither its statusline JSON nor a custom status line names it: the only live sign is the
+/// "ultracode" label on the top border of Claude's input box. Chat keeps Ultracode as the level
+/// after Max, so a session with the switch on reads as effort `ultracode`, and the model picker
+/// uses the same reading to decide whether a pick is already applied.
+/// SEE-ALSO: server/src/session_chat_claude_effort_slider.rs `drive_claude_effort_slider`.
+pub(crate) fn claude_ultracode_on(screen: &str) -> Option<bool> {
+    claude_ultracode_on_lines(&scan_window(screen))
+}
+
+/// `lines` oldest first, as `scan_window` returns them. `None` when no input box is on screen.
+fn claude_ultracode_on_lines(lines: &[String]) -> Option<bool> {
+    let bottom = lines.iter().rposition(|line| is_divider_line(line))?;
+    let top = lines[..bottom]
+        .iter()
+        .rposition(|line| is_divider_line(line))?;
+    if !lines[top + 1].trim_start().starts_with('\u{276f}') {
+        return None;
+    }
+    Some(
+        lines[top]
+            .split(|ch: char| ch == '\u{2500}' || ch.is_whitespace())
+            .any(|word| word == "ultracode"),
+    )
 }
 
 pub(crate) fn transcript_tail_text(path: &Path) -> std::io::Result<String> {
@@ -1860,8 +1896,14 @@ pub(crate) fn claude_statusline_model_choice(
         .and_then(|window| window.get("context_window_size"))
         .and_then(Value::as_u64)
         .is_some_and(|size| size >= 1_000_000);
+    // Fable 5.1 and Sonnet 5.5 run with a 1M window too but have only one catalog row, which a
+    // `fable[1m]` reading matched nothing in.
     if reports_long_context && !id.contains('[') {
-        return claude_transcript_model_choice(&format!("{id}[1m]"));
+        if let Some(long) = claude_transcript_model_choice(&format!("{id}[1m]")).filter(|long| {
+            crate::agent_model_catalog::catalog_model("claude", &long.value).is_some()
+        }) {
+            return Some(long);
+        }
     }
     claude_transcript_model_choice(id)
 }

@@ -17,7 +17,8 @@ pub struct DraftVersion {
 }
 
 pub fn parse(params: &Map<String, Value>) -> Result<Option<DraftVersion>, DomainStateError> {
-    let Some(value) = params.get("draftVersion") else {
+    // The chat core serializes a send with no draft (`/compact`, option commands) as `null`.
+    let Some(value) = params.get("draftVersion").filter(|value| !value.is_null()) else {
         return Ok(None);
     };
     let version: DraftVersion = serde_json::from_value(value.clone())
