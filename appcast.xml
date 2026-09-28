@@ -8,6 +8,54 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <link>https://github.com/maddada/Ghostex/releases</link>
         <description>Sparkle appcast for Ghostex macOS releases.</description>
         <item>
+            <title>10.6.0</title>
+            <pubDate>Mon, 28 Sep 2026 23:18:48 +0000</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.6.0</sparkle:fullReleaseNotesLink>
+            <sparkle:version>100600</sparkle:version>
+            <sparkle:shortVersionString>10.6.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.6.0
+
+## 10.6.0 - 2026-09-29
+
+**Ghostex 10.6.0 is out.** Settings, first-run setup, Add Project, the Agents hub and Git Commit are now native windows, Chromium becomes an optional one-time install, the Files editor gains tables, Mermaid and drag and drop, Claude Opus 5.5 and Sonnet 5.5 arrive, and Windows installs get through first launch on a clean computer.
+
+### 🧩 Ghostex without Chromium
+- **Settings, first-run setup, Add Project, the Agents hub and Git Commit open as native windows,** so almost all of Ghostex works without the built-in web runtime, and the Settings colour swatches use your system's colour picker.
+- **The web runtime is an optional one-time install.** Until you install it, the Browser, the Code view, website and extension views, and HTML and media files show an Install button (or Hide tab), and web links open in your system browser. Nothing is downloaded until you press Install; Settings > Extensions > Built-in > Chromium runtime installs, reinstalls or uninstalls it.
+
+### 🗂 A richer Files editor
+- **Markdown in Files gains table tools, emoji, Mermaid diagrams, smarter list keys, find and notes,** with a richer gutter and rename and conflict dialogs.
+- **Drag and drop files and folders in the Files tree,** and opening a file from chat always goes to the Files view.
+
+### 💬 Chat and agents
+- **Claude Opus 5.5 and Sonnet 5.5 replace Opus 5 and Sonnet 5** in the model pickers for Claude Code and Cursor, and Opus 5.5 is a single 1M row.
+- **Claude Code 2.1.284 works with every chat picker:** the effort slider knows the new Ultracode switch, session-only model and effort picks answer Claude's Switch model? prompt, the model picker works in short panes, and a 1M session keeps its 1M pill.
+- **A new Claude Code install's first-run setup is answered in the chat,** with a Sign in to Claude card that tells you to paste the code your browser shows.
+- **A collapsed approval shows the command it asks to run,** compaction shows its token counter, and the Note, Stash, Attach and Switch to Terminal tooltips name their hotkeys, on the computer and the phone.
+- **Codex plans show above Implement this plan?,** a Codex script that runs several commands lists each one, and an interrupted turn keeps its Interrupted marker under your prompt.
+- **Hermes chats keep every prompt and reply across a compaction,** Hermes /compress works like /compact, and subagent notices and errors read the way the terminal prints them, thanks to @banozz0.
+- **Chat rides out a gxserver restart** instead of saying gxserver is not reachable, links take the chat's own light or dark link colour, and the scrollbar stays on the pane's right edge in a wide chat.
+
+### 🗃 Sidebar, Spaces and sleeping sessions
+- **Dim sleeping sessions and Wake sleeping sessions when selected** are new in Settings > Advanced. Turn off the second one and clicking a sleeping session opens it with its Resume button instead of waking it.
+- **Grouping never moves a project out of its Space.** A new group joins its project's Space, a project taken out of a group stays in that Space, and adding a project to a group in another Space switches the sidebar there.
+- **Marking a notification read clears its session's done or needs-input mark** in every sidebar, and a newly pinned session goes to the bottom of the pinned list.
+- **Search by Prompt follows your theme and window glass,** and its preview text can be selected and copied.
+
+### 🪟 Windows
+- **A clean Windows install gets through first launch and onboarding** without the Visual C++ runtime, and a slow first start (often the antivirus scan) is waited for, with Retry if it fails.
+- **Agent CLIs installed where new terminals cannot find them offer Add to PATH,** and Git and the GitHub CLI installed while Ghostex runs are picked up without a restart.
+- **Opening Ghostex again hands off to the running window at once,** and slow first session starts no longer fail the session.
+
+### 🩹 Fixes
+- **A woken Hermes session resumes under its own profile,** even when the project's Hermes agent uses another one, thanks to @banozz0.
+- **Attaching to a session after Codex's fullscreen view or Claude Code quit keeps the shell history** instead of showing an empty screen.
+]]></description>
+            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.6.0/ghostex-10.6.0-arm64.dmg" length="128255030" type="application/octet-stream" sparkle:edSignature="qYSfmoMuTx7l+lwAu5qzouyNFsp9vmkQ97hG2HKu5/nNkPiURU7+t+oRhMCzLY2/NlFf9cKcPFzL9UBu8DEfCQ=="/>
+        </item>
+        <item>
             <title>10.5.5</title>
             <pubDate>Mon, 28 Sep 2026 17:28:32 +0000</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.5.5</sparkle:fullReleaseNotesLink>
@@ -340,68 +388,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.2.0/ghostex-10.2.0-arm64.dmg" length="119536468" type="application/octet-stream" sparkle:edSignature="NAgsK8laiISp6gFtWyRM3G2vVmgqpOaw27BOmroxLaIpeYO66nMmjO2o9oqV7C/1w6hFWfC26TSj73WsEcf/Bg=="/>
         </item>
         <item>
-            <title>10.1.0</title>
-            <pubDate>Tue, 22 Sep 2026 22:48:30 +0000</pubDate>
-            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.1.0</sparkle:fullReleaseNotesLink>
-            <sparkle:version>100100</sparkle:version>
-            <sparkle:shortVersionString>10.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.1.0
-
-## 10.1.0 - 2026-09-23
-
-**Ghostex 10.1.0 is out.** Linear, Jira, GitHub, Storybook and Terminal views, light and dark theme presets, a Trust and Remember answer for folder trust prompts, drag a session onto a pane to split, account usage that peeks on hover, and the newest Claude, Codex, Cursor and Grok models.
-
-### 🧭 New views beside your sessions
-- **Linear and Jira open as views.** Pick one from the + menu, paste the workspace, team, or board address you want as its home, and Ghostex keeps it per project; worktrees follow their parent project until you give them their own. Middle-click or Cmd-click a link to open it in a background Browser tab.
-- **A GitHub view opens your repository with no setup.** It appears whenever the project has a GitHub origin, including in worktrees.
-- **Storybook is built in.** Projects with Storybook get a Storybook view (press S in the view picker) that builds and serves the component workshop without keeping a server running, with Rebuild Storybook and Annotate with Agentation.
-- **A Terminal view puts command terminals on the right.** It has its own tabs and splits, runs Actions, and keeps its terminals alive when you close it; the Commands pane under your sessions still works as before.
-- **The view picker shows real icons.** Installed extensions use their own icon and description, and website views show their mark.
-- **Sleeping browser tabs show what they hold.** The card shows the page's icon, title and site, and a Resume button wakes it.
-
-### 🎨 Theme presets
-- **Pick a preset for each appearance.** Dark theme offers Dark Gray, Black, Blue, Green, Red, Purple, or Custom, and Light theme offers Light Gray, White, Blue, Green, Pink, Orange, or Custom, under Settings > Appearance.
-- **The theme reaches more of the app.** The sidebar, window chrome, sidebar menus, chat background, and chat and file change cards all follow the chosen preset, and Custom keeps your own contrast and tint.
-
-### 🗂 The Agents Panel and sidebar
-- **The sessions column is now the Agents Panel.** Its toggle sits beside Hide sidebar, even while the sidebar is collapsed.
-- **Drag a session onto a pane to split.** Drop a sidebar row on the left, right, top or bottom edge of a terminal or chat pane to open it in a new split there.
-- **Account usage peeks on hover.** Hover the chart button in the sidebar's Commands row to float your starred accounts' meters over the list, and click the pin to keep them there.
-- **Sleep Inactive on the Space menu.** Right-click a Space icon to sleep only its sessions that are awake but neither working nor waiting on you.
-- **The floating sidebar and Agents Panel slide at your chosen speed.** They follow the sidebar's Collapse animation setting, and 0 turns the slide off.
-- **Quick Access opens a session in the floating panel** while chat is collapsed, and your configured hotkeys now work from the floating sessions panel.
-- **Sessions with background shells or monitors still running show as working.**
-
-### 💬 Chat
-- **Trust and Remember answers folder trust prompts for good.** Choose it on the trust card once and Ghostex answers that project's trust prompt by itself from then on, for every agent.
-- **Every copy says Copied!** A small bubble appears at the pointer whenever you copy something anywhere in the app.
-- **The chat box stays expanded while you scroll.** Turn off Settings > Chat > Keep chat box expanded while scrolling to get the collapsing box back.
-- **Switching a draft's agent keeps your model and effort.** The picked model and reasoning carry into the new agent's launch.
-- **Switching accounts is safer for Claude background sessions.** Ghostex stops the conversation and its remaining jobs, then resumes it on the selected account.
-- **The model picker explains itself.** Hover a row's eye to read what the model is for, unavailable buttons are dimmed and say Default or Off, Auto sits first, and a detected Fast mode shows as on.
-
-### 🤖 Newest models, without waiting for a release
-- **New models reach your open app within minutes.** The model list updates on its own, so a new model shows up and can be picked without installing a new Ghostex.
-- **Claude matches Claude Code's own picker.** Opus 5.5 is the Opus model with 1M context, Opus 5 leaves the list, and the quick picker shows every Claude model with its version.
-- **Codex gets GPT 6 Sol and GPT 6 Luna.** Older GPT 5.6 models move under Legacy, and titles and commit messages are now written with GPT 6 Luna.
-- **Grok 4.7 and Grok 4.7 Fast for Grok Build and Cursor.**
-
-### 🩹 Fixes
-- **Linux shows new versions in the Update window.** Open download page takes you to the release; install it the same way you installed Ghostex.
-- **Windows chat sends reach the terminal again,** and the prompt editor starts correctly on Windows.
-- **The transcript scrollbar no longer jumps while a reply streams.**
-- **A new usage limit shows even right after the old one cleared.**
-- **Worktree dialogs explain why a list failed,** and pick the right source project.
-- **Remote sessions attach more reliably,** retrying each session on its own.
-- **The GitHub button opens the right repository** as soon as a project loads.
-- **Agents Hub sync is easier to read.** It says how many agents are out of sync and lists each fix in plain words, with a To fix and In sync filter.
-- **Better screen reader support** for the sidebar, chat box, transcript and terminal.
-]]></description>
-            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.1.0/ghostex-10.1.0-arm64.dmg" length="118495106" type="application/octet-stream" sparkle:edSignature="cpPchym034Z7jVriLreI61Qmvf6fJFR11R1snM2kvVPUrX4pO/reUjq/ifgmqO5fY0TV1GQvH1JYkAP5l/yKCA=="/>
-        </item>
-        <item>
             <title>3.26.1</title>
             <pubDate>Mon, 01 Jun 2026 18:43:20 +0400</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v3.26.1</sparkle:fullReleaseNotesLink>
@@ -413,6 +399,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 5cwn70DS+iomej62rd2pb8AinQl/fPkCTlmjbqgOCMw1UYy9Xk4Zy+XC042wpCyyFfqh1isFQypDkMgSuFcZAA==
-length: 43409
+edSignature: tUA82bquDZ5FXrYW0lSBuASX36LYm/CkQAwLmSEd0/+2Ins/UrnK4nnEJA18wtlrYW2egU6MX2NoCpjkF0GxBA==
+length: 42206
 -->
