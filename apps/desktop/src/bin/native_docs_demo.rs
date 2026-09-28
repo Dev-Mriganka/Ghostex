@@ -20,69 +20,11 @@ mod assets;
 mod ui_fonts;
 
 /// The app modules the Docs files reach through `crate::app::…`, with stand-ins for the pieces
-/// that belong to the rest of the app.
-mod app {
-    pub(crate) mod native_chat {
-        pub(crate) mod fonts {
-            pub(crate) const CHAT_MONO: &str = "JetBrainsMono Nerd Font";
-        }
-        pub(crate) mod markdown_style {
-            use gpui_component::highlighter::HighlightTheme;
-            use std::sync::{Arc, LazyLock};
-
-            #[derive(serde::Deserialize)]
-            struct CodeThemes {
-                dark: HighlightTheme,
-                light: HighlightTheme,
-            }
-
-            static THEMES: LazyLock<(Arc<HighlightTheme>, Arc<HighlightTheme>)> =
-                LazyLock::new(|| {
-                    let themes: CodeThemes = serde_json::from_str(include_str!(
-                        "../../../../packages/gx-chat-core/visual/code-theme.json"
-                    ))
-                    .expect("shared code theme");
-                    (Arc::new(themes.dark), Arc::new(themes.light))
-                });
-
-            pub(crate) fn highlight_theme(light: bool) -> Arc<HighlightTheme> {
-                if light {
-                    THEMES.1.clone()
-                } else {
-                    THEMES.0.clone()
-                }
-            }
-        }
-    }
-    pub(crate) mod helpers {
-        #[path = "../../../app/helpers/manage_docs_resources.rs"]
-        pub(crate) mod manage_docs_resources;
-    }
-    pub(crate) mod window {
-        #[path = "../../../app/window/native_modal_kit.rs"]
-        pub(crate) mod native_modal_kit;
-    }
-    pub(crate) mod native_docs {
-        #[path = "../../../app/native_docs/blocks.rs"]
-        pub(crate) mod blocks;
-        #[path = "../../../app/native_docs/conflicts.rs"]
-        pub(crate) mod conflicts;
-        #[path = "../../../app/native_docs/editor_style.rs"]
-        pub(crate) mod editor_style;
-        #[path = "../../../app/native_docs/fonts.rs"]
-        pub(crate) mod fonts;
-        #[path = "../../../app/native_docs/gutter.rs"]
-        pub(crate) mod gutter;
-        #[path = "../../../app/native_docs/markdown_body.rs"]
-        pub(crate) mod markdown_body;
-        #[path = "../../../app/native_docs/mermaid_widget.rs"]
-        pub(crate) mod mermaid_widget;
-        #[path = "../../../app/native_docs/palette.rs"]
-        pub(crate) mod palette;
-        #[path = "../../../app/native_docs/table_tools.rs"]
-        pub(crate) mod table_tools;
-    }
-}
+/// that belong to the rest of the app. They live in files under `native_docs_demo/` because a
+/// `#[path]` inside an inline module resolves through folders named after the modules, which
+/// do not exist, and macOS will not walk `..` out of a missing folder.
+#[path = "native_docs_demo/app.rs"]
+mod app;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
