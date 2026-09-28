@@ -116,6 +116,25 @@ pub fn run_notify_hook(args: Vec<String>) -> Result<(), DomainStateError> {
     {
         return Ok(());
     }
+    /*
+    CDXC:SessionIdentity 2026-09-27 WHY:
+    Hermes runs a delegate_task subagent inside the terminal's own process, and its terminal tool can start another `hermes` run; both fire this terminal's hooks under their own session id, without the parent's. Each one rebound the Ghostex session to the child: chat showed the child's transcript, the row took the child's title ("Subagent: …"), and the child's end marked the session idle mid-turn (observed 2026-09-27 in the Dobby bot, sessions G26an and G30nd). Hermes marks every process it starts for a subagent with `HERMES_DELEGATED_CHILD_CONTEXT` and starts terminal-tool commands in a new session with no controlling terminal, so neither is the session's agent. A nested run is dropped; a subagent keeps only its approval prompt, which waits in this terminal, and never names the conversation.
+    */
+    let hermes = agent_key == "hermes-agent";
+    if hermes && !hook_process_has_terminal() {
+        return Ok(());
+    }
+    let hermes_subagent = hermes && env_string("HERMES_DELEGATED_CHILD_CONTEXT").is_some();
+    if hermes_subagent
+        && !matches!(
+            event_name.as_str(),
+            "pre_approval_request" | "post_approval_response"
+        )
+    {
+        return Ok(());
+    }
+    let session_id = session_id.filter(|_| !hermes_subagent);
+    let transcript_path = transcript_path.filter(|_| !hermes_subagent);
     let prompt = first_string([
         payload.get("user_message"),
         payload.get("prompt"),
@@ -144,7 +163,13 @@ pub fn run_notify_hook(args: Vec<String>) -> Result<(), DomainStateError> {
     let prompt_event =
         is_prompt_event(&event_name) || (agent_key == "antigravity" && prompt.is_some());
 
-    ensure_state_default(&mut state, "status", "idle");
+    /*
+    CDXC:AgentHooks 2026-09-28 WHY:
+    A zmx pane carries no GHOSTEX_SESSION_STATE_FILE, so the hook starts from an empty state. Seeding idle there invented a status that gxserver applied to every event its mapping leaves unset, blinking a working session idle mid-turn (Hermes post_tool_call, Cursor afterShellExecution, Claude's auto PostCompact; a replayed made-up event idled a working Hermes session within 20ms on 2026-09-28). Without a state file the posted status comes only from activity_for_hook_event.
+    */
+    if has_state_path {
+        ensure_state_default(&mut state, "status", "idle");
+    }
     if read_state_string(&state, "statusUpdatedAt").is_none() {
         if let Some(last_activity_at) = read_state_string(&state, "lastActivityAt") {
             state.insert("statusUpdatedAt".to_string(), json!(last_activity_at));
@@ -292,6 +317,11 @@ fn is_actual_user_message_prompt(prompt: &str) -> bool {
     };
     !crate::agents::activity::is_first_prompt_claim_meta_prompt(&normalized)
         && !crate::agents::activity::is_first_prompt_claim_slash_command(Some(prompt), &normalized)
+}
+
+/// A `setsid` process cannot open `/dev/tty`; Windows has no controlling terminal, so every hook counts there.
+fn hook_process_has_terminal() -> bool {
+    !cfg!(unix) || fs::File::open("/dev/tty").is_ok()
 }
 
 pub(crate) fn read_hook_state(path: &Path) -> Map<String, Value> {

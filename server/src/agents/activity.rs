@@ -983,23 +983,15 @@ pub(crate) fn normalize_agent_hook_event_activity(params: &Map<String, Value>) -
             "Stop",
             &Value::Object(params.clone()),
         )
-    } else if agent.as_deref() == Some("mastra") {
-        crate::agent_hooks::event_mapping::mastra_hook_activity(
-            params
-                .get("eventName")
-                .or_else(|| params.get("rawEventName"))
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
+    } else if let Some(agent @ ("mastra" | "hermes-agent")) = agent.as_deref() {
+        // Both decide from the payload; Hermes needs the tool name.
+        crate::agent_hooks::event_mapping::activity_for_hook_event(
+            agent,
+            event.and_then(Value::as_str).unwrap_or_default(),
             &Value::Object(params.clone()),
         )
     } else {
-        normalize_agent_hook_activity(
-            params.get("status"),
-            params
-                .get("eventName")
-                .or_else(|| params.get("rawEventName")),
-            params.get("agentName"),
-        )
+        normalize_agent_hook_activity(params.get("status"), event, params.get("agentName"))
     };
     /*
     CDXC:SessionChat 2026-08-24:
@@ -1079,18 +1071,6 @@ pub(crate) fn normalize_agent_hook_activity(
             return Some("attention".to_string());
         }
         if lower == "idle" {
-            return Some("idle".to_string());
-        }
-        /*
-        CDXC:SessionChat 2026-08-24:
-        SessionStart is the only hook Claude Code fires when /compact or /clear
-        finishes; the UserPromptSubmit that submitted the command set "working"
-        and no Stop follows, which left the session — and the prompt-queue
-        scheduler gating on it — stuck working after every manual compaction.
-        Every SessionStart source means the CLI is at its input prompt, so it
-        settles to idle (mirrors the notify hook's mapping).
-        */
-        if matches!(lower.as_str(), "sessionstart" | "session-start") {
             return Some("idle".to_string());
         }
         if matches!(
@@ -1176,9 +1156,10 @@ pub(crate) fn normalize_agent_hook_activity(
     the posted-status fallback because gxserver's own event semantics outrank a
     sidecar status.
 
-    Two of that table's rules are deliberately NOT mirrored here: Copilot's
-    ErrorOccurred (idle unless the payload says `recoverable`) and Claude's
-    PostCompact (idle only when `trigger` is manual) both need the hook payload,
+    Three of that table's rules are deliberately NOT mirrored here: Copilot's
+    ErrorOccurred (idle unless the payload says `recoverable`), Claude's
+    PostCompact (idle only when `trigger` is manual) and SessionStart (idle
+    unless it is Claude's compaction) all need the hook payload,
     which this function never receives. Leaving them unmapped lets the posted
     status — already derived from the full payload by the notify hook — decide.
     */
@@ -1220,7 +1201,6 @@ pub(crate) fn normalize_agent_hook_activity(
             "UserPromptSubmit",
             "agent.start",
             "agent_start",
-            "agentSpawn",
             "beforeShellExecution",
             "beforeSubmitPrompt",
             "on_session_reset",
@@ -1310,7 +1290,8 @@ pub(crate) fn default_activity(agent_id: Option<&str>, override_activity: Option
     had happened, and the chat surface — empty transcript, known agent session
     — read that as "turn in flight, transcript not flushed" and replaced its
     welcome with the blank "Loading conversation…" hold until the spinner
-    settled. A creation that starts "working" (launch startup text) keeps the
+    settled. A creation that starts "working" (a launch that submits a first
+    prompt, see CDXC:SessionStatus in `launch_plan.rs`) keeps the
     expired stamp: its own titles must stay able to settle it back to idle.
     */
     activity.insert(
