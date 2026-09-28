@@ -1156,9 +1156,10 @@ pub(crate) fn normalize_agent_hook_activity(
     the posted-status fallback because gxserver's own event semantics outrank a
     sidecar status.
 
-    Two of that table's rules are deliberately NOT mirrored here: Copilot's
-    ErrorOccurred (idle unless the payload says `recoverable`) and Claude's
-    PostCompact (idle only when `trigger` is manual) both need the hook payload,
+    Three of that table's rules are deliberately NOT mirrored here: Copilot's
+    ErrorOccurred (idle unless the payload says `recoverable`), Claude's
+    PostCompact (idle only when `trigger` is manual) and SessionStart (idle
+    unless it is Claude's compaction) all need the hook payload,
     which this function never receives. Leaving them unmapped lets the posted
     status — already derived from the full payload by the notify hook — decide.
     */
@@ -1178,12 +1179,7 @@ pub(crate) fn normalize_agent_hook_activity(
     if compact == "askuserquestion" {
         return Some("attention".to_string());
     }
-    if matches!(compact.as_str(), "sessionidle" | "stopfailure")
-        || crate::agent_hooks::event_mapping::hook_event_starts_session_at_prompt(
-            normalized_agent.as_deref().unwrap_or_default(),
-            &compact,
-        )
-    {
+    if matches!(compact.as_str(), "sessionidle" | "stopfailure") {
         return Some("idle".to_string());
     }
     if let Some(status) = status

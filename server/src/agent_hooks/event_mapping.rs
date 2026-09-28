@@ -258,7 +258,16 @@ pub(crate) fn activity_for_hook_event(
             return Some("working".to_string());
         }
     }
-    if hook_event_starts_session_at_prompt(agent_key, &compact) {
+    /*
+    CDXC:AgentHooks 2026-09-28 WHY:
+    SessionStart (Kiro: agentSpawn) fires while the CLI waits at its input prompt: startup, resume, a new or cleared conversation, and it is the only hook Claude fires when /clear finishes. Most agents settled idle on it only through the notify hook's stateless default status, which also invented idle for every mid-turn event nothing maps, so the rule is explicit now. Two exceptions stay unmapped: OpenCode's plugin reports every mid-turn session.updated as SessionStart, and Claude's compaction SessionStart (source compact) also fires mid-turn after an auto-compact, while a manual /compact settles through PostCompact. gxserver's table leaves SessionStart to the status posted here, because the Claude rule needs the payload.
+    */
+    if compact == "agentspawn"
+        || (compact == "sessionstart"
+            && agent_key != "opencode"
+            && !(matches!(agent_key, "claude" | "openclaude")
+                && payload.get("source").and_then(Value::as_str) == Some("compact")))
+    {
         return Some("idle".to_string());
     }
     /*
@@ -332,14 +341,6 @@ pub(crate) fn activity_for_hook_event(
         return Some("idle".to_string());
     }
     None
-}
-
-/*
-CDXC:AgentHooks 2026-09-28 WHY:
-SessionStart (Kiro: agentSpawn) fires while the CLI waits at its input prompt: startup, resume, a new or cleared conversation. It is the only hook Claude fires when /compact or /clear finishes, with no Stop behind it; a Claude auto-compact also fires it mid-turn, and the next PreToolUse restores working. Most agents settled idle on it only through the notify hook's stateless default status, which also invented idle for every mid-turn event nothing maps, so the rule is explicit now. OpenCode is the exception: its plugin reports every mid-turn session.updated as SessionStart.
-*/
-pub(crate) fn hook_event_starts_session_at_prompt(agent_key: &str, compact_event: &str) -> bool {
-    compact_event == "agentspawn" || (compact_event == "sessionstart" && agent_key != "opencode")
 }
 
 /*

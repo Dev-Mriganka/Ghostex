@@ -134,6 +134,7 @@ pub fn run_notify_hook(args: Vec<String>) -> Result<(), DomainStateError> {
         return Ok(());
     }
     let session_id = session_id.filter(|_| !hermes_subagent);
+    let transcript_path = transcript_path.filter(|_| !hermes_subagent);
     let prompt = first_string([
         payload.get("user_message"),
         payload.get("prompt"),

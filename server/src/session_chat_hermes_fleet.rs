@@ -28,7 +28,8 @@ pub(crate) fn read_hermes_fleet(session: &Value) -> anyhow::Result<Option<Sessio
                  WHERE m.session_id = s.id AND m.role = 'user' ORDER BY m.id LIMIT 1) \
          FROM sessions s \
          WHERE s.parent_session_id = ?1 AND s.source = 'subagent' AND s.ended_at IS NULL \
-           AND COALESCE(s.last_activity_at, s.started_at) > ?2 \
+           AND MAX(COALESCE(s.last_activity_at, 0), s.started_at, COALESCE( \
+                 (SELECT MAX(m.timestamp) FROM messages m WHERE m.session_id = s.id), 0)) > ?2 \
          ORDER BY s.started_at, s.id",
     )?;
     let agents = query
