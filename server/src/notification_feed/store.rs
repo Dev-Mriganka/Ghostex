@@ -126,6 +126,24 @@ pub(crate) fn mark_session_notifications_read(
         .map_err(sql_error)
 }
 
+/// Sessions of the unread rows, of one row when `id` is given; read before a mark-read so the caller knows which threads it read.
+pub(crate) fn unread_notification_session_ids(
+    db: &Connection,
+    id: Option<&str>,
+) -> DomainResult<Vec<String>> {
+    let mut statement = db
+        .prepare(
+            "SELECT DISTINCT sessionId FROM notification_feed WHERE readAt IS NULL AND (?1 IS NULL OR id = ?1)",
+        )
+        .map_err(sql_error)?;
+    let rows = statement
+        .query_map(params![id], |row| row.get::<_, String>(0))
+        .map_err(sql_error)?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(sql_error)?;
+    Ok(rows)
+}
+
 pub(crate) fn mark_notification_read(db: &Connection, id: &str) -> DomainResult<usize> {
     db.execute(
         "UPDATE notification_feed SET readAt = ?1, deferredAt = NULL WHERE id = ?2 AND readAt IS NULL",

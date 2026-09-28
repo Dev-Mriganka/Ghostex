@@ -1488,7 +1488,9 @@ Cmd+Shift+U jumps to the latest unread notification, and Cmd+Ctrl+U pushes the
 current session to the back of the unread queue and jumps to the next one.
 Clearing a session's attention by selecting it in the sidebar, focusing its
 terminal, or pressing Escape also marks its notification read, including one
-you previously moved to the back of the unread queue.
+you previously moved to the back of the unread queue. It works the other way
+too: marking a notification read, or using Mark all read, clears the
+finished or needs-input mark on its session in the sidebar.
 Scripts and agent hooks can post their own rows with
 `ghostex notify --title <text> [--body <text>]`.
 
