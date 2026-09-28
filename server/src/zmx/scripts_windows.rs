@@ -212,7 +212,7 @@ pub(crate) fn process_snapshot_command(program: &str) -> String {
 
 /// CDXC:PlatformSupport 2026-09-14 WHY:
 /// Keep the existing endpoint directory when migrating to wmx so running native sessions remain attachable without restarting their agents.
-fn session_directory() -> String {
+pub(crate) fn session_directory() -> String {
     ghostex_paths::GhostexPaths::resolve()
         .runtime_dir
         .join("windows-sessions")
