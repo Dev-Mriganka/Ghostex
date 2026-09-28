@@ -27,6 +27,8 @@ export interface AddProjectMachineOption {
   readonly machineId: string;
   /** Host filesystem platform ("MacIntel" | "Linux" | "Win32" | "POSIX"); omitted means host validation. */
   readonly platform?: string;
+  /** Native Windows (PowerShell) host: Local folder opens its drive list, which leads with the home folder. */
+  readonly startsAtDriveList?: boolean;
 }
 
 export interface AddProjectBrowseInput {

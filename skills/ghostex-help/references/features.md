@@ -274,10 +274,13 @@ button that an empty project list or empty Space shows, or by right-clicking
 the empty sidebar area) joins the Space that is open at the time and appears at
 the top of it; add a project while Other is selected to leave it out of every
 Space.
-In Add Project, select the computer whose folders you want to browse. External
-drives and other folders shows that computer's filesystem root, or its drives
-on native Windows. You can paste a Windows drive or UNC path when the selected
-computer runs native Windows, even from a Linux or macOS client.
+In Add Project, select the computer whose folders you want to browse. Local
+folder starts in your home folder, and External drives and other folders shows
+that computer's filesystem root. On a computer running native Windows
+(PowerShell), the two are a single Local folder row that opens the list of
+drives, with your home folder at the top. You can paste a Windows drive or UNC
+path when the selected computer runs native Windows, even from a Linux or macOS
+client.
 Right-click a Space icon for its menu: Manage (Edit Space, New Space) and
 Sleep. Sleep Inactive sleeps only the Space's sessions that are awake but
 neither working nor waiting on you. Sessions stay where they are, asleep, and

@@ -1138,25 +1138,39 @@ function AddProjectModalBody(props: AddProjectModalProps) {
     }
     if (currentView?.kind === "sources" && machineId) {
       const sourceRows: AddProjectRow[] = [];
+      /*
+       * CDXC:AddProject 2026-09-28 DECISION:
+       * User: on a native Windows (PowerShell) machine, Local folder should show the drives by default instead of `~/`, merged with External drives and other folders into one row. gxserver lists the home folder first in that drive list.
+       * SEE-ALSO: server/src/server/project_paths.rs (drive list), apps/desktop/src/app/remote_conn/clone_job_and_preview.rs (startsAtDriveList).
+       */
+      const startsAtDriveList = machine?.startsAtDriveList === true;
       if (
         matchesAddProjectFilter(query, "Local folder", [
           "browse",
           "directory",
           "disk",
+          ...(startsAtDriveList ? ["drive", "external", "usb", "home"] : []),
         ])
       ) {
         sourceRows.push({
           dataAttributes: { "data-add-project-source": "local" },
-          description: "Browse a folder on disk",
+          description: startsAtDriveList
+            ? "Browse your drives and home folder"
+            : "Browse a folder on disk",
           field: "sourceOption",
           icon: <IconFolder className={ADD_PROJECT_ROW_ICON_CLASS} />,
-          onSelect: () => startLocalBrowse(machineId),
+          onSelect: () =>
+            startLocalBrowse(
+              machineId,
+              startsAtDriveList ? ADD_PROJECT_ROOT_BROWSE_PATH : undefined,
+            ),
           submenu: true,
           title: "Local folder",
           value: "source:local",
         });
       }
       if (
+        !startsAtDriveList &&
         matchesAddProjectFilter(query, "External drives and other folders", [
           "root",
           "volumes",
