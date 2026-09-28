@@ -582,6 +582,12 @@ impl GhostexGpuiApp {
             );
             #[cfg(target_os = "macos")]
             cef::install_first_responder_observer(this.parent_ns_view);
+            #[cfg(target_os = "windows")]
+            crate::navigation_history::windows_mouse::register(
+                this.parent_ns_view,
+                cx.weak_entity(),
+                cx.to_async(),
+            );
             let startup_activity_changed = this.restore_gpui_command_startup_activity_intents(
                 command_startup_activity_restore_intents,
                 cx,

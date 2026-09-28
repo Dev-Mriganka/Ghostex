@@ -987,6 +987,8 @@ pub struct GhostexGpuiApp {
 
 impl Drop for GhostexGpuiApp {
     fn drop(&mut self) {
+        #[cfg(target_os = "windows")]
+        crate::navigation_history::windows_mouse::unregister(self.parent_ns_view);
         #[cfg(target_os = "macos")]
         unregister_gpui_app_shots_callback_target();
         #[cfg(target_os = "macos")]

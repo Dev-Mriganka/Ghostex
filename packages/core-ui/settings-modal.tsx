@@ -491,6 +491,7 @@ export function SettingsModal({
       normalizedInitialSettings.showAdvancedSettings
     )
   );
+  const pageHistoryRef = useRef({ pages: [activeTab], index: 0 });
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const showAdvancedSettingsId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -635,11 +636,59 @@ export function SettingsModal({
     const visibleTab = resolveSettingsModalTabForVisibility(nextTab, {
       showOSIntegrationSettingsTab,
     });
+    const history = pageHistoryRef.current;
+    if (history.pages[history.index] !== visibleTab) {
+      history.pages = [...history.pages.slice(0, history.index + 1), visibleTab].slice(-100);
+      history.index = history.pages.length - 1;
+    }
     rememberActiveScrollPosition();
     rememberSettingsModalTab(visibleTab);
     persistSettingsModalNavigation(visibleTab);
     setActiveTabState(visibleTab);
   };
+
+  /**
+   * CDXC:Settings 2026-09-28 DECISION:
+   * User: keep the current close behavior and use the mouse Back/Forward buttons to navigate between Settings pages.
+   */
+  const navigateSettingsHistory = (direction: 'back' | 'forward') => {
+    if (isFirstLaunchSetup) return;
+    const history = pageHistoryRef.current;
+    const step = direction === 'back' ? -1 : 1;
+    let index = history.index + step;
+    while (index >= 0 && index < history.pages.length) {
+      const tab = history.pages[index];
+      if (
+        tab !== activeTab &&
+        (tab !== 'osIntegration' || showOSIntegrationSettingsTab) &&
+        (tab !== 'debugging' || draft.showAdvancedSettings)
+      ) {
+        rememberActiveScrollPosition();
+        history.index = index;
+        setSettingsSearchQuery('');
+        rememberSettingsModalTab(tab);
+        persistSettingsModalNavigation(tab);
+        setActiveTabState(tab);
+        return;
+      }
+      index += step;
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onHostMessage = (event: Event) => {
+      const message = (event as CustomEvent).detail;
+      if (
+        message?.type === 'navigateSettingsHistory' &&
+        (message.direction === 'back' || message.direction === 'forward')
+      ) {
+        navigateSettingsHistory(message.direction);
+      }
+    };
+    window.addEventListener('ghostex-app-modal-host-message', onHostMessage);
+    return () => window.removeEventListener('ghostex-app-modal-host-message', onHostMessage);
+  });
 
   const toggleSettingsSidebarPage = (pageId: SettingsModalTab) => {
     setExpandedSettingsSidebarPages((expandedPages) => ({
@@ -661,6 +710,7 @@ export function SettingsModal({
     rememberActiveScrollPosition();
     rememberSettingsModalTab(nextTab);
     persistSettingsModalNavigation(nextTab);
+    pageHistoryRef.current = { pages: [nextTab], index: 0 };
     setActiveTabState(nextTab);
   }, [initialTab, isOpen]);
 
