@@ -75,7 +75,7 @@ pub(super) fn claude_effort_slider(screen: &str) -> Option<ClaudeEffortSlider> {
 }
 
 /// CDXC:SessionChat 2026-09-26 WHY:
-/// A custom status line prints "Opus 5.5" for both context sizes, so a session on `opus[1m]` never read as already on its model and every effort change walked the model list for a row Claude 2.1.283 does not have. The terminal still wins (the 2026-09-08 decision in session_chat_options.rs); the status line JSON Claude pipes to Ghostex only adds the context size the footer cannot print, when both name the same model, and answers for a value the footer shows none of.
+/// A custom status line prints "Opus 5.5" for both context sizes, so a session on `opus[1m]` never read as already on its model and every effort change walked the model list for a row Claude 2.1.283 does not have. The terminal still wins (the 2026-09-08 decision in session_chat_options.rs); the status line JSON Claude pipes to Ghostex only adds the context size the footer cannot print, when both name the same model (`claude_long_context_twin`, which chat's detection shares), and answers for a value the footer shows none of.
 pub(super) fn claude_live_selection(
     plan: &CodexPickerPlan,
     screen: &str,
@@ -97,13 +97,10 @@ pub(super) fn claude_live_selection(
         .and_then(crate::session_chat_options::claude_statusline_model_choice)
         .map(|choice| choice.value);
     let model = match (terminal_model, payload_model) {
-        (Some(terminal), Some(payload))
-            if !terminal.contains('[')
-                && payload.split_once('[').map(|(base, _)| base) == Some(terminal.as_str()) =>
-        {
-            Some(payload)
-        }
-        (Some(terminal), _) => Some(terminal),
+        (Some(terminal), payload) => Some(
+            crate::session_chat_options::claude_long_context_twin(&terminal, payload.as_deref())
+                .unwrap_or(terminal),
+        ),
         (None, payload) => payload,
     };
     let effort = terminal

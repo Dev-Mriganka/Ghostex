@@ -1880,7 +1880,8 @@ fn read_session_chat_statusline_selection(
         label: label.to_string(),
         source: SessionChatOptionEvidence::Statusline,
     };
-    let model = claude_statusline_model_choice(payload).map(|found| choice(&found.value, &found.label));
+    let model =
+        claude_statusline_model_choice(payload).map(|found| choice(&found.value, &found.label));
     let effort = payload
         .get("effort")
         .and_then(|effort| transcript_text(effort.get("level")))
@@ -2220,6 +2221,15 @@ fn overlay_session_chat_option_selection(
     }
 }
 
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// Claude's footer prints "Opus 5.5" for both context sizes, so the screen alone reads `opus`, the 200K twin, while the statusline JSON Claude pipes to Ghostex reads `opus[1m]` from its own `context_window_size`. Chat took whichever reading arrived last, so the composer pill showed "200K" and dropped it again every few seconds on a 1M session. The terminal still names the model (the 2026-09-08 decision below); the statusline only adds the window the footer cannot print, when both name the same model. This is the rule the model picker already used to decide a pick was applied.
+/// SEE-ALSO: server/src/session_chat_claude_effort_slider.rs `claude_live_selection`.
+pub(crate) fn claude_long_context_twin(model: &str, statusline: Option<&str>) -> Option<String> {
+    let statusline = statusline?;
+    (!model.contains('[') && statusline.strip_suffix("[1m]") == Some(model))
+        .then(|| statusline.to_string())
+}
+
 /// Precedence, lowest first: transcript (a turn behind), statusline payload
 /// (live, but only what Claude puts in it), terminal screen (live, and the
 /// only source for the permission mode footer).
@@ -2234,11 +2244,20 @@ fn merge_session_chat_option_selections(
     terminal: Option<SessionChatDetectedSelection>,
 ) -> Option<SessionChatDetectedSelection> {
     let mut merged = transcript.unwrap_or_default();
+    let statusline_model = statusline
+        .as_ref()
+        .and_then(|statusline| statusline.model.as_ref())
+        .map(|model| model.value.clone());
     if let Some(statusline) = statusline {
         overlay_session_chat_option_selection(&mut merged, statusline);
     }
     if let Some(terminal) = terminal {
         overlay_session_chat_option_selection(&mut merged, terminal);
+    }
+    if let Some(model) = merged.model.as_mut() {
+        if let Some(long) = claude_long_context_twin(&model.value, statusline_model.as_deref()) {
+            model.value = long;
+        }
     }
     (merged.model.is_some()
         || merged.effort.is_some()
