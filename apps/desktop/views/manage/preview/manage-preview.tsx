@@ -2,6 +2,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconChecklist,
+  IconCode,
   IconCopy,
   IconEdit,
   IconFileText,
@@ -71,6 +72,7 @@ export function ManagePreview({
   onDraftContentChange,
   onEditAnnotationNote,
   onOpenDocument,
+  onOpenInCodeView,
   onReload,
   onSendFeedback,
   preview,
@@ -92,6 +94,7 @@ export function ManagePreview({
   onDraftContentChange: (content: string) => void;
   onEditAnnotationNote: (annotationId: string, note: string) => void;
   onOpenDocument: (path: string) => void;
+  onOpenInCodeView: (path: string) => void;
   onReload: () => void;
   onSendFeedback: (request: { allFiles?: boolean; scope: 'all' | 'pending' }) => Promise<void>;
   preview?: ManageFilePreview;
@@ -782,6 +785,19 @@ export function ManagePreview({
       {!usesCompactArtifactHeader ? <div className='manage-preview-path'>{previewDisplayPath}</div> : null}
       {preview.kind === 'unsupported' ? (
         <ManagePreviewMessage
+          action={
+            /* Only Markdown has a size limit (CDXC:Docs 2026-09-28 in apps/desktop/src/app/helpers/os_cli/process_and_constants.rs); past it the file opens in the Code view. */
+            isMarkdown ? (
+              <button
+                className='manage-preview-message-action'
+                onClick={() => onOpenInCodeView(preview.path)}
+                type='button'
+              >
+                <IconCode aria-hidden='true' size={14} />
+                <span>Open in Code view</span>
+              </button>
+            ) : undefined
+          }
           icon={<IconAlertTriangle aria-hidden='true' size={21} />}
           title={preview.error ?? 'Preview unavailable'}
         />

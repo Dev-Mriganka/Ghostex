@@ -341,6 +341,7 @@ pub(crate) fn gpui_global_docs_directory_text(
 pub(crate) enum ManageFilesBridgeSideEffect {
     AddToSessionContext(String),
     CopyFullPath(String),
+    OpenInCodeView(PathBuf),
     OpenWithSystemApp(PathBuf),
     RevealInFinder(PathBuf),
 }
@@ -378,6 +379,10 @@ pub(crate) fn manage_files_bridge_outcome(
                 .and_then(|object| object.remove("revealPath"))
                 .and_then(|value| value.as_str().map(PathBuf::from))
                 .map(ManageFilesBridgeSideEffect::RevealInFinder),
+            "openInCodeView" => object
+                .and_then(|object| object.remove("codeViewPath"))
+                .and_then(|value| value.as_str().map(PathBuf::from))
+                .map(ManageFilesBridgeSideEffect::OpenInCodeView),
             "openWithSystemApp" => object
                 .and_then(|object| object.remove("openPath"))
                 .and_then(|value| value.as_str().map(PathBuf::from))
@@ -597,6 +602,16 @@ pub(crate) fn manage_files_bridge_result(
                 context,
                 manage_request_string(request, "path").as_deref(),
                 manage_request_string(request, "newPath").as_deref(),
+            )?,
+            "requestId": request_id,
+            "rootName": MANAGE_DOCS_RELATIVE_PATH,
+        })),
+        "openInCodeView" => Ok(serde_json::json!({
+            "action": action,
+            "codeViewPath": manage_docs_action_item_path(
+                context,
+                manage_request_string(request, "path").as_deref(),
+                "Select a file to open in Code view.",
             )?,
             "requestId": request_id,
             "rootName": MANAGE_DOCS_RELATIVE_PATH,
@@ -1859,7 +1874,7 @@ pub(crate) fn manage_project_file_preview_with_baseline(
         .and_then(|name| name.to_str())
         .unwrap_or("")
         .to_string();
-    if size > MANAGE_FILE_PREVIEW_MAX_BYTES {
+    if size > MANAGE_FILE_PREVIEW_MAX_BYTES && manage_file_opens_in_markdown_editor(&name) {
         return Ok(manage_unsupported_file_preview(
             "File is too large to preview.",
             &name,
@@ -1961,7 +1976,9 @@ pub(crate) fn manage_save_project_file(
     content: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let content = content.ok_or_else(|| "No file content was provided.".to_string())?;
-    if content.len() > MANAGE_FILE_SAVE_MAX_BYTES {
+    if content.len() > MANAGE_FILE_SAVE_MAX_BYTES
+        && path.is_some_and(manage_file_opens_in_markdown_editor)
+    {
         return Err("File is too large to save from the Files view.".to_string());
     }
     let path = manage_docs_path(context, path)?;

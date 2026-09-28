@@ -299,9 +299,24 @@ silently stopped.
 */
 pub(crate) const MANAGE_DOCS_TREE_MAX_ENTRIES: usize = 20_000;
 pub(crate) const MANAGE_DOCS_TREE_MAX_DEPTH: usize = 12;
+/// CDXC:Docs 2026-09-28 DECISION:
+/// User: only files that open in the Markdown editor keep the 2 MB preview and save limit, and a Markdown file over it gets an "Open in Code view" button; HTML and every other file Docs shows open at any size. The limit was an agent default nobody asked for, and it hid a 3 MB HTML guide whose screenshots were inlined as base64.
+/// SEE-ALSO: `FILE_PREVIEW_MAX_BYTES` in server/src/project_docs.rs.
 pub(crate) const MANAGE_FILE_PREVIEW_MAX_BYTES: u64 = 2_000_000;
 pub(crate) const MANAGE_FILE_SAVE_MAX_BYTES: usize = 2_000_000;
 pub(crate) const MANAGE_GIT_BASELINE_MAX_BYTES: usize = 1024 * 1024;
+
+/// Whether Docs opens this file in its Markdown editor (the Docs page's `isMarkdownPath` plus the
+/// native view's `.mdx`), the only kind the preview and save limits apply to.
+pub(crate) fn manage_file_opens_in_markdown_editor(path: &str) -> bool {
+    let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    name.rsplit_once('.').is_some_and(|(_, extension)| {
+        matches!(
+            extension.to_ascii_lowercase().as_str(),
+            "md" | "markdown" | "mdown" | "mkdn" | "mdx"
+        )
+    })
+}
 pub(crate) const MANAGE_REMOTE_RESOURCE_MAX_BYTES: usize = 12 * 1024 * 1024;
 pub(crate) const MANAGE_SESSION_CONTEXT_MAX_BYTES: usize = 300_000;
 pub(crate) static MANAGE_REMOTE_RESOURCE_REQUEST_SEQUENCE: AtomicU64 = AtomicU64::new(1);

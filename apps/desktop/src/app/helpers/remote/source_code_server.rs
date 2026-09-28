@@ -379,6 +379,8 @@ pub(crate) fn run_remote_manage_files_bridge_request_for_project_snapshot(
                 Err("Files on a remote computer can't open in this computer's apps.".to_string())
             } else if action == "revealInFinder" {
                 Err("Open Location is unavailable for remote files.".to_string())
+            } else if action == "openInCodeView" {
+                Err("Open in Code view is unavailable for remote files.".to_string())
             } else {
                 Err("Unsupported Files action.".to_string())
             };

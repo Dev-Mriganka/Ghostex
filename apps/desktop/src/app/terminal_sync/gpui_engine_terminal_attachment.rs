@@ -387,6 +387,9 @@ impl GhostexGpuiApp {
             }
             ManageFilesBridgeSideEffect::RevealInFinder(path) => gpui_reveal_path_in_finder(&path),
             ManageFilesBridgeSideEffect::OpenWithSystemApp(path) => gpui_open_path(&path),
+            ManageFilesBridgeSideEffect::OpenInCodeView(path) => {
+                self.open_docs_file_in_code_view(path, cx)
+            }
             ManageFilesBridgeSideEffect::AddToSessionContext(prompt) => {
                 let session_id = self
                     .manage_session_context_target_session_id()

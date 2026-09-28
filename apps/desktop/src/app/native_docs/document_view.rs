@@ -452,6 +452,23 @@ impl GhostexGpuiApp {
         let Some(document) = self.native_docs.active_document() else {
             return notice("docs/t-file-175.svg", "Select a file".to_string());
         };
+        let action_button = |id: &'static str, icon: &'static str, label: &'static str| {
+            div()
+                .id(id)
+                .flex()
+                .items_center()
+                .gap(px(6.0))
+                .h(px(28.0))
+                .px(px(12.0))
+                .rounded(px(7.0))
+                .border_1()
+                .border_color(p.border_strong)
+                .cursor_pointer()
+                .text_color(p.text)
+                .hover(|style| style.bg(p.control_hover))
+                .child(titlebar_svg_icon(icon, 14.0, p.text))
+                .child(label)
+        };
         let open_externally = |path: String, reason: String, cx: &mut Context<Self>| {
             div()
                 .size_full()
@@ -466,28 +483,14 @@ impl GhostexGpuiApp {
                 .text_color(p.muted)
                 .child(reason)
                 .child(
-                    div()
-                        .id("native-docs-open-system-app-button")
-                        .flex()
-                        .items_center()
-                        .gap(px(6.0))
-                        .h(px(28.0))
-                        .px(px(12.0))
-                        .rounded(px(7.0))
-                        .border_1()
-                        .border_color(p.border_strong)
-                        .cursor_pointer()
-                        .text_color(p.text)
-                        .hover(|style| style.bg(p.control_hover))
-                        .child(titlebar_svg_icon(
-                            "titlebar/external-link.svg",
-                            14.0,
-                            p.text,
-                        ))
-                        .child("Open in system app")
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            this.native_docs_open_with_system_app(&path, cx);
-                        })),
+                    action_button(
+                        "native-docs-open-system-app-button",
+                        "titlebar/external-link.svg",
+                        "Open in system app",
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.native_docs_open_with_system_app(&path, cx);
+                    })),
                 )
                 .into_any_element()
         };
@@ -497,6 +500,34 @@ impl GhostexGpuiApp {
             }
             DocsDocumentLoad::Error(error) => {
                 return notice("titlebar/alert-triangle.svg", error.clone());
+            }
+            DocsDocumentLoad::Unsupported(reason) if document.kind == DocsFileKind::Markdown => {
+                // Only Markdown has a size limit (CDXC:Docs 2026-09-28 in
+                // helpers/os_cli/process_and_constants.rs); past it the file opens in the Code view.
+                let path = document.path.clone();
+                return div()
+                    .size_full()
+                    .min_h(px(140.0))
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .justify_center()
+                    .gap(px(12.0))
+                    .text_size(px(13.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(p.muted)
+                    .child(reason.clone())
+                    .child(
+                        action_button(
+                            "native-docs-open-code-view-button",
+                            crate::app::consts::TITLEBAR_ICON_CODE,
+                            "Open in Code view",
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.native_docs_open_in_code_view(&path, cx);
+                        })),
+                    )
+                    .into_any_element();
             }
             DocsDocumentLoad::Unsupported(reason) => {
                 let (path, reason) = (document.path.clone(), reason.clone());
