@@ -63,8 +63,8 @@ const isWsl =
   (Boolean(process.env.WSL_DISTRO_NAME?.trim()) ||
     readFileSync('/proc/sys/kernel/osrelease', 'utf8').toLowerCase().includes('microsoft'));
 const targetsWindows = isWindows || isWsl;
-const windowsProgramFilesPaths = targetsWindows ? resolveWindowsProgramFilesPaths() : undefined;
-const installDir = isolatedInstance?.installDir ?? windowsProgramFilesPaths?.hostPath ?? resolveGpuiInstallDir();
+const windowsInstallPaths = targetsWindows ? resolveWindowsInstallPaths() : undefined;
+const installDir = isolatedInstance?.installDir ?? windowsInstallPaths?.hostPath ?? resolveGpuiInstallDir();
 const protocolVersion = 1;
 const gxserverBaseUrl = `http://127.0.0.1:${isolatedInstance?.environment.GHOSTEX_GXSERVER_DEV_PORT ?? '58744'}`;
 const gxserverExplicitLaunchEnvironmentKeys = ['GHOSTEX_GXSERVER_CLI', 'GHOSTEX_GXSERVER_BIN'];
@@ -78,7 +78,7 @@ CDXC:Build 2026-07-08-04:55:
 `bun run start` builds the staged GPUI package and installs it to a stable,
 platform-appropriate location before launch. macOS refreshes shared resources,
 then installs to /Applications and opens through LaunchServices. Windows installs
-the staged CEF package to Program Files, creates the machine Start Menu shortcut,
+the staged CEF package to Program Files (or INSTALL_DIR), creates a Start Menu shortcut,
 and launches that installed copy. Linux installs the flat CEF package under XDG
 data (or INSTALL_DIR), preserves gxserver/zmx sessions across the relaunch, and
 runs the installed executable.
@@ -89,8 +89,8 @@ const appPath = isDarwin
     ? path.join(gpuiDir, 'build', 'windows', appName)
     : path.join(gpuiDir, 'build', 'linux', appName);
 const installedAppPath = path.join(installDir, isDarwin ? `${appName}.app` : appName);
-const windowsInstalledAppPath = windowsProgramFilesPaths
-  ? path.win32.join(windowsProgramFilesPaths.windowsPath, appName)
+const windowsInstalledAppPath = windowsInstallPaths
+  ? path.win32.join(windowsInstallPaths.windowsPath, appName)
   : undefined;
 const linuxAppExecutable = path.join(installedAppPath, 'Ghostex');
 const windowsAppExecutable = path.join(installedAppPath, 'Ghostex.exe');
@@ -467,7 +467,12 @@ function resolveGpuiInstallDir() {
   return xdgDataHome || path.join(homedir(), '.local', 'share');
 }
 
-function resolveWindowsProgramFilesPaths() {
+function resolveWindowsInstallPaths() {
+  const configured = process.env.INSTALL_DIR?.trim();
+  if (configured) {
+    const hostPath = path.resolve(configured);
+    return { hostPath, windowsPath: windowsPathForHostPath(hostPath, process.env) };
+  }
   const result = spawnSync(
     windowsPowerShellExecutable(),
     [
@@ -1065,14 +1070,14 @@ function windowsPowerShellExecutable() {
   return isWsl ? '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe' : 'powershell.exe';
 }
 
-function windowsPathForHostPath(hostPath) {
+function windowsPathForHostPath(hostPath, environment = startEnvironment) {
   if (!isWsl) {
     return hostPath;
   }
   const result = spawnSync('wslpath', ['-w', hostPath], {
     cwd: repoRoot,
     encoding: 'utf8',
-    env: startEnvironment,
+    env: environment,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.error) {
@@ -1580,7 +1585,7 @@ function launchWindowsGpuiApp() {
 
 function installWindowsGpuiApp(stagedAppPath) {
   logStartStep(`Installing ${appName} to ${windowsInstalledAppPath}...`);
-  logStartDetail('Windows may request administrator approval for Program Files and the all-users Start Menu.');
+  logStartDetail('The default Program Files location requires administrator approval.');
   const installerScript = path.join(repoRoot, 'tooling', 'install-windows-gpui.ps1');
   const installResult = run(
     windowsPowerShellExecutable(),
@@ -1593,6 +1598,8 @@ function installWindowsGpuiApp(stagedAppPath) {
       windowsPathForHostPath(installerScript),
       '-StagedAppPath',
       windowsPathForHostPath(stagedAppPath),
+      '-InstallDir',
+      windowsInstalledAppPath,
     ],
     {
       allowFailure: true,
@@ -1611,7 +1618,7 @@ function installWindowsGpuiApp(stagedAppPath) {
   if (!existsSync(windowsAppExecutable)) {
     throw new Error(`The installed Ghostex executable is missing at ${windowsInstalledAppPath}\\Ghostex.exe.`);
   }
-  logStartDetail(`Installed app and Start Menu shortcut are ready for all Windows users.`);
+  logStartDetail('Installed app and Start Menu shortcut are ready.');
 }
 
 function uniquePids(pids) {
