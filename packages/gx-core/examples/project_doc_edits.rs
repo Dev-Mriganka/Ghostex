@@ -145,6 +145,7 @@ fn group(group_id: &str, sidebar_session_ids: &[&str]) -> ghostex_gx_core::Group
         }),
         collection_color: None,
         collection_id: None,
+        space_project: None,
     }
 }
 

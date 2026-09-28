@@ -25,9 +25,10 @@ use serde_json::{json, Value};
 use crate::core::Core;
 use crate::keys::MachineId;
 use crate::project_docs::{
-    create_collection, move_members_to_space, move_projects_to_collection,
-    move_projects_with_worktrees, reorder_collection_projects, reorder_spaces, toggle_space_member,
-    CollectionsDocument, DropPosition, SpaceMemberKind, SpacesDocument,
+    create_collection, keep_spaces_across_collection_edit, move_members_to_space,
+    move_projects_to_collection, move_projects_with_worktrees, reorder_collection_projects,
+    reorder_spaces, toggle_space_member, CollectionsDocument, DropPosition, SpaceMemberKind,
+    SpacesDocument,
 };
 use crate::sidebar_view::{SidebarInputs, OTHER_SPACE_ID};
 
@@ -229,13 +230,18 @@ pub fn plan_project_move(
         true => spaces,
         false => None,
     };
+    // The Space follow-up of a Project Groups edit reads the document WITHOUT the setting's gate:
+    // the document outlives the setting, and gxserver carries the same membership either way
+    // (`keep_spaces_across_collection_edit`).
     let plan = match command.get("type").and_then(Value::as_str)? {
-        "moveGroup" => plan_move_group(&section, collections, command),
+        "moveGroup" => plan_move_group(&section, collections, spaces, command),
         "moveSpace" => plan_move_space(spaces, command),
         "moveToSpace" => plan_move_to_space(&section, collections, section_spaces, command),
-        "moveToCollection" => plan_move_to_collection(&section, collections, command),
+        "moveToCollection" => plan_move_to_collection(&section, collections, spaces, command),
         "moveCollection" => plan_move_collection(&section, collections, command),
-        "projectMembership" => plan_project_membership(&section, collections, command, now_ms),
+        "projectMembership" => {
+            plan_project_membership(&section, collections, spaces, command, now_ms)
+        }
         "spaceMembership" => plan_space_membership(&section, inputs, section_spaces, command),
         _ => None,
     }?;
@@ -249,6 +255,7 @@ pub fn plan_project_move(
 fn plan_move_group(
     section: &ProjectSection,
     collections: &CollectionsDocument,
+    spaces: Option<&SpacesDocument>,
     command: &Value,
 ) -> Option<ProjectMovePlan> {
     let group_id = command.get("groupId")?.as_str()?;
@@ -265,8 +272,14 @@ fn plan_move_group(
             .into_iter()
             .map(|item| item.order_id)
             .collect();
-    let mut writes =
-        update_project_drop_membership(section, collections, group_id, target_group_id, &next);
+    let mut writes = update_project_drop_membership(
+        section,
+        collections,
+        spaces,
+        group_id,
+        target_group_id,
+        &next,
+    );
     writes.push(ProjectWrite::GroupOrder { group_ids: next });
     Some(ProjectMovePlan::of(writes))
 }
@@ -279,6 +292,7 @@ fn plan_move_group(
 fn update_project_drop_membership(
     section: &ProjectSection,
     collections: &CollectionsDocument,
+    spaces: Option<&SpacesDocument>,
     group_id: &str,
     target_group_id: &str,
     order: &[String],
@@ -295,7 +309,24 @@ fn update_project_drop_membership(
     let family = section.project_ids_of(&section.project_family(group_id));
     let moved = move_projects_to_collection(collections, &family, collection_id.as_deref());
     let document = reorder_collection_projects(&moved, &section.project_ids_of(order));
-    vec![ProjectWrite::EditCollections { document }]
+    collection_writes(collections, document, spaces)
+}
+
+/// A Project Groups edit, followed by the Spaces edit that keeps its projects in their Space
+/// (`keep_spaces_across_collection_edit`). The groups go first, which is also the order the host
+/// pushes them in.
+fn collection_writes(
+    before: &CollectionsDocument,
+    document: CollectionsDocument,
+    spaces: Option<&SpacesDocument>,
+) -> Vec<ProjectWrite> {
+    let kept =
+        spaces.and_then(|spaces| keep_spaces_across_collection_edit(spaces, before, &document));
+    let mut writes = vec![ProjectWrite::EditCollections { document }];
+    if let Some(document) = kept {
+        writes.push(ProjectWrite::EditSpaces { document });
+    }
+    writes
 }
 
 /// `runNativeProjectDrop`'s `moveToSpace` arm.
@@ -360,6 +391,7 @@ fn plan_move_to_space(
 fn plan_move_to_collection(
     section: &ProjectSection,
     collections: &CollectionsDocument,
+    spaces: Option<&SpacesDocument>,
     command: &Value,
 ) -> Option<ProjectMovePlan> {
     let source_kind = command.get("sourceKind")?.as_str()?;
@@ -373,9 +405,11 @@ fn plan_move_to_collection(
         return Some(ProjectMovePlan::refused("noGroupsMoved"));
     }
     let family = section.project_ids_of(&moved_group_ids);
-    Some(ProjectMovePlan::of(vec![ProjectWrite::EditCollections {
-        document: move_projects_to_collection(collections, &family, collection_id),
-    }]))
+    Some(ProjectMovePlan::of(collection_writes(
+        collections,
+        move_projects_to_collection(collections, &family, collection_id),
+        spaces,
+    )))
 }
 
 /// `runNativeProjectDrop`'s tail: a whole collection dragged to another position.
@@ -482,6 +516,7 @@ fn plan_move_space(spaces: Option<&SpacesDocument>, command: &Value) -> Option<P
 fn plan_project_membership(
     section: &ProjectSection,
     collections: &CollectionsDocument,
+    spaces: Option<&SpacesDocument>,
     command: &Value,
     now_ms: i64,
 ) -> Option<ProjectMovePlan> {
@@ -506,16 +541,17 @@ fn plan_project_membership(
     if action == "createCollection" {
         let (collection_id, created) = create_collection(collections, &family[0], now_ms);
         let document = move_projects_to_collection(&created, &family, Some(&collection_id));
-        return Some(ProjectMovePlan::of(vec![
-            ProjectWrite::EditCollections { document },
-            ProjectWrite::RequestCollectionRename { collection_id },
-        ]));
+        let mut writes = collection_writes(collections, document, spaces);
+        writes.push(ProjectWrite::RequestCollectionRename { collection_id });
+        return Some(ProjectMovePlan::of(writes));
     }
     // `moveCollection` with no `collectionId` is Remove from Group.
     let collection_id = command.get("collectionId").and_then(Value::as_str);
-    Some(ProjectMovePlan::of(vec![ProjectWrite::EditCollections {
-        document: move_projects_to_collection(collections, &family, collection_id),
-    }]))
+    Some(ProjectMovePlan::of(collection_writes(
+        collections,
+        move_projects_to_collection(collections, &family, collection_id),
+        spaces,
+    )))
 }
 
 /// `getProjectCollectionFamilyProjectIds`: the project ids of one family, de-duplicated, falling

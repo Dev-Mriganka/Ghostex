@@ -122,6 +122,18 @@ impl ClientDocument for SpacesDocument {
             .and_then(|machine| machine.side_state().spaces.as_ref())
             .and_then(|state| serde_json::to_value(state).ok())
     }
+
+    /// CDXC:Spaces 2026-09-28 WHY:
+    /// gxserver checks a Spaces document against the Project Groups it holds: a grouped project
+    /// loses its direct membership and an unknown group is dropped. The two pushes run on separate
+    /// connections, so a Spaces edit made with a Project Groups edit (a new group filed in the
+    /// project's Space, a project that left a group keeping its Space, a project dropped on a
+    /// Space) could land first, be checked against the old groups, and lose the member it filed.
+    ///
+    /// SEE-ALSO: server/src/sidebar_spaces.rs (`carry_sidebar_spaces_across_collections`).
+    fn push_waits(app: &GhostexGpuiApp) -> bool {
+        app.gx_store.collections.sync.is_pending()
+    }
 }
 
 impl GhostexGpuiApp {

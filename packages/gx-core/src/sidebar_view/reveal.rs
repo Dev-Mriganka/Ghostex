@@ -243,15 +243,13 @@ pub fn reveal_plan(
                 found.effective_tag.as_deref(),
                 &inputs.ui.selected_tag_filters,
             ),
-        select_space: space_for_reveal(core, inputs, group, collection_id.as_deref()),
-        remember_space: space_of_group(core, inputs, group, collection_id.as_deref()).map(
-            |space_id| FocusedRowSpace {
-                section_key: inputs.ui.section_key(),
-                // The reveal's own `select_space` above carries the move; this is only the memory.
-                follow: false,
-                space_id,
-            },
-        ),
+        select_space: space_for_reveal(core, inputs, group),
+        remember_space: space_of_group(core, inputs, group).map(|space_id| FocusedRowSpace {
+            section_key: inputs.ui.section_key(),
+            // The reveal's own `select_space` above carries the move; this is only the memory.
+            follow: false,
+            space_id,
+        }),
         select_machine,
         select_mode,
         group_id: found.group_id.clone(),
@@ -353,12 +351,12 @@ pub fn space_for_focused_row(
         .then(|| find_group(view, sidebar_session_id))
         .flatten();
     let space_id = match drawn {
-        Some(group) => space_of_group(core, inputs, group, group.collection_id.as_deref())?,
+        Some(group) => space_of_group(core, inputs, group)?,
         None => {
             let unfiltered_inputs = unfiltered(inputs, SidebarMode::Projects);
             let built = SidebarViewModel::build_from_scratch(core, &unfiltered_inputs, now_ms);
             let group = find_group(&built, sidebar_session_id)?;
-            space_of_group(core, inputs, group, group.collection_id.as_deref())?
+            space_of_group(core, inputs, group)?
         }
     };
     // `rememberNativeSidebarFocus` writes the section's Space when the setting is on, and writes it
@@ -471,12 +469,7 @@ fn locate(
 /// One function rather than two: the reveal, the follow and the per-Space session memory all ask
 /// exactly this question, and the reveal once had its own copy of the "has it moved" test as well,
 /// which is how the follow and the drawing could have drifted by one section key.
-fn space_of_group(
-    core: &Core,
-    inputs: &SidebarInputs,
-    group: &GroupView,
-    collection_id: Option<&str>,
-) -> Option<String> {
+fn space_of_group(core: &Core, inputs: &SidebarInputs, group: &GroupView) -> Option<String> {
     // A bot belongs to no Space, so revealing one neither moves nor remembers a Space.
     let is_bot = group
         .core
@@ -504,15 +497,13 @@ fn space_of_group(
             .get(&section_key)
             .map(String::as_str),
     );
-    let context = group.core.project_context.as_ref();
+    let project = group.space_project.as_ref();
     Some(space_for_group(
         &spaces,
         &selection,
-        context.map(|context| context.project_id.as_str()),
-        collection_id,
-        context
-            .and_then(|context| context.worktree.as_ref())
-            .map(|worktree| worktree.parent_project_id.as_str()),
+        project.map(|project| project.project_id.as_str()),
+        project.and_then(|project| project.collection_id.as_deref()),
+        project.and_then(|project| project.parent_project_id.as_deref()),
     ))
 }
 
@@ -536,13 +527,8 @@ fn section_space_moves(inputs: &SidebarInputs, section_key: &str, space_id: &str
 }
 
 /// The reveal's own use of the two above: the Space to select, when it is not already selected.
-fn space_for_reveal(
-    core: &Core,
-    inputs: &SidebarInputs,
-    group: &GroupView,
-    collection_id: Option<&str>,
-) -> Option<String> {
-    let space_id = space_of_group(core, inputs, group, collection_id)?;
+fn space_for_reveal(core: &Core, inputs: &SidebarInputs, group: &GroupView) -> Option<String> {
+    let space_id = space_of_group(core, inputs, group)?;
     section_space_moves(inputs, &inputs.ui.section_key(), &space_id).then_some(space_id)
 }
 

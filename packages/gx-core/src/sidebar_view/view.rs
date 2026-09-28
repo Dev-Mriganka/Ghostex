@@ -94,6 +94,19 @@ pub struct GroupView {
     /// drawn list: a collection the user hid still owns its projects, and the Space rules are
     /// written against ownership, not against what is on screen.
     pub collection_id: Option<String>,
+    /// The project whose Space shows this group: its own for a project group, the project it was
+    /// made in for a user-made session group. Absent for a group with no project (Chats).
+    pub space_project: Option<SpaceProject>,
+}
+
+/// The facts a Space decides a group's visibility from (`space_claims_project`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SpaceProject {
+    pub project_id: String,
+    /// A worktree's parent project, whose Space the worktree follows.
+    pub parent_project_id: Option<String>,
+    /// The project's collection, which a grouped project takes its Space from.
+    pub collection_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -142,9 +142,11 @@ revision so revision order stays identical to broadcast order.
 pub(crate) fn broadcast_pruned_sidebar_spaces(
     state: &AppState,
     db: &rusqlite::Connection,
+    previous_collections: &Value,
     collections: &Value,
 ) -> std::result::Result<(), DomainStateError> {
-    let Some(spaces) = prune_sidebar_spaces_for_collections(db, collections)? else {
+    let Some(spaces) = prune_sidebar_spaces_for_collections(db, previous_collections, collections)?
+    else {
         return Ok(());
     };
     let revision = increment_presentation_revision(db)?;

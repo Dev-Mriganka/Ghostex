@@ -14,6 +14,7 @@
 use crate::sidebar_view::text::js_trim;
 use crate::sidebar_view::SpacesState;
 
+use super::collections::CollectionsDocument;
 use super::spaces::SpacesDocument;
 
 /// Which list of a Space a member belongs to.
@@ -96,6 +97,124 @@ pub fn move_members_to_space(
         };
     }
     SpacesDocument { state }
+}
+
+/// The Spaces document after a Project Groups edit, with every project kept in the Space it was in;
+/// `None` when nothing had to move.
+///
+/// CDXC:Spaces 2026-09-28 DECISION:
+/// User: Add to Group > New Project Group always puts the new group in the current Space, and no
+/// action may move a project out of its Space unless the user moves it to another one. A grouped
+/// project takes its Space from its Project Group and gxserver strips its own membership, so every
+/// groups edit carries the Space across: a new group that no Space lists joins the Space its
+/// projects were in, and a project that leaves every group keeps its old group's Space. Joining a
+/// group that already exists still takes that group's Space, because the user picked the group.
+///
+/// Nothing is removed here. A new group's projects keep their own membership until gxserver strips
+/// it, so whichever of the two documents reaches the daemon first, the project is never left in no
+/// Space at all.
+///
+/// SEE-ALSO: server/src/sidebar_spaces.rs (`carry_sidebar_spaces_across_collections`), the same
+/// rule for every client's and the CLI's groups writes.
+pub fn keep_spaces_across_collection_edit(
+    spaces: &SpacesDocument,
+    before: &CollectionsDocument,
+    after: &CollectionsDocument,
+) -> Option<SpacesDocument> {
+    let state = &spaces.state;
+    let collection_before = |project_id: &str| {
+        before
+            .state
+            .collections
+            .iter()
+            .find(|collection| collection.project_ids.iter().any(|id| id == project_id))
+            .map(|collection| collection.collection_id.as_str())
+    };
+    let space_listing = |state: &SpacesState, kind: SpaceMemberKind, member_id: &str| {
+        state
+            .order
+            .iter()
+            .find(|space_id| {
+                state.spaces.get(*space_id).is_some_and(|space| {
+                    let list = match kind {
+                        SpaceMemberKind::Collection => &space.member_collection_ids,
+                        SpaceMemberKind::Project => &space.member_project_ids,
+                    };
+                    list.iter().any(|candidate| candidate == member_id)
+                })
+            })
+            .cloned()
+    };
+    let space_before = |project_id: &str| match collection_before(project_id) {
+        Some(collection_id) => space_listing(state, SpaceMemberKind::Collection, collection_id),
+        None => space_listing(state, SpaceMemberKind::Project, project_id),
+    };
+    let mut additions: Vec<(String, SpaceMemberKind, String)> = Vec::new();
+    for collection in &after.state.collections {
+        let is_new = !before
+            .state
+            .collections
+            .iter()
+            .any(|candidate| candidate.collection_id == collection.collection_id);
+        if !is_new
+            || space_listing(
+                state,
+                SpaceMemberKind::Collection,
+                &collection.collection_id,
+            )
+            .is_some()
+        {
+            continue;
+        }
+        if let Some(space_id) = collection
+            .project_ids
+            .iter()
+            .find_map(|project_id| space_before(project_id))
+        {
+            additions.push((
+                space_id,
+                SpaceMemberKind::Collection,
+                collection.collection_id.clone(),
+            ));
+        }
+    }
+    for collection in &before.state.collections {
+        for project_id in &collection.project_ids {
+            let still_grouped = after
+                .state
+                .collections
+                .iter()
+                .any(|candidate| candidate.project_ids.contains(project_id));
+            if still_grouped || space_listing(state, SpaceMemberKind::Project, project_id).is_some()
+            {
+                continue;
+            }
+            if let Some(space_id) = space_listing(
+                state,
+                SpaceMemberKind::Collection,
+                &collection.collection_id,
+            ) {
+                additions.push((space_id, SpaceMemberKind::Project, project_id.clone()));
+            }
+        }
+    }
+    if additions.is_empty() {
+        return None;
+    }
+    let mut next = state.clone();
+    for (space_id, kind, member_id) in additions {
+        let Some(space) = next.spaces.get_mut(&space_id) else {
+            continue;
+        };
+        let list = match kind {
+            SpaceMemberKind::Collection => &mut space.member_collection_ids,
+            SpaceMemberKind::Project => &mut space.member_project_ids,
+        };
+        if !list.contains(&member_id) {
+            list.push(member_id);
+        }
+    }
+    Some(SpacesDocument { state: next })
 }
 
 /// `reorderSidebarSpaces`: the named ids first, in the order given, then whatever the stored order
