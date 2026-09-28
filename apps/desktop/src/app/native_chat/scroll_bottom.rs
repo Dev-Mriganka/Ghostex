@@ -4,11 +4,13 @@ use crate::app::hotkeys::{
     gpui_migrated_hotkey_for_action, gpui_platform_hotkey_for_action,
 };
 use crate::app::native_chat::cursor::ChatCursor as _;
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, App, Context, EntityInputHandler as _, Focusable as _, FontWeight,
     InteractiveElement, IntoElement, KeyBinding, ParentElement, StatefulInteractiveElement, Styled,
     Window, div, px,
 };
+use gpui_component::tooltip::{ManagedTooltipExt as _, ManagedTooltipPlacement};
 use serde::Deserialize;
 use std::{collections::HashSet, sync::LazyLock};
 
@@ -36,6 +38,20 @@ pub(super) fn label() -> &'static str {
 
 pub(super) fn font_size() -> f32 {
     SPEC.font_size
+}
+
+/// CDXC:SessionChat 2026-09-29 DECISION:
+/// User: "remove the hotkey shown for the scroll to bottom indicator in the gpui app on desktop but show it in the tooltip by itself when i hover on it." The pill reads only "Scroll to bottom"; hovering it shows the configured shortcut alone, above the pill so it never covers the composer.
+pub(super) const TOOLTIP_PLACEMENT: ManagedTooltipPlacement =
+    ManagedTooltipPlacement::Preferred(gpui_component::Placement::Top);
+
+/// The configured shortcut's label, or `None` when the action has no hotkey.
+pub(super) fn shortcut_label() -> Option<String> {
+    gpui_configured_hotkey_label("scrollChatToBottom").filter(|label| !label.is_empty())
+}
+
+pub(super) fn shortcut_tooltip(key: String, window: &mut Window, cx: &mut App) -> gpui::AnyView {
+    gpui_component::tooltip::Tooltip::new(key).build(window, cx)
 }
 
 #[derive(Clone, Debug, PartialEq, gpui::Action)]
@@ -135,12 +151,8 @@ impl NativeChatView {
         if !shown {
             return div().into_any_element();
         }
-        let label = gpui_configured_hotkey_label("scrollChatToBottom")
-            .filter(|label| !label.is_empty())
-            .map_or_else(
-                || SPEC.label.clone(),
-                |key| format!("{} ({key})", SPEC.label),
-            );
+        let label = SPEC.label.clone();
+        let shortcut = shortcut_label();
         // The pill wears the composer's own chrome: the same opaque card fill, the 1px outline and
         // the inset top highlight session-chat-composer-focus.css gives both of them.
         let outline = if p.light {
@@ -162,6 +174,11 @@ impl NativeChatView {
                     .role(gpui::Role::Button)
                     .aria_label(label.clone())
                     .chat_cursor_pointer()
+                    .when_some(shortcut, |pill, key| {
+                        pill.managed_tooltip_with_placement(TOOLTIP_PLACEMENT, move |window, cx| {
+                            shortcut_tooltip(key.clone(), window, cx)
+                        })
+                    })
                     .relative()
                     .overflow_hidden()
                     .flex()
@@ -212,12 +229,7 @@ impl NativeChatView {
         if !shown {
             return div().absolute().size_0().child(report).into_any_element();
         }
-        let label = gpui_configured_hotkey_label("scrollChatToBottom")
-            .filter(|label| !label.is_empty())
-            .map_or_else(
-                || SPEC.label.clone(),
-                |key| format!("{} ({key})", SPEC.label),
-            );
+        let label = SPEC.label.clone();
         div()
             .absolute()
             .bottom(px(SPEC.bottom * p.scale))

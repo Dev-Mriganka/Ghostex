@@ -349,7 +349,16 @@ impl NativeChatView {
             // The prompt renders as markdown like the React bubble, which also makes it a selectable TextView; a plain string child cannot be selected.
             let mut bubble_appearance = p.clone();
             bubble_appearance.prose = p.primary;
+            // The delivery indicator sits left of the bubble, level with its last line, so it never drifts away from a short prompt. It hangs off the bubble's own left edge (6px gap, the 1px border counted) because a flex row around the bubble measured a prompt with an inline picture at min-content, one word per line.
+            let indicator = self.delivery_indicator(message, p, cx).map(|icon| {
+                div()
+                    .absolute()
+                    .bottom(px(11.0 * s))
+                    .left(px(-31.0 * s))
+                    .child(icon)
+            });
             let bubble = div()
+                .relative()
                 .max_w(relative(0.8))
                 .min_w_0()
                 .rounded(px(16.0 * s))
@@ -363,15 +372,12 @@ impl NativeChatView {
                     &message["markdownReferences"],
                     &bubble_appearance,
                     cx,
-                ));
+                ))
+                .children(indicator);
             let failed_delivery = self.render_startup_delivery(message, false, p, cx);
             // The prompt's own pictures sit above the bubble, where their author put them.
             let thumbnails = self.user_image_thumbnails(message, p, cx);
             let actions = self.user_actions(message, p, cx);
-            // The delivery indicator sits left of the bubble, level with its last line, so it never drifts away from a short prompt.
-            let indicator = self
-                .delivery_indicator(message, p, cx)
-                .map(|icon| div().flex_shrink_0().mb(px(12.0 * s)).child(icon));
             return row
                 .when_some(failed_delivery, |this, status| this.child(status))
                 .when_some(thumbnails, |this, images| this.child(images))
@@ -381,16 +387,7 @@ impl NativeChatView {
                         .flex_col()
                         .items_end()
                         .gap(px(4.0 * s))
-                        .child(
-                            div()
-                                .flex()
-                                .items_end()
-                                .justify_end()
-                                .w_full()
-                                .gap(px(6.0 * s))
-                                .children(indicator)
-                                .child(bubble),
-                        )
+                        .child(bubble)
                         .children(actions),
                 )
                 .into_any_element();

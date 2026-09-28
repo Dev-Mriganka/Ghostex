@@ -8,7 +8,6 @@
 //! opens, moves and closes the window on those bounds.
 
 use super::{appearance::ChatAppearance, state::NativeChatView};
-use crate::app::hotkeys::gpui_configured_hotkey_label;
 use crate::app::native_chat::cursor::ChatCursor as _;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
@@ -16,7 +15,7 @@ use gpui::{
     ParentElement as _, Pixels, Render, StatefulInteractiveElement as _, Styled as _, Subscription,
     WeakEntity, Window, WindowBounds, WindowOptions, div, point, px, svg,
 };
-use gpui_component::Root;
+use gpui_component::{Root, tooltip::ManagedTooltipPlacement};
 use std::{cell::Cell, rc::Rc, time::Duration};
 
 /// Which floating control a window carries.
@@ -310,7 +309,9 @@ impl Render for FrostedOverlayView {
             gpui::white().opacity(0.11)
         };
         match self.overlay {
-            FrostedOverlay::ScrollBottom => scroll_bottom_pill(self.chat.clone(), &p, hover),
+            FrostedOverlay::ScrollBottom => {
+                scroll_bottom_pill(self.chat.clone(), &p, hover, self.tooltip_epoch.clone())
+            }
             FrostedOverlay::ForkBranches => {
                 let lifted = self.hovered.get()
                     || chat
@@ -347,13 +348,11 @@ fn scroll_bottom_pill(
     chat: WeakEntity<NativeChatView>,
     p: &ChatAppearance,
     hover: gpui::Hsla,
+    tooltip_epoch: Rc<Cell<u64>>,
 ) -> AnyElement {
-    let label = gpui_configured_hotkey_label("scrollChatToBottom")
-        .filter(|label| !label.is_empty())
-        .map_or_else(
-            || super::scroll_bottom::label().to_string(),
-            |key| format!("{} ({key})", super::scroll_bottom::label()),
-        );
+    let label = super::scroll_bottom::label().to_string();
+    let shortcut = super::scroll_bottom::shortcut_label();
+    let hover_chat = chat.clone();
     div()
         .id("chat-scroll-bottom-window")
         .role(gpui::Role::Button)
@@ -374,9 +373,29 @@ fn scroll_bottom_pill(
         .font_weight(FontWeight::MEDIUM)
         .whitespace_nowrap()
         .child(label)
+        .when_some(shortcut, move |pill, key| {
+            pill.on_hover(move |hovered, window, cx| {
+                let key = key.clone();
+                overlay_hover_tooltip(
+                    hover_chat.clone(),
+                    FrostedOverlay::ScrollBottom,
+                    *hovered,
+                    &tooltip_epoch,
+                    super::scroll_bottom::TOOLTIP_PLACEMENT,
+                    Rc::new(move |window, cx| {
+                        super::scroll_bottom::shortcut_tooltip(key.clone(), window, cx)
+                    }),
+                    window,
+                    cx,
+                );
+            })
+        })
         .on_click(move |_, _, cx| {
             let chat = chat.clone();
             cx.defer(move |cx| {
+                if let Some(main) = chat.upgrade().and_then(|chat| chat.read(cx).main_window) {
+                    let _ = main.update(cx, |_, window, cx| Root::hide_tooltip(window, cx));
+                }
                 let Ok(main) = chat.update(cx, |chat, cx| {
                     chat.jump_to_bottom(cx);
                     chat.main_window
@@ -445,64 +464,22 @@ fn fork_branches_badge(
                 .text_color(p.muted),
         )
         .child(count.to_string())
-        // The window is too small to hold the tooltip, so it is shown in the chat's window under
-        // the badge's place there, after the managed tooltips' own delay.
         .on_hover(move |hovered, window, cx| {
             hovered_state.set(*hovered);
             window.refresh();
-            let epoch = tooltip_epoch.get() + 1;
-            tooltip_epoch.set(epoch);
-            let chat = hover_chat.clone();
-            if !*hovered {
-                let main = chat.upgrade().and_then(|chat| chat.read(cx).main_window);
-                if let Some(main) = main {
-                    let _ = main.update(cx, |_, window, cx| Root::hide_tooltip(window, cx));
-                }
-                return;
-            }
-            let tooltip_epoch = tooltip_epoch.clone();
             let tooltip = tooltip.clone();
-            window
-                .spawn(cx, async move |cx| {
-                    cx.background_executor()
-                        .timer(Duration::from_millis(500))
-                        .await;
-                    let _ = cx.update(|_, cx| {
-                        if tooltip_epoch.get() != epoch {
-                            return;
-                        }
-                        let Some(view) = chat.upgrade() else {
-                            return;
-                        };
-                        let (main, anchor) = {
-                            let view = view.read(cx);
-                            (
-                                view.main_window,
-                                view.frosted_overlays
-                                    .measured(FrostedOverlay::ForkBranches)
-                                    .get(),
-                            )
-                        };
-                        if let (Some(main), Some(anchor)) = (main, anchor) {
-                            let _ = main.update(cx, |_, window, cx| {
-                                Root::show_tooltip_for_bounds(
-                                    window,
-                                    cx,
-                                    anchor,
-                                    super::fork_branches::TOOLTIP_PLACEMENT,
-                                    move |window, cx| {
-                                        super::fork_branches::fork_branches_tooltip(
-                                            tooltip.clone(),
-                                            window,
-                                            cx,
-                                        )
-                                    },
-                                )
-                            });
-                        }
-                    });
-                })
-                .detach();
+            overlay_hover_tooltip(
+                hover_chat.clone(),
+                FrostedOverlay::ForkBranches,
+                *hovered,
+                &tooltip_epoch,
+                super::fork_branches::TOOLTIP_PLACEMENT,
+                Rc::new(move |window, cx| {
+                    super::fork_branches::fork_branches_tooltip(tooltip.clone(), window, cx)
+                }),
+                window,
+                cx,
+            );
         })
         .on_click(move |_, _, cx| {
             let chat = click_chat.clone();
@@ -532,6 +509,65 @@ fn fork_branches_badge(
             });
         })
         .into_any_element()
+}
+
+/// The control's window is too small to hold a tooltip, so its tooltip is shown in the chat's window
+/// under the control's place there, after the managed tooltips' own delay, and hidden when the
+/// pointer leaves.
+#[allow(clippy::too_many_arguments)]
+fn overlay_hover_tooltip(
+    chat: WeakEntity<NativeChatView>,
+    overlay: FrostedOverlay,
+    hovered: bool,
+    tooltip_epoch: &Rc<Cell<u64>>,
+    placement: ManagedTooltipPlacement,
+    build: Rc<dyn Fn(&mut Window, &mut gpui::App) -> gpui::AnyView>,
+    window: &mut Window,
+    cx: &mut gpui::App,
+) {
+    let epoch = tooltip_epoch.get() + 1;
+    tooltip_epoch.set(epoch);
+    if !hovered {
+        let main = chat.upgrade().and_then(|chat| chat.read(cx).main_window);
+        if let Some(main) = main {
+            let _ = main.update(cx, |_, window, cx| Root::hide_tooltip(window, cx));
+        }
+        return;
+    }
+    let tooltip_epoch = tooltip_epoch.clone();
+    window
+        .spawn(cx, async move |cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(500))
+                .await;
+            let _ = cx.update(|_, cx| {
+                if tooltip_epoch.get() != epoch {
+                    return;
+                }
+                let Some(view) = chat.upgrade() else {
+                    return;
+                };
+                let (main, anchor) = {
+                    let view = view.read(cx);
+                    (
+                        view.main_window,
+                        view.frosted_overlays.measured(overlay).get(),
+                    )
+                };
+                if let (Some(main), Some(anchor)) = (main, anchor) {
+                    let _ = main.update(cx, |_, window, cx| {
+                        Root::show_tooltip_for_bounds(
+                            window,
+                            cx,
+                            anchor,
+                            placement,
+                            move |window, cx| build(window, cx),
+                        )
+                    });
+                }
+            });
+        })
+        .detach();
 }
 
 /// The control's window never takes the keyboard, so a click from another app brings the chat's

@@ -721,8 +721,8 @@ Paste images into an answer to add numbered image references and the same
 clickable thumbnails as the composer. The references stay with the saved answer.
 
 Press Ctrl+Shift+Down to scroll the focused chat to the bottom, including while
-typing. The Scroll to bottom button shows your current shortcut on desktop and web;
-mobile shows the button without a keyboard shortcut. Both stop any
+typing. On desktop and web, hover the Scroll to bottom button to see your current
+shortcut; mobile shows the button without a keyboard shortcut. Both stop any
 ongoing scroll momentum so the conversation settles at the bottom. This takes
 priority over paragraph selection or adding a cursor in the composer; rebind or
 clear Scroll Chat to Bottom in Settings > Hotkeys (`scrollChatToBottom`).
