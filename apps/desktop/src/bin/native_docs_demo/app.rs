@@ -1,8 +1,3 @@
-//! The app modules the Docs files reach through `crate::app::…`, with stand-ins for the pieces
-//! that belong to the rest of the app. Each `#[path]` include sits in a file of this folder so it
-//! resolves from a directory that exists: macOS will not walk `..` through the missing
-//! `src/bin/app/` an inline `mod app { … }` in the crate root would start from.
-
 pub(crate) mod native_chat {
     pub(crate) mod fonts {
         pub(crate) const CHAT_MONO: &str = "JetBrainsMono Nerd Font";

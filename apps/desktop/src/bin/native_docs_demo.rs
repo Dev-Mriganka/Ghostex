@@ -19,6 +19,10 @@ mod assets;
 #[path = "../ui_fonts.rs"]
 mod ui_fonts;
 
+/// The app modules the Docs files reach through `crate::app::…`, with stand-ins for the pieces
+/// that belong to the rest of the app. They live in files under `native_docs_demo/` because a
+/// `#[path]` inside an inline module resolves through folders named after the modules, which
+/// do not exist, and macOS will not walk `..` out of a missing folder.
 #[path = "native_docs_demo/app.rs"]
 mod app;
 
