@@ -26,28 +26,16 @@ use crate::session::terminal::{
 };
 use crate::session::text::{collapse_whitespace, is_js_space, parse_command_envelope};
 use crate::state::ChatState;
-use crate::transcript::noise::{classify_suppressed_turn, SuppressedTurn};
+use crate::transcript::noise::is_compaction_record;
 
 /// `countSessionChatCompactionRecords`: how many compactions the authoritative transcript records.
 ///
-/// A compaction record is a suppressed turn whose status label is one of the two the agent writes.
 /// The optimistic "Ran /compact" marker retires against this count: once the agent has said the
 /// compaction happened, a client-side "we sent it" row would sit BELOW the result it announced.
-///
-/// The classifier is family b's (`crate::transcript::noise`, from
-/// `packages/core-ui/chat/session-chat-noise.ts`); the two labels are compared as literals here
-/// because they are private to that module, and `session_chat.rs` in gxserver holds the same
-/// spellings.
 pub fn compaction_records(messages: &[ChatMessage]) -> usize {
     messages
         .iter()
-        .filter(|message| {
-            matches!(
-                classify_suppressed_turn(message),
-                Some(SuppressedTurn::Status { ref label, .. })
-                    if label == "Context compacted" || label == "Compaction completed"
-            )
-        })
+        .filter(|message| is_compaction_record(message))
         .count()
 }
 

@@ -50,7 +50,7 @@ const CURSOR_ACTIVITY_SCAN_LINES: usize = 15;
 /// next line; two leaves room for a wrap.
 const ACTIVITY_PERCENT_LOOKAHEAD: usize = 2;
 
-/// Activity kind for Claude Code, Codex, Cursor and Grok compaction (manual and automatic).
+/// Activity kind for Claude Code, Codex, Cursor and Grok compaction (manual and automatic), and Hermes's `/compress`.
 pub const SESSION_CHAT_ACTIVITY_COMPACTING: &str = "compacting";
 
 /// Claude Code's current assistant status, not yet flushed to transcript JSONL.
@@ -681,6 +681,26 @@ fn grok_compacting_activity(screen_text: &str) -> Option<SessionChatTerminalActi
     Some(activity)
 }
 
+/// CDXC:AgentScreenDetection 2026-09-28 DECISION:
+/// User: a Hermes compress shows the shared compaction card while it runs, then one line in chat: "Context compacted" or "Nothing to compress".
+/// `/compress` prints `⏳ Compressing context...` when it starts and Hermes keeps its "command in progress" hint directly above the status bar until it ends. Stale copies of both stay in scrollback, so only the hint in the bottom layout counts.
+fn hermes_compacting_activity(screen_text: &str) -> Option<SessionChatTerminalActivity> {
+    let lines = crate::session_chat_agent_fleet::normalized_screen_lines(screen_text);
+    let status_bar = lines
+        .iter()
+        .rposition(|line| crate::session_chat_options::is_hermes_statusline(line))?;
+    if !crate::session_chat_options::is_hermes_busy_hint(lines.get(status_bar.checked_sub(1)?)?) {
+        return None;
+    }
+    let started = lines[..status_bar]
+        .iter()
+        .rev()
+        .find_map(|line| line.strip_prefix("⏳ "))?;
+    (started == "Compressing context...").then(|| {
+        SessionChatTerminalActivity::new(SESSION_CHAT_ACTIVITY_COMPACTING, COMPACTING_LABEL)
+    })
+}
+
 /*
 CDXC:AgentScreenDetection 2026-09-02:
 One physical screen row with its layout kept. `normalized_screen_lines` throws
@@ -1016,6 +1036,9 @@ pub fn detect_session_chat_terminal_activity_styled(
     let agent = session_chat_option_agent(agent)?;
     if agent == SessionChatOptionAgent::Grok {
         return grok_compacting_activity(screen_text);
+    }
+    if agent == SessionChatOptionAgent::Hermes {
+        return hermes_compacting_activity(screen_text);
     }
     if agent == SessionChatOptionAgent::Cursor {
         let lines = crate::session_chat_agent_fleet::normalized_screen_lines(screen_text);

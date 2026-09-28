@@ -4,24 +4,28 @@ the `messages` table of its session store (`~/.hermes/state.db`, or
 `profiles/<name>/state.db` for a named profile; rollback-journal SQLite, written
 row-by-row as the turn progresses, with monotonic AUTOINCREMENT ids). The chat
 pipeline is built around tailing an append-only jsonl file, so this module
-materializes one: each Hermes session's active rows are mirrored into
+materializes one: each Hermes session's display history is mirrored into
 `<gxserver state dir>/hermes-chat-mirror/<agent-session-id>.jsonl`, one JSON
-object per row in the shape `decode_hermes_transcript_line` reads.
+object per logical message in the shape `decode_hermes_transcript_line` reads.
 
 Sync runs at the two places every consumer already passes through:
 `resolve_session_chat_transcript_path` (follower resolve/staleness polls, HTTP
 long-poll reads, queue runtime, export, watchdog) and the follower's
-`follower_drain_once` steady-state tick. New rows append; a rewind or
-deactivation (Hermes `/undo` flips `active` off on old rows) rewrites the
-mirror atomically via rename, which the follower's inode-identity check reads
-as `content_replaced` and answers with a fresh snapshot.
+`follower_drain_once` steady-state tick. New messages append; a rewind (Hermes
+`/undo` flips `active` off on old rows) rewrites the mirror atomically via
+rename, which the follower's inode-identity check reads as `content_replaced`
+and answers with a fresh snapshot.
+
+The mirror's own record shape adds a `{"role": "compaction"}` marker where each
+compaction happened, and its timestamps never go backwards in file order.
 
 The mirror file's stem IS the Hermes session id, which is what lets the drain
 hook re-derive the session from the path alone.
 */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -110,13 +114,60 @@ fn hermes_mirror_dir() -> PathBuf {
         .join("hermes-chat-mirror")
 }
 
-/// Where the sync left off for one session: the newest mirrored row id and how
-/// many active rows the mirror holds. `active_count` is what detects a rewind:
-/// appends grow it in lockstep with new ids, deactivation shrinks it.
-#[derive(Clone, Copy, Default)]
+/// Where the sync left off for one session: the newest row id read and how
+/// many visible rows the store held then, the messages already written and the
+/// newest timestamp written. `visible_count` is what detects a rewind or an
+/// in-place compaction: appends grow it in lockstep with new ids, while `/undo`
+/// and a compaction hide rows.
+#[derive(Default)]
 struct HermesMirrorCursor {
     last_row_id: i64,
-    active_count: i64,
+    visible_count: i64,
+    written: HashSet<HermesMirrorKey>,
+    last_timestamp: f64,
+}
+
+impl HermesMirrorCursor {
+    /// CDXC:SessionChat 2026-09-28 WHY:
+    /// Hermes compaction keeps the conversation in its session store but moves it around. In place (the default) it archives older rows (`active = 0, compacted = 1`), hides the recent rows it carries forward (`active = 0, compacted = 0`, the same flags `/undo` uses) and re-inserts them after the summary, sometimes with the summary folded into the first one and tool output pruned ("[read_file] read … (2,781 chars)"). With `compression.in_place: false` it instead ends the session (`end_reason = 'compression'`) and continues in a child session whose first rows are copies. A chat that read only the live rows of the session it follows lost every earlier prompt and reply the moment a busy session compacted, while the terminal still showed them (Dobby session G26an lost four of Sven's five prompts). So every logical message that still has a live or archived copy is written once, as its first row, even when that row is hidden: it is what the terminal printed, where it printed it. A copy keeps its role and timestamp and a tool result its call id, while pruning and a folded summary change everything else, so those three identify it. Timestamps never go backwards because chat orders by timestamp and Hermes by row id: a /steer message is stamped 0.6 ms after the reply it precedes, so chat drew it below the answer while the terminal printed "⏩ Steered" above it.
+    fn render_rows(&mut self, rows: &[HermesMessageRow]) -> String {
+        let keys: Vec<u64> = rows.iter().map(hermes_message_key).collect();
+        let shown: HashSet<u64> = if rows.iter().all(|row| row.visible) {
+            HashSet::new()
+        } else {
+            rows.iter()
+                .zip(&keys)
+                .filter(|(row, _)| row.visible)
+                .map(|(_, key)| *key)
+                .collect()
+        };
+        let mut rendered = String::new();
+        for (row, key) in rows.iter().zip(keys) {
+            let mirror_key = match (row.compaction_summary, row.visible) {
+                (true, true) => HermesMirrorKey::Compaction(row.row_id),
+                (true, false) => continue,
+                (false, visible) if visible || shown.contains(&key) => {
+                    HermesMirrorKey::Message(key)
+                }
+                (false, _) => continue,
+            };
+            if !self.written.insert(mirror_key) {
+                continue;
+            }
+            self.last_timestamp = self.last_timestamp.max(row.timestamp);
+            if row.compaction_summary {
+                let marker = json!({
+                    "rowId": row.row_id,
+                    "role": "compaction",
+                    "timestamp": self.last_timestamp,
+                });
+                rendered.push_str(&format!("{marker}\n"));
+            } else {
+                rendered.push_str(&hermes_row_json_line(row, self.last_timestamp));
+            }
+        }
+        rendered
+    }
 }
 
 static MIRROR_CURSORS: Mutex<Option<HashMap<String, HermesMirrorCursor>>> = Mutex::new(None);
@@ -133,6 +184,22 @@ struct HermesMessageRow {
     reasoning: Option<String>,
     reasoning_content: Option<String>,
     message_items: Option<String>,
+    display_kind: Option<String>,
+    display_text: Option<String>,
+    compaction_summary: bool,
+    visible: bool,
+}
+
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+enum HermesMirrorKey {
+    Message(u64),
+    Compaction(i64),
+}
+
+fn hermes_message_key(row: &HermesMessageRow) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (&row.role, row.timestamp.to_bits(), &row.tool_call_id).hash(&mut hasher);
+    hasher.finish()
 }
 
 /// CDXC:SessionChat 2026-09-27 WHY:
@@ -156,11 +223,11 @@ fn hermes_row_text(row: &HermesMessageRow) -> Option<String> {
     (!text.is_empty()).then_some(text)
 }
 
-fn hermes_row_json_line(row: &HermesMessageRow) -> String {
+fn hermes_row_json_line(row: &HermesMessageRow, timestamp: f64) -> String {
     let mut record = json!({
         "rowId": row.row_id,
         "role": row.role,
-        "timestamp": row.timestamp,
+        "timestamp": timestamp,
     });
     let object = record.as_object_mut().expect("literal object");
     if let Some(content) = hermes_row_text(row).or_else(|| row.content.clone()) {
@@ -188,6 +255,12 @@ fn hermes_row_json_line(row: &HermesMessageRow) -> String {
             "reasoningContent".into(),
             Value::String(reasoning_content.clone()),
         );
+    }
+    if let Some(display_kind) = &row.display_kind {
+        object.insert("displayKind".into(), Value::String(display_kind.clone()));
+    }
+    if let Some(display_text) = &row.display_text {
+        object.insert("displayText".into(), Value::String(display_text.clone()));
     }
     let mut line = record.to_string();
     line.push('\n');
@@ -255,25 +328,89 @@ pub(crate) fn read_hermes_session_title(
     })
 }
 
-fn read_hermes_active_rows(
+/// The session (`?1`) and the sessions it continues after a compaction that rotated it. A parent
+/// that ended any other way (a subagent's parent, a reset) is a different conversation.
+const HERMES_LINEAGE_CTE: &str = "WITH RECURSIVE lineage(id) AS (SELECT ?1 UNION \
+     SELECT parent.id FROM lineage \
+     JOIN sessions AS child ON child.id = lineage.id \
+     JOIN sessions AS parent ON parent.id = child.parent_session_id \
+     AND parent.end_reason = 'compression') ";
+
+/// The mirror's two reads for one store: the visible rows' count and newest id, and the rows
+/// after `?2` (only visible ones while `?3` is 1; hidden ones too for a rebuild).
+struct HermesMirrorQueries {
+    count: String,
+    rows: String,
+}
+
+/// Built from the store's own columns: older Hermes stores lack the newer ones.
+fn hermes_mirror_queries(connection: &Connection) -> Option<HermesMirrorQueries> {
+    let mut statement = connection
+        .prepare("SELECT name FROM pragma_table_info('messages')")
+        .ok()?;
+    let columns = statement
+        .query_map([], |row| row.get::<_, String>(0))
+        .ok()?
+        .collect::<rusqlite::Result<HashSet<String>>>()
+        .ok()?;
+    let column = |name: &'static str, fallback: &'static str| {
+        if columns.contains(name) {
+            name
+        } else {
+            fallback
+        }
+    };
+    // Hermes' own guard: a malformed metadata value reads as no metadata instead of failing the query.
+    let metadata = |path: &str| {
+        format!(
+            "json_extract(CASE WHEN json_valid(display_metadata) \
+             THEN display_metadata ELSE '{{}}' END, '{path}')"
+        )
+    };
+    let visible = if columns.contains("compacted") {
+        "(active = 1 OR compacted = 1)"
+    } else {
+        "active != 0"
+    };
+    let in_session = "session_id IN (SELECT id FROM lineage)";
+    let (display_text, shown) = if columns.contains("display_metadata") {
+        let model_only = metadata("$.model_only");
+        (
+            metadata("$.display_text"),
+            format!("COALESCE({model_only}, 0) = 0"),
+        )
+    } else {
+        ("NULL".to_string(), "1".to_string())
+    };
+    Some(HermesMirrorQueries {
+        // Change detection only, so it skips the per-row `model_only` check: a model-only row costs one rebuild.
+        count: format!(
+            "{HERMES_LINEAGE_CTE}SELECT COUNT(*), COALESCE(MAX(id), 0) FROM messages \
+             WHERE {in_session} AND {visible}"
+        ),
+        rows: format!(
+            "{HERMES_LINEAGE_CTE}SELECT id, role, content, tool_calls, tool_name, tool_call_id, \
+                    timestamp, finish_reason, reasoning, reasoning_content, {}, {}, \
+                    {display_text}, {}, {visible} \
+             FROM messages WHERE {in_session} AND {shown} AND id > ?2 AND ({visible} OR ?3 = 0) \
+             ORDER BY id",
+            column("codex_message_items", "NULL"),
+            column("display_kind", "NULL"),
+            column("_compressed_summary", "0"),
+        ),
+    })
+}
+
+fn read_hermes_rows(
     connection: &Connection,
+    queries: &HermesMirrorQueries,
     session_id: &str,
     after_row_id: i64,
+    visible_only: bool,
 ) -> rusqlite::Result<Vec<HermesMessageRow>> {
-    // Older Hermes stores have no `codex_message_items` column.
-    let message_items = connection
-        .query_row(
-            "SELECT 1 FROM pragma_table_info('messages') WHERE name = 'codex_message_items'",
-            [],
-            |_| Ok(()),
-        )
-        .map_or("NULL", |()| "codex_message_items");
-    let mut statement = connection.prepare(&format!(
-        "SELECT id, role, content, tool_calls, tool_name, tool_call_id, timestamp, \
-                finish_reason, reasoning, reasoning_content, {message_items} \
-         FROM messages WHERE session_id = ?1 AND active != 0 AND id > ?2 ORDER BY id",
-    ))?;
-    let rows = statement.query_map(rusqlite::params![session_id, after_row_id], |row| {
+    let mut statement = connection.prepare(&queries.rows)?;
+    let params = rusqlite::params![session_id, after_row_id, visible_only];
+    let rows = statement.query_map(params, |row| {
         Ok(HermesMessageRow {
             row_id: row.get(0)?,
             role: row.get(1)?,
@@ -286,13 +423,17 @@ fn read_hermes_active_rows(
             reasoning: row.get(8)?,
             reasoning_content: row.get(9)?,
             message_items: row.get(10)?,
+            display_kind: row.get(11)?,
+            display_text: row.get(12)?,
+            compaction_summary: row.get::<_, Option<i64>>(13)?.is_some_and(|flag| flag != 0),
+            visible: row.get(14)?,
         })
     })?;
     rows.collect()
 }
 
 /// One sync pass for one session. Returns the mirror path once the session has
-/// at least one active row; `None` before the first prompt (the follower keeps
+/// at least one visible row; `None` before the first prompt (the follower keeps
 /// polling with status "starting", exactly as for an agent whose transcript
 /// file has not appeared yet).
 fn sync_hermes_transcript_mirror(session_id: &str) -> Option<PathBuf> {
@@ -301,15 +442,13 @@ fn sync_hermes_transcript_mirror(session_id: &str) -> Option<PathBuf> {
     }
     let mirror_path = hermes_mirror_dir().join(format!("{session_id}.jsonl"));
     let connection = open_hermes_state_db(session_id)?;
-    let (active_count, max_row_id) = connection
-        .query_row(
-            "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM messages \
-             WHERE session_id = ?1 AND active != 0",
-            rusqlite::params![session_id],
-            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
-        )
+    let queries = hermes_mirror_queries(&connection)?;
+    let (visible_count, max_row_id) = connection
+        .query_row(&queries.count, rusqlite::params![session_id], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+        })
         .ok()?;
-    if active_count == 0 {
+    if visible_count == 0 {
         return None;
     }
 
@@ -317,26 +456,27 @@ fn sync_hermes_transcript_mirror(session_id: &str) -> Option<PathBuf> {
     let cursors = cursors_guard.get_or_insert_with(HashMap::new);
     // A cursor only counts when the file it describes is still there; a wiped
     // state dir or fresh daemon always rebuilds.
-    let cursor = cursors
-        .get(session_id)
-        .copied()
-        .filter(|_| mirror_path.is_file());
-
-    let up_to_date = cursor.is_some_and(|cursor| {
-        cursor.last_row_id == max_row_id && cursor.active_count == active_count
-    });
+    let mirror_exists = mirror_path.is_file();
+    let up_to_date = mirror_exists
+        && cursors.get(session_id).is_some_and(|cursor| {
+            cursor.last_row_id == max_row_id && cursor.visible_count == visible_count
+        });
     if up_to_date {
         return Some(mirror_path);
     }
+    // Taken out until this pass succeeds, so a failed write leaves the next pass a rebuild.
+    let cursor = cursors.remove(session_id).filter(|_| mirror_exists);
 
-    let appended_rows = match cursor {
+    let appended_rows = match &cursor {
         Some(cursor) if max_row_id > cursor.last_row_id => {
-            read_hermes_active_rows(&connection, session_id, cursor.last_row_id).ok()?
+            read_hermes_rows(&connection, &queries, session_id, cursor.last_row_id, true).ok()?
         }
         _ => Vec::new(),
     };
     let pure_append = cursor
-        .is_some_and(|cursor| active_count == cursor.active_count + appended_rows.len() as i64);
+        .as_ref()
+        .is_some_and(|cursor| visible_count == cursor.visible_count + appended_rows.len() as i64);
+    let mut cursor = cursor.filter(|_| pure_append).unwrap_or_default();
 
     fs::create_dir_all(mirror_path.parent()?).ok()?;
     if pure_append {
@@ -344,30 +484,23 @@ fn sync_hermes_transcript_mirror(session_id: &str) -> Option<PathBuf> {
             .append(true)
             .open(&mirror_path)
             .ok()?;
-        for row in &appended_rows {
-            file.write_all(hermes_row_json_line(row).as_bytes()).ok()?;
-        }
+        file.write_all(cursor.render_rows(&appended_rows).as_bytes())
+            .ok()?;
     } else {
-        // Cold start, rewind, or deactivation: rebuild the whole mirror and
-        // swap it in by rename so no reader ever sees a torn file. The new
-        // inode is what tells the follower the content was replaced.
-        let rows = read_hermes_active_rows(&connection, session_id, 0).ok()?;
+        // Cold start, rewind or in-place compaction: rebuild the whole mirror
+        // from every row, hidden ones included (see `render_rows`), and swap it
+        // in by rename so no reader ever sees a torn file. The new inode is what
+        // tells the follower the content was replaced.
+        let rows = read_hermes_rows(&connection, &queries, session_id, 0, false).ok()?;
         let temp_path = mirror_path.with_extension("jsonl.tmp");
         let mut file = fs::File::create(&temp_path).ok()?;
-        for row in &rows {
-            file.write_all(hermes_row_json_line(row).as_bytes()).ok()?;
-        }
-        file.flush().ok()?;
+        file.write_all(cursor.render_rows(&rows).as_bytes()).ok()?;
         drop(file);
         fs::rename(&temp_path, &mirror_path).ok()?;
     }
-    cursors.insert(
-        session_id.to_string(),
-        HermesMirrorCursor {
-            last_row_id: max_row_id,
-            active_count,
-        },
-    );
+    cursor.last_row_id = max_row_id;
+    cursor.visible_count = visible_count;
+    cursors.insert(session_id.to_string(), cursor);
     Some(mirror_path)
 }
 
