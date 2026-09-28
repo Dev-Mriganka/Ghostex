@@ -540,7 +540,8 @@ when you open it.
   header's ⋯ menu sleeps many at once and shows CPU and RAM per session. Clean RAM
   copies a diagnosis prompt; paste it into an agent session to reduce RAM use.
   Sleeping sidebar sessions keep their normal title color and show a dimmer
-  last-active time on the right; awake sessions show a stronger timestamp. Use `ghostex sleep|wake <selector>` to
+  last-active time on the right; turn on Settings > Advanced > Dim sleeping
+  sessions to fade the whole row instead (`dimSleepingSessions`). Use `ghostex sleep|wake <selector>` to
   sleep or wake a session.
 - A sleeping session wakes when you ask for it. Clicking its row in the
   sidebar wakes it. Selecting its tab, opening its project, or
@@ -548,7 +549,11 @@ when you open it.
   its name and a Resume button instead; click anywhere in the pane or press a key to
   wake the session. With
   Click to Wake Sleeping Panes turned off, those wake right away
-  (`clickToWakeSleepingSessions`).
+  (`clickToWakeSleepingSessions`). To stop a sidebar click from waking a
+  sleeping session, turn off Settings > Advanced > Wake sleeping sessions when
+  selected: the click then opens the session with its Resume button, and it
+  wakes only when you click the pane or press a key
+  (`wakeSleepingSessionsOnSelect`).
 - Drag pinned sessions to reorder them within their project. Rows stay in place
   while an icon-and-title ghost follows the pointer; the insertion line marks
   where the session moves when you drop it.
@@ -595,6 +600,7 @@ when you open it.
   resumes work. Close After Done closes a pane once its command exits.
 
 Related settings: `autoSleep*`, `clickToWakeSleepingSessions`,
+`dimSleepingSessions`, `wakeSleepingSessionsOnSelect`,
 `showSessionIdInTerminalPanes`, `sessionTitleGenerationAgent`,
 `renameSessionOnDoubleClick`.
 

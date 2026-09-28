@@ -73,6 +73,9 @@ impl GhostexGpuiApp {
         );
         let stale = group.is_stale && !session.is_browser();
         let sleeping = session.lifecycle_state.as_deref() == Some("sleeping");
+        // CDXC:SessionSleep 2026-09-29 DECISION: User (issue 177): by default a sleeping row dims only its last-active time; Advanced > Dim sleeping sessions fades the whole row, and hovering it brings the row back to full strength so its hover buttons stay readable.
+        let dim_sleeping =
+            sleeping && !hovered && hud["settings"]["dimSleepingSessions"].as_bool() == Some(true);
         let icon = super::icons::session_icon(session, hud, appearance, hovered);
         let double_click_rename = hud["settings"]["renameSessionOnDoubleClick"].as_bool()
             == Some(true)
@@ -142,6 +145,7 @@ impl GhostexGpuiApp {
                 .relative().h(px(SESSION_HEIGHT * scale)).w_full().min_w_0().pl(px(5.0 * scale)).pr(px(6.0 * scale)).gap(px(6.0 * scale)).rounded(px(5.0 * scale))
                 .cursor_default()
                 .when(stale, |row| row.opacity(0.55))
+                .when(dim_sleeping && !stale, |row| row.opacity(0.5))
                 .when(self.native_sidebar.is_dragging("session", &session_id), |row| row.opacity(0.2))
                 .when_some(completion, |row, start| row.opacity(super::status::completion_opacity(start)))
                 .when(visible && !focused, |row| row.bg(appearance.visible))

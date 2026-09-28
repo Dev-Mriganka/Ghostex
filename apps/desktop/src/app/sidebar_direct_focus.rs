@@ -164,9 +164,19 @@ impl GhostexGpuiApp {
                 {
                     session.title = row.title().to_owned();
                     session.agent_icon = icon;
-                    // Not a startup-pipeline candidate: the attach owns this tab.
+                    // Not a startup-pipeline candidate: the attach owns this tab. A sleeping
+                    // session that selection must not wake starts as its Resume pill instead,
+                    // which the store's focus then selects asleep (sleeping_tab_focus.rs).
+                    let settings = shared_settings::shared_sidebar_settings_snapshot();
+                    let stays_asleep = row.lifecycle_state.as_deref() == Some("sleeping")
+                        && !gpui_wake_sleeping_sessions_on_select_from_shared_settings(&settings)
+                        && gpui_click_to_wake_sleeping_sessions_from_shared_settings(&settings);
                     session.set_presentation_state_with_startup_eligibility(
-                        TerminalSessionPresentationState::Mounting,
+                        if stays_asleep {
+                            TerminalSessionPresentationState::Sleeping
+                        } else {
+                            TerminalSessionPresentationState::Mounting
+                        },
                         false,
                     );
                 }

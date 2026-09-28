@@ -152,6 +152,7 @@ export type MainSettingsScrollTargetId =
   | 'autoSleep'
   | 'power'
   | 'sounds'
+  | 'sleepingSessions'
   | 'beta';
 
 export type MainSettingsSectionRefs = Record<MainSettingsScrollTargetId, RefObject<HTMLDivElement | null>>;
@@ -356,7 +357,7 @@ export const MAIN_SETTINGS_SECTION_SETTING_KEYS: Record<MainSettingsSectionId, r
     'keepAwakeDeactivateOnLowPowerMode',
     'keepAwakeDeactivateOnUserSwitch',
   ],
-  advanced: ['showBetaFeatures'],
+  advanced: ['dimSleepingSessions', 'wakeSleepingSessionsOnSelect', 'showBetaFeatures'],
 };
 
 export const MAIN_SETTINGS_SCROLL_TARGET_SETTING_KEYS = {
@@ -455,6 +456,7 @@ export const MAIN_SETTINGS_SCROLL_TARGET_SETTING_KEYS = {
     'actionCompletionSound',
     'copySound',
   ],
+  sleepingSessions: ['dimSleepingSessions', 'wakeSleepingSessionsOnSelect'],
   beta: ['showBetaFeatures'],
 } satisfies Record<MainSettingsScrollTargetId, readonly string[]>;
 
@@ -469,6 +471,7 @@ export type MainSettingsSubsectionId =
   | 'sessionCards'
   | 'sidebar'
   | 'sidebarTags'
+  | 'sleepingSessions'
   | 'terminal'
   | 'terminalBehavior'
   | 'terminalDevServers'
@@ -491,7 +494,10 @@ export type MainSettingsSubsectionNavigationItem = {
 export const MAIN_SETTINGS_SUBSECTION_NAVIGATION: Partial<
   Record<MainSettingsSectionId, readonly MainSettingsSubsectionNavigationItem[]>
 > = {
-  advanced: [{ id: 'beta', title: 'Experimental' }],
+  advanced: [
+    { id: 'sleepingSessions', title: 'Sleeping Sessions' },
+    { id: 'beta', title: 'Experimental' },
+  ],
   appearance: [
     { id: 'theming', title: 'Theme' },
     { id: 'appIcon', title: 'App Icon' },
@@ -689,6 +695,8 @@ export const ADVANCED_MAIN_SETTING_KEYS = new Set<string>([
   'keepAwakeDeactivateOnLowPowerMode',
   'keepAwakeDeactivateOnUserSwitch',
   'attentionNotificationActions',
+  'dimSleepingSessions',
+  'wakeSleepingSessionsOnSelect',
   'showBetaFeatures',
 ]);
 

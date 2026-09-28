@@ -2746,6 +2746,36 @@
       "agentWritable": true
     },
     {
+      "key": "dimSleepingSessions",
+      "title": "Dim sleeping sessions",
+      "subtitle": "Fade sleeping sessions in the sidebar so they stand apart from awake ones.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "advanced",
+      "groupTitle": "Advanced",
+      "section": "sleepingSessions",
+      "sectionTitle": "Sleeping Sessions",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "agentWritable": true
+    },
+    {
+      "key": "wakeSleepingSessionsOnSelect",
+      "title": "Wake sleeping sessions when selected",
+      "subtitle": "Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "advanced",
+      "groupTitle": "Advanced",
+      "section": "sleepingSessions",
+      "sectionTitle": "Sleeping Sessions",
+      "type": "boolean",
+      "default": true,
+      "advanced": true,
+      "agentWritable": true
+    },
+    {
       "key": "showBetaFeatures",
       "title": "Enable Experimental Features",
       "subtitle": "Show experimental surfaces: OS Integration settings, Browser color scheme, and Keep Awake.",

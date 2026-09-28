@@ -590,6 +590,8 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   terminalBackgroundMode: 'pure',
   workspaceBackgroundColor: '',
   clickToWakeSleepingSessions: true,
+  dimSleepingSessions: false,
+  wakeSleepingSessionsOnSelect: true,
   customViews: [],
   customViewTemplates: [],
   viewScopes: {},

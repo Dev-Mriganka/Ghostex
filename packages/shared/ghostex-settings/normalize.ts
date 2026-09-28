@@ -1033,6 +1033,12 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'clickToWakeSleepingSessions',
       DEFAULT_ghostex_SETTINGS.clickToWakeSleepingSessions
     ),
+    dimSleepingSessions: readBoolean(source, 'dimSleepingSessions', DEFAULT_ghostex_SETTINGS.dimSleepingSessions),
+    wakeSleepingSessionsOnSelect: readBoolean(
+      source,
+      'wakeSleepingSessionsOnSelect',
+      DEFAULT_ghostex_SETTINGS.wakeSleepingSessionsOnSelect
+    ),
     customViews: normalizeGhostexCustomViews(source.customViews),
     customViewTemplates: normalizeProjectViewTemplates(source.customViewTemplates),
     viewScopes: normalizeGhostexViewScopes(source.viewScopes),

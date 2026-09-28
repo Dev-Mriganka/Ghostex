@@ -36,6 +36,8 @@ use serde_json::{Value, json};
 
 use super::focus_perform::RowFocusOptions;
 use crate::GhostexGpuiApp;
+use crate::app::model::gpui_wake_sleeping_sessions_on_select_from_shared_settings;
+use crate::shared_settings;
 
 /// What this app run did with local row focus. Rides `gxStore.sidebarActions.summary`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -93,8 +95,14 @@ impl GhostexGpuiApp {
         let app = cx.entity().downgrade();
         cx.defer(move |cx| {
             let _ = app.update(cx, |app, cx| {
+                // With Wake sleeping sessions when selected off, a sleeping row is selected
+                // asleep and shows its Resume pill (sleeping_tab_focus.rs).
+                let keep_sleeping = !gpui_wake_sleeping_sessions_on_select_from_shared_settings(
+                    &shared_settings::shared_sidebar_settings_snapshot(),
+                );
                 let options = RowFocusOptions {
                     keep_view,
+                    keep_sleeping,
                     ..RowFocusOptions::default()
                 };
                 app.gx_store_focus_session_row(&session_id, options, cx);

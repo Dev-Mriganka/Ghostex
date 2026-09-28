@@ -511,6 +511,7 @@ export function SettingsModal({
   const statusIndicatorsSectionRef = useRef<HTMLDivElement>(null);
   const sessionCardsSectionRef = useRef<HTMLDivElement>(null);
   const betaSectionRef = useRef<HTMLDivElement>(null);
+  const sleepingSessionsSectionRef = useRef<HTMLDivElement>(null);
   const agentsOnboardingSectionRef = useRef<HTMLDivElement>(null);
   const sidebarSectionRef = useRef<HTMLDivElement>(null);
   const themingSectionRef = useRef<HTMLDivElement>(null);
@@ -863,11 +864,12 @@ export function SettingsModal({
   });
   const mainSettingsSectionRefs: MainSettingsSectionRefs = {
     agents: agentsOnboardingSectionRef,
-    advanced: betaSectionRef,
+    advanced: sleepingSessionsSectionRef,
     appearance: themingSectionRef,
     appIcon: appIconSectionRef,
     autoSleep: autoSleepSectionRef,
     beta: betaSectionRef,
+    sleepingSessions: sleepingSessionsSectionRef,
     fileOpening: fileOpeningSectionRef,
     browser: browserSectionRef,
     chat: chatSectionRef,
@@ -964,6 +966,7 @@ export function SettingsModal({
     appIconSectionRef,
     autoSleepSectionRef,
     betaSectionRef,
+    sleepingSessionsSectionRef,
     browserSectionRef,
     chatSectionRef,
     dialogContentRef,
@@ -2774,6 +2777,29 @@ export function SettingsModal({
                                 ]}
                                 description='Run the current completion sound and notification flow, or open system notification permissions.'
                                 label='Completion Alerts'
+                              />
+                            ) : null}
+                          </SettingsSection>
+                        ) : null}
+
+                        {mainSubsectionVisible('sleepingSessions', settingsSearch.sleepingSessions) ? (
+                          <SettingsSection sectionRef={sleepingSessionsSectionRef} title='Sleeping Sessions'>
+                            {mainSettingVisible(settingsSearch.sleepingSessions, 'dimSleepingSessions') ? (
+                              <ToggleField
+                                checked={draft.dimSleepingSessions}
+                                description='Fade sleeping sessions in the sidebar so they stand apart from awake ones.'
+                                label='Dim sleeping sessions'
+                                {...getSettingModificationProps('dimSleepingSessions')}
+                                onChange={(checked) => updateDraft('dimSleepingSessions', checked)}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.sleepingSessions, 'wakeSleepingSessionsOnSelect') ? (
+                              <ToggleField
+                                checked={draft.wakeSleepingSessionsOnSelect}
+                                description='Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.'
+                                label='Wake sleeping sessions when selected'
+                                {...getSettingModificationProps('wakeSleepingSessionsOnSelect')}
+                                onChange={(checked) => updateDraft('wakeSleepingSessionsOnSelect', checked)}
                               />
                             ) : null}
                           </SettingsSection>

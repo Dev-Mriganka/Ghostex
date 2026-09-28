@@ -165,6 +165,10 @@ How to use this file:
 - **Copy Sound** `copySound` (boolean, default false): Play a short sound when copying to the clipboard, including text from the chat composer.
 ### Advanced
 
+#### Sleeping Sessions
+
+- **Dim sleeping sessions** `dimSleepingSessions` (boolean, default false) [advanced]: Fade sleeping sessions in the sidebar so they stand apart from awake ones.
+- **Wake sleeping sessions when selected** `wakeSleepingSessionsOnSelect` (boolean, default true) [advanced]: Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.
 #### Experimental
 
 - **Enable Experimental Features** `showBetaFeatures` (boolean, default false) [advanced]: Show experimental surfaces: OS Integration settings, Browser color scheme, and Keep Awake.

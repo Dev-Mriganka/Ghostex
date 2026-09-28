@@ -434,7 +434,8 @@ export function getSettingsSearchSectionDefinitions() {
         },
         {
           key: 'highlightPendingQuestions',
-          subtitle: 'Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.',
+          subtitle:
+            'Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.',
           title: 'Highlight unanswered questions',
         },
         {
@@ -1094,6 +1095,22 @@ export function getSettingsSearchSectionDefinitions() {
         },
       ],
     },
+    sleepingSessions: {
+      title: 'Sleeping Sessions',
+      settings: [
+        {
+          key: 'dimSleepingSessions',
+          subtitle: 'Fade sleeping sessions in the sidebar so they stand apart from awake ones.',
+          title: 'Dim sleeping sessions',
+        },
+        {
+          key: 'wakeSleepingSessionsOnSelect',
+          subtitle:
+            'Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.',
+          title: 'Wake sleeping sessions when selected',
+        },
+      ],
+    },
     beta: {
       title: 'Experimental',
       settings: [
@@ -1156,7 +1173,7 @@ export const MAIN_SETTINGS_GROUP_SECTIONS: Record<
   statusIndicators: { sections: ['statusIndicators'], title: 'Status Indicators' },
   notifications: { sections: ['sounds'], title: 'Notifications' },
   system: { sections: ['autoSleep', 'power'], title: 'System' },
-  advanced: { sections: ['beta'], title: 'Advanced' },
+  advanced: { sections: ['sleepingSessions', 'beta'], title: 'Advanced' },
 };
 
 export function getMainSettingsGroupSearch(settingsSearchQuery: string, settingsSearch: SettingsSearchSections) {
