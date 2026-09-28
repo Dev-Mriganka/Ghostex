@@ -19,8 +19,6 @@ use crate::GhostexGpuiApp;
 use crate::app::consts::WORKAREA_HEADER_EDGE_PADDING;
 use crate::app::helpers::{titlebar_svg_icon, titlebar_tooltip};
 
-/// `MANAGE_MEO_CONTENT_MAX_WIDTH`: the document's text column.
-const CONTENT_MAX_WIDTH: f32 = 800.0;
 thread_local! {
     /// The document header's bounds, so the selection toolbar flips below the text instead of
     /// covering the header.
@@ -217,11 +215,11 @@ impl GhostexGpuiApp {
                     } else {
                         titlebar_svg_icon(
                             if kind == DocsFileKind::Excalidraw {
-                                "docs/t-edit-175.svg"
+                                "files-view/t-edit-175.svg"
                             } else if media {
                                 super::files_list::file_icon(&path)
                             } else {
-                                "docs/t-file-text-175.svg"
+                                "files-view/t-file-text-175.svg"
                             },
                             15.0,
                             p.muted,
@@ -280,7 +278,7 @@ impl GhostexGpuiApp {
                         this.child(
                             header_tile(
                                 "native-docs-html-annotate",
-                                header_icon("docs/t-message-plus-2.svg", false, p),
+                                header_icon("files-view/t-message-plus-2.svg", false, p),
                                 annotate,
                                 false,
                                 p,
@@ -388,7 +386,7 @@ impl GhostexGpuiApp {
                             this.child(
                                 header_tile(
                                     "native-docs-reload",
-                                    header_icon("docs/t-refresh-2.svg", false, p),
+                                    header_icon("files-view/t-refresh-2.svg", false, p),
                                     false,
                                     false,
                                     p,
@@ -430,7 +428,7 @@ impl GhostexGpuiApp {
     fn render_native_docs_body(
         &mut self,
         p: &DocsPalette,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let notice = |icon: &'static str, text: String| {
@@ -450,7 +448,7 @@ impl GhostexGpuiApp {
         };
         let format_bar = self.render_native_docs_format_bar(p, cx);
         let Some(document) = self.native_docs.active_document() else {
-            return notice("docs/t-file-175.svg", "Select a file".to_string());
+            return notice("files-view/t-file-175.svg", "Select a file".to_string());
         };
         let open_externally = |path: String, reason: String, cx: &mut Context<Self>| {
             div()
@@ -493,7 +491,7 @@ impl GhostexGpuiApp {
         };
         match &document.load {
             DocsDocumentLoad::Loading => {
-                return notice("docs/t-refresh-2.svg", "Loading file".to_string());
+                return notice("files-view/t-refresh-2.svg", "Loading file".to_string());
             }
             DocsDocumentLoad::Error(error) => {
                 return notice("titlebar/alert-triangle.svg", error.clone());
@@ -512,7 +510,7 @@ impl GhostexGpuiApp {
             DocsFileKind::Image if document.svg_source => {}
             DocsFileKind::Image => {
                 let Some(image) = document.image.clone() else {
-                    return notice("docs/t-refresh-2.svg", "Loading file".to_string());
+                    return notice("files-view/t-refresh-2.svg", "Loading file".to_string());
                 };
                 return div()
                     .id("native-docs-image")
@@ -534,104 +532,73 @@ impl GhostexGpuiApp {
             | DocsFileKind::Excalidraw
             | DocsFileKind::Video
             | DocsFileKind::Audio => {
+                // The web runtime prompt (app/render/web_runtime_prompt.rs) with this file's Open
+                // in system app beside Install.
+                if let Some(prompt) =
+                    crate::app::helpers::web_runtime::web_runtime_install_prompt("This file")
+                {
+                    let path = document.path.clone();
+                    return self.render_web_runtime_prompt_card(
+                        "native-docs-web-runtime-prompt",
+                        prompt,
+                        Some(path),
+                        cx,
+                    );
+                }
                 if self.native_docs_browser_area_covered() {
                     return div().size_full().into_any_element();
                 }
-                return self
-                    .render_native_docs_browser_area(cx)
-                    .unwrap_or_else(|| notice("docs/t-refresh-2.svg", "Loading file".to_string()));
+                return self.render_native_docs_browser_area(cx).unwrap_or_else(|| {
+                    notice("files-view/t-refresh-2.svg", "Loading file".to_string())
+                });
             }
             DocsFileKind::Markdown => {
                 let Some(live) = document.live.clone() else {
-                    return notice("docs/t-refresh-2.svg", "Loading file".to_string());
+                    return notice("files-view/t-refresh-2.svg", "Loading file".to_string());
                 };
-                let body = super::editor_style::body_color(p);
-                let state = live.read(cx);
-                let rows = state.row_layout();
-                let text = state.text();
-                let caret = state.cursor().min(text.len());
-                let caret_line = text[..caret].bytes().filter(|byte| *byte == b'\n').count();
-                let source = document.mode == DocsMarkdownMode::Source;
-                // The viewport in the gutter's y (it starts below the column's 14px top pad), one
-                // screen of margin each side.
-                let band = {
-                    let viewport = document.scroll.bounds().size.height;
-                    let top = -document.scroll.offset().y - px(14.0);
-                    (viewport > px(0.0)).then(|| (top - viewport, top + viewport * 2.0))
-                };
-                let gutter = super::gutter::render(
-                    super::gutter::GutterModel {
-                        rows: &rows,
-                        caret_line,
-                        numbers: self.native_docs.line_numbers,
+                let body = super::markdown_body::render_markdown_body(
+                    super::markdown_body::DocsMarkdownBody {
+                        id: SharedString::from(format!("native-docs-scroll-{}", document.path)),
+                        live: &live,
+                        scroll: &document.scroll,
+                        source: document.mode == DocsMarkdownMode::Source,
+                        line_numbers: self.native_docs.line_numbers,
+                        constrain: self.native_docs.constrain_width,
                         changes: self
                             .native_docs
                             .git_changes
                             .then_some(document.changes.as_ref())
                             .flatten(),
-                        band,
                     },
                     p,
-                    body,
+                    window,
+                    cx,
+                )
+                .capture_key_down(cx.listener(Self::native_docs_selection_key));
+                let ruler = super::markdown_body::render_overview_ruler(
+                    &live,
+                    &document.scroll,
+                    self.native_docs
+                        .git_changes
+                        .then_some(document.changes.as_ref())
+                        .flatten(),
+                    p,
+                    cx,
                 );
-                let constrain = self.native_docs.constrain_width;
-                let focus_target = live.clone();
-                let scroll = document.scroll.clone();
                 return div()
                     .relative()
                     .size_full()
                     .flex()
                     .flex_col()
-                    .child(
-                        div()
-                            .id(SharedString::from(format!(
-                                "native-docs-scroll-{}",
-                                document.path
-                            )))
-                            .flex_1()
-                            .min_h_0()
-                            .overflow_y_scroll()
-                            .track_scroll(&scroll)
-                            .on_mouse_down(gpui::MouseButton::Left, move |_, window, cx| {
-                                focus_target.update(cx, |editor, cx| editor.focus(window, cx));
-                            })
-                            .capture_key_down(cx.listener(Self::native_docs_selection_key))
-                            .child(
-                                div().w_full().flex().justify_center().child(
-                                    div()
-                                        .w_full()
-                                        .when(constrain, |row| {
-                                            row.max_w(px(CONTENT_MAX_WIDTH + 51.0))
-                                        })
-                                        .pt(px(14.0))
-                                        .pb(px(72.0 + 60.0))
-                                        .pr(px(12.0))
-                                        .flex()
-                                        .items_start()
-                                        .child(gutter)
-                                        .child(
-                                            div()
-                                                .flex_1()
-                                                .min_w_0()
-                                                .text_size(px(14.0))
-                                                .text_color(body)
-                                                .font_family(if source {
-                                                    super::fonts::DOCS_MONO
-                                                } else {
-                                                    super::fonts::DOCS_FONT
-                                                })
-                                                .child(live),
-                                        ),
-                                ),
-                            ),
-                    )
+                    .child(body)
+                    .children(ruler)
                     .children(format_bar)
                     .into_any_element();
             }
             DocsFileKind::Text => {}
         }
         let Some(editor) = document.editor.clone() else {
-            return notice("docs/t-refresh-2.svg", "Loading file".to_string());
+            return notice("files-view/t-refresh-2.svg", "Loading file".to_string());
         };
         let path_row: SharedString = document.display_path.clone().into();
         div()

@@ -46,9 +46,6 @@ impl GhostexGpuiApp {
             self.mark_project_editor_mode_awake(TitlebarMode::Manage, cx);
             self.focus_project_editor_surface(TitlebarMode::Manage, window, cx);
         }
-        if !super::render::native_docs_enabled() {
-            return;
-        }
         if self.native_docs.search.is_some() && self.native_docs.project.is_some() {
             self.native_docs_show_search(window, cx);
         } else {

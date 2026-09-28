@@ -25,6 +25,9 @@ pub(crate) struct DocsFind {
     pub(crate) case_sensitive: bool,
     pub(crate) matches: Vec<Range<usize>>,
     pub(crate) active: usize,
+    /// What the last step or replace reported (text, error), shown until the query changes; the
+    /// match count shows otherwise (the Docs page's find status).
+    pub(crate) status: Option<(String, bool)>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -86,6 +89,7 @@ impl GhostexGpuiApp {
                     InputEvent::Change => {
                         if let Some(find) = this.native_docs.find.as_mut() {
                             find.active = 0;
+                            find.status = None;
                         }
                         this.native_docs_refresh_find(cx);
                         this.native_docs_reveal_match(window, cx);
@@ -114,6 +118,7 @@ impl GhostexGpuiApp {
             case_sensitive: false,
             matches: Vec::new(),
             active: 0,
+            status: None,
             _subscriptions: subscriptions,
         });
     }
@@ -151,6 +156,11 @@ impl GhostexGpuiApp {
             return;
         }
         find.visible = false;
+        // Closing clears the query, the replacement and the status, like the Docs page.
+        find.status = None;
+        let (query, replace) = (find.query.clone(), find.replace.clone());
+        query.update(cx, |query, cx| query.set_value("", window, cx));
+        replace.update(cx, |replace, cx| replace.set_value("", window, cx));
         self.native_docs_refresh_find(cx);
         if let Some(editor) = self.native_docs_live_editor() {
             editor.update(cx, |editor, cx| editor.focus(window, cx));
@@ -198,11 +208,19 @@ impl GhostexGpuiApp {
         let Some(find) = self.native_docs.find.as_mut() else {
             return;
         };
+        if find.query.read(cx).value().is_empty() {
+            find.status = Some(("Enter text".into(), true));
+            self.native_docs_notify(cx);
+            return;
+        }
         if find.matches.is_empty() {
+            find.status = Some(("No matches".into(), true));
+            self.native_docs_notify(cx);
             return;
         }
         let len = find.matches.len() as isize;
         find.active = ((find.active as isize + delta).rem_euclid(len)) as usize;
+        find.status = Some((format!("{}/{}", find.active + 1, find.matches.len()), false));
         self.native_docs_refresh_find(cx);
         self.native_docs_reveal_match(window, cx);
     }
@@ -236,17 +254,36 @@ impl GhostexGpuiApp {
         let Some(editor) = self.native_docs_live_editor() else {
             return;
         };
-        let Some(find) = self.native_docs.find.as_ref() else {
+        let Some(find) = self.native_docs.find.as_mut() else {
             return;
         };
+        if find.query.read(cx).value().is_empty() {
+            find.status = Some(("Enter text".into(), true));
+            self.native_docs_notify(cx);
+            return;
+        }
         let Some(range) = find.matches.get(find.active).cloned() else {
+            find.status = Some(("No matches".into(), true));
+            self.native_docs_notify(cx);
             return;
         };
         let replacement = find.replace.read(cx).value().to_string();
         editor.update(cx, |editor, cx| {
-            editor.replace_range(range, &replacement, cx)
+            editor.replace_range(range, &replacement, cx);
+            cx.emit(zorite_editor::EditorEvent::Changed);
         });
         self.native_docs_refresh_find(cx);
+        if let Some(find) = self.native_docs.find.as_mut() {
+            find.status = Some((
+                if find.matches.is_empty() {
+                    "Replaced".to_string()
+                } else {
+                    format!("Replaced - {}/{}", find.active + 1, find.matches.len())
+                },
+                false,
+            ));
+        }
+        self.native_docs_notify(cx);
     }
 
     fn native_docs_replace_all(&mut self, cx: &mut Context<Self>) {
@@ -256,13 +293,25 @@ impl GhostexGpuiApp {
         let Some(find) = self.native_docs.find.as_mut() else {
             return;
         };
+        if find.query.read(cx).value().is_empty() {
+            find.status = Some(("Enter text".into(), true));
+            self.native_docs_notify(cx);
+            return;
+        }
+        if find.matches.is_empty() {
+            find.status = Some(("No matches".into(), true));
+            self.native_docs_notify(cx);
+            return;
+        }
         let replacement = find.replace.read(cx).value().to_string();
         let matches = find.matches.clone();
         find.active = 0;
+        find.status = Some((format!("Replaced {} matches", matches.len()), false));
         editor.update(cx, |editor, cx| {
             for range in matches.into_iter().rev() {
                 editor.replace_range(range, &replacement, cx);
             }
+            cx.emit(zorite_editor::EditorEvent::Changed);
         });
         self.native_docs_refresh_find(cx);
     }
@@ -276,14 +325,13 @@ impl GhostexGpuiApp {
     ) -> Option<AnyElement> {
         let find = self.native_docs.find.as_ref().filter(|find| find.visible)?;
         let needle_empty = find.query.read(cx).value().is_empty();
-        let status = if needle_empty {
-            String::new()
-        } else if find.matches.is_empty() {
-            "No results".into()
-        } else {
-            format!("{} of {}", find.active + 1, find.matches.len())
+        // The Docs page's find status (`markdown-review-viewer.tsx` 157-243).
+        let (status, no_results) = match &find.status {
+            Some((text, error)) => (text.clone(), *error),
+            None if needle_empty => (String::new(), false),
+            None if find.matches.is_empty() => ("No matches".into(), true),
+            None => (format!("{} matches", find.matches.len()), false),
         };
-        let no_results = status == "No results";
         let (hover, icon_color) = (p.control_hover, p.toolbar_icon);
         let button =
             |id: &'static str, icon: &'static str, tooltip: &'static str, toggled: Option<bool>| {
@@ -355,7 +403,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-find-word",
-                                "docs/l-whole-word-2.svg",
+                                "files-view/l-whole-word-2.svg",
                                 "Whole Word",
                                 Some(whole_word),
                             )
@@ -370,7 +418,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-find-case",
-                                "docs/l-case-sensitive-2.svg",
+                                "files-view/l-case-sensitive-2.svg",
                                 "Case Sensitive",
                                 Some(case_sensitive),
                             )
@@ -385,7 +433,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-find-prev",
-                                "docs/l-chevron-up-2.svg",
+                                "files-view/l-chevron-up-2.svg",
                                 "Previous Match",
                                 None,
                             )
@@ -396,7 +444,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-find-next",
-                                "docs/l-chevron-down-2.svg",
+                                "files-view/l-chevron-down-2.svg",
                                 "Next Match",
                                 None,
                             )
@@ -414,7 +462,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-replace-one",
-                                "docs/l-replace-2.svg",
+                                "files-view/l-replace-2.svg",
                                 "Replace Current Match",
                                 None,
                             )
@@ -425,7 +473,7 @@ impl GhostexGpuiApp {
                         .child(
                             button(
                                 "docs-replace-all",
-                                "docs/l-replace-all-2.svg",
+                                "files-view/l-replace-all-2.svg",
                                 "Replace All Matches",
                                 None,
                             )
@@ -435,10 +483,15 @@ impl GhostexGpuiApp {
                         )
                         .child(div().w(px(24.0)))
                         .child(
-                            button("docs-find-close", "docs/l-x-2.svg", "Close Find", None)
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    this.native_docs_hide_find(window, cx)
-                                })),
+                            button(
+                                "docs-find-close",
+                                "files-view/l-x-2.svg",
+                                "Close Find",
+                                None,
+                            )
+                            .on_click(cx.listener(
+                                |this, _, window, cx| this.native_docs_hide_find(window, cx),
+                            )),
                         ),
                 )
                 .into_any_element(),

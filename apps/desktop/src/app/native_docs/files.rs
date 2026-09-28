@@ -134,7 +134,8 @@ impl GhostexGpuiApp {
             self.native_docs.format_bar_collapsed = super::storage::read_format_bar_collapsed();
             self.native_docs.line_numbers = true;
             self.native_docs.git_changes = true;
-            self.native_docs.constrain_width = true;
+            // The Docs page starts with the full content width (`markdown-review-viewer.tsx` 63).
+            self.native_docs.constrain_width = false;
         }
         self.native_docs_ensure_search(window, cx);
         if self.native_docs.project.as_ref() == Some(project) {
@@ -258,21 +259,33 @@ impl GhostexGpuiApp {
             json!({ "path": folder, "directoryOnly": true, "revision": revision }),
         );
         let folder = folder.to_string();
+        // The row shows "…" while its listing is on the way (`Folder not loaded yet`).
+        if !folder.is_empty() {
+            self.native_docs.folders_loading.insert(folder.clone());
+        }
         self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
             if this.native_docs.generation != generation {
                 return;
             }
+            this.native_docs.folders_loading.remove(&folder);
             if let Some(error) = response["error"].as_str() {
                 if folder.is_empty() {
                     this.native_docs.load_state = Some(DocsLoadState::Error);
                     this.native_docs.error = Some(error.to_string());
                 } else {
-                    // The folder went away (renamed, deleted): drop it and what was under it.
-                    this.native_docs_forget_folder(&folder);
+                    // The row shows "!" with the error (`Folder could not load`). Listing its
+                    // parent again drops the row when the folder went away (renamed, deleted).
+                    this.native_docs
+                        .folder_errors
+                        .insert(folder.clone(), error.to_string());
+                    this.native_docs.loaded_folders.remove(&folder);
+                    let parent = parent_path(&folder).to_string();
+                    this.native_docs_list_folder(&parent, cx);
                 }
                 this.native_docs_notify(cx);
                 return;
             }
+            this.native_docs.folder_errors.remove(&folder);
             if let Some(revision) = response["revision"].as_str() {
                 this.native_docs
                     .folder_revisions
@@ -333,6 +346,8 @@ impl GhostexGpuiApp {
         state.expanded.retain(|path| !under(path));
         state.loaded_folders.retain(|path| !under(path));
         state.folder_revisions.retain(|path, _| !under(path));
+        state.folder_errors.retain(|path, _| !under(path));
+        state.folders_loading.retain(|path| !under(path));
     }
 
     /// Runs the project-wide search for the search box's text a moment after typing stops.

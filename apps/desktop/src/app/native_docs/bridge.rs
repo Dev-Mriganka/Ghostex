@@ -36,9 +36,8 @@ impl GhostexGpuiApp {
                     self.gpui_remote_gxserver_request_target(reference.remote_machine_id.as_str());
                 (reference, target)
             });
-        // The native Files view (and the embed page it shows HTML in) covers the whole project;
-        // the Docs page only its Docs folders.
-        let project_scope = super::render::native_docs_enabled();
+        // The Files view (and the embed page it shows HTML in) covers the whole project.
+        let project_scope = true;
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let outcome = background

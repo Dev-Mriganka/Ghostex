@@ -33,6 +33,19 @@ pub(crate) struct BlockCache {
     images: HashMap<String, Option<Arc<RenderImage>>>,
     pending: HashSet<String>,
     code: HashMap<(String, String, bool), Vec<(Range<usize>, HighlightStyle)>>,
+    /// The Mermaid cards drawn in the documents, by (document, source, light), with the layout
+    /// the editor's gap follows.
+    #[allow(clippy::type_complexity)]
+    mermaid_widgets: HashMap<
+        (String, String, bool),
+        (
+            Entity<super::mermaid_widget::DocsMermaidWidget>,
+            Rc<std::cell::Cell<super::mermaid_widget::MermaidLayout>>,
+        ),
+    >,
+    /// What new Mermaid cards are drawn with and how they expand (set by `install`).
+    mermaid_colors: Option<super::mermaid_widget::MermaidColors>,
+    mermaid_expand: Option<super::mermaid_widget::MermaidExpand>,
 }
 
 pub(crate) type SharedCache = Rc<RefCell<BlockCache>>;
@@ -76,20 +89,38 @@ fn image_sources(text: &str) -> Vec<String> {
     sources
 }
 
-/// Installs every provider on a fresh editor for the document at `doc_path`.
+/// Installs every provider on a fresh editor for the document at `doc_path`. Its Mermaid blocks
+/// draw as cards in `colors` that open `expand` for their larger view.
 pub(crate) fn install(
     editor: &Entity<EditorState>,
     cache: &SharedCache,
     doc_path: String,
     light: bool,
+    colors: super::mermaid_widget::MermaidColors,
+    expand: super::mermaid_widget::MermaidExpand,
     cx: &mut App,
 ) {
+    {
+        let mut state = cache.borrow_mut();
+        state.mermaid_colors = Some(colors);
+        state.mermaid_expand = Some(expand);
+    }
     let mermaid = cache.clone();
     let math = cache.clone();
     let images = cache.clone();
     let code = cache.clone();
+    let widgets = cache.clone();
+    let widget_doc = doc_path.clone();
     let math_color = math_color_key(light);
     editor.update(cx, |editor, _| {
+        editor.set_mermaid_view_provider(move |source, width| {
+            let state = widgets.borrow();
+            let (widget, layout) =
+                state
+                    .mermaid_widgets
+                    .get(&(widget_doc.clone(), source.to_string(), light))?;
+            Some((widget.clone().into(), layout.get().height(width)))
+        });
         editor.set_block_mermaid_provider(move |source| {
             mermaid
                 .borrow()
@@ -148,10 +179,11 @@ pub(crate) fn prerender(
     cache: &SharedCache,
     doc_path: &str,
     light: bool,
-    scope: Option<crate::cef::ManageDocsResourceScope>,
+    scope: Option<crate::app::helpers::manage_docs_resources::ManageDocsResourceScope>,
     cx: &mut App,
 ) {
     let text = editor.read(cx).text().to_string();
+    ensure_mermaid_widgets(cache, doc_path, &text, light, cx);
     enum Job {
         Mermaid(String),
         Math(String),
@@ -217,7 +249,11 @@ pub(crate) fn prerender(
                 Job::Image(path) => {
                     let decoded = scope
                         .as_ref()
-                        .and_then(|scope| crate::cef::read_manage_docs_resource(scope, &path))
+                        .and_then(|scope| {
+                            crate::app::helpers::manage_docs_resources::read_manage_docs_resource(
+                                scope, &path,
+                            )
+                        })
                         .and_then(|bytes| decode_image(&path, &bytes));
                     (format!("i:{path}"), Landed::Image(path, decoded))
                 }
@@ -247,6 +283,55 @@ pub(crate) fn prerender(
         })
         .detach();
     }
+}
+
+/// Creates the Mermaid card for every diagram in the document that has none, and drops the cards
+/// of diagrams the document no longer has.
+fn ensure_mermaid_widgets(
+    cache: &SharedCache,
+    doc_path: &str,
+    text: &str,
+    light: bool,
+    cx: &mut App,
+) {
+    let sources: HashSet<String> = zorite_editor::mermaid_sources(text)
+        .into_iter()
+        .map(|source| source.to_string())
+        .filter(|source| !source.trim().is_empty())
+        .collect();
+    let (colors, expand, missing) = {
+        let mut state = cache.borrow_mut();
+        state
+            .mermaid_widgets
+            .retain(|(doc, source, _), _| doc != doc_path || sources.contains(source));
+        let missing: Vec<String> = sources
+            .into_iter()
+            .filter(|source| {
+                !state
+                    .mermaid_widgets
+                    .contains_key(&(doc_path.to_string(), source.clone(), light))
+            })
+            .collect();
+        (state.mermaid_colors, state.mermaid_expand.clone(), missing)
+    };
+    let (Some(colors), Some(expand)) = (colors, expand) else {
+        return;
+    };
+    if missing.is_empty() {
+        return;
+    }
+    for source in missing {
+        let expand = expand.clone();
+        let text = source.clone();
+        let widget = cx
+            .new(move |cx| super::mermaid_widget::DocsMermaidWidget::new(text, colors, expand, cx));
+        let layout = widget.read(cx).layout();
+        cache
+            .borrow_mut()
+            .mermaid_widgets
+            .insert((doc_path.to_string(), source, light), (widget, layout));
+    }
+    cx.refresh_windows();
 }
 
 enum Landed {
@@ -373,7 +458,7 @@ fn highlight(
     let mut highlighter = gpui_component::highlighter::SyntaxHighlighter::new(lang_name);
     let rope = gpui_component::Rope::from(text);
     highlighter.update(None, &rope, None);
-    let theme = crate::app::native_chat::markdown_style::highlight_theme(light);
+    let theme = super::editor_style::code_theme(light);
     let styles = highlighter.styles(&(0..text.len()), &*theme);
     let mut state = cache.borrow_mut();
     if state.code.len() > 512 {

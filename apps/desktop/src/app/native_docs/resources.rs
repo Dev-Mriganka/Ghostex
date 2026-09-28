@@ -3,17 +3,18 @@
 
 use std::sync::Arc;
 
+use crate::app::helpers::manage_docs_resources::{ManageDocsResourceRoot, ManageDocsResourceScope};
 use crate::app::helpers::*;
 use crate::*;
 
 impl GhostexGpuiApp {
     /// The current project's Docs resource scope: the project root and mounted Docs folders for a
     /// local project, the project's gxserver for a remote one. `None` without a project.
-    pub(crate) fn manage_docs_resource_scope(&self) -> Option<cef::ManageDocsResourceScope> {
+    pub(crate) fn manage_docs_resource_scope(&self) -> Option<ManageDocsResourceScope> {
         let snapshot = self.latest_sidebar_project_snapshot.as_ref()?;
         // The Files view opens any project file, so its pages and media load from the whole
         // project, as the file bridge's project scope reads it.
-        let project_scope = super::render::native_docs_enabled();
+        let project_scope = true;
         let active_project_id = snapshot.active_project_id.as_ref()?.0.as_str();
         if let Some(reference) = gpui_remote_project_reference_from_project_id(active_project_id) {
             /*
@@ -29,7 +30,7 @@ impl GhostexGpuiApp {
             let project_id = reference.project_id;
             let docs_folders =
                 gpui_manage_additional_docs_folders_text(&self.sidebar_runtime_settings_snapshot);
-            Some(cef::ManageDocsResourceScope::new_remote(Arc::new(
+            Some(ManageDocsResourceScope::new_remote(Arc::new(
                 move |relative_path| {
                     read_remote_manage_docs_resource(
                         target.as_ref(),
@@ -61,7 +62,7 @@ impl GhostexGpuiApp {
                 gpui_manage_additional_docs_folders_text(&self.sidebar_runtime_settings_snapshot);
             let global_docs_directory =
                 gpui_global_docs_directory_text(&self.sidebar_runtime_settings_snapshot);
-            Some(cef::ManageDocsResourceScope::new(
+            Some(ManageDocsResourceScope::new(
                 Arc::new(move || {
                     let roots = manage_docs_root(
                         Some(project_id.as_str()),
@@ -71,7 +72,7 @@ impl GhostexGpuiApp {
                         None,
                     )
                     .ok()?;
-                    let mut mounts = vec![cef::ManageDocsResourceRoot {
+                    let mut mounts = vec![ManageDocsResourceRoot {
                         allowed_relative_roots: if project_scope {
                             vec![String::new()]
                         } else {
@@ -84,7 +85,7 @@ impl GhostexGpuiApp {
                         path: roots.project,
                     }];
                     if let Some(path) = roots.extra.and_then(|mount| mount.location.ok()) {
-                        mounts.push(cef::ManageDocsResourceRoot {
+                        mounts.push(ManageDocsResourceRoot {
                             // The whole tree, matching what the mount lists.
                             allowed_relative_roots: vec![String::new()],
                             mount_segment: MANAGE_DOCS_EXTRA_ROOT_MOUNT_SEGMENT.to_string(),
@@ -97,7 +98,7 @@ impl GhostexGpuiApp {
                     let (id, _) = manage_chat_file_address(relative_path)?;
                     let authorization =
                         resolve_manage_chat_file(&dynamic_project_id, relative_path)?;
-                    Some(cef::ManageDocsResourceRoot {
+                    Some(ManageDocsResourceRoot {
                         allowed_relative_roots: vec![String::new()],
                         mount_segment: format!("{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/{id}"),
                         path: authorization.root,

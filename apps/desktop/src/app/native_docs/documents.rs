@@ -133,7 +133,11 @@ impl GhostexGpuiApp {
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let bytes = background
-                .spawn(async move { crate::cef::read_manage_docs_resource(&scope, &relative) })
+                .spawn(async move {
+                    crate::app::helpers::manage_docs_resources::read_manage_docs_resource(
+                        &scope, &relative,
+                    )
+                })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 if this.native_docs.generation != generation {

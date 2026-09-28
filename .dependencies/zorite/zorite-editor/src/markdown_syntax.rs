@@ -85,6 +85,13 @@ pub struct SyntaxStyle {
     pub property_icon: Option<PropertyIconFn>,
     /// Heading text colour (`None` = the body colour). Local addition for the Docs prototype.
     pub heading: Option<Hsla>,
+    /// Local change (Ghostex Docs): the blockquote bar colour (the Docs page's `base07`).
+    pub quote_bar: Hsla,
+    /// Local change (Ghostex Docs): the fenced code card's 1px border; `None` draws none.
+    pub code_border: Option<Hsla>,
+    /// Local change (Ghostex Docs): links open on Cmd-click (Ctrl-click off macOS) only, and a
+    /// plain click places the caret, like the Docs page.
+    pub links_need_modifier: bool,
 }
 
 impl Style {
@@ -607,6 +614,33 @@ fn scan_line(text: &str, start: usize, end: usize, st: &SyntaxStyle, out: &mut V
     if apply_heading(text, start, end, st, out) {
         return;
     }
+    // Local change (Ghostex Docs): a numbered footnote definition's `[^label]:` shows as "N.",
+    // like the Docs page; the raw label comes back with the caret on it.
+    if let Some(len) = footnote_def(&text[start..end])
+        && let Some(number) = footnote_number(&text[start + 2..start + len - 2])
+    {
+        out.push(Span {
+            range: start..start + len,
+            style: Style {
+                color: Some(st.link),
+                hide: true,
+                replace: Some(SharedString::from(format!("{number}."))),
+                ..Default::default()
+            },
+        });
+        let mut next_id = 1u16;
+        scan_inline(
+            text,
+            start + len,
+            end,
+            st,
+            out,
+            &Style::default(),
+            0,
+            &mut next_id,
+        );
+        return;
+    }
     // Blockquote: leading `>` (GFM nesting) + optional spaces. Hide the markers;
     // the body keeps inline styling over a muted base color (set by the caller).
     let mut i = start;
@@ -708,12 +742,14 @@ fn scan_inline(
                 let id = *next_id;
                 *next_id += 1;
                 fmt_marker(out, i..i + n, st.marker, id);
+                // Local change (Ghostex Docs): inline code in the monospace face, like the Docs page.
                 push(
                     out,
                     i + n..close,
                     Style {
                         color: Some(st.code),
                         bg: Some(st.code_bg),
+                        mono: true,
                         ..Default::default()
                     }
                     .over(base),
@@ -903,6 +939,32 @@ fn scan_inline(
             i = close + 2;
             continue;
         }
+        // Local change (Ghostex Docs): a footnote reference the document defines renders as its
+        // superscript number (by first use), like the Docs page; the raw `[^label]` comes back
+        // with the caret inside it.
+        if c == b'['
+            && !is_backslash_escaped(b, i)
+            && i + 1 < end
+            && b[i + 1] == b'^'
+            && let Some(rb) = find1(b, i + 2, end, b']')
+            && rb > i + 2
+            && let Some(number) = footnote_number(&text[i + 2..rb])
+        {
+            out.push(Span {
+                range: i..rb + 1,
+                style: Style {
+                    color: Some(st.link),
+                    hide: true,
+                    replace: Some(SharedString::from(zorite_markdown::syntax::superscript(
+                        number,
+                    ))),
+                    ..Default::default()
+                }
+                .over(base),
+            });
+            i = rb + 1;
+            continue;
+        }
         // Footnote reference: [^label] — rendered `[label]` in link color (the
         // `^` hidden), matching the reading view's resolved marker.
         if c == b'['
@@ -972,8 +1034,10 @@ fn scan_inline(
             && let Some(close) = find2(b, i + 2, end, b']', b']')
         {
             marker(out, i..i + 2, st.marker);
+            // Local change (Ghostex Docs): links are underlined, like the Docs page.
             let link = Style {
                 color: Some(st.link),
+                underline: true,
                 ..Default::default()
             }
             .over(base);
@@ -1063,6 +1127,7 @@ fn scan_inline(
                 i + 1..rb,
                 Style {
                     color: Some(st.link),
+                    underline: true,
                     ..Default::default()
                 }
                 .over(base),
@@ -1086,12 +1151,98 @@ fn scan_inline(
                 i + 1..rb,
                 Style {
                     color: Some(st.link),
+                    underline: true,
                     ..Default::default()
                 }
                 .over(base),
             );
             marker(out, rb..rb2 + 1, st.marker);
             i = rb2 + 1;
+            continue;
+        }
+        // Local change (Ghostex Docs): `<kbd>X</kbd>` renders as a keycap (bold monospace on the
+        // code tint, a thin space of the tint either side), its tags hidden off the caret, like
+        // the Docs page (`meo/helpers/kbd.ts`).
+        if c == b'<'
+            && b[i..end].starts_with(b"<kbd>")
+            && let Some(rel) = text[i + 5..end].find("</kbd>")
+            && rel > 0
+        {
+            let body = i + 5;
+            let close = body + rel;
+            let cap = |replace: &'static str| Style {
+                color: Some(st.marker),
+                bg: Some(st.code_bg),
+                hide: true,
+                replace: Some(SharedString::from(replace)),
+                ..Default::default()
+            };
+            out.push(Span {
+                range: i..body,
+                style: cap("\u{2009}"),
+            });
+            push(
+                out,
+                body..close,
+                Style {
+                    bold: true,
+                    mono: true,
+                    bg: Some(st.code_bg),
+                    ..Default::default()
+                }
+                .over(base),
+            );
+            out.push(Span {
+                range: close..close + 6,
+                style: cap("\u{2009}"),
+            });
+            i = close + 6;
+            continue;
+        }
+        // Local change (Ghostex Docs): an autolink `<https://…>` shows only its link; the angle
+        // brackets hide off the caret (`meo/helpers/urlDecorationRange.ts`).
+        if c == b'<'
+            && (b[i + 1..end].starts_with(b"http://")
+                || b[i + 1..end].starts_with(b"https://")
+                || b[i + 1..end].starts_with(b"mailto:"))
+            && let Some(gt) = find1(b, i + 1, end, b'>')
+            && !text[i + 1..gt].contains(char::is_whitespace)
+        {
+            marker(out, i..i + 1, st.marker);
+            push(
+                out,
+                i + 1..gt,
+                Style {
+                    color: Some(st.link),
+                    underline: true,
+                    ..Default::default()
+                }
+                .over(base),
+            );
+            marker(out, gt..gt + 1, st.marker);
+            i = gt + 1;
+            continue;
+        }
+        // Local change (Ghostex Docs): `:shortcode:` emoji from the Docs page's table
+        // (`meo/helpers/emoji.ts`), always shown as the emoji, even on the caret's line.
+        if c == b':'
+            && let Some(rel) = text[i + 1..end].find(':')
+            && rel > 0
+            && text[i + 1..i + 1 + rel]
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b'+' | b'-'))
+            && let Some(emoji) = crate::emoji::emoji_for(&text[i + 1..i + 1 + rel])
+        {
+            out.push(Span {
+                range: i..i + rel + 2,
+                style: Style {
+                    hide: true,
+                    always_hide: true,
+                    replace: Some(SharedString::from(emoji)),
+                    ..Default::default()
+                },
+            });
+            i += rel + 2;
             continue;
         }
         // Styled inline HTML — `<mark>` / `<mark style="background:…">`,
@@ -1144,6 +1295,7 @@ fn scan_inline(
                     i..j,
                     Style {
                         color: Some(st.link),
+                        underline: true,
                         ..Default::default()
                     }
                     .over(base),
@@ -1348,6 +1500,230 @@ pub(crate) fn footnote_def(line: &str) -> Option<usize> {
     let close = rest.find(']')?;
     // Label must be non-empty and the `]` immediately followed by `:`.
     (close > 0 && rest[close + 1..].starts_with(':')).then_some(2 + close + 2)
+}
+
+// Local change (Ghostex Docs): footnote numbering, like the Docs page (`meo/helpers/footnotes.ts`).
+// A defined footnote is numbered by the order of its first reference; `shape_document` installs
+// the document's numbers here before it scans the lines, since the scanner works one line at a time.
+thread_local! {
+    static FOOTNOTE_NUMBERS: std::cell::RefCell<std::rc::Rc<std::collections::HashMap<String, usize>>> =
+        std::cell::RefCell::new(std::rc::Rc::default());
+}
+
+/// A footnote label as the Docs page compares them: lowercase, whitespace collapsed.
+pub(crate) fn footnote_key(label: &str) -> String {
+    label
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+
+/// Installs the numbers the scanner uses for the document being shaped.
+pub(crate) fn set_footnote_numbers(numbers: std::rc::Rc<std::collections::HashMap<String, usize>>) {
+    FOOTNOTE_NUMBERS.with(|cell| *cell.borrow_mut() = numbers);
+}
+
+/// The number of the defined footnote `label`, if the document references it.
+pub(crate) fn footnote_number(label: &str) -> Option<usize> {
+    let key = footnote_key(label);
+    FOOTNOTE_NUMBERS.with(|cell| cell.borrow().get(&key).copied())
+}
+
+/// Every defined footnote's number, by the order of its first reference outside fenced code.
+/// `fence_odd[i]` says whether line `i` starts inside a fence.
+pub(crate) fn footnote_numbers(
+    lines: &[&str],
+    fence_odd: &[bool],
+) -> std::collections::HashMap<String, usize> {
+    let code = |i: usize, line: &str| {
+        fence_odd.get(i).copied().unwrap_or(false) || line.trim_start().starts_with("```")
+    };
+    let defined: std::collections::HashSet<String> = lines
+        .iter()
+        .enumerate()
+        .filter(|(i, line)| !code(*i, line))
+        .filter_map(|(_, line)| {
+            let len = footnote_def(line)?;
+            Some(footnote_key(&line[2..len - 2]))
+        })
+        .collect();
+    let mut numbers = std::collections::HashMap::new();
+    if defined.is_empty() {
+        return numbers;
+    }
+    for (i, line) in lines.iter().enumerate() {
+        if code(i, line) {
+            continue;
+        }
+        let skip = footnote_def(line).unwrap_or(0);
+        let mut rest = &line[skip..];
+        while let Some(at) = rest.find("[^") {
+            let after = &rest[at + 2..];
+            let Some(close) = after.find(']') else {
+                break;
+            };
+            let key = footnote_key(&after[..close]);
+            if close > 0 && defined.contains(&key) && !numbers.contains_key(&key) {
+                let next = numbers.len() + 1;
+                numbers.insert(key, next);
+            }
+            rest = &after[close..];
+        }
+    }
+    numbers
+}
+
+/// Local change (Ghostex Docs): the last line of a frontmatter block — line 0 is `---` and a later
+/// line trimmed to `---` closes it (`meo/helpers/frontmatter.ts`).
+pub(crate) fn frontmatter_end(lines: &[&str]) -> Option<usize> {
+    if lines.first().map(|line| line.trim_end()) != Some("---") {
+        return None;
+    }
+    lines
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find(|(_, line)| line.trim() == "---")
+        .map(|(index, _)| index)
+}
+
+/// Local change (Ghostex Docs): the line ranges of complete git merge-conflict blocks,
+/// `<<<<<<<` … optional `|||||||` … `=======` … `>>>>>>>` (`meo/helpers/mergeConflicts.ts`).
+pub(crate) fn conflict_regions(lines: &[&str]) -> Vec<Range<usize>> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        if !lines[i].starts_with("<<<<<<<") {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        let mut j = start + 1;
+        let mut base = false;
+        let mut separator = None;
+        while j < lines.len() {
+            if separator.is_none() && !base && lines[j].starts_with("|||||||") {
+                base = true;
+            } else if lines[j].starts_with("=======") {
+                separator = Some(j);
+                j += 1;
+                break;
+            }
+            j += 1;
+        }
+        let Some(_) = separator else {
+            i = start + 1;
+            continue;
+        };
+        let end = (j..lines.len()).find(|&k| lines[k].starts_with(">>>>>>>"));
+        match end {
+            Some(end) => {
+                out.push(start..end + 1);
+                i = end + 1;
+            }
+            None => i = start + 1,
+        }
+    }
+    out
+}
+
+/// Local change (Ghostex Docs): a merge-conflict marker line (drawn muted).
+pub(crate) fn conflict_marker(line: &str) -> bool {
+    ["<<<<<<<", "|||||||", "=======", ">>>>>>>"]
+        .iter()
+        .any(|marker| line.starts_with(marker))
+}
+
+/// Local change (Ghostex Docs): a `<details>` block (`meo/helpers/markdownSyntax.ts` 54-174).
+#[derive(Clone, Debug)]
+pub(crate) struct DetailsRegion {
+    /// The `<details>` line through the `</details>` line.
+    pub(crate) lines: Range<usize>,
+    /// The line whose `<summary>` is drawn as the toggle (the start line or the one after it).
+    pub(crate) summary_line: usize,
+    /// The summary's text, tags stripped ("Details" when there is none).
+    pub(crate) summary: String,
+    /// Open when the block is first shown (`<details open>`).
+    pub(crate) open: bool,
+    /// Identifies the block across edits for its toggled state.
+    pub(crate) key: String,
+}
+
+fn strip_tags(text: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in text.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out.trim().to_string()
+}
+
+/// Every `<details>` … `</details>` block outside fenced code.
+pub(crate) fn details_regions(lines: &[&str], fence_odd: &[bool]) -> Vec<DetailsRegion> {
+    let code = |i: usize| {
+        fence_odd.get(i).copied().unwrap_or(false) || lines[i].trim_start().starts_with("```")
+    };
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let trimmed = lines[i].trim_start();
+        if code(i) || !trimmed.to_ascii_lowercase().starts_with("<details") {
+            i += 1;
+            continue;
+        }
+        let Some(end) = (i..lines.len())
+            .find(|&k| !code(k) && lines[k].to_ascii_lowercase().contains("</details>"))
+        else {
+            i += 1;
+            continue;
+        };
+        let lower = trimmed.to_ascii_lowercase();
+        let open = lower
+            .split('>')
+            .next()
+            .is_some_and(|tag| tag.split_whitespace().any(|word| word == "open"));
+        let summary_line = if lower.contains("<summary") {
+            i
+        } else {
+            (i + 1..end)
+                .find(|&k| !lines[k].trim().is_empty())
+                .filter(|&k| lines[k].to_ascii_lowercase().contains("<summary"))
+                .unwrap_or(i)
+        };
+        let summary_source = lines[summary_line];
+        let summary = match summary_source.to_ascii_lowercase().find("<summary") {
+            Some(at) => {
+                let rest = &summary_source[at..];
+                let body = rest.find('>').map_or("", |gt| &rest[gt + 1..]);
+                let body = match body.to_ascii_lowercase().find("</summary>") {
+                    Some(close) => &body[..close],
+                    None => body,
+                };
+                strip_tags(body)
+            }
+            None => String::new(),
+        };
+        let summary = if summary.is_empty() {
+            "Details".to_string()
+        } else {
+            summary
+        };
+        out.push(DetailsRegion {
+            key: format!("{}\u{0}{summary}", lines[i].trim()),
+            lines: i..end + 1,
+            summary_line,
+            summary,
+            open,
+        });
+        i = end + 1;
+    }
+    out
 }
 
 /// True if `line` looks like a block-level raw HTML line — `<tag …>`, `</tag>`,
@@ -1590,15 +1966,37 @@ pub(crate) fn renumber_copy(content: &str, range: std::ops::Range<usize>) -> Str
 pub(crate) fn task_prefix(line: &str) -> Option<(usize, usize, bool)> {
     let (list_len, indent, ..) = list_prefix(line)?;
     let rest = &line.as_bytes()[list_len..];
+    // Local change (Ghostex Docs): `[~]` (in progress) and `[-]` (dropped) are tasks too, like the
+    // Docs page (`meo/helpers/listMarkers.ts`); only `x`/`X` counts as checked.
     if rest.len() >= 4
         && rest[0] == b'['
         && rest[2] == b']'
         && rest[3] == b' '
-        && matches!(rest[1], b' ' | b'x' | b'X')
+        && matches!(rest[1], b' ' | b'x' | b'X' | b'~' | b'-')
     {
         return Some((list_len + 4, indent, matches!(rest[1], b'x' | b'X')));
     }
     None
+}
+
+/// Local change (Ghostex Docs): a task item's state, from the character between its brackets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TaskState {
+    Open,
+    Done,
+    InProgress,
+    Dropped,
+}
+
+/// The state of the task item `line` (see [`task_prefix`]).
+pub(crate) fn task_state(line: &str) -> Option<TaskState> {
+    let (prefix_len, ..) = task_prefix(line)?;
+    Some(match line.as_bytes()[prefix_len - 3] {
+        b'x' | b'X' => TaskState::Done,
+        b'~' => TaskState::InProgress,
+        b'-' => TaskState::Dropped,
+        _ => TaskState::Open,
+    })
 }
 
 /// Toggle a GFM task item's checkbox in `line` — flip the char between the
@@ -1618,11 +2016,30 @@ pub(crate) fn toggle_task_checkbox(line: &str) -> Option<String> {
 /// (W4) when the caret is elsewhere; a line with any other trailing text stays
 /// plain source.
 pub(crate) fn image_line(line: &str) -> Option<(&str, Option<f32>)> {
-    let rest = line.trim().strip_prefix("![")?;
+    // Local change (Ghostex Docs): an empty-text link to an image file, `[](x.png)`, renders as
+    // the image too, like the Docs page (`meo/liveMode.ts` 783-803).
+    let trimmed = line.trim();
+    let (rest, image_link) = match trimmed.strip_prefix("![") {
+        Some(rest) => (rest, false),
+        None => (trimmed.strip_prefix("[").filter(|rest| rest.starts_with("](")), true)
+            .0
+            .map(|rest| (rest, true))?,
+    };
     let close_alt = rest.find("](")?;
     let after_alt = &rest[close_alt + 2..];
     let close_src = after_alt.find(')')?;
     let src = after_alt[..close_src].trim();
+    if image_link {
+        let extension = src.rsplit('.').next().unwrap_or_default().to_ascii_lowercase();
+        let image = matches!(
+            extension.as_str(),
+            "avif" | "bmp" | "gif" | "ico" | "jpg" | "jpeg" | "png" | "svg" | "tif" | "tiff"
+                | "webp"
+        );
+        if !image {
+            return None;
+        }
+    }
     let tail = after_alt[close_src + 1..].trim();
     let width = if tail.is_empty() {
         None
@@ -1660,12 +2077,14 @@ pub(crate) fn image_row(line: &str) -> Option<(&str, Option<f32>, usize)> {
 /// as [`apply_heading`].
 pub(crate) fn line_scale(line: &str) -> f32 {
     let body = list_prefix(line).map_or(line, |(p, ..)| &line[p..]);
+    // Local change (Ghostex Docs): the Docs page's heading scale (`meo-toolbar.tsx` 94-105).
     match heading_level(body) {
-        Some(1) => 1.8,
-        Some(2) => 1.5,
-        Some(3) => 1.3,
-        Some(4) => 1.15,
-        Some(5) => 1.05,
+        Some(1) => 1.85,
+        Some(2) => 1.45,
+        Some(3) => 1.18,
+        Some(4) => 1.08,
+        Some(5) => 1.0,
+        Some(6) => 0.94,
         _ => 1.0,
     }
 }
@@ -1677,6 +2096,7 @@ pub(crate) fn mermaid_blocks(content: &str) -> Vec<(Range<usize>, String)> {
     let lines: Vec<&str> = content.split('\n').collect();
     let mut out = Vec::new();
     let mut i = 0;
+    let mut in_fence = false;
     while i < lines.len() {
         let t = lines[i].trim_start();
         if t.starts_with("```") && t[3..].trim() == "mermaid" {
@@ -1689,9 +2109,31 @@ pub(crate) fn mermaid_blocks(content: &str) -> Vec<(Range<usize>, String)> {
             let end = (j + 1).min(lines.len()); // include the closing fence
             out.push((start..end, source));
             i = end;
-        } else {
-            i += 1;
+            continue;
         }
+        if t.starts_with("```") {
+            in_fence = !in_fence;
+            i += 1;
+            continue;
+        }
+        // Local change (Ghostex Docs): `:::mermaid` colon blocks (3+ colons, closed by a line of
+        // at least as many colons), outside code fences, like the Docs page
+        // (`meo/helpers/mermaidColonBlocks.ts`).
+        let colons = t.bytes().take_while(|b| *b == b':').count();
+        if !in_fence && colons >= 3 && t[colons..].trim().eq_ignore_ascii_case("mermaid") {
+            let start = i;
+            let close = (start + 1..lines.len()).find(|&k| {
+                let c = lines[k].trim();
+                c.len() >= colons && c.bytes().all(|b| b == b':')
+            });
+            if let Some(close) = close {
+                let source = lines[start + 1..close].join("\n");
+                out.push((start..close + 1, source));
+                i = close + 1;
+                continue;
+            }
+        }
+        i += 1;
     }
     out
 }
@@ -2825,6 +3267,10 @@ mod tests {
             popover_danger: c,
             mono: gpui::font("monospace"),
             property_icon: None,
+            heading: None,
+            quote_bar: c,
+            code_border: None,
+            links_need_modifier: false,
         }
     }
 

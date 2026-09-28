@@ -9,15 +9,13 @@ use crate::shared_settings::{self, SharedMediaFileOpenTarget};
 
 /// Where a clicked image, video or audio file opens: `Some(true)` in the Files view, `Some(false)`
 /// in the system app, `None` for any other file. Files takes it when its "Images / Videos / Audio
-/// open in" setting says Files, Files can show its format, and the native Files view is on.
+/// open in" setting says Files and Files can show its format.
 ///
 /// CDXC:Docs 2026-09-27 SEE-ALSO: `imageFileOpenTarget` in packages/shared/ghostex-settings/types.ts holds the decision; terminal links (`gpui_terminal_file_opens_with_os_default`) and chat file links (`open_session_chat_file_for_session`) both ask here.
 pub(crate) fn media_file_opens_in_files(path: &std::path::Path) -> Option<bool> {
     let path = path.to_string_lossy();
     let media = DocsMediaKind::for_path(&path)?;
-    if DocsFileKind::for_path(&path) == DocsFileKind::SystemApp
-        || !super::render::native_docs_enabled()
-    {
+    if DocsFileKind::for_path(&path) == DocsFileKind::SystemApp {
         return Some(false);
     }
     let settings = shared_settings::shared_sidebar_settings_snapshot();

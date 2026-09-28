@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use super::files::parent_path;
 use super::files_list::{CREATE_MENU_ANCHOR, OVERFLOW_MENU_ANCHOR};
-use super::state::{DocsEntryKind, DocsRename};
+use super::state::DocsEntryKind;
 use crate::GhostexGpuiApp;
 use crate::app::context_menu::GpuiContextMenu;
 
@@ -41,6 +41,14 @@ impl ArtifactKind {
             "html" => Some(Self::Html),
             "excalidraw" => Some(Self::Excalidraw),
             _ => None,
+        }
+    }
+
+    fn id(self) -> &'static str {
+        match self {
+            Self::Markdown => "markdown",
+            Self::Html => "html",
+            Self::Excalidraw => "excalidraw",
         }
     }
 
@@ -170,8 +178,17 @@ impl GhostexGpuiApp {
             }
             "newFolder" => self.native_docs_create_folder(&text("directory"), cx),
             "duplicate" => self.native_docs_duplicate(&path, cx),
-            "rename" => self.native_docs_begin_rename(&path, window, cx),
-            "delete" => self.native_docs_confirm_delete(&path, window, cx),
+            "rename" => self.native_docs_open_rename(&path, window, cx),
+            // The first Delete re-opens the menu with "Confirm delete" in its place.
+            "delete" => {
+                if let Some((menu_path, kind, position)) = self.native_docs.entry_menu.clone()
+                    && menu_path == path
+                {
+                    self.native_docs.delete_armed = Some(path.clone());
+                    self.show_native_docs_entry_menu(&path, kind, position, window, cx);
+                }
+            }
+            "confirmDelete" => self.native_docs_delete(&path, cx),
             "refresh" => self.native_docs_refresh(cx),
             "configureFolders" => self.native_docs_open_folders_settings(window, cx),
             "barItem" => {
@@ -198,7 +215,9 @@ impl GhostexGpuiApp {
     fn native_docs_bridge_side_effect(&mut self, action: &str, path: &str, cx: &mut Context<Self>) {
         let run = move |this: &mut Self, action: String, path: String, cx: &mut Context<Self>| {
             let request = this.native_docs_request(&action, json!({ "path": path }));
+            this.native_docs_begin_operation(&action, &path);
             this.run_docs_files_request(request.to_string(), cx, |this, response, cx| {
+                this.native_docs_end_operation();
                 if let Some(error) = response["error"].as_str() {
                     this.dispatch_gpui_workspace_action_toast("error", "Files", error, cx);
                 }
@@ -261,29 +280,44 @@ impl GhostexGpuiApp {
     ) {
         let create =
             |kind: &str| action(json!({ "type": "newFile", "kind": kind, "directory": directory }));
+        // While something is being created its row reads "Creating …" and every row waits.
+        let creating = self
+            .native_docs
+            .file_operation
+            .as_ref()
+            .and_then(|(running, _)| running.strip_prefix("create:"))
+            .map(str::to_string);
+        let busy = creating.is_some();
+        let label = |kind: &str, idle: &'static str, working: &'static str| {
+            if creating.as_deref() == Some(kind) {
+                working
+            } else {
+                idle
+            }
+        };
         let menu = GpuiContextMenu::new()
             .menu_with_icon(
-                "New folder",
+                label("folder", "New folder", "Creating folder"),
                 "titlebar/folder-plus.svg",
-                false,
+                busy,
                 action(json!({ "type": "newFolder", "directory": directory })),
             )
             .menu_with_icon(
-                "New Markdown",
+                label("markdown", "New Markdown", "Creating Markdown"),
                 "titlebar/markdown.svg",
-                false,
+                busy,
                 create("markdown"),
             )
             .menu_with_icon(
-                "New HTML",
+                label("html", "New HTML", "Creating HTML"),
                 "titlebar/file-type-html.svg",
-                false,
+                busy,
                 create("html"),
             )
             .menu_with_icon(
-                "New drawing",
+                label("excalidraw", "New drawing", "Creating drawing"),
                 "titlebar/edit.svg",
-                false,
+                busy,
                 create("excalidraw"),
             );
         let trigger = CREATE_MENU_ANCHOR.with(|cell| cell.get());
@@ -323,6 +357,21 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // The Docs page's row menu (`file-tree-ui.tsx` 376-582): while a
+        // file operation runs every row but Copy Relative Path is disabled and the running one
+        // reads "…ing"; Delete takes a second click ("Confirm delete"), with no dialog.
+        self.native_docs.entry_menu = Some((path.to_string(), kind, position));
+        let armed = self.native_docs.delete_armed.as_deref() == Some(path);
+        if !armed {
+            self.native_docs.delete_armed = None;
+        }
+        let busy = self.native_docs.file_operation.is_some();
+        let running = |action: &str| {
+            self.native_docs
+                .file_operation
+                .as_ref()
+                .is_some_and(|(running, running_path)| running == action && running_path == path)
+        };
         let is_file = kind == DocsEntryKind::File;
         let root_node = self.native_docs.entries.iter().any(|entry| {
             entry.path == path && entry.depth == 0 && entry.kind == DocsEntryKind::Directory
@@ -336,35 +385,53 @@ impl GhostexGpuiApp {
                 command("copyRelativePath"),
             )
             .menu_with_icon(
-                "Copy Full Path",
+                if running("copyFullPath") {
+                    "Copying Full Path"
+                } else {
+                    "Copy Full Path"
+                },
                 "titlebar/copy-plus.svg",
-                false,
+                busy,
                 command("copyFullPath"),
             )
             .menu_with_icon(
-                if is_file {
-                    "Open File Location"
+                if running("revealInFinder") {
+                    "Opening"
                 } else {
-                    "Open Folder Location"
+                    "Open File/Folder Location"
                 },
                 "titlebar/folder-open.svg",
-                false,
+                busy,
                 command("revealInFinder"),
             );
         if is_file {
             menu = menu.menu_with_icon(
-                "Add to Session Context",
+                if running("addToSessionContext") {
+                    "Adding context"
+                } else {
+                    "Add to Session Context"
+                },
                 "titlebar/message-plus.svg",
-                false,
+                busy,
                 command("addToSessionContext"),
             );
         }
-        menu = menu.separator();
         if !is_file {
             let create =
                 |kind: &str| action(json!({ "type": "newFile", "kind": kind, "directory": path }));
-            menu = menu
-                .submenu_with_icon(
+            let creating = |kind: &str| {
+                self.native_docs
+                    .file_operation
+                    .as_ref()
+                    .is_some_and(|(running, running_path)| {
+                        running == &format!("create:{kind}") && running_path == path
+                    })
+            };
+            menu = menu.separator();
+            menu = if busy {
+                menu.menu_with_icon("New File Here", "titlebar/file.svg", true, command("noop"))
+            } else {
+                menu.submenu_with_icon(
                     "New File Here",
                     Some("titlebar/file.svg"),
                     vec![
@@ -373,26 +440,48 @@ impl GhostexGpuiApp {
                         ("Excalidraw".into(), create("excalidraw")),
                     ],
                 )
-                .menu_with_icon(
-                    "New Folder Here",
-                    "titlebar/folder-plus.svg",
-                    false,
-                    action(json!({ "type": "newFolder", "directory": path })),
-                );
-        }
-        if is_file {
+            };
             menu = menu.menu_with_icon(
-                "Duplicate",
-                "titlebar/copy.svg",
-                false,
-                command("duplicate"),
+                if creating("folder") {
+                    "Creating Folder"
+                } else {
+                    "New Folder Here"
+                },
+                "titlebar/folder-plus.svg",
+                busy,
+                action(json!({ "type": "newFolder", "directory": path })),
             );
         }
+        if is_file {
+            menu = menu.separator().menu_with_icon(
+                if running("duplicate") {
+                    "Duplicating"
+                } else {
+                    "Duplicate"
+                },
+                "titlebar/copy-plus.svg",
+                busy,
+                command("duplicate"),
+            );
+        } else {
+            menu = menu.separator();
+        }
         if !root_node {
-            menu = menu.menu_with_icon("Rename", "titlebar/pencil.svg", false, command("rename"));
+            menu = menu.menu_with_icon("Rename", "titlebar/edit.svg", busy, command("rename"));
         }
         if path != EXTRA_ROOT_MOUNT_PATH {
-            menu = menu.menu_with_icon("Delete", "titlebar/trash.svg", false, command("delete"));
+            menu = menu.menu_with_icon(
+                if running("delete") {
+                    "Deleting"
+                } else if armed {
+                    "Confirm delete"
+                } else {
+                    "Delete"
+                },
+                "titlebar/trash.svg",
+                busy,
+                command(if armed { "confirmDelete" } else { "delete" }),
+            );
         }
         let trigger = Bounds::new(position, gpui::size(px(1.0), px(1.0)));
         self.native_docs_show_menu(menu, trigger, false, window, cx);
@@ -414,8 +503,10 @@ impl GhostexGpuiApp {
             "save",
             json!({ "path": path, "content": kind.initial_content() }),
         );
+        self.native_docs_begin_operation(&format!("create:{}", kind.id()), directory);
         let directory = directory.to_string();
         self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            this.native_docs_end_operation();
             if let Some(error) = response["error"].as_str() {
                 this.dispatch_gpui_workspace_action_toast(
                     "error",
@@ -440,8 +531,10 @@ impl GhostexGpuiApp {
         };
         let path = self.native_docs_new_folder_path(directory);
         let request = self.native_docs_request("createFolder", json!({ "path": path }));
+        self.native_docs_begin_operation("create:folder", directory);
         let directory = directory.to_string();
         self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            this.native_docs_end_operation();
             if let Some(error) = response["error"].as_str() {
                 this.dispatch_gpui_workspace_action_toast(
                     "error",
@@ -473,7 +566,9 @@ impl GhostexGpuiApp {
         let new_path = self.native_docs_duplicate_path(path);
         let request =
             self.native_docs_request("duplicate", json!({ "path": path, "newPath": new_path }));
+        self.native_docs_begin_operation("duplicate", path);
         self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            this.native_docs_end_operation();
             if let Some(error) = response["error"].as_str() {
                 this.dispatch_gpui_workspace_action_toast("error", "Couldn't duplicate", error, cx);
                 return;
@@ -483,123 +578,9 @@ impl GhostexGpuiApp {
         });
     }
 
-    /// Turns the row into a name field with the whole name selected.
-    fn native_docs_begin_rename(
-        &mut self,
-        path: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let name = path.rsplit('/').next().unwrap_or(path).to_string();
-        let input = cx.new(|cx| InputState::new(window, cx).default_value(name));
-        let renaming = path.to_string();
-        let subscription = cx.subscribe_in(
-            &input,
-            window,
-            move |this: &mut Self, input, event: &InputEvent, window, cx| match event {
-                InputEvent::PressEnter { .. } => {
-                    let name = input.read(cx).value().trim().to_string();
-                    this.native_docs_commit_rename(&renaming, &name, window, cx);
-                }
-                InputEvent::Blur => {
-                    if this
-                        .native_docs
-                        .rename
-                        .as_ref()
-                        .is_some_and(|rename| rename.path == renaming)
-                    {
-                        this.native_docs.rename = None;
-                        this.native_docs_notify(cx);
-                    }
-                }
-                _ => {}
-            },
-        );
-        self.native_docs_focus_list_input(&input, window, cx);
-        self.native_docs.rename = Some(DocsRename {
-            path: path.to_string(),
-            input,
-            _subscription: subscription,
-        });
-    }
-
-    /// `validateManageRenameFileName`, the collision check, and the folder-with-unsaved-file rule.
-    fn native_docs_commit_rename(
-        &mut self,
-        path: &str,
-        name: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let error = if name.is_empty() {
-            Some("Enter a file name.")
-        } else if name == "." || name == ".." {
-            Some("Use a normal file name.")
-        } else if name.contains(['/', '\\', '\0']) {
-            Some("File names cannot contain path separators.")
-        } else {
-            None
-        };
-        if let Some(error) = error {
-            self.dispatch_gpui_workspace_action_toast("error", "Couldn't rename", error, cx);
-            return;
-        }
-        let parent = parent_path(path);
-        let new_path = if parent.is_empty() {
-            name.to_string()
-        } else {
-            format!("{parent}/{name}")
-        };
-        self.native_docs.rename = None;
-        if new_path == path {
-            self.native_docs_notify(cx);
-            return;
-        }
-        if new_path.to_lowercase() != path.to_lowercase() && self.native_docs_path_taken(&new_path)
-        {
-            self.dispatch_gpui_workspace_action_toast(
-                "error",
-                "Couldn't rename",
-                "A file or folder with that name already exists.",
-                cx,
-            );
-            return;
-        }
-        let folder_prefix = format!("{path}/");
-        if self
-            .native_docs
-            .documents
-            .iter()
-            .any(|document| document.dirty && document.path.starts_with(&folder_prefix))
-        {
-            self.dispatch_gpui_workspace_action_toast(
-                "error",
-                "Couldn't rename",
-                "Save the current file before renaming its folder.",
-                cx,
-            );
-            return;
-        }
-        let _ = window;
-        let request =
-            self.native_docs_request("rename", json!({ "path": path, "newPath": new_path }));
-        let old_path = path.to_string();
-        self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
-            if let Some(error) = response["error"].as_str() {
-                this.dispatch_gpui_workspace_action_toast("error", "Couldn't rename", error, cx);
-                return;
-            }
-            this.native_docs_remap_paths(&old_path, &new_path, cx);
-            this.native_docs_refresh(cx);
-        });
-    }
-
-    fn native_docs_confirm_delete(
-        &mut self,
-        path: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    /// Deletes a file or folder (the menu's second Delete click).
+    fn native_docs_delete(&mut self, path: &str, cx: &mut Context<Self>) {
+        self.native_docs.delete_armed = None;
         let folder_prefix = format!("{path}/");
         if self
             .native_docs
@@ -615,41 +596,27 @@ impl GhostexGpuiApp {
             );
             return;
         }
-        let name = path.rsplit('/').next().unwrap_or(path).to_string();
-        let answer = window.prompt(
-            gpui::PromptLevel::Warning,
-            &format!("Delete {name}?"),
-            Some("This can't be undone."),
-            &["Cancel", "Delete"],
-            cx,
-        );
-        let path = path.to_string();
-        cx.spawn(async move |this, cx| {
-            if answer.await == Ok(1) {
-                let _ = this.update(cx, |this, cx| {
-                    let request = this.native_docs_request("delete", json!({ "path": path }));
-                    let deleted = path.clone();
-                    this.run_docs_files_request(
-                        request.to_string(),
-                        cx,
-                        move |this, response, cx| {
-                            if let Some(error) = response["error"].as_str() {
-                                this.dispatch_gpui_workspace_action_toast(
-                                    "error",
-                                    "Couldn't delete",
-                                    error,
-                                    cx,
-                                );
-                            } else {
-                                this.native_docs_forget_paths(&deleted, cx);
-                            }
-                            this.native_docs_refresh(cx);
-                        },
-                    );
-                });
+        let request = self.native_docs_request("delete", json!({ "path": path }));
+        let deleted = path.to_string();
+        self.native_docs_begin_operation("delete", path);
+        self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            this.native_docs_end_operation();
+            if let Some(error) = response["error"].as_str() {
+                this.dispatch_gpui_workspace_action_toast("error", "Couldn't delete", error, cx);
+            } else {
+                this.native_docs_forget_paths(&deleted, cx);
             }
-        })
-        .detach();
+            this.native_docs_refresh(cx);
+        });
+    }
+
+    /// A file operation the menus show as running (their "…ing" labels, the rest disabled).
+    pub(crate) fn native_docs_begin_operation(&mut self, action: &str, path: &str) {
+        self.native_docs.file_operation = Some((action.to_string(), path.to_string()));
+    }
+
+    pub(crate) fn native_docs_end_operation(&mut self) {
+        self.native_docs.file_operation = None;
     }
 
     /// After a rename or move: open files, drafts, folder state and the selection follow the item.

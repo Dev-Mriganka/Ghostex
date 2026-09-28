@@ -48,6 +48,9 @@ use unicode_segmentation::UnicodeSegmentation;
 mod markdown_syntax;
 pub use markdown_syntax::{AlertIcons, MathAlign, PropertyIconFn, SyntaxStyle};
 
+// Local change (Ghostex Docs): `:shortcode:` emoji.
+mod emoji;
+
 mod tables;
 use tables::*;
 
@@ -212,11 +215,14 @@ const CODE_INSET: f32 = 12.;
 /// Vertical padding (px) above the first / below the last line of a fenced code
 /// block. Reserved as layout space (a gap in the line tops + total height) so the
 /// box doesn't overlap adjacent lines, with no blank line required.
-const CODE_PAD: f32 = 8.;
+// Local change (Ghostex Docs): no pad; the fence rows stay in the card as its first and last rows
+// (the Docs page's look), so the card needs no extra room above or below.
+const CODE_PAD: f32 = 0.;
 
 /// Horizontal inset (px) of blockquote text from the editor's left edge, leaving
 /// room for the left border (2px) + a gap, matching the reading view's `pl(12)`.
-const QUOTE_INSET: f32 = 14.;
+// Local change (Ghostex Docs): the Docs page's 3ch quote padding (was 14).
+const QUOTE_INSET: f32 = 20.;
 
 /// Vertical padding (px) inside a file chip (e.g. a PDF embed), above + below its
 /// label, so the chip box reads as a button rather than a bare line of text.
@@ -573,6 +579,11 @@ pub type ClipboardWriter = std::rc::Rc<dyn Fn(&str, &mut App)>;
 /// embed chip.
 type EmbedViewFn = Box<dyn Fn(&str) -> Option<(gpui::AnyView, Pixels)>>;
 
+/// Local change (Ghostex Docs): resolves a Mermaid block's source, at the editor's width, to the
+/// host view that draws it (the Docs page's diagram card with its toolbar) and the height to keep
+/// for it. See [`EditorState::set_mermaid_view_provider`].
+type MermaidViewFn = Box<dyn Fn(&str, Pixels) -> Option<(gpui::AnyView, Pixels)>>;
+
 /// Resolves a ` ```mermaid ` block's source to a rendered diagram bitmap plus its
 /// **logical** (display) px size — supplied by the host for the same reason as
 /// [`BlockMathFn`]. Set via [`EditorState::set_block_mermaid_provider`]; the host
@@ -873,6 +884,8 @@ pub struct EditorState {
     /// the host via [`Self::set_block_chip_provider`].
     block_chip: Option<BlockChipFn>,
     embed_view: Option<EmbedViewFn>,
+    /// Local change (Ghostex Docs): see [`MermaidViewFn`].
+    mermaid_view: Option<MermaidViewFn>,
     /// Resolves a ` ```mermaid ` block's source to a rendered diagram; set by the
     /// host via [`Self::set_block_mermaid_provider`].
     block_mermaid: Option<BlockMermaidFn>,
@@ -911,6 +924,9 @@ pub struct EditorState {
     code_card_rects: Vec<(usize, Bounds<Pixels>)>,
     /// The hovered code block's first body line, if any (chrome shows there).
     code_chip_hover: Option<usize>,
+    /// Local change (Ghostex Docs): the code block whose Copy was just clicked (its opening fence
+    /// row) and when, so its chip reads "copied" for two seconds.
+    code_copied: Option<(usize, std::time::Instant)>,
     /// Open language picker for a code block: `(opening fence row, anchor)`.
     code_lang_menu: Option<(usize, Point<Pixels>)>,
     code_lang_scroll: ScrollHandle,
@@ -1027,7 +1043,20 @@ pub struct EditorState {
     /// (a fold chevron on every heading would clutter). Drives
     /// `on_mouse_move`'s repaint-on-change, like the property-row hover.
     heading_hover_row: Option<usize>,
+    /// Local change (Ghostex Docs): false when the host draws the heading fold chevrons itself
+    /// (see [`Self::heading_folds`]).
+    heading_chevrons: bool,
+    /// Local change (Ghostex Docs): false turns off the gutter's block-drag grip (the Docs page
+    /// has none, and its fold lane sits where the grip would).
+    block_grip: bool,
+    /// Local change (Ghostex Docs): `<details>` blocks (by `DetailsRegion::key`) toggled away
+    /// from their initial open state.
+    details_toggled: std::collections::HashSet<String>,
 }
+
+/// Local change (Ghostex Docs): the room above a merge-conflict block's first line, where the host
+/// draws Accept Current / Accept Incoming / Accept Both (the Docs page's action row).
+pub const CONFLICT_ACTIONS_HEIGHT: f32 = 28.;
 
 /// A math block under in-line structural edit: the byte range to overwrite on commit, and
 /// the host's editor view to render in the reserved gap.
@@ -1102,6 +1131,7 @@ impl EditorState {
             block_image: None,
             block_chip: None,
             embed_view: None,
+            mermaid_view: None,
             block_mermaid: None,
             block_math: None,
             block_math_em: None,
@@ -1112,6 +1142,7 @@ impl EditorState {
             image_rects: Vec::new(),
             checkbox_rects: Vec::new(),
             code_chip_rects: Vec::new(),
+            code_copied: None,
             code_card_rects: Vec::new(),
             code_chip_hover: None,
             code_lang_menu: None,
@@ -1150,6 +1181,9 @@ impl EditorState {
             heading_fold_rects: Vec::new(),
             heading_row_rects: Vec::new(),
             heading_hover_row: None,
+            heading_chevrons: true,
+            block_grip: true,
+            details_toggled: std::collections::HashSet::new(),
         }
     }
 
@@ -1310,6 +1344,64 @@ impl EditorState {
         provider: impl Fn(&str) -> Option<(gpui::AnyView, Pixels)> + 'static,
     ) {
         self.embed_view = Some(Box::new(provider));
+    }
+
+    /// Local change (Ghostex Docs): with a Mermaid view provider, a ```` ```mermaid ```` block
+    /// off the caret keeps its fence rows (a code card with its language and copy chips) and its
+    /// body becomes the host's view (`provider(source, editor width)`), and a `:::mermaid` block
+    /// becomes the view alone. The caret inside a block shows its source as before.
+    pub fn set_mermaid_view_provider(
+        &mut self,
+        provider: impl Fn(&str, Pixels) -> Option<(gpui::AnyView, Pixels)> + 'static,
+    ) {
+        self.mermaid_view = Some(Box::new(provider));
+    }
+
+    /// The Mermaid views over their reserved rows (see [`Self::set_mermaid_view_provider`]),
+    /// like [`Self::embed_overlays`].
+    fn mermaid_overlays(&self, window: &Window) -> Vec<gpui::Div> {
+        let Some(provider) = &self.mermaid_view else {
+            return Vec::new();
+        };
+        if self.markdown_style.is_none() {
+            return Vec::new();
+        }
+        let Some(bounds) = self.last_bounds else {
+            return Vec::new();
+        };
+        let caret_row = self
+            .focus_handle
+            .is_focused(window)
+            .then(|| self.row_col(self.cursor_offset()).0);
+        let lines: Vec<&str> = self.content.split('\n').collect();
+        let mut out = Vec::new();
+        for (range, source) in self.scan_data().mermaid.iter() {
+            if caret_row.is_some_and(|row| range.contains(&row)) || source.trim().is_empty() {
+                continue;
+            }
+            let fenced = lines
+                .get(range.start)
+                .is_some_and(|line| line.trim_start().starts_with("```"));
+            let row = if fenced { range.start + 1 } else { range.start };
+            let (Some(top), Some(height)) = (self.line_tops.get(row), self.line_heights.get(row))
+            else {
+                continue;
+            };
+            let Some((view, _)) = provider(source, bounds.size.width) else {
+                continue;
+            };
+            out.push(
+                div()
+                    .absolute()
+                    .top(*top)
+                    .left(px(0.))
+                    .w_full()
+                    .h(*height)
+                    .occlude()
+                    .child(view),
+            );
+        }
+        out
     }
 
     /// Install the provider that resolves a ` ```mermaid ` block's source to a
@@ -1802,7 +1894,21 @@ impl EditorState {
                 odd = !odd;
             }
         }
+        let footnotes = markdown_syntax::footnote_numbers(&lines, &fence_odd);
+        let footnote_epoch = {
+            use std::hash::{Hash, Hasher};
+            let mut sorted: Vec<(&String, &usize)> = footnotes.iter().collect();
+            sorted.sort();
+            let mut h = std::collections::hash_map::DefaultHasher::new();
+            sorted.hash(&mut h);
+            h.finish()
+        };
         let data = std::rc::Rc::new(ScanData {
+            footnotes: std::rc::Rc::new(footnotes),
+            footnote_epoch,
+            frontmatter: markdown_syntax::frontmatter_end(&lines),
+            conflicts: markdown_syntax::conflict_regions(&lines),
+            details: markdown_syntax::details_regions(&lines, &fence_odd),
             generation: self.content_gen,
             ordered: markdown_syntax::ordered_numbers(&lines),
             tables: markdown_syntax::table_regions(&self.content),
@@ -2265,6 +2371,10 @@ impl EditorState {
     // --- Editing -------------------------------------------------------------
 
     fn backspace(&mut self, _: &Backspace, window: &mut Window, cx: &mut Context<Self>) {
+        // Local change (Ghostex Docs): Backspace over table cells empties them.
+        if self.clear_table_cell_selection(cx) {
+            return;
+        }
         if self.selected_range.is_empty() {
             // Word-style image deletion: with the caret on an image row — or at
             // the start of the line just below one — remove the whole picture
@@ -2336,6 +2446,10 @@ impl EditorState {
     }
 
     fn delete(&mut self, _: &Delete, window: &mut Window, cx: &mut Context<Self>) {
+        // Local change (Ghostex Docs): Delete over table cells empties them.
+        if self.clear_table_cell_selection(cx) {
+            return;
+        }
         if self.selected_range.is_empty() {
             // Word-style, mirroring `backspace`: the caret on an image row — or
             // at the end of the line just above one — removes the whole picture.
@@ -2889,6 +3003,11 @@ impl EditorState {
     }
 
     fn copy(&mut self, _: &Copy, _: &mut Window, cx: &mut Context<Self>) {
+        // Local change (Ghostex Docs): a selection across table cells copies them as TSV.
+        if let Some(tsv) = self.table_selection_tsv() {
+            self.write_clipboard(tsv, cx);
+            return;
+        }
         if !self.selected_range.is_empty() {
             let range = self.copy_range();
             // Ordered markers copy at their DISPLAYED positions (still digit
@@ -3252,12 +3371,57 @@ impl EditorState {
                 if let Some((_, body)) = self.code_block_at(fence_row) {
                     let text = self.content[body].to_string();
                     self.write_clipboard(text, cx);
+                    // Local change (Ghostex Docs): "copied" for two seconds, like the Docs page.
+                    let at = std::time::Instant::now();
+                    self.code_copied = Some((fence_row, at));
+                    cx.spawn(async move |this, cx| {
+                        cx.background_executor()
+                            .timer(std::time::Duration::from_secs(2))
+                            .await;
+                        let _ = this.update(cx, |this, cx| {
+                            if this.code_copied.is_some_and(|(_, when)| when == at) {
+                                this.code_copied = None;
+                                cx.notify();
+                            }
+                        });
+                    })
+                    .detach();
+                    cx.notify();
                 }
             } else if !self.code_langs.is_empty() {
                 self.code_lang_menu = Some((fence_row, event.position));
                 cx.notify();
             }
             return;
+        }
+        // Local change (Ghostex Docs): a click on a rendered footnote number jumps between the
+        // reference and its definition, like the Docs page (`meo/liveMode.ts` 593-692).
+        if self.markdown_style.is_some()
+            && event.click_count == 1
+            && !event.modifiers.shift
+            && let Some(target) = self.footnote_jump_at(event.position)
+        {
+            self.move_to(target, cx);
+            return;
+        }
+        // Local change (Ghostex Docs): a press on a rendered `<details>` summary opens or closes
+        // the block instead of placing the caret.
+        if self.markdown_style.is_some() && event.click_count == 1 && !event.modifiers.shift {
+            let offset = self.index_for_mouse_position(event.position);
+            let row = self.row_col(offset).0;
+            let crow = self.row_col(self.cursor_offset()).0;
+            let scan = self.scan_data();
+            if let Some(region) = scan
+                .details
+                .iter()
+                .find(|region| region.summary_line == row && !region.lines.contains(&crow))
+            {
+                if !self.details_toggled.remove(&region.key) {
+                    self.details_toggled.insert(region.key.clone());
+                }
+                cx.notify();
+                return;
+            }
         }
         // A press on a foldable callout's chevron flips its `-`/`+` fold char
         // (folding/unfolding the body) instead of placing the caret — the same
@@ -3382,11 +3546,16 @@ impl EditorState {
         // double-click still selects the word, shift still extends the
         // selection, and the caret goes anywhere else as usual (to edit a
         // link's own text, click beside it and arrow in — reveal-on-caret).
-        if event.click_count == 1
-            && !event.modifiers.shift
-            && !event.modifiers.control
-            && self.markdown_style.is_some()
-        {
+        // Local change (Ghostex Docs): with `links_need_modifier` a link opens on Cmd-click
+        // (Ctrl-click off macOS) and a plain click places the caret.
+        let link_click = match self.markdown_style.as_ref() {
+            Some(st) if st.links_need_modifier => {
+                event.modifiers.secondary() && !event.modifiers.shift
+            }
+            Some(_) => !event.modifiers.shift && !event.modifiers.control,
+            None => false,
+        };
+        if event.click_count == 1 && link_click {
             let offset = self.index_for_mouse_position(event.position);
             let (row, _) = self.row_col(offset);
             let start = self.line_starts()[row];
@@ -4216,6 +4385,136 @@ impl EditorState {
         self.grip_inset = inset;
     }
 
+    /// Local change (Ghostex Docs): every heading whose section has content, as `(heading row,
+    /// rows its fold hides, folded)`, for a host-drawn fold lane like the Docs page's.
+    pub fn heading_folds(&self) -> Vec<(usize, Range<usize>, bool)> {
+        // A heading's section runs to the next heading of its level or higher, outside fenced
+        // code (the same section `heading_fold_regions` folds).
+        let lines: Vec<&str> = self.content.split('\n').collect();
+        let mut sections: Vec<(usize, usize)> = Vec::new();
+        let mut open: Vec<(usize, u8)> = Vec::new();
+        let mut in_fence = false;
+        for (row, line) in lines.iter().enumerate() {
+            if line.trim_start().starts_with("```") {
+                in_fence = !in_fence;
+                continue;
+            }
+            if in_fence {
+                continue;
+            }
+            let Some(level) = markdown_syntax::heading_level(line) else {
+                continue;
+            };
+            while open.last().is_some_and(|&(_, l)| l >= level) {
+                let (start, _) = open.pop().unwrap();
+                sections.push((start, row));
+            }
+            open.push((row, level));
+        }
+        sections.extend(open.into_iter().map(|(start, _)| (start, lines.len())));
+        sections.sort_unstable();
+        sections
+            .into_iter()
+            .filter(|&(start, end)| {
+                lines[start + 1..end]
+                    .iter()
+                    .any(|line| !line.trim().is_empty())
+            })
+            .map(|(start, end)| {
+                let folded = self.folded_headings.contains(lines[start].trim());
+                (start, start + 1..end, folded)
+            })
+            .collect()
+    }
+
+    /// Local change (Ghostex Docs): folds or unfolds the heading on `row` (see
+    /// [`Self::heading_folds`]).
+    pub fn toggle_heading_fold(&mut self, row: usize, cx: &mut Context<Self>) {
+        let starts = self.line_starts();
+        let Some(&start) = starts.get(row) else {
+            return;
+        };
+        let end = self.line_end(row);
+        let key = self.content[start..end].trim().to_string();
+        if !self.folded_headings.remove(&key) {
+            let single = std::collections::HashSet::from([key.clone()]);
+            let crow = self.row_col(self.cursor_offset()).0;
+            if markdown_syntax::heading_fold_regions(&self.content, &single)
+                .iter()
+                .any(|r| crow > r.start && crow < r.end)
+            {
+                self.move_to(end, cx);
+            }
+            self.folded_headings.insert(key);
+        }
+        cx.notify();
+    }
+
+    /// Local change (Ghostex Docs): where a click on a rendered footnote number at `position`
+    /// jumps: from a reference to its definition's text, from a definition's number to the first
+    /// reference. `None` when the click is not on one (or the caret is in it, showing its source).
+    fn footnote_jump_at(&self, position: Point<Pixels>) -> Option<usize> {
+        let scan = self.scan_data();
+        if scan.footnotes.is_empty() {
+            return None;
+        }
+        let offset = self.index_for_mouse_position(position);
+        let (row, _) = self.row_col(offset);
+        let (caret_row, caret_col) = self.row_col(self.cursor_offset());
+        let starts = self.line_starts();
+        let start = starts[row];
+        let line = &self.content[start..self.line_end(row)];
+        let col = offset - start;
+        let lines: Vec<&str> = self.content.split('\n').collect();
+        let def_line = |key: &str| -> Option<usize> {
+            lines.iter().enumerate().find_map(|(r, l)| {
+                let len = markdown_syntax::footnote_def(l)?;
+                (markdown_syntax::footnote_key(&l[2..len - 2]) == key).then(|| starts[r] + len)
+            })
+        };
+        // A definition's "N.": the first reference to it.
+        if let Some(len) = markdown_syntax::footnote_def(line) {
+            let key = markdown_syntax::footnote_key(&line[2..len - 2]);
+            if col < len && scan.footnotes.contains_key(&key) && !(caret_row == row && caret_col < len) {
+                let needle = format!("[^{}]", &line[2..len - 2]);
+                return lines.iter().enumerate().find_map(|(r, l)| {
+                    let skip = markdown_syntax::footnote_def(l).unwrap_or(0);
+                    l[skip..].find(&needle).map(|at| starts[r] + skip + at + needle.len())
+                });
+            }
+        }
+        // A reference `[^label]` under the click.
+        let skip = markdown_syntax::footnote_def(line).unwrap_or(0);
+        let mut from = skip;
+        while let Some(at) = line[from..].find("[^") {
+            let open = from + at;
+            let Some(close) = line[open + 2..].find(']').map(|c| open + 2 + c) else {
+                break;
+            };
+            if (open..=close).contains(&col) {
+                let caret_inside = caret_row == row && (open..=close + 1).contains(&caret_col);
+                let key = markdown_syntax::footnote_key(&line[open + 2..close]);
+                if caret_inside || !scan.footnotes.contains_key(&key) {
+                    return None;
+                }
+                return def_line(&key);
+            }
+            from = close + 1;
+        }
+        None
+    }
+
+    /// Local change (Ghostex Docs): whether the editor draws its own hover chevrons on headings;
+    /// off when the host draws [`Self::heading_folds`] in its gutter.
+    pub fn set_heading_chevrons(&mut self, show: bool) {
+        self.heading_chevrons = show;
+    }
+
+    /// Local change (Ghostex Docs): whether the gutter's block-drag grip shows.
+    pub fn set_block_grip(&mut self, show: bool) {
+        self.block_grip = show;
+    }
+
     /// The line span the gutter grip drags as one unit: whole fenced/rendered
     /// regions (code, math, mermaid, tables incl. their style marker,
     /// property panels), a quote/callout run, a list item with its
@@ -4277,6 +4576,7 @@ impl EditorState {
     fn grip_hover_row_at(&self, position: Point<Pixels>) -> Option<usize> {
         let bounds = self.last_bounds?;
         if self.markdown_style.is_none()
+            || !self.block_grip
             || self.line_drag.is_some()
             || position.x < grip_left(bounds.origin.x, self.grip_inset) - px(4.)
             || position.x > bounds.origin.x + bounds.size.width
@@ -5337,6 +5637,7 @@ impl Render for EditorState {
                 editor: cx.entity(),
             })
             .children(self.embed_overlays(window))
+            .children(self.mermaid_overlays(window))
             .children(self.editing_block_overlay())
             .children(self.editing_inline_overlay())
             // Right-click suggestions menu, absolutely positioned over the
@@ -6395,6 +6696,8 @@ struct CodeBg {
     width: Pixels,
     top: bool,
     bottom: bool,
+    /// Local change (Ghostex Docs): the card's 1px border.
+    border: Option<Hsla>,
 }
 
 /// A table row rendered as a grid (W4c): its cells, per-column alignment, the
@@ -6430,7 +6733,8 @@ struct TableRow {
 /// marker and renders something in its place, with the body text inset to make
 /// Task checkbox edge, as a fraction of the line's font size — shared by the
 /// shaping (body inset), the pointer hitbox, and the paint so they agree.
-const CHECKBOX_SCALE: f32 = 0.9;
+// Local change (Ghostex Docs): the Docs page's 17px box at 14px text (was 0.9).
+const CHECKBOX_SCALE: f32 = 17. / 14.;
 
 /// room. Covers blockquotes now; list bullets + task checkboxes reuse it.
 #[derive(Clone, Copy)]
@@ -6474,7 +6778,8 @@ enum LineMark {
     Check {
         bullet_x: Pixels,
         text_inset: Pixels,
-        checked: bool,
+        /// Local change (Ghostex Docs): open, done, in progress (`[~]`) or dropped (`[-]`).
+        state: markdown_syntax::TaskState,
         color: Hsla,
         /// Fill for a done box (the host's link/accent color; white check on top).
         accent: Hsla,
@@ -6505,6 +6810,9 @@ impl LineMark {
 /// the only writers, so the lockstep invariant lives here.
 #[derive(Default)]
 struct ShapedDoc {
+    /// Local change (Ghostex Docs): extra room above each line (a merge-conflict block's action
+    /// row), added to its top like the code and table pads.
+    extra_top: Vec<Pixels>,
     wrapped: Vec<WrappedLine>,
     heights: Vec<Pixels>,
     widgets: Vec<Option<Block>>,
@@ -6564,6 +6872,39 @@ impl ShapedDoc {
         self.inline_maths.push(Vec::new());
         self.wrap_rows.push(rows);
         self.rtl_rows.push(None);
+        self.extra_top.push(px(0.));
+    }
+
+    /// Local change (Ghostex Docs): push one text line shaped from `text`/`runs` at `font_size`,
+    /// each wrap row `h` tall, `extra_top` of room above it, `map` from display to source.
+    #[allow(clippy::too_many_arguments)]
+    fn push_text(
+        &mut self,
+        window: &mut Window,
+        text: SharedString,
+        runs: &[TextRun],
+        font_size: Pixels,
+        wrap_width: Option<Pixels>,
+        h: Pixels,
+        map: Option<std::rc::Rc<Vec<usize>>>,
+        extra_top: Pixels,
+    ) {
+        let wl = shape_runs(window, &text, font_size, runs, wrap_width)
+            .into_iter()
+            .next()
+            .expect("a line always shapes to one wrapped line");
+        let rows = wl.wrap_boundaries().len() + 1;
+        self.wrapped.push(wl);
+        self.heights.push(h);
+        self.widgets.push(None);
+        self.backgrounds.push(None);
+        self.tables.push(None);
+        self.maps.push(map);
+        self.marks.push(None);
+        self.inline_maths.push(Vec::new());
+        self.wrap_rows.push(rows);
+        self.rtl_rows.push(None);
+        self.extra_top.push(extra_top);
     }
 }
 
@@ -6935,6 +7276,15 @@ pub(crate) struct ScanData {
     /// Whether each line STARTS inside a fenced code block (odd count of ```
     /// fences above it).
     fence_odd: Vec<bool>,
+    /// Local change (Ghostex Docs): each defined footnote's number by first reference, and a hash
+    /// of them for the line-run cache (a line's rendered numbers change with other lines).
+    footnotes: std::rc::Rc<std::collections::HashMap<String, usize>>,
+    footnote_epoch: u64,
+    /// Local change (Ghostex Docs): the frontmatter's closing line, the merge-conflict blocks and
+    /// the `<details>` blocks.
+    frontmatter: Option<usize>,
+    conflicts: Vec<Range<usize>>,
+    details: Vec<markdown_syntax::DetailsRegion>,
 }
 
 /// One frame's shaping, memoized between the measure pass and prepaint —

@@ -190,6 +190,11 @@ impl GhostexGpuiApp {
             }
             _ => {}
         }
+        // The Code view needs the editor component above and the web runtime to show it; with
+        // both missing their prompts come one after the other.
+        if let Some(signature) = self.web_runtime_placeholder_signature(TitlebarMode::Source) {
+            return signature;
+        }
         ProjectEditorPlaceholderSignature::for_source_code_server_launch_state(
             self.source_code_server_runtime.state,
             self.source_code_server_runtime
@@ -282,8 +287,14 @@ impl GhostexGpuiApp {
         if let Some(surface) = self.project_workarea_runtime_cef_surface_for_render(slot_key) {
             return self.render_project_workarea_runtime_cef_surface(slot_key, surface, cx);
         }
-        let signature = ProjectEditorPlaceholderSignature::for_mode(TitlebarMode::Manage)
-            .expect("Docs placeholder signature must exist");
+        // Until native Files becomes the default (CDXC:Docs 2026-09-24 in native_docs/render.rs)
+        // the whole view is the web page, so it asks for the web runtime like the Browser.
+        let signature = self
+            .web_runtime_placeholder_signature(TitlebarMode::Manage)
+            .unwrap_or_else(|| {
+                ProjectEditorPlaceholderSignature::for_mode(TitlebarMode::Manage)
+                    .expect("Docs placeholder signature must exist")
+            });
         self.render_project_editor_placeholder(signature, cx)
     }
 
@@ -300,7 +311,11 @@ impl GhostexGpuiApp {
         if let Some(surface) = self.project_workarea_runtime_cef_surface_for_render(slot_key) {
             return self.render_project_workarea_runtime_cef_surface(slot_key, surface, cx);
         }
-        self.render_project_editor_placeholder(self.extension_view_placeholder_signature(id), cx)
+        // Website, custom URL, Storybook and extension views are web pages.
+        let signature = self
+            .web_runtime_placeholder_signature(TitlebarMode::Extension(id))
+            .unwrap_or_else(|| self.extension_view_placeholder_signature(id));
+        self.render_project_editor_placeholder(signature, cx)
     }
 
     pub(crate) fn render_project_editor_sleeping_placeholder(
@@ -388,6 +403,7 @@ impl GhostexGpuiApp {
             .justify_center()
             .gap(px(8.0));
         for action in actions {
+            let hide_view_tab_label;
             let (id, label) = match action {
                 ProjectEditorPlaceholderAction::ProjectViewRetry => {
                     ("project-view-retry", "Start / Retry")
@@ -411,12 +427,29 @@ impl GhostexGpuiApp {
                 ProjectEditorPlaceholderAction::RetrySourceLoad => {
                     ("ghostex-gpui-source-load-retry", "Retry")
                 }
+                ProjectEditorPlaceholderAction::HideViewTab => {
+                    hide_view_tab_label = format!("Hide “{}” tab", mode.tab_label());
+                    (
+                        "ghostex-gpui-web-runtime-hide-view-tab",
+                        hide_view_tab_label.as_str(),
+                    )
+                }
+                ProjectEditorPlaceholderAction::InstallWebRuntime => {
+                    ("ghostex-gpui-web-runtime-install", "Install")
+                }
+                ProjectEditorPlaceholderAction::RetryWebRuntime => {
+                    ("ghostex-gpui-web-runtime-retry", "Retry")
+                }
             };
             action_row = action_row.child(
-                view_card_button(label)
+                view_card_button(label.to_string())
                     .id(id)
                     .when(
-                        action == ProjectEditorPlaceholderAction::InstallSourceComponent,
+                        matches!(
+                            action,
+                            ProjectEditorPlaceholderAction::InstallSourceComponent
+                                | ProjectEditorPlaceholderAction::InstallWebRuntime
+                        ),
                         |this| this.bg(chrome_ink().opacity(0.14)),
                     )
                     .on_mouse_down(
@@ -464,6 +497,16 @@ impl GhostexGpuiApp {
                                 }
                                 ProjectEditorPlaceholderAction::RetrySourceLoad => {
                                     this.retry_source_code_server_load(cx);
+                                }
+                                ProjectEditorPlaceholderAction::HideViewTab => {
+                                    let _ = this
+                                        .set_project_workarea_titlebar_mode_hidden(mode, true, cx);
+                                }
+                                ProjectEditorPlaceholderAction::InstallWebRuntime => {
+                                    this.install_web_runtime(false, cx);
+                                }
+                                ProjectEditorPlaceholderAction::RetryWebRuntime => {
+                                    this.retry_web_runtime(cx);
                                 }
                             }
                         }),

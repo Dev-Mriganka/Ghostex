@@ -83,6 +83,10 @@ fn demo_markdown_style() -> SyntaxStyle {
         popover_danger: gpui::rgb(0xE5484D).into(),  // destructive rows
         mono: font("Menlo"),
         property_icon: None,
+        heading: None,
+        quote_bar: hsla(0., 0., 0.6, 1.),
+        code_border: None,
+        links_need_modifier: false,
     }
 }
 

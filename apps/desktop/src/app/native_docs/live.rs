@@ -51,16 +51,26 @@ impl GhostexGpuiApp {
         let editor = cx.new(|cx| {
             let mut editor = EditorState::new(window, cx).with_text(initial);
             editor.set_tab_indent(2);
+            editor.set_labels(super::editor_style::labels(), cx);
             if live_mode {
                 editor.set_markdown_style(style, cx);
             }
             editor
+        });
+        // A Mermaid card's expand button opens the app's larger diagram view.
+        let app = cx.entity().downgrade();
+        let expand: super::mermaid_widget::MermaidExpand = std::rc::Rc::new(move |source, cx| {
+            let _ = app.update(cx, |this, cx| {
+                this.open_gpui_mermaid_diagram_modal(&json!({ "source": source }), cx);
+            });
         });
         super::blocks::install(
             &editor,
             &self.native_docs.blocks,
             path.to_string(),
             p.light,
+            super::editor_style::mermaid_colors(&p),
+            expand,
             cx,
         );
         let subscription = cx.subscribe_in(&editor, window, Self::native_docs_on_live_event);
@@ -111,6 +121,25 @@ impl GhostexGpuiApp {
                 self.native_docs_notify(cx);
             }
             EditorEvent::SelectionChanged => {
+                // The caret arriving inside a folded heading's section unfolds it, as on the Docs
+                // page (`headingCollapse.ts`).
+                let folded_around_caret = {
+                    let state = editor.read(cx);
+                    let text = state.text();
+                    let cursor = state.cursor().min(text.len());
+                    let row = text.as_bytes()[..cursor]
+                        .iter()
+                        .filter(|byte| **byte == b'\n')
+                        .count();
+                    state
+                        .heading_folds()
+                        .into_iter()
+                        .find(|(_, hidden, folded)| *folded && hidden.contains(&row))
+                        .map(|(heading, _, _)| heading)
+                };
+                if let Some(heading) = folded_around_caret {
+                    editor.update(cx, |state, cx| state.toggle_heading_fold(heading, cx));
+                }
                 self.native_docs_keep_caret_visible(window, cx);
                 self.native_docs_notify(cx);
             }

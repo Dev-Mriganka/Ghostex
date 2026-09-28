@@ -184,6 +184,7 @@ impl Element for EditorElement {
                     editor.block_image.as_ref(),
                     editor.block_chip.as_ref(),
                     editor.embed_view.as_ref(),
+                    editor.mermaid_view.as_ref(),
                     editor.block_mermaid.as_ref(),
                     editor.block_math.as_ref(),
                     editor.code_highlight.as_ref(),
@@ -204,6 +205,7 @@ impl Element for EditorElement {
                     &editor.shape_caches,
                     editor.shape_band.get().map(|(a, b)| (px(a), px(b))),
                     &editor.folded_headings,
+                    &editor.details_toggled,
                 );
                 // Mirror prepaint's `line_tops` walk exactly (same `line_pads`),
                 // or the element lays out shorter than it paints.
@@ -218,7 +220,11 @@ impl Element for EditorElement {
                 let mut new_tops: Vec<Pixels> = Vec::with_capacity(heights.len());
                 for (i, h) in heights.iter().enumerate() {
                     let tbl = tables.get(i).and_then(Option::as_ref);
-                    let (top, bot) = line_pads(backgrounds[i], tbl);
+                    let (top, bot) = line_pads(
+                        backgrounds[i],
+                        tbl,
+                        shaped.extra_top.get(i).copied().unwrap_or(px(0.)),
+                    );
                     y += top;
                     new_tops.push(y);
                     let row_h = *h * rows[i] as f32;
@@ -355,6 +361,7 @@ impl Element for EditorElement {
                 && m.font_size == font_size
         });
         let ShapedDoc {
+            extra_top,
             wrapped,
             heights: line_heights,
             widgets,
@@ -379,6 +386,7 @@ impl Element for EditorElement {
             let n = w.len();
             let rows: Vec<usize> = w.iter().map(|l| l.wrap_boundaries().len() + 1).collect();
             ShapedDoc {
+                extra_top: vec![px(0.); n],
                 wrapped: w,
                 heights: vec![base_lh; n],
                 widgets: vec![None; n],
@@ -405,6 +413,7 @@ impl Element for EditorElement {
                 editor.block_image.as_ref(),
                 editor.block_chip.as_ref(),
                 editor.embed_view.as_ref(),
+                editor.mermaid_view.as_ref(),
                 editor.block_mermaid.as_ref(),
                 editor.block_math.as_ref(),
                 editor.code_highlight.as_ref(),
@@ -425,6 +434,7 @@ impl Element for EditorElement {
                 &editor.shape_caches,
                 editor.shape_band.get().map(|(a, b)| (px(a), px(b))),
                 &editor.folded_headings,
+                &editor.details_toggled,
             )
         };
 
@@ -454,6 +464,7 @@ impl Element for EditorElement {
             let (top_pad, bot_pad) = line_pads(
                 backgrounds.get(idx).copied().flatten(),
                 tables.get(idx).and_then(Option::as_ref),
+                extra_top.get(idx).copied().unwrap_or(px(0.)),
             );
             y += top_pad;
             line_tops.push(y);
@@ -600,7 +611,10 @@ impl Element for EditorElement {
             .filter(|_| !editor.content.is_empty())
         {
             let starts = editor.line_starts();
-            let chip_fs = px(13.);
+            // Local change (Ghostex Docs): the Docs page's code chrome (`meo/styles.css` 611-656):
+            // the lowercase language at the card's top left and "copy" at its top right, 12px in
+            // the marker colour on no pill, always shown while the opening fence is off the caret.
+            let chip_fs = px(12.);
             let chip_h = px(20.);
             let shape = |window: &mut Window, text: &SharedString, color: Hsla| {
                 let run = TextRun {
@@ -641,41 +655,42 @@ impl Element for EditorElement {
                     size(cb.width, card_bottom - card_top),
                 );
                 code_card_rects.push((i, card));
-                // The chrome itself is hover-revealed: only the hovered card
-                // lays out (and hit-tests) its chips.
-                if editor.code_chip_hover != Some(i) {
+                // The card's first row is its opening fence; with the caret on it the raw fence
+                // shows instead of the chips.
+                let fence_row = i;
+                let is_fence = starts.get(i).is_some_and(|&s| {
+                    editor.content[s..editor.line_end(i)]
+                        .trim_start()
+                        .starts_with("```")
+                });
+                if !is_fence || caret_row == Some(fence_row) {
                     continue;
                 }
-                // The opening fence row: this row if the fence is revealed, else
-                // the nearest ``` row above (hidden fences collapse to height 0).
-                let Some(fence_row) = (0..=i).rev().find(|&r| {
-                    starts.get(r).is_some_and(|&s| {
-                        editor.content[s..editor.line_end(r)]
-                            .trim_start()
-                            .starts_with("```")
-                    })
-                }) else {
-                    continue;
-                };
                 let lang = editor
                     .code_block_at(fence_row)
-                    .map(|(l, _)| l)
+                    .map(|(l, _)| l.to_lowercase())
                     .unwrap_or_default();
-                let lang_text: SharedString = if lang.is_empty() {
-                    "text ▾".into()
+                let lang_text: SharedString = lang.into();
+                let copied = editor
+                    .code_copied
+                    .is_some_and(|(row, _)| row == fence_row);
+                let copy_text: SharedString = if copied {
+                    "copied".into()
                 } else {
-                    format!("{lang} ▾").into()
+                    editor.labels.code_copy.clone()
                 };
-                let copy_text: SharedString = editor.labels.code_copy.clone();
-                let lang_w = shape(window, &lang_text, st.quote) + px(12.);
-                let copy_w = shape(window, &copy_text, st.quote) + px(12.);
-                let right = bounds.origin.x + cb.width - px(6.);
-                let y = bounds.origin.y + line_tops[i] - top_pad + px(3.);
+                let lang_w = if lang_text.is_empty() {
+                    px(0.)
+                } else {
+                    shape(window, &lang_text, st.marker) + px(10.)
+                };
+                let copy_w = shape(window, &copy_text, st.marker) + px(16.);
+                let right = bounds.origin.x + cb.width - px(5.);
+                let row_h = line_heights[i];
+                let y = bounds.origin.y + line_tops[i] + (row_h - chip_h) / 2.;
                 let copy_bounds = Bounds::new(point(right - copy_w, y), size(copy_w, chip_h));
-                let lang_bounds = Bounds::new(
-                    point(right - copy_w - px(4.) - lang_w, y),
-                    size(lang_w, chip_h),
-                );
+                let lang_bounds =
+                    Bounds::new(point(bounds.origin.x + px(11.), y), size(lang_w, chip_h));
                 let lang_hb = window.insert_hitbox(lang_bounds, HitboxBehavior::Normal);
                 let copy_hb = window.insert_hitbox(copy_bounds, HitboxBehavior::Normal);
                 code_chips.push(CodeChip {
@@ -684,10 +699,9 @@ impl Element for EditorElement {
                     lang_bounds,
                     copy_bounds,
                     fence_row,
-                    // The popover surface (opaque) — the card tint is
-                    // translucent, and the labels must cover the code text.
-                    bg: st.popover_bg,
-                    fg: st.quote,
+                    // No pill: the fence row under the chips is empty.
+                    bg: hsla(0., 0., 0., 0.),
+                    fg: st.marker,
                     lang_hb,
                     copy_hb,
                 });
@@ -700,7 +714,8 @@ impl Element for EditorElement {
         let mut heading_chevrons = Vec::new();
         let mut heading_fold_grips = Vec::new();
         let mut heading_row_rects = Vec::new();
-        if editor.markdown_style.is_some() && !editor.content.is_empty() {
+        // Local change (Ghostex Docs): not when the host draws the chevrons in its fold lane.
+        if editor.markdown_style.is_some() && !editor.content.is_empty() && editor.heading_chevrons {
             let starts = editor.line_starts();
             for (i, line_shaped) in wrapped.iter().enumerate() {
                 // A fence's `# comment` line isn't a heading; folded rows
@@ -874,6 +889,7 @@ impl Element for EditorElement {
         }
         let gl = grip_left(bounds.origin.x, editor.grip_inset);
         if editor.markdown_style.is_some()
+            && editor.block_grip
             && editor.line_drag.is_none()
             && mouse.x >= gl - px(4.)
             && mouse.x <= bounds.origin.x + bounds.size.width
@@ -1421,15 +1437,38 @@ impl Element for EditorElement {
                     c.a = 0.25;
                     c
                 });
-            (
-                None,
-                range_quads(
+            // Local change (Ghostex Docs): a selection across table cells tints the rectangle of
+            // cells it covers (the Docs page's cell-range selection), the cells Copy and
+            // Backspace act on, instead of the text between its ends.
+            let quads = match editor.table_cell_selection() {
+                Some((rows, first, last)) => {
+                    let mut quads = Vec::new();
+                    for row in rows {
+                        let Some(t) = tables.get(row).and_then(Option::as_ref) else {
+                            continue;
+                        };
+                        let lh = line_heights.get(row).copied().unwrap_or(base_lh);
+                        let tleft = editor.table_left(t, row, &bounds);
+                        let y = bounds.top() + line_tops[row];
+                        for c in first..=last.min(t.cells.len().saturating_sub(1)) {
+                            let x = tleft + col_offset(&t.col_widths, t.cells.len(), c, t.rtl);
+                            let w = cell_span_width(&t.col_widths, t.cells.len(), c);
+                            quads.push(fill(
+                                Bounds::from_corners(point(x, y), point(x + w, y + lh)),
+                                color,
+                            ));
+                        }
+                    }
+                    quads
+                }
+                None => range_quads(
                     editor.selected_range.start,
                     editor.selected_range.end,
                     color,
                     window,
                 ),
-            )
+            };
+            (None, quads)
         };
 
         PrepaintState {
@@ -1620,18 +1659,39 @@ impl Element for EditorElement {
                 };
                 let box_origin = point(origin.x, origin.y - top_pad);
                 let box_size = size(cb.width, *lh + top_pad + bot_pad);
-                window.paint_quad(
-                    fill(Bounds::new(box_origin, box_size), cb.color).corner_radii(corners),
-                );
+                // Local change (Ghostex Docs): the card's 1px border, drawn per row.
+                let one = px(1.);
+                window.paint_quad(PaintQuad {
+                    bounds: Bounds::new(box_origin, box_size),
+                    corner_radii: corners,
+                    background: cb.color.into(),
+                    border_widths: Edges {
+                        top: if cb.top && cb.border.is_some() { one } else { z },
+                        bottom: if cb.bottom && cb.border.is_some() { one } else { z },
+                        left: if cb.border.is_some() { one } else { z },
+                        right: if cb.border.is_some() { one } else { z },
+                    },
+                    border_color: cb.border.unwrap_or(cb.color),
+                    border_style: BorderStyle::Solid,
+                });
             }
             // Blockquote: a muted 2px left border down the line (the body is inset
             // past it by QUOTE_INSET).
-            if let Some(LineMark::Quote { bar, .. }) = prepaint.marks.get(i).copied().flatten() {
+            if let Some(LineMark::Quote { bar, text }) = prepaint.marks.get(i).copied().flatten() {
+                // Local change (Ghostex Docs): a 3px bar, and an alert's rows get an 8% tint of
+                // its colour, like the Docs page.
+                let rows_h = *lh * prepaint.wrap_rows.get(i).copied().unwrap_or(1) as f32;
+                if text.is_none() {
+                    window.paint_quad(fill(
+                        Bounds::new(point(origin.x, origin.y), size(content_w, rows_h)),
+                        bar.opacity(0.08),
+                    ));
+                }
                 // RTL: the rule belongs on the right, where the text starts —
                 // the reader's `border_r_2` (see `zorite-markdown`'s blockquote).
-                let bx = origin.x + rtl.map_or(px(0.), |_| content_w - px(2.));
+                let bx = origin.x + rtl.map_or(px(0.), |_| content_w - px(3.));
                 window.paint_quad(fill(
-                    Bounds::new(point(bx, origin.y), size(px(2.), *lh)),
+                    Bounds::new(point(bx, origin.y), size(px(3.), rows_h)),
                     bar,
                 ));
             }
@@ -1698,10 +1758,15 @@ impl Element for EditorElement {
                         x
                     }
                 };
+                let rows_h = *lh * prepaint.wrap_rows.get(i).copied().unwrap_or(1) as f32;
+                window.paint_quad(fill(
+                    Bounds::new(point(origin.x, origin.y), size(content_w, rows_h)),
+                    bar.opacity(0.08),
+                ));
                 window.paint_quad(fill(
                     Bounds::new(
-                        point(amirror(origin.x, px(2.)), origin.y),
-                        size(px(2.), *lh),
+                        point(amirror(origin.x, px(3.)), origin.y),
+                        size(px(3.), rows_h),
                     ),
                     bar,
                 ));
@@ -1760,7 +1825,7 @@ impl Element for EditorElement {
                     label_x += sz + px(6.);
                 }
                 let label_font = Font {
-                    weight: FontWeight::BOLD,
+                    weight: FontWeight::MEDIUM,
                     ..font.clone()
                 };
                 let run = TextRun {
@@ -1835,7 +1900,7 @@ impl Element for EditorElement {
             // it reads at the text's size) with a checkmark when done.
             if let Some(LineMark::Check {
                 bullet_x,
-                checked,
+                state,
                 color,
                 accent,
                 ..
@@ -1853,29 +1918,61 @@ impl Element for EditorElement {
                 {
                     window.set_cursor_style(CursorStyle::PointingHand, hb);
                 }
-                // Done: a solid accent fill with a white check (Notion-style).
-                // Open: an empty outline.
+                // Local change (Ghostex Docs): the Docs page's box (`meo/styles.css` 1548-1607):
+                // a 1px `base03` outline with a 4px radius; done draws a check, in progress a ◐,
+                // dropped a bar, all in the text colour (`accent`).
                 window.paint_quad(PaintQuad {
                     bounds: box_bounds,
-                    corner_radii: Corners::all(px(3.)),
-                    background: if checked {
-                        accent.into()
-                    } else {
-                        hsla(0., 0., 0., 0.).into()
-                    },
-                    border_widths: Edges::all(px(1.5)),
-                    border_color: if checked { accent } else { color },
+                    corner_radii: Corners::all(px(4.)),
+                    background: hsla(0., 0., 0., 0.).into(),
+                    border_widths: Edges::all(px(1.)),
+                    border_color: color,
                     border_style: BorderStyle::Solid,
                 });
-                if checked {
-                    let s = f32::from(sz);
-                    let mut pb = PathBuilder::stroke(px(1.6));
-                    pb.move_to(point(bx + px(s * 0.24), by + px(s * 0.52)));
-                    pb.line_to(point(bx + px(s * 0.42), by + px(s * 0.70)));
-                    pb.line_to(point(bx + px(s * 0.76), by + px(s * 0.28)));
-                    if let Ok(path) = pb.build() {
-                        window.paint_path(path, gpui::white());
+                let s = f32::from(sz);
+                match state {
+                    markdown_syntax::TaskState::Done => {
+                        let mut pb = PathBuilder::stroke(px(2.));
+                        pb.move_to(point(bx + px(s * 0.27), by + px(s * 0.52)));
+                        pb.line_to(point(bx + px(s * 0.44), by + px(s * 0.68)));
+                        pb.line_to(point(bx + px(s * 0.74), by + px(s * 0.30)));
+                        if let Ok(path) = pb.build() {
+                            window.paint_path(path, accent);
+                        }
                     }
+                    markdown_syntax::TaskState::Dropped => {
+                        window.paint_quad(fill(
+                            Bounds::new(
+                                point(bx + px(3.), by + px(s / 2. - 1.)),
+                                size(px(s - 6.), px(2.)),
+                            ),
+                            accent,
+                        ));
+                    }
+                    markdown_syntax::TaskState::InProgress => {
+                        let glyph: SharedString = "◐".into();
+                        let run = TextRun {
+                            len: glyph.len(),
+                            font: Font {
+                                weight: FontWeight::MEDIUM,
+                                ..font.clone()
+                            },
+                            color: accent,
+                            background_color: None,
+                            underline: None,
+                            strikethrough: None,
+                        };
+                        let shaped = window.text_system().shape_line(glyph, px(12.), &[run], None);
+                        let _ = shaped.paint(
+                            point(bx + (sz - shaped.width()) / 2., by),
+                            sz,
+                            gpui::TextAlign::Left,
+                            None,
+                            window,
+                            cx,
+                        );
+                    }
+                    markdown_syntax::TaskState::Open => {}
                 }
             }
             if let Some(t) = prepaint.tables.get(i).and_then(Option::as_ref) {
@@ -2363,7 +2460,7 @@ impl Element for EditorElement {
                 };
                 let shaped = window
                     .text_system()
-                    .shape_line(text.clone(), px(13.), &[run], None);
+                    .shape_line(text.clone(), px(12.), &[run], None);
                 let _ = shaped.paint(
                     point(
                         bounds_.origin.x + (bounds_.size.width - shaped.width()) / 2.,
@@ -2533,8 +2630,9 @@ fn code_pads(bg: Option<CodeBg>) -> (Pixels, Pixels) {
 /// (measure missed the table gutters), the element laid out ~2×TABLE_GUTTER
 /// shorter per table than it painted, and clicks over the shortfall never
 /// reached the editor (the add-row "+" strip's dead bottom half).
-fn line_pads(bg: Option<CodeBg>, table: Option<&TableRow>) -> (Pixels, Pixels) {
+fn line_pads(bg: Option<CodeBg>, table: Option<&TableRow>, extra_top: Pixels) -> (Pixels, Pixels) {
     let (mut top, mut bot) = code_pads(bg);
+    top += extra_top;
     if let Some(t) = table {
         if t.is_header {
             top += px(TABLE_GUTTER);
@@ -2716,6 +2814,241 @@ fn shape_inline_images(
 /// line (incl. empty), so the counts match the logical lines and blank rows
 /// stay positionable.
 #[allow(clippy::too_many_arguments)]
+/// Local change (Ghostex Docs): how a frontmatter, merge-conflict or `<details>` line draws.
+enum LocalLine {
+    Text {
+        text: SharedString,
+        runs: Vec<TextRun>,
+        font_size: Pixels,
+        map: Option<std::rc::Rc<Vec<usize>>>,
+        extra_top: Pixels,
+    },
+    /// Folded away (height 0).
+    Hidden,
+}
+
+fn plain_run(len: usize, font: &Font, color: Hsla) -> TextRun {
+    TextRun {
+        len,
+        font: font.clone(),
+        color,
+        background_color: None,
+        underline: None,
+        strikethrough: None,
+    }
+}
+
+/// Local change (Ghostex Docs): the Docs page's rendering of the lines that belong to a
+/// frontmatter block (`meo/helpers/frontmatter.ts`), a merge-conflict block
+/// (`meo/helpers/mergeConflicts.ts`) or a `<details>` block (`meo/helpers/markdownSyntax.ts`);
+/// `None` for every other line.
+#[allow(clippy::too_many_arguments)]
+fn local_block_line(
+    idx: usize,
+    line: &str,
+    lines: &[&str],
+    scan: &ScanData,
+    md: Option<&SyntaxStyle>,
+    caret_row: Option<usize>,
+    sel_hits: &dyn Fn(&Range<usize>) -> bool,
+    details_toggled: &std::collections::HashSet<String>,
+    base_font: &Font,
+    base_color: Hsla,
+    base_font_size: Pixels,
+) -> Option<LocalLine> {
+    let text_line = |text: String, runs: Vec<TextRun>, map: Option<Vec<usize>>| LocalLine::Text {
+        text: text.into(),
+        runs,
+        font_size: base_font_size,
+        map: map.map(std::rc::Rc::new),
+        extra_top: px(0.),
+    };
+    // A merge conflict (live and source alike): plain text, the marker lines muted, the room for
+    // the host's action row above the first line.
+    if let Some(region) = scan.conflicts.iter().find(|r| r.contains(&idx)) {
+        let muted = md.map_or(base_color.opacity(0.55), |st| st.marker);
+        let color = if markdown_syntax::conflict_marker(line) {
+            muted
+        } else {
+            base_color
+        };
+        let runs = if line.is_empty() {
+            Vec::new()
+        } else {
+            vec![plain_run(line.len(), base_font, color)]
+        };
+        return Some(LocalLine::Text {
+            text: line.to_string().into(),
+            runs,
+            font_size: base_font_size,
+            map: None,
+            extra_top: if idx == region.start {
+                px(crate::CONFLICT_ACTIONS_HEIGHT)
+            } else {
+                px(0.)
+            },
+        });
+    }
+    let st = md?;
+    // Frontmatter: the fences show `---` (muted), except the opening one off the caret, which
+    // shows the "frontmatter" label; `key:` lines colour the key and draw `[a, b]` as pills.
+    if let Some(close) = scan.frontmatter
+        && idx <= close
+    {
+        let on_line = caret_row == Some(idx) || sel_hits(&(idx..idx + 1));
+        if idx == 0 && !on_line {
+            let label = "frontmatter";
+            let mut map = vec![0; label.len()];
+            map.push(line.len());
+            return Some(LocalLine::Text {
+                text: label.into(),
+                runs: vec![plain_run(label.len(), base_font, st.marker)],
+                font_size: base_font_size * (12. / 14.),
+                map: Some(std::rc::Rc::new(map)),
+                extra_top: px(0.),
+            });
+        }
+        if idx == 0 || idx == close {
+            let runs = if line.is_empty() {
+                Vec::new()
+            } else {
+                vec![plain_run(line.len(), base_font, st.marker)]
+            };
+            return Some(text_line(line.to_string(), runs, None));
+        }
+        return Some(frontmatter_line(line, on_line, base_font, base_color, base_font_size, st));
+    }
+    // `<details>`: off the caret the summary line is a bold "▸ Summary" toggle, the start and end
+    // tags hide, and a closed block hides its body.
+    if let Some(region) = scan.details.iter().find(|r| r.lines.contains(&idx)) {
+        let inside = caret_row.is_some_and(|row| region.lines.contains(&row));
+        if inside || sel_hits(&region.lines) {
+            return None;
+        }
+        let open = region.open != details_toggled.contains(&region.key);
+        if idx == region.summary_line {
+            let text = format!("{} {}", if open { "▾" } else { "▸" }, region.summary);
+            let bold = Font {
+                weight: FontWeight::SEMIBOLD,
+                ..base_font.clone()
+            };
+            let mut map = vec![0; text.len()];
+            map.push(line.len());
+            return Some(LocalLine::Text {
+                runs: vec![plain_run(text.len(), &bold, base_color)],
+                text: text.into(),
+                font_size: base_font_size,
+                map: Some(std::rc::Rc::new(map)),
+                extra_top: px(0.),
+            });
+        }
+        let end_line = region.lines.end - 1;
+        if idx == region.lines.start || idx == end_line || !open {
+            return Some(LocalLine::Hidden);
+        }
+        let _ = lines;
+        return None;
+    }
+    None
+}
+
+/// A frontmatter `key: value` line: the key in the quote-bar colour, the value in the text colour,
+/// and off the caret a `[a, b]` flow array as tinted pills.
+fn frontmatter_line(
+    line: &str,
+    on_line: bool,
+    base_font: &Font,
+    base_color: Hsla,
+    base_font_size: Pixels,
+    st: &SyntaxStyle,
+) -> LocalLine {
+    struct Built<'a> {
+        line: &'a str,
+        font: &'a Font,
+        text: String,
+        runs: Vec<TextRun>,
+        map: Vec<usize>,
+    }
+    impl Built<'_> {
+        fn push(&mut self, piece: &str, source: usize, color: Hsla, bg: Option<Hsla>) {
+            if piece.is_empty() {
+                return;
+            }
+            self.text.push_str(piece);
+            let len = self.line.len();
+            self.map
+                .extend((0..piece.len()).map(|k| (source + k).min(len)));
+            self.runs.push(TextRun {
+                background_color: bg,
+                ..plain_run(piece.len(), self.font, color)
+            });
+        }
+    }
+    let mut built = Built {
+        line,
+        font: base_font,
+        text: String::new(),
+        runs: Vec::new(),
+        map: Vec::new(),
+    };
+    match line.find(':').map(|at| at + 1) {
+        None => built.push(line, 0, st.quote_bar, None),
+        Some(key_end) => {
+            built.push(&line[..key_end], 0, st.quote_bar, None);
+            let value = &line[key_end..];
+            let trimmed = value.trim();
+            let array = (!on_line
+                && trimmed.starts_with('[')
+                && trimmed.ends_with(']')
+                && trimmed.len() > 2)
+                .then(|| &trimmed[1..trimmed.len() - 1]);
+            match array {
+                Some(items) => {
+                    let lead = value.len() - value.trim_start().len();
+                    built.push(&value[..lead], key_end, base_color, None);
+                    let mut at = key_end + lead + 1;
+                    let mut first = true;
+                    for item in items.split(',') {
+                        let name = item.trim();
+                        let offset = at + (item.len() - item.trim_start().len());
+                        if !name.is_empty() {
+                            if !first {
+                                built.push(" ", offset, base_color, None);
+                            }
+                            built.push("\u{2009}", offset, base_color, Some(st.rule));
+                            built.push(name, offset, base_color, Some(st.rule));
+                            built.push("\u{2009}", offset + name.len(), base_color, Some(st.rule));
+                            first = false;
+                        }
+                        at += item.len() + 1;
+                    }
+                }
+                None => built.push(value, key_end, base_color, None),
+            }
+        }
+    }
+    built.map.push(line.len());
+    LocalLine::Text {
+        text: built.text.into(),
+        runs: built.runs,
+        font_size: base_font_size,
+        map: Some(std::rc::Rc::new(built.map)),
+        extra_top: px(0.),
+    }
+}
+
+/// Local change (Ghostex Docs): the Docs page's alert label (`meo/helpers/alerts.ts`), uppercase and
+/// drawn at weight 500.
+fn alert_label(kind: markdown_syntax::AlertKind) -> &'static str {
+    match kind {
+        markdown_syntax::AlertKind::Note => "NOTE",
+        markdown_syntax::AlertKind::Tip => "TIP",
+        markdown_syntax::AlertKind::Important => "IMPORTANT",
+        markdown_syntax::AlertKind::Warning => "WARNING",
+        markdown_syntax::AlertKind::Caution => "CAUTION",
+    }
+}
+
 fn shape_document(
     window: &mut Window,
     content: &str,
@@ -2729,6 +3062,8 @@ fn shape_document(
     block_image: Option<&BlockImageFn>,
     block_chip: Option<&BlockChipFn>,
     embed_view: Option<&EmbedViewFn>,
+    // Local change (Ghostex Docs): see `MermaidViewFn`.
+    mermaid_view: Option<&MermaidViewFn>,
     block_mermaid: Option<&BlockMermaidFn>,
     block_math: Option<&BlockMathFn>,
     code_highlight: Option<&CodeHighlightFn>,
@@ -2758,9 +3093,13 @@ fn shape_document(
     // Collapsed headings (trimmed source lines) — their section lines fold to
     // height 0 like a folded callout's body.
     folded_headings: &std::collections::HashSet<String>,
+    // Local change (Ghostex Docs): `<details>` blocks toggled from their initial state.
+    details_toggled: &std::collections::HashSet<String>,
 ) -> ShapedDoc {
     let mut out = ShapedDoc::default();
     let lines: Vec<&str> = content.split('\n').collect();
+    // Local change (Ghostex Docs): the scanner numbers footnotes from this document's references.
+    markdown_syntax::set_footnote_numbers(scan.footnotes.clone());
     // Ordered items paint their computed CommonMark position, not their
     // literal source digits (the reader renumbers the same way).
     let ordered_nums = &scan.ordered;
@@ -2785,6 +3124,28 @@ fn shape_document(
     // ```mermaid blocks ready to render as a diagram: the caret is outside the
     // block and the host has a rendered bitmap. The diagram paints on the block's
     // first line; the rest collapse. Caret inside / still rendering → raw code.
+    // Local change (Ghostex Docs): Mermaid blocks the host draws as views: `(block, fenced,
+    // height)`. A fenced block keeps its fence rows; the view takes its first body row.
+    let mermaid_views: Vec<(Range<usize>, bool, Pixels)> = match mermaid_view.filter(|_| md.is_some())
+    {
+        Some(f) => scan
+            .mermaid
+            .iter()
+            .filter(|(range, source)| {
+                caret_row.is_none_or(|cr| !range.contains(&cr))
+                    && !sel_hits(range)
+                    && !source.trim().is_empty()
+            })
+            .filter_map(|(range, source)| {
+                let (_, height) = f(source, wrap_width.unwrap_or(px(760.)))?;
+                let fenced = lines
+                    .get(range.start)
+                    .is_some_and(|line| line.trim_start().starts_with("```"));
+                Some((range.clone(), fenced, height))
+            })
+            .collect(),
+        None => Vec::new(),
+    };
     let mermaid: Vec<(Range<usize>, BlockImg)> = match block_mermaid.filter(|_| md.is_some()) {
         Some(f) => scan
             .mermaid
@@ -3064,14 +3425,32 @@ fn shape_document(
         // Running top of this line — mirrors the prepaint `line_tops` walk
         // (including `line_pads`) so the band test is exact.
         if idx > 0 {
-            let (tp, bp) = line_pads(out.backgrounds[idx - 1], out.tables[idx - 1].as_ref());
+            let (tp, bp) = line_pads(
+                out.backgrounds[idx - 1],
+                out.tables[idx - 1].as_ref(),
+                out.extra_top[idx - 1],
+            );
             y_acc += tp + bp + out.heights[idx - 1] * out.wrap_rows[idx - 1] as f32;
         }
 
         // A ready mermaid block renders as its diagram (on the first line) with the
         // rest of the block collapsed — bypassing the normal per-line handling. Its
         // ``` fences still toggle `in_fence` so later code blocks track correctly.
-        if let Some((range, bi)) = mermaid.iter().find(|(r, _)| r.contains(&idx)) {
+        if let Some((range, fenced, height)) = mermaid_views.iter().find(|(r, ..)| r.contains(&idx))
+            && !(*fenced && (idx == range.start || idx + 1 == range.end))
+        {
+            // The view's row (the first body row, or a `:::` block's first row) keeps its
+            // height; the rest collapse. A fenced block's fence rows fall through to the code path.
+            let view_row = if *fenced { range.start + 1 } else { range.start };
+            let h = if idx == view_row { *height } else { px(0.) };
+            out.push_placeholder(window, base_font_size, wrap_width, h, None, None, 1);
+            line_start = line_end + 1;
+            alert_run = None;
+            continue;
+        }
+        if mermaid_views.iter().any(|(r, ..)| r.contains(&idx)) {
+            // A view block's fence row: drawn by the code path below.
+        } else if let Some((range, bi)) = mermaid.iter().find(|(r, _)| r.contains(&idx)) {
             if line.trim_start().starts_with("```") {
                 in_fence = !in_fence;
             }
@@ -3153,6 +3532,49 @@ fn shape_document(
             continue;
         }
 
+        // Local change (Ghostex Docs): frontmatter, merge conflicts and `<details>` blocks, drawn
+        // the Docs page's way (see `local_block_line`).
+        if let Some(local) = local_block_line(
+            idx,
+            line,
+            &lines,
+            scan,
+            md,
+            caret_row,
+            &sel_hits,
+            details_toggled,
+            base_font,
+            base_color,
+            base_font_size,
+        ) {
+            if line.trim_start().starts_with("```") {
+                in_fence = !in_fence;
+            }
+            match local {
+                LocalLine::Text {
+                    text,
+                    runs,
+                    font_size,
+                    map,
+                    extra_top,
+                } => out.push_text(
+                    window,
+                    text,
+                    &runs,
+                    font_size,
+                    wrap_width,
+                    base_font_size * LINE_HEIGHT_RATIO,
+                    map,
+                    extra_top,
+                ),
+                LocalLine::Hidden => {
+                    out.push_placeholder(window, base_font_size, wrap_width, px(0.), None, None, 1)
+                }
+            }
+            line_start = line_end + 1;
+            alert_run = None;
+            continue;
+        }
         // Fenced code block (W4b): a ``` line toggles the fence; the delimiter
         // lines + the lines between render as monospace code over a content-fit
         // background (delimiters dimmed). Code is literal — no inline scanning,
@@ -3201,7 +3623,8 @@ fn shape_document(
         // its bottom edge. The vertical padding is grown into the painted quad, so
         // line geometry — and the caret — stay untouched.
         if !is_code && !code_block.is_empty() {
-            let bw = code_w + px(2. * CODE_INSET);
+            // Local change (Ghostex Docs): the card spans the text column, like the Docs page.
+        let bw = (code_w + px(2. * CODE_INSET)).max(wrap_width.unwrap_or(px(0.)));
             let last = *code_block.last().unwrap();
             for &bi in &code_block {
                 if let Some(cb) = &mut out.backgrounds[bi] {
@@ -3379,10 +3802,10 @@ fn shape_document(
                     // same-line body insets past the label's measured width.
                     let color = st.alert_color(kind);
                     let label_font = Font {
-                        weight: FontWeight::BOLD,
+                        weight: FontWeight::MEDIUM,
                         ..base_font.clone()
                     };
-                    let label_w = measure_width(window, kind.label(), &label_font, base_font_size);
+                    let label_w = measure_width(window, alert_label(kind), &label_font, base_font_size);
                     // The icon (when the host supplies paths) sits before the
                     // label; both shift the same-line body's inset.
                     let icon_w = if st.alert_icons.is_some() {
@@ -3402,7 +3825,7 @@ fn shape_document(
                         plen + mlen,
                         LineMark::Alert {
                             bar: color,
-                            label: kind.label(),
+                            label: alert_label(kind),
                             kind,
                             text_inset: chevron_x + chevron_w,
                             fold,
@@ -3414,11 +3837,13 @@ fn shape_document(
                     // normal body text; plain quotes are muted throughout.
                     let (bar, text) = match alert_line {
                         Some((c, _)) => (c, None),
-                        None => (st.quote, Some(st.quote)),
+                        None => (st.quote_bar, Some(st.quote)),
                     };
                     Some((plen, LineMark::Quote { bar, text }))
                 }
-            } else if let Some((plen, indent, checked)) = markdown_syntax::task_prefix(line) {
+            } else if let Some((plen, indent, _)) = markdown_syntax::task_prefix(line) {
+                let state = markdown_syntax::task_state(line)
+                    .unwrap_or(markdown_syntax::TaskState::Open);
                 // Reader-style geometry: each nesting level advances by
                 // marker + gap + (spaces × 4.5), not the raw spaces' width.
                 let depth = indent as f32 / tab_indent.max(1) as f32;
@@ -3429,12 +3854,14 @@ fn shape_document(
                 let text_inset = bullet_x + box_w + px(LIST_TEXT_GAP);
                 Some((
                     plen,
+                    // Local change (Ghostex Docs): the Docs page's box: a `base03` outline with
+                    // the mark in the text colour.
                     LineMark::Check {
                         bullet_x,
                         text_inset,
-                        checked,
-                        color: st.quote,
-                        accent: st.link,
+                        state,
+                        color: st.rule,
+                        accent: base_color,
                     },
                 ))
             } else if let Some((plen, indent, ordered, _)) = markdown_syntax::list_prefix(line) {
@@ -3522,14 +3949,16 @@ fn shape_document(
         // the reading view shows them — a whole-line color, no hidden markers.
         let muted_line = md
             .filter(|_| !is_code && widget.is_none() && table.is_none())
-            .filter(|_| {
-                markdown_syntax::footnote_def(line).is_some() || markdown_syntax::html_block(line)
-            })
+            // Local change (Ghostex Docs): footnote definitions keep the body colour (their
+            // number is drawn in the link colour), like the Docs page.
+            .filter(|_| markdown_syntax::html_block(line))
             .map(|st| st.quote);
         // A blockquote's body is muted; a list keeps the normal body color (only
-        // its bullet is muted).
+        // its bullet is muted). Local change (Ghostex Docs): an alert's whole body takes its
+        // colour, like the Docs page.
         let line_base = match mark {
-            Some(LineMark::Quote { text, .. }) => text.unwrap_or(base_color),
+            Some(LineMark::Quote { text, bar }) => text.unwrap_or(bar),
+            Some(LineMark::Alert { bar, .. }) => bar,
             _ => muted_line.unwrap_or(base_color),
         };
         // Inline `$…$` formulas spliced into this line (populated by the hidden-markers branch).
@@ -3538,8 +3967,10 @@ fn shape_document(
         // per-line height cache — its (row height, wrap rows) get recorded at
         // push time so a later frame can window it out without shaping.
         let mut plain_hkey: Option<u64> = None;
-        let (shaped_text, runs, bg, map) = if collapse_fence || collapse_marker {
-            // Hidden ``` fence line or table-style marker: nothing, zero height.
+        // Local change (Ghostex Docs): a ``` fence off the caret stays in the card as an empty row
+        // (the Docs page keeps it, with the language and copy chips on the opening one).
+        let (shaped_text, runs, bg, map) = if collapse_marker {
+            // Hidden table-style marker: nothing, zero height.
             (
                 SharedString::default(),
                 std::rc::Rc::new(Vec::new()),
@@ -3566,7 +3997,7 @@ fn shape_document(
                 underline: None,
                 strikethrough: None,
             };
-            let runs = if line.is_empty() {
+            let runs = if line.is_empty() || collapse_fence {
                 Vec::new()
             } else if let Some(tokens) = line_highlights.get(&idx).filter(|_| !is_fence) {
                 let mut runs = Vec::new();
@@ -3600,13 +4031,18 @@ fn shape_document(
             // First visible code line of the block rounds the box's top corners.
             let top = code_block.is_empty();
             (
-                SharedString::from(line.to_string()),
+                SharedString::from(if collapse_fence {
+                    String::new()
+                } else {
+                    line.to_string()
+                }),
                 std::rc::Rc::new(runs),
                 Some(CodeBg {
                     color: st.code_bg,
                     width: px(0.), // back-patched to the block's widest line
                     top,
                     bottom: false,
+                    border: st.code_border,
                 }),
                 None,
             )
@@ -3638,6 +4074,10 @@ fn shape_document(
                             d.range.end.hash(&mut h);
                         }
                         run_epoch.hash(&mut h);
+                        // Local change (Ghostex Docs): footnote numbers depend on other lines.
+                        if line.contains("[^") {
+                            scan.footnote_epoch.hash(&mut h);
+                        }
                         let k = h.finish();
                         if let Some(slot) = caches.row_keys.borrow_mut().1.get_mut(idx) {
                             *slot = Some(k);
@@ -3745,16 +4185,26 @@ fn shape_document(
             };
             // A checked task's body renders struck through + muted (the reader
             // does the same) — a whole-line restyle over the finished runs.
-            let (disp, runs, m) = if matches!(mark, Some(LineMark::Check { checked: true, .. })) {
+            // Local change (Ghostex Docs): a done task is muted, a dropped one muted and struck,
+            // like the Docs page.
+            let finished = match mark {
+                Some(LineMark::Check { state, .. }) => match state {
+                    markdown_syntax::TaskState::Done => Some(false),
+                    markdown_syntax::TaskState::Dropped => Some(true),
+                    _ => None,
+                },
+                _ => None,
+            };
+            let (disp, runs, m) = if let Some(strike) = finished {
                 let runs = std::rc::Rc::new(
                     runs.iter()
                         .cloned()
                         .map(|mut r| {
-                            r.strikethrough = Some(gpui::StrikethroughStyle {
+                            r.strikethrough = strike.then_some(gpui::StrikethroughStyle {
                                 thickness: px(1.0),
                                 color: None,
                             });
-                            r.color = st.quote;
+                            r.color = st.marker;
                             r
                         })
                         .collect(),
@@ -3848,7 +4298,7 @@ fn shape_document(
         };
         let shaped = shape_runs(window, &shaped_text, fs, &runs, line_wrap);
         if let Some(wl) = shaped.into_iter().next() {
-            let h = if collapse_fence || collapse_marker {
+            let h = if collapse_marker {
                 px(0.)
             } else {
                 match &table {
@@ -3976,6 +4426,7 @@ fn shape_document(
                 caches.line_heights.borrow_mut().insert(hk, (h, span));
             }
             out.wrap_rows.push(span);
+            out.extra_top.push(px(0.));
             out.rtl_rows.push(rtl_rows.map(|rows| (line_rtl, rows)));
             out.wrapped.push(wl);
             out.heights.push(h);
@@ -3987,7 +4438,7 @@ fn shape_document(
             out.inline_maths.push(line_inline_math);
             // Track a (visible) code line + its width so the block's box can be
             // sized to its widest line and its last line marked.
-            if is_code && !collapse_fence {
+            if is_code {
                 code_block.push(out.backgrounds.len() - 1);
                 code_w = code_w.max(line_w);
             }
@@ -3997,7 +4448,8 @@ fn shape_document(
     // A code block running to the end of the document: size its box + mark its
     // last line (round the box bottom + pad).
     if !code_block.is_empty() {
-        let bw = code_w + px(2. * CODE_INSET);
+        // Local change (Ghostex Docs): the card spans the text column, like the Docs page.
+        let bw = (code_w + px(2. * CODE_INSET)).max(wrap_width.unwrap_or(px(0.)));
         let last = *code_block.last().unwrap();
         for &bi in &code_block {
             if let Some(cb) = &mut out.backgrounds[bi] {

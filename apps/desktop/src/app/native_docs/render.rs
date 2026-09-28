@@ -39,24 +39,18 @@ pub(crate) fn view_width() -> f32 {
     }
 }
 
-/// Whether the temporary switch that draws Docs natively is on.
-///
-/// CDXC:Docs 2026-09-24 DECISION:
-/// User: make Docs fully GPUI like Kanban and Automate, with the files list GPUI too, and swap it in all at once when everything is finished. Until then the native view is drawn only with `GHOSTEX_NATIVE_DOCS=1` or a `native-docs` file in the Ghostex config folder (`~/.config/ghostex/`, which an app opened from Finder can see), and the Docs page stays the default; the switch goes away with the swap.
-pub(crate) fn native_docs_enabled() -> bool {
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        if std::env::var("GHOSTEX_NATIVE_DOCS").as_deref() == Ok("1") {
-            return true;
-        }
-        let config = std::env::var_os("XDG_CONFIG_HOME")
-            .map(std::path::PathBuf::from)
-            .filter(|path| path.is_absolute())
-            .or_else(|| {
-                std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".config"))
-            });
-        config.is_some_and(|config| config.join("ghostex/native-docs").exists())
-    })
+impl DocsPalette {
+    /// The palette for the window's glass and the chat's resolved appearance.
+    pub(crate) fn current(window: &Window) -> Self {
+        let chat =
+            crate::app::native_chat::appearance::ChatAppearance::current(&serde_json::Value::Null);
+        Self::resolve(
+            crate::app::helpers::window_glass_active_in(window),
+            chat.light,
+            chat.font.clone(),
+            chat.background,
+        )
+    }
 }
 
 impl GhostexGpuiApp {
@@ -92,16 +86,16 @@ impl GhostexGpuiApp {
         palette
     }
 
-    /// Runs in the app's render. `None` when native Docs is off or the context has no project,
-    /// which keeps the Docs page or its placeholder.
+    /// Runs in the app's render. `None` when the context has no project, which keeps the
+    /// placeholder.
+    ///
+    /// CDXC:Docs 2026-09-29 DECISION:
+    /// User: the native Files view is the main version; HTML files and Excalidraw drawings stay on CEF (the browser area). Supersedes the 2026-09-24 decision that kept the React Docs page as the default behind the `GHOSTEX_NATIVE_DOCS` / `~/.config/ghostex/native-docs` switch; the switch is gone.
     pub(crate) fn render_native_docs(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        if !native_docs_enabled() {
-            return None;
-        }
         let project = self.native_docs_project()?;
         self.native_docs_sync_project(&project, window, cx);
         if std::mem::take(&mut self.native_docs.open_file_prompt) {
@@ -161,6 +155,8 @@ impl GhostexGpuiApp {
         let toolbar = self.render_native_docs_selection_toolbar(&p, header_bottom, window, cx);
         let composer = self.render_native_docs_composer(&p, window, cx);
         let notes_list = self.render_native_docs_notes_list(&p, window, cx);
+        let note_preview = self.render_native_docs_note_preview(&p, window, cx);
+        let rename_dialog = self.render_native_docs_rename_dialog(window, cx);
 
         Some(
             div()
@@ -211,7 +207,9 @@ impl GhostexGpuiApp {
                 .children(restore)
                 .children(toolbar)
                 .children(notes_list)
+                .children(note_preview)
                 .children(composer)
+                .children(rename_dialog)
                 .into_any_element(),
         )
     }
@@ -317,7 +315,7 @@ impl GhostexGpuiApp {
             .cursor_pointer()
             .hover(move |style| style.bg(hover))
             .child(crate::app::helpers::titlebar_svg_icon(
-                "docs/t-layout-sidebar-right-expand-2.svg",
+                "files-view/t-layout-sidebar-right-expand-2.svg",
                 16.0,
                 p.toolbar_icon,
             ))

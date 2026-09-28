@@ -16,7 +16,9 @@ impl GhostexGpuiApp {
         snapshot: &crate::GpuiProjectSnapshot,
     ) -> Option<ProjectWorkareaRealRuntimeUrl> {
         let document = self.native_docs.active_document()?;
-        if !document.kind.uses_browser_area() {
+        if !document.kind.uses_browser_area()
+            || !crate::app::helpers::web_runtime::web_runtime_available()
+        {
             return None;
         }
         let media = match document.kind {
@@ -47,10 +49,9 @@ impl GhostexGpuiApp {
     /// the composer). A browser page cannot sit under GPUI content, so it hides meanwhile. The
     /// floating files list has a window of its own and leaves the page showing.
     pub(crate) fn native_docs_browser_area_covered(&self) -> bool {
-        if !super::render::native_docs_enabled() {
-            return false;
-        }
-        self.native_docs.composer.is_some() || self.native_docs.notes_list_open
+        self.native_docs.composer.is_some()
+            || self.native_docs.notes_list_open
+            || self.native_docs.rename_dialog.is_some()
     }
 
     /// Creates, replaces or hides the page after the open file or the covering state changed.

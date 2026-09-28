@@ -10,4 +10,16 @@ line height, find colours, table-cell slack, note highlights, and cached line st
 which a long document took about half a second per frame). Upstream compiles against
 Ghostex's GPUI after dropping the extra clip-bounds argument from two `paint_image` calls.
 
+The Files view's parity pass with the Docs page it replaced (2026-09-28) added more, also marked
+`Local change`: frontmatter, merge-conflict and `<details>` blocks (`local_block_line` in
+`element.rs`, with room above a conflict for the host's buttons); numbered footnotes that jump
+between reference and definition; `<kbd>` keycaps, `:shortcode:` emoji (`emoji.rs`), hidden
+autolink brackets, underlined links that open on Cmd/Ctrl-click (`links_need_modifier`) and
+empty-text image links; `[~]`/`[-]` task states and the Docs checkbox; the Docs heading scale,
+quote bar, uppercase alert labels with a tinted body, and code cards whose fence rows carry the
+language and copy chips; a host view per Mermaid block (`set_mermaid_view_provider`) and
+`:::mermaid` blocks; a heading-fold API for a host-drawn fold lane (`heading_folds`); switches
+for the block-drag grip and the hover chevrons; and table controls (`caret_table`,
+`table_header_cells`, `sort_table`, TSV copy and cell clearing of a cell-range selection).
+
 The Zorite application is GPL and none of its code is here.

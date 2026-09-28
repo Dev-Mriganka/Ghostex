@@ -191,13 +191,6 @@ impl DocsFileKind {
     }
 }
 
-/// A tree row turned into a name field.
-pub(crate) struct DocsRename {
-    pub(crate) path: String,
-    pub(crate) input: Entity<InputState>,
-    pub(crate) _subscription: Subscription,
-}
-
 /// How the files list is showing when it is not docked.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum DocsTransient {
@@ -379,8 +372,24 @@ pub(crate) struct NativeDocsState {
     pub(crate) pending_open: Option<String>,
     /// Open File was asked for before Files drew; its next draw shows the search box.
     pub(crate) open_file_prompt: bool,
-    /// A tree row being renamed in place.
-    pub(crate) rename: Option<DocsRename>,
+    /// The Rename item dialog, while open.
+    pub(crate) rename_dialog: Option<super::rename_dialog::DocsRenameDialog>,
+    /// The row menu last shown (item, kind, where), so Delete can re-open it armed.
+    pub(crate) entry_menu: Option<(String, DocsEntryKind, gpui::Point<gpui::Pixels>)>,
+    /// The item whose Delete was clicked once; the next click deletes it.
+    pub(crate) delete_armed: Option<String>,
+    /// The file operation running (action, item), which the menus show and wait for.
+    pub(crate) file_operation: Option<(String, String)>,
+    /// Folders whose listing is on its way, and the ones that failed with why.
+    pub(crate) folders_loading: BTreeSet<String>,
+    pub(crate) folder_errors: BTreeMap<String, String>,
+    /// The tree row keyboard focus is on (by path), for arrow-key navigation.
+    pub(crate) tree_focus: Option<String>,
+    /// The tree's and Open Files' keyboard focus.
+    pub(crate) tree_focus_handle: Option<FocusHandle>,
+    pub(crate) open_files_focus_handle: Option<FocusHandle>,
+    /// Rows drawn above the tree's first entry (the loading or error line), as last drawn.
+    pub(crate) tree_status_rows: usize,
     /// The project's notes (`.ghostex/manage-annotations.json`), by file path.
     pub(crate) notes: super::annotations::DocsAnnotationsByPath,
     pub(crate) notes_loaded: bool,
@@ -501,6 +510,8 @@ impl NativeDocsState {
         self.search = from.search.take();
         self.search_subscription = from.search_subscription.take();
         self.focus = from.focus.take();
+        self.tree_focus_handle = from.tree_focus_handle.take();
+        self.open_files_focus_handle = from.open_files_focus_handle.take();
         self.palette = from.palette.take();
         self.appearance_signature = from.appearance_signature;
         self.sidebar_pinned = from.sidebar_pinned;

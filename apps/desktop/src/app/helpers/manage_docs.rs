@@ -1,6 +1,7 @@
 // C1 wave-1 extraction: stateless helper functions moved verbatim out of
 // main.rs (pure move, no logic changes). See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
+use crate::app::helpers::web_bridge_types::SidebarRuntimeSettingsSnapshot;
 use std::{
     collections::HashSet,
     fs,
@@ -311,7 +312,7 @@ pub(crate) fn manage_workarea_runtime_url_from_project_snapshot(
 }
 
 pub(crate) fn gpui_manage_additional_docs_folders_text(
-    settings: &cef::SidebarRuntimeSettingsSnapshot,
+    settings: &SidebarRuntimeSettingsSnapshot,
 ) -> String {
     serde_json::from_str::<serde_json::Value>(&settings.saved_settings_json)
         .ok()
@@ -324,9 +325,7 @@ pub(crate) fn gpui_manage_additional_docs_folders_text(
         .unwrap_or_default()
 }
 
-pub(crate) fn gpui_global_docs_directory_text(
-    settings: &cef::SidebarRuntimeSettingsSnapshot,
-) -> String {
+pub(crate) fn gpui_global_docs_directory_text(settings: &SidebarRuntimeSettingsSnapshot) -> String {
     serde_json::from_str::<serde_json::Value>(&settings.saved_settings_json)
         .ok()
         .and_then(|value| {

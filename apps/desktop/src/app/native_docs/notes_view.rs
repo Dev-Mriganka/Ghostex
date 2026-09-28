@@ -8,7 +8,7 @@ use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, Bounds, Context, FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent,
     MouseButton, ParentElement as _, Pixels, SharedString, StatefulInteractiveElement as _,
-    Styled as _, Window, anchored, deferred, div, point, px,
+    Styled as _, StyledImage as _, Window, anchored, deferred, div, point, px,
 };
 use gpui_component::input::Textarea;
 
@@ -173,7 +173,7 @@ impl GhostexGpuiApp {
         vec![
             header_tile(
                 "native-docs-notes-list",
-                header_icon("docs/t-messages-2.svg", false, p),
+                header_icon("files-view/t-messages-2.svg", false, p),
                 list_open,
                 false,
                 p,
@@ -208,7 +208,7 @@ impl GhostexGpuiApp {
             .into_any_element(),
             header_tile(
                 "native-docs-global-comment",
-                header_icon("docs/t-message-plus-2.svg", false, p),
+                header_icon("files-view/t-message-plus-2.svg", false, p),
                 false,
                 false,
                 p,
@@ -222,7 +222,7 @@ impl GhostexGpuiApp {
             .into_any_element(),
             header_tile(
                 "native-docs-send",
-                header_icon("docs/t-send-2.svg", total == 0, p),
+                header_icon("files-view/t-send-2.svg", total == 0, p),
                 false,
                 total == 0,
                 p,
@@ -243,7 +243,7 @@ impl GhostexGpuiApp {
             .into_any_element(),
             header_tile(
                 "native-docs-copy-feedback",
-                header_icon("docs/t-copy-2.svg", total == 0, p),
+                header_icon("files-view/t-copy-2.svg", total == 0, p),
                 false,
                 total == 0,
                 p,
@@ -255,7 +255,7 @@ impl GhostexGpuiApp {
             .into_any_element(),
             header_tile(
                 "native-docs-clear",
-                header_icon("docs/t-trash-2.svg", total == 0, p),
+                header_icon("files-view/t-trash-2.svg", total == 0, p),
                 false,
                 total == 0,
                 p,
@@ -375,7 +375,7 @@ impl GhostexGpuiApp {
             vec![
                 button(
                     "docs-sel-annotations",
-                    "docs/t-messages-2.svg",
+                    "files-view/t-messages-2.svg",
                     "#ededed",
                     "#3f3f46",
                     "Annotations",
@@ -433,7 +433,7 @@ impl GhostexGpuiApp {
             vec![
                 button(
                     "docs-sel-comment",
-                    "docs/t-message-plus-2.svg",
+                    "files-view/t-message-plus-2.svg",
                     "#e2b340",
                     "#926b0e",
                     "Comment (C)",
@@ -540,7 +540,7 @@ impl GhostexGpuiApp {
     pub(crate) fn native_docs_selection_key(
         &mut self,
         event: &KeyDownEvent,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if self.native_docs.composer.is_some() || self.native_docs.toolbar_formatting {
@@ -575,12 +575,16 @@ impl GhostexGpuiApp {
                 cx,
             ),
             "escape" => {
+                // The selection lives in the Markdown document's live editor.
                 if let Some(editor) = self
                     .native_docs
                     .active_document()
-                    .and_then(|document| document.editor.clone())
+                    .and_then(|document| document.live.clone())
                 {
-                    editor.update(cx, |editor, cx| editor.unselect(window, cx));
+                    editor.update(cx, |editor, cx| {
+                        let caret = editor.cursor();
+                        editor.set_cursor(caret, cx);
+                    });
                 }
             }
             _ => {
@@ -799,10 +803,18 @@ impl GhostexGpuiApp {
                             .when(sent, |this| {
                                 this.child(
                                     div()
+                                        .id(("native-docs-note-sent", index))
                                         .flex()
                                         .items_center()
                                         .gap(px(3.0))
                                         .text_color(p.subtle)
+                                        .tooltip(|window, cx| {
+                                            titlebar_tooltip(
+                                                "Already sent to the agent; editing sends it again",
+                                                window,
+                                                cx,
+                                            )
+                                        })
                                         .child(titlebar_svg_icon(
                                             "titlebar/check.svg",
                                             11.0,
@@ -826,12 +838,56 @@ impl GhostexGpuiApp {
                                 .child(note.quote.clone()),
                         )
                     })
-                    .when(!note.note.is_empty(), |this| {
+                    .when(!note.display_note().is_empty(), |this| {
                         this.child(
                             div()
                                 .text_size(px(12.0))
                                 .text_color(p.text)
-                                .child(note.note.clone()),
+                                .child(note.display_note().to_string()),
+                        )
+                    })
+                    // The note's images, each a thumbnail and its name that opens the picture.
+                    .when(!note.attachments.is_empty(), |this| {
+                        this.child(
+                            div().flex().flex_col().gap(px(6.0)).children(
+                                note.attachments
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(slot, attachment)| {
+                                        let image = super::notes::attachment_image(attachment);
+                                        let open = attachment.clone();
+                                        div()
+                                            .id(("native-docs-note-attachment", index * 8 + slot))
+                                            .flex()
+                                            .items_center()
+                                            .gap(px(6.0))
+                                            .cursor_pointer()
+                                            .child(
+                                                div()
+                                                    .flex_none()
+                                                    .size(px(34.0))
+                                                    .rounded(px(4.0))
+                                                    .overflow_hidden()
+                                                    .bg(p.text.opacity(0.06))
+                                                    .children(image.map(|image| {
+                                                        gpui::img(image)
+                                                            .size_full()
+                                                            .object_fit(gpui::ObjectFit::Cover)
+                                                    })),
+                                            )
+                                            .child(
+                                                div()
+                                                    .min_w_0()
+                                                    .truncate()
+                                                    .text_size(px(10.0))
+                                                    .text_color(p.muted)
+                                                    .child(attachment.name.clone()),
+                                            )
+                                            .on_click(move |_, _, cx| {
+                                                super::notes::open_attachment(&open, cx)
+                                            })
+                                    }),
+                            ),
                         )
                     })
                     .when(note.kind == DocsAnnotationType::Comment, |this| {
@@ -932,6 +988,142 @@ impl GhostexGpuiApp {
             deferred(anchored().position(point(px(left), top)).child(panel))
                 .with_priority(2)
                 .into_any_element(),
+        )
+    }
+}
+
+impl GhostexGpuiApp {
+    /// The card over the note the caret sits in (nothing selected, no composer open): its type,
+    /// its image count, a two-line preview and a remove button (`ManageAnnotationPreviewCard`).
+    pub(crate) fn render_native_docs_note_preview(
+        &mut self,
+        p: &DocsPalette,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        if self.native_docs.composer.is_some() || self.native_docs.notes_list_open {
+            return None;
+        }
+        let notes = self.native_docs_active_notes();
+        if notes.is_empty() {
+            return None;
+        }
+        let document = self.native_docs.active_document()?;
+        let live = document.live.as_ref()?;
+        let editor = live.read(cx);
+        if !gpui::Focusable::focus_handle(editor, cx).is_focused(window)
+            || !editor.selected_range().is_empty()
+        {
+            return None;
+        }
+        let text = editor.text();
+        let found =
+            super::annotations::annotation_range_at(text, notes, editor.cursor().min(text.len()))?;
+        let note = notes.get(found.annotation_index)?.clone();
+        let start = editor.bounds_for_offset(found.range.start)?;
+        let end = editor.bounds_for_offset(found.range.end).unwrap_or(start);
+        let anchor_x = if (end.top() - start.top()).abs() < px(1.0) {
+            (f32::from(start.left()) + f32::from(end.left())) / 2.0
+        } else {
+            f32::from(start.left())
+        };
+        let viewport = window.viewport_size();
+        let width = (f32::from(viewport.width) - 24.0).clamp(240.0, 320.0);
+        let half = width / 2.0;
+        let center = anchor_x.clamp(
+            12.0 + half,
+            (f32::from(viewport.width) - 12.0 - half).max(12.0 + half),
+        );
+        let top = (f32::from(start.top()) - 96.0).max(12.0);
+        let color = hex(note.color(), 1.0);
+        let images = note.attachments.len();
+        let remove_id = note.id.clone();
+        let card = div()
+            .id("native-docs-note-preview")
+            .relative()
+            .w(px(width))
+            .flex()
+            .flex_col()
+            .gap(px(6.0))
+            .pt(px(10.0))
+            .pb(px(10.0))
+            .pl(px(12.0))
+            .pr(px(36.0))
+            .rounded(px(8.0))
+            .bg(p.raised)
+            .border_1()
+            .border_color(color.opacity(0.28))
+            .shadow_lg()
+            .child(
+                div()
+                    .absolute()
+                    .inset_0()
+                    .rounded(px(8.0))
+                    .bg(color.opacity(0.04)),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .text_size(px(10.0))
+                    .font_weight(FontWeight::MEDIUM)
+                    .line_height(px(11.0))
+                    .child(
+                        div()
+                            .text_color(color)
+                            .child(note.type_label().to_uppercase()),
+                    )
+                    .when(images > 0, |this| {
+                        this.child(div().text_color(p.muted).child(format!(
+                            "{images} {}",
+                            if images == 1 { "image" } else { "images" }
+                        )))
+                    }),
+            )
+            .child(
+                div()
+                    .text_size(px(12.0))
+                    .line_height(px(12.0 * 1.4))
+                    .max_h(px(12.0 * 1.4 * 2.0))
+                    .overflow_hidden()
+                    .text_color(p.text.opacity(0.9))
+                    .child(note.preview_text()),
+            )
+            .child(
+                div()
+                    .id("native-docs-note-preview-remove")
+                    .absolute()
+                    .top(px(7.0))
+                    .right(px(7.0))
+                    .size(px(22.0))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(5.0))
+                    .cursor_pointer()
+                    .child(titlebar_svg_icon(
+                        "titlebar/x.svg",
+                        14.0,
+                        color.opacity(0.7),
+                    ))
+                    .tooltip(|window, cx| titlebar_tooltip("Remove annotation", window, cx))
+                    .on_mouse_down(MouseButton::Left, |_, window, cx| {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.native_docs_remove_note(&remove_id, cx);
+                    })),
+            );
+        Some(
+            deferred(
+                anchored()
+                    .position(point(px(center - half), px(top)))
+                    .child(card),
+            )
+            .with_priority(1)
+            .into_any_element(),
         )
     }
 }

@@ -627,6 +627,177 @@ impl EditorState {
         cx.notify();
     }
 
+    /// Local change (Ghostex Docs): the caret's table for a host toolbar, as `(header row, row
+    /// after the table, column count, body row count, caret on a body row)`; `None` outside a
+    /// table, while the editor has no focus, or with the caret on the separator (the table then
+    /// shows its source).
+    pub fn caret_table(&self) -> Option<(usize, usize, usize, usize, bool)> {
+        let (row, _) = self.row_col(self.cursor_offset());
+        let (header, sep, end, columns) = self.caret_table_block()?;
+        if row == sep {
+            return None;
+        }
+        Some((header, end, columns, end.saturating_sub(sep + 1), row > sep))
+    }
+
+    /// Local change (Ghostex Docs): the header cells of the table headed at `header_row`, as
+    /// painted last frame, in the editor's own coordinates.
+    pub fn table_header_cells(&self, header_row: usize) -> Vec<Bounds<Pixels>> {
+        let (Some(bounds), Some(Some(t)), Some(top), Some(height)) = (
+            self.last_bounds,
+            self.table_rows.get(header_row),
+            self.line_tops.get(header_row),
+            self.line_heights.get(header_row),
+        ) else {
+            return Vec::new();
+        };
+        let mut x = self.table_left(t, header_row, &bounds) - bounds.origin.x;
+        t.col_widths
+            .iter()
+            .map(|width| {
+                let cell = Bounds::new(point(x, *top), size(*width, *height));
+                x += *width;
+                cell
+            })
+            .collect()
+    }
+
+    /// Local change (Ghostex Docs): rewrites the table headed at `header_row` with its body rows
+    /// sorted by column `col` (the Docs page's comparator: empty cells last, then numbers, then
+    /// ISO dates, then text, numeric-aware and case-insensitive). One undo step.
+    pub fn sort_table(
+        &mut self,
+        header_row: usize,
+        col: usize,
+        descending: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let scan = self.scan_data();
+        let Some(region) = scan.tables.iter().find(|r| r.lines.start == header_row) else {
+            return;
+        };
+        let (body_start, end) = (region.lines.start + 2, region.lines.end);
+        if body_start >= end {
+            return;
+        }
+        let starts = self.line_starts();
+        let rows: Vec<String> = (body_start..end)
+            .map(|row| self.content[starts[row]..self.line_end(row)].to_string())
+            .collect();
+        let mut keyed: Vec<(String, String)> = rows
+            .iter()
+            .map(|line| {
+                let cell = markdown_syntax::table_cells(line)
+                    .get(col)
+                    .map(|cell| cell.trim().to_string())
+                    .unwrap_or_default();
+                (cell, line.clone())
+            })
+            .collect();
+        keyed.sort_by(|(a, _), (b, _)| compare_table_cells(a, b, descending));
+        let sorted: Vec<String> = keyed.into_iter().map(|(_, line)| line).collect();
+        if sorted == rows {
+            return;
+        }
+        let range = starts[body_start]..self.line_end(end - 1);
+        let text = sorted.join("\n");
+        self.replace_range(range, &text, cx);
+        cx.emit(EditorEvent::Changed);
+    }
+
+    /// Local change (Ghostex Docs): a selection that spans more than one cell of one rendered
+    /// table, as the rectangle of cells between its ends: `(rows, first column, last column)`,
+    /// separator row excluded. The Docs page copies such a selection as tab-separated values and
+    /// clears its cells on Backspace or Delete.
+    pub(crate) fn table_cell_selection(&self) -> Option<(Vec<usize>, usize, usize)> {
+        if self.markdown_style.is_none() || self.selected_range.is_empty() {
+            return None;
+        }
+        let (start, end) = (
+            self.selected_range.start.min(self.selected_range.end),
+            self.selected_range.start.max(self.selected_range.end),
+        );
+        let (row_a, _) = self.row_col(start);
+        let (row_b, _) = self.row_col(end);
+        let scan = self.scan_data();
+        let region = scan.tables.iter().find(|r| r.lines.contains(&row_a))?;
+        if !region.lines.contains(&row_b) {
+            return None;
+        }
+        let starts = self.line_starts();
+        let cell_at = |row: usize, offset: usize| -> usize {
+            let line = &self.content[starts[row]..self.line_end(row)];
+            let col = offset - starts[row];
+            let ranges = markdown_syntax::table_cell_ranges(line);
+            ranges
+                .iter()
+                .position(|r| col <= r.end)
+                .unwrap_or(ranges.len().saturating_sub(1))
+        };
+        let (col_a, col_b) = (cell_at(row_a, start), cell_at(row_b, end));
+        if row_a == row_b && col_a == col_b {
+            return None;
+        }
+        let separator = region.lines.start + 1;
+        let rows = (row_a..=row_b).filter(|row| *row != separator).collect();
+        Some((rows, col_a.min(col_b), col_a.max(col_b)))
+    }
+
+    /// The selected cells as tab-separated values (see [`Self::table_cell_selection`]).
+    pub(crate) fn table_selection_tsv(&self) -> Option<String> {
+        let (rows, first, last) = self.table_cell_selection()?;
+        let starts = self.line_starts();
+        Some(
+            rows.iter()
+                .map(|&row| {
+                    let line = &self.content[starts[row]..self.line_end(row)];
+                    let cells = markdown_syntax::table_cells(line);
+                    (first..=last)
+                        .map(|col| cells.get(col).map_or("", |cell| cell.trim()))
+                        .collect::<Vec<_>>()
+                        .join("\t")
+                })
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    }
+
+    /// Empties the selected cells, keeping the table's pipes (one undo step). False when the
+    /// selection is not a cell range.
+    pub(crate) fn clear_table_cell_selection(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some((rows, first, last)) = self.table_cell_selection() else {
+            return false;
+        };
+        let starts = self.line_starts();
+        let (from, to) = (starts[rows[0]], self.line_end(*rows.last().unwrap()));
+        let mut text = String::new();
+        for row in rows[0]..=*rows.last().unwrap() {
+            let line = &self.content[starts[row]..self.line_end(row)];
+            if !rows.contains(&row) {
+                text.push_str(line);
+            } else {
+                let mut out = line.to_string();
+                for range in markdown_syntax::table_cell_ranges(line)
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(col, _)| (first..=last).contains(col))
+                    .map(|(_, range)| range)
+                    .rev()
+                {
+                    out.replace_range(range, "");
+                }
+                text.push_str(&out);
+            }
+            if row != *rows.last().unwrap() {
+                text.push('\n');
+            }
+        }
+        self.replace_range(from..to, &text, cx);
+        self.selected_range = from..from;
+        cx.emit(EditorEvent::Changed);
+        true
+    }
+
     /// The caret row's table region, when inside one.
     pub(crate) fn caret_table_region(&self) -> Option<markdown_syntax::TableRegion> {
         let (row, _) = self.row_col(self.cursor_offset());
@@ -1028,11 +1199,15 @@ pub(crate) fn table_column_widths(
                     None,
                 )
                 .width();
-            widths[c] = widths[c].max(w + pad * 2. + px(2.)); // Local change: slack so rounding never wraps a cell that fits.
+            // Local change (Ghostex Docs): the header keeps room for its sort button, like the
+            // Docs page's 2.5ch (`meo/helpers/tables.ts` 150-153).
+            let sort = if header { font_size * 1.5 } else { px(0.) };
+            widths[c] = widths[c].max(w + pad * 2. + px(2.) + sort); // Local change: slack so rounding never wraps a cell that fits.
         }
     }
+    // Local change (Ghostex Docs): the Docs page's 10ch minimum column (was 48px).
     for w in &mut widths {
-        *w = (*w).max(px(48.));
+        *w = (*w).max(font_size * 6.);
     }
     // Explicit widths — the marker's `cols=` list (drag-to-resize persisted),
     // then the live drag — override the measurement (floored so a column can't
@@ -1058,6 +1233,87 @@ pub(crate) const TABLE_CELL_PAD: f32 = 10.;
 /// Left indent for tables, so per-row delete "−" handles sit in a gutter beside the
 /// grid instead of over the first cell (issue #16).
 pub(crate) const TABLE_GUTTER: f32 = 22.;
+
+/// Local change (Ghostex Docs): the Docs page's table sort order (`meo/helpers/tables.ts`
+/// 1126-1168): empty cells last in either direction, then numbers (commas and a trailing `%`
+/// allowed), then ISO dates, then numeric-aware case-insensitive text.
+fn compare_table_cells(left: &str, right: &str, descending: bool) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    match (left.is_empty(), right.is_empty()) {
+        (true, true) => return Ordering::Equal,
+        (true, false) => return Ordering::Greater,
+        (false, true) => return Ordering::Less,
+        _ => {}
+    }
+    let number = |value: &str| -> Option<f64> {
+        let normalized = value.replace(',', "");
+        let normalized = normalized.strip_suffix('%').unwrap_or(&normalized).trim();
+        let valid = !normalized.is_empty()
+            && normalized
+                .trim_start_matches(['+', '-'])
+                .chars()
+                .all(|c| c.is_ascii_digit() || matches!(c, '.' | 'e' | 'E' | '+' | '-'));
+        valid.then(|| normalized.parse::<f64>().ok()).flatten().filter(|n| n.is_finite())
+    };
+    let date = |value: &str| -> Option<String> {
+        let b = value.as_bytes();
+        (b.len() >= 10
+            && b[..4].iter().all(u8::is_ascii_digit)
+            && b[4] == b'-'
+            && b[5..7].iter().all(u8::is_ascii_digit)
+            && b[7] == b'-'
+            && b[8..10].iter().all(u8::is_ascii_digit))
+        .then(|| value.to_string())
+    };
+    let ordering = match (number(left), number(right)) {
+        (Some(a), Some(b)) => a.partial_cmp(&b).unwrap_or(Ordering::Equal),
+        _ => match (date(left), date(right)) {
+            (Some(a), Some(b)) => a.cmp(&b),
+            _ => natural_cmp(&left.to_lowercase(), &right.to_lowercase()),
+        },
+    };
+    if descending {
+        ordering.reverse()
+    } else {
+        ordering
+    }
+}
+
+/// Text order with runs of digits compared as numbers (`Intl.Collator` with `numeric`).
+fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    let (mut a, mut b) = (a.chars().peekable(), b.chars().peekable());
+    loop {
+        match (a.peek().copied(), b.peek().copied()) {
+            (None, None) => return std::cmp::Ordering::Equal,
+            (None, Some(_)) => return std::cmp::Ordering::Less,
+            (Some(_), None) => return std::cmp::Ordering::Greater,
+            (Some(x), Some(y)) if x.is_ascii_digit() && y.is_ascii_digit() => {
+                let mut left = String::new();
+                while let Some(c) = a.peek().copied().filter(char::is_ascii_digit) {
+                    left.push(c);
+                    a.next();
+                }
+                let mut right = String::new();
+                while let Some(c) = b.peek().copied().filter(char::is_ascii_digit) {
+                    right.push(c);
+                    b.next();
+                }
+                let (l, r) = (left.trim_start_matches('0'), right.trim_start_matches('0'));
+                let ordering = l.len().cmp(&r.len()).then_with(|| l.cmp(r));
+                if ordering != std::cmp::Ordering::Equal {
+                    return ordering;
+                }
+            }
+            (Some(x), Some(y)) => {
+                if x != y {
+                    return x.cmp(&y);
+                }
+                a.next();
+                b.next();
+            }
+        }
+    }
+}
 
 /// The font a table cell is rendered with — bold in the header row.
 fn cell_font(font: &Font, is_header: bool) -> Font {

@@ -461,38 +461,16 @@ impl GhostexGpuiApp {
         }
     }
 
-    /// Same shape as `deliver_pending_docs_file_open`: the Docs page may not
-    /// have mounted yet, so the injected script waits for the page's own hook.
+    /// Hands the pending review to the native Files view.
     pub(crate) fn deliver_pending_docs_review_open(
         &mut self,
         cx: &mut gpui::Context<Self>,
     ) -> bool {
-        let Some(payload) = self.pending_docs_review_open.clone() else {
+        let Some(payload) = self.pending_docs_review_open.take() else {
             return false;
         };
-        if crate::app::native_docs::render::native_docs_enabled() {
-            self.pending_docs_review_open = None;
-            self.native_docs_open_review(&payload, cx);
-            return true;
-        }
-        let Some(surface) = self
-            .project_workarea_runtime_cef_surfaces
-            .get(&ProjectWorkareaCefSurfaceSlotKey::Manage)
-            .map(|owned_surface| owned_surface.surface.clone())
-        else {
-            return false;
-        };
-        let literal = payload
-            .replace('\u{2028}', "\\u2028")
-            .replace('\u{2029}', "\\u2029");
-        let script = format!(
-            "(function(){{var p={literal};var a=0;var send=function(){{var open=window.ghostexOpenDocsReview;if(typeof open==='function'){{open(p);return;}}if(++a<250){{setTimeout(send,20);}}}};send();}})(); undefined;"
-        );
-        let dispatched = surface.update(cx, |surface, _| surface.execute_app_owned_script(&script));
-        if dispatched {
-            self.pending_docs_review_open = None;
-        }
-        dispatched
+        self.native_docs_open_review(&payload, cx);
+        true
     }
 
     fn schedule_pending_docs_review_open_delivery(&mut self, cx: &mut gpui::Context<Self>) {

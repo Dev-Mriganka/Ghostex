@@ -2,9 +2,7 @@
 //! (`apps/desktop/views/manage/styles.ts`); under window glass the fills become light washes of
 //! the text ink, the way the native Kanban's do, so the frosted work area shows through.
 
-use gpui::{Hsla, Window, rgb};
-
-use crate::app::native_chat::appearance::ChatAppearance;
+use gpui::{Hsla, rgb};
 
 #[derive(Clone)]
 pub(crate) struct DocsPalette {
@@ -63,10 +61,10 @@ impl DocsPalette {
     ///
     /// CDXC:Docs 2026-09-24 DECISION:
     /// User: after the move to GPUI, Docs has transparency in the background because it is GPUI-based, not web-based anymore. Under glass the page paints no fill and its rows are washes of the text ink, like Kanban and Automate; this supersedes the 2026-09-23 Theming decision that drew the page as one solid card below the tab strip.
-    pub(crate) fn current(window: &Window) -> Self {
-        let glass = crate::app::helpers::window_glass_active_in(window);
-        let chat = ChatAppearance::current(&serde_json::Value::Null);
-        let light = chat.light;
+    ///
+    /// The values for one appearance. `font` and `background` are the chat's (Files follows the
+    /// workarea theme the chat resolves); `current` in `render.rs` reads them from the app.
+    pub(crate) fn resolve(glass: bool, light: bool, font: String, background: Hsla) -> Self {
         let solid_chrome = pick(light, 0xf4f4f5, 0x0b0b0b);
         let wash = |light_alpha: f32, dark_alpha: f32| {
             ink(light, if light { light_alpha } else { dark_alpha })
@@ -74,12 +72,12 @@ impl DocsPalette {
         Self {
             glass,
             light,
-            font: chat.font.clone(),
-            mono_font: crate::app::native_chat::fonts::CHAT_MONO.to_string(),
+            font,
+            mono_font: super::fonts::DOCS_MONO.to_string(),
             page: if glass {
                 gpui::transparent_black()
             } else {
-                chat.background
+                background
             },
             chrome: if glass {
                 wash(0.03, 0.04)

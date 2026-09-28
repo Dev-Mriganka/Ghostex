@@ -558,3 +558,76 @@ impl GhostexGpuiApp {
         crate::app::helpers::gpui_copy_feedback(cx);
     }
 }
+
+/// An attachment's `data:image/…;base64,` bytes and file extension.
+fn attachment_bytes(
+    attachment: &super::annotations::DocsAnnotationImage,
+) -> Option<(Vec<u8>, &'static str)> {
+    use base64::Engine as _;
+    let (header, data) = attachment.data_url.split_once(',')?;
+    let mime = header.strip_prefix("data:")?.split(';').next()?;
+    let extension = match mime {
+        "image/png" => "png",
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/svg+xml" => "svg",
+        "image/bmp" => "bmp",
+        _ => return None,
+    };
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data.trim())
+        .ok()?;
+    Some((bytes, extension))
+}
+
+thread_local! {
+    /// Decoded attachment thumbnails by attachment id, so a card redraw reuses its picture.
+    static ATTACHMENT_IMAGES: std::cell::RefCell<std::collections::HashMap<String, std::sync::Arc<gpui::Image>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// The picture of a note's image attachment, for its card.
+pub(crate) fn attachment_image(
+    attachment: &super::annotations::DocsAnnotationImage,
+) -> Option<std::sync::Arc<gpui::Image>> {
+    ATTACHMENT_IMAGES.with(|cache| {
+        if let Some(image) = cache.borrow().get(&attachment.id) {
+            return Some(image.clone());
+        }
+        let (bytes, extension) = attachment_bytes(attachment)?;
+        let format = match extension {
+            "png" => gpui::ImageFormat::Png,
+            "jpg" => gpui::ImageFormat::Jpeg,
+            "gif" => gpui::ImageFormat::Gif,
+            "webp" => gpui::ImageFormat::Webp,
+            "svg" => gpui::ImageFormat::Svg,
+            _ => gpui::ImageFormat::Bmp,
+        };
+        let image = std::sync::Arc::new(gpui::Image::from_bytes(format, bytes));
+        cache
+            .borrow_mut()
+            .insert(attachment.id.clone(), image.clone());
+        Some(image)
+    })
+}
+
+/// Opens a note's image attachment in the system's image viewer (the Docs page opened its
+/// `data:` URL in a browser tab), from a copy in the temporary folder.
+pub(crate) fn open_attachment(
+    attachment: &super::annotations::DocsAnnotationImage,
+    cx: &mut gpui::App,
+) {
+    let Some((bytes, extension)) = attachment_bytes(attachment) else {
+        return;
+    };
+    let safe: String = attachment
+        .id
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .collect();
+    let path = std::env::temp_dir().join(format!("ghostex-annotation-{safe}.{extension}"));
+    if std::fs::write(&path, bytes).is_ok() {
+        cx.open_with_system(&path);
+    }
+}

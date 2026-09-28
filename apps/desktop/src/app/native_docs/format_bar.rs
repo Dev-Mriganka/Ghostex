@@ -114,21 +114,21 @@ impl DocsBarItem {
 
     fn icon(self) -> &'static str {
         match self {
-            Self::Heading => "docs/l-heading-17.svg",
-            Self::Bullet => "docs/l-list-17.svg",
-            Self::Numbered => "docs/l-list-ordered-17.svg",
-            Self::Task => "docs/l-list-todo-17.svg",
-            Self::Table => "docs/l-table-2-17.svg",
-            Self::Code => "docs/l-code-17.svg",
-            Self::Link => "docs/l-link-17.svg",
-            Self::Wiki => "docs/l-brackets-17.svg",
-            Self::Image => "docs/l-image-17.svg",
-            Self::Quote => "docs/l-quote-17.svg",
-            Self::Rule => "docs/l-minus-17.svg",
-            Self::Find => "docs/l-search-17.svg",
-            Self::Width => "docs/l-panel-left-right-dashed-17.svg",
-            Self::Lines => "docs/l-hash-17.svg",
-            Self::Git => "docs/l-git-compare-17.svg",
+            Self::Heading => "files-view/l-heading-17.svg",
+            Self::Bullet => "files-view/l-list-17.svg",
+            Self::Numbered => "files-view/l-list-ordered-17.svg",
+            Self::Task => "files-view/l-list-todo-17.svg",
+            Self::Table => "files-view/l-table-2-17.svg",
+            Self::Code => "files-view/l-code-17.svg",
+            Self::Link => "files-view/l-link-17.svg",
+            Self::Wiki => "files-view/l-brackets-17.svg",
+            Self::Image => "files-view/l-image-17.svg",
+            Self::Quote => "files-view/l-quote-17.svg",
+            Self::Rule => "files-view/l-minus-17.svg",
+            Self::Find => "files-view/l-search-17.svg",
+            Self::Width => "files-view/l-panel-left-right-dashed-17.svg",
+            Self::Lines => "files-view/l-hash-17.svg",
+            Self::Git => "files-view/l-git-compare-17.svg",
         }
     }
 
@@ -238,6 +238,9 @@ impl GhostexGpuiApp {
         };
         editor.update(cx, |editor, cx| {
             f(editor, cx);
+            // `replace_range` records the edit but emits nothing, so the document would stay
+            // clean, keep no draft and leave its git stripe stale after a bar edit.
+            cx.emit(zorite_editor::EditorEvent::Changed);
             editor.focus(window, cx);
         });
     }
@@ -364,9 +367,9 @@ impl GhostexGpuiApp {
         let toggle = button(
             "docs-bar-toggle",
             if collapsed {
-                "docs/l-type-17.svg"
+                "files-view/l-type-17.svg"
             } else {
-                "docs/l-chevron-down-17.svg"
+                "files-view/l-chevron-down-17.svg"
             },
             if collapsed {
                 "Show formatting bar"
@@ -664,12 +667,12 @@ impl GhostexGpuiApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         const ICONS: [&str; 6] = [
-            "docs/l-heading-1-17.svg",
-            "docs/l-heading-2-17.svg",
-            "docs/l-heading-3-17.svg",
-            "docs/l-heading-4-17.svg",
-            "docs/l-heading-5-17.svg",
-            "docs/l-heading-6-17.svg",
+            "files-view/l-heading-1-17.svg",
+            "files-view/l-heading-2-17.svg",
+            "files-view/l-heading-3-17.svg",
+            "files-view/l-heading-4-17.svg",
+            "files-view/l-heading-5-17.svg",
+            "files-view/l-heading-6-17.svg",
         ];
         let (hover, text) = (p.control_hover, p.text);
         popover(p)
@@ -1014,6 +1017,7 @@ pub(crate) fn wrap_inline(
         let len = replacement.len();
         editor.replace_range(selection.clone(), &replacement, cx);
         editor.select_range(selection.start..selection.start + len, cx);
+        cx.emit(zorite_editor::EditorEvent::Changed);
     });
 }
 
