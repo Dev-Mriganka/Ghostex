@@ -364,26 +364,16 @@ impl NativeChatView {
                     &bubble_appearance,
                     cx,
                 ));
-            let startup_delivery = self.render_startup_delivery(message, p, cx);
+            let failed_delivery = self.render_startup_delivery(message, false, p, cx);
             // The prompt's own pictures sit above the bubble, where their author put them.
             let thumbnails = self.user_image_thumbnails(message, p, cx);
             let actions = self.user_actions(message, p, cx);
+            // The delivery indicator sits left of the bubble, level with its last line, so it never drifts away from a short prompt.
+            let indicator = self
+                .delivery_indicator(message, p, cx)
+                .map(|icon| div().flex_shrink_0().mb(px(12.0 * s)).child(icon));
             return row
-                // A send still waiting for the terminal says so instead of showing the agent's queue label.
-                .when_some(startup_delivery, |this, status| this.child(status))
-                .when(
-                    message["queued"] == true && message["startupDelivery"].is_null(),
-                    |this| {
-                        this.child(
-                            div()
-                                .flex()
-                                .justify_end()
-                                .text_size(px(11.0 * s))
-                                .text_color(p.muted)
-                                .child("QUEUED"),
-                        )
-                    },
-                )
+                .when_some(failed_delivery, |this, status| this.child(status))
                 .when_some(thumbnails, |this, images| this.child(images))
                 .child(
                     div()
@@ -391,7 +381,16 @@ impl NativeChatView {
                         .flex_col()
                         .items_end()
                         .gap(px(4.0 * s))
-                        .child(bubble)
+                        .child(
+                            div()
+                                .flex()
+                                .items_end()
+                                .justify_end()
+                                .w_full()
+                                .gap(px(6.0 * s))
+                                .children(indicator)
+                                .child(bubble),
+                        )
                         .children(actions),
                 )
                 .into_any_element();
