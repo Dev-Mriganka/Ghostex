@@ -166,7 +166,11 @@ pub fn partition_completed_work(messages: &[ChatMessage]) -> (Vec<ChatMessage>, 
     let mut visible_artifacts = Vec::new();
     let mut collapsed_work = Vec::new();
     for message in messages {
-        if is_visible_assistant_artifact(message) || message.role == ChatRole::User {
+        // The "Interrupted" marker stays in view as it does in summary mode; Claude's used to be a user row, gxserver's own is a system row.
+        if is_visible_assistant_artifact(message)
+            || message.role == ChatRole::User
+            || suppressed_turn_label(message).as_deref() == Some("Interrupted")
+        {
             visible_artifacts.push(message.clone());
         } else {
             collapsed_work.push(message.clone());
@@ -207,6 +211,10 @@ pub fn final_assistant_message_ids(messages: &[ChatMessage], is_working: bool) -
         // mid-response on both sides of it. Ending the turn there put a copy affordance under
         // commentary that the agent then kept building on.
         if suppressed_turn_label(message).is_some() && !is_command_turn(message) {
+            // An interrupted response has no final reply: its commentary folds into "Worked for" and the marker closes the turn, instead of the marker drawing above text the agent wrote before it was stopped.
+            if suppressed_turn_label(message).as_deref() == Some("Interrupted") {
+                final_assistant_id = None;
+            }
             continue;
         }
         if message.role == ChatRole::User {
@@ -278,11 +286,18 @@ pub fn completed_work_render_items(
         }
         let turn_messages = &messages[index + 1..next_user_index];
         let final_index = turn_messages.iter().rposition(has_agent_response_content);
+        // Stopped after its last text: the turn folds with no final reply, and the marker (kept in view by `partition_completed_work`) ends it.
+        let interrupted = final_index.is_some_and(|at| {
+            turn_messages[at + 1..]
+                .iter()
+                .any(|row| suppressed_turn_label(row).as_deref() == Some("Interrupted"))
+        });
+        let final_index = final_index.filter(|_| !interrupted);
         let interacted_inline_diff = turn_messages
             .iter()
             .any(|row| interacted_message_ids.contains(&row.id));
         let interacted_grouped_diff = interacted_message_ids.contains(&message.id);
-        if (message.deferred_work.is_none() && final_index.is_none())
+        if (message.deferred_work.is_none() && final_index.is_none() && !interrupted)
             || (index >= active_start && !interacted_grouped_diff)
             || interacted_inline_diff
         {

@@ -1797,9 +1797,26 @@ fn codex_command_text(arguments: &Value, input_text: &str) -> String {
             return command;
         }
     }
-    javascript_string_field(input_text, "cmd")
-        .or_else(|| javascript_string_field(input_text, "chars"))
-        .unwrap_or_else(|| input_text.trim().to_string())
+    // A code-mode script can batch several `tools.exec_command({cmd})` calls; export every command it ran.
+    let commands = javascript_string_fields(input_text, "cmd");
+    if !commands.is_empty() {
+        return commands.join("\n");
+    }
+    javascript_string_field(input_text, "chars").unwrap_or_else(|| input_text.trim().to_string())
+}
+
+pub(crate) fn javascript_string_fields(snippet: &str, field: &str) -> Vec<String> {
+    let needle = format!("{field}:");
+    let mut values = Vec::new();
+    let mut offset = 0;
+    while let Some(found) = snippet[offset..].find(&needle) {
+        let at = offset + found;
+        if let Some(value) = javascript_string_field(&snippet[at..], field) {
+            values.push(value);
+        }
+        offset = at + needle.len();
+    }
+    values
 }
 
 /// Reads `<field>:"…"` out of a JavaScript snippet, honoring backslash escapes

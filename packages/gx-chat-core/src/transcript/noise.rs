@@ -706,6 +706,15 @@ pub fn classify_suppressed_turn(message: &ChatMessage) -> Option<SuppressedTurn>
     if message.role == ChatRole::User && parse_cross_session_message(&text).is_some() {
         return None;
     }
+    // gxserver's own row for an interrupted turn (Codex's `turn_aborted`, Claude's `interruptedMessageId`): the same marker Claude's "[Request interrupted" prompt gets, kept under the prompt instead of folded into "Worked for".
+    if message.role == ChatRole::System
+        && message.source == ChatSource::Transcript
+        && text.to_lowercase() == crate::session::constants::TRANSCRIPT_INTERRUPTED_TEXT
+    {
+        return Some(SuppressedTurn::Collapsed {
+            label: "Interrupted".to_string(),
+        });
+    }
     if is_context_compaction_record(message, &text) {
         // Same completed-action pill Claude's compaction gets, so the seam reads identically
         // whichever CLI drew it.

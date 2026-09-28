@@ -332,6 +332,22 @@ fn codex_event_message(
                     queued: false,
                 });
             }
+            // CDXC:SessionChat 2026-09-29 WHY:
+            // Plan mode ends its turn with a `Plan` item instead of an AgentMessage (the `<proposed_plan>` message lane stays undecoded), so without this arm the chat showed "Implement this plan?" with no plan above it while the TUI printed `• Proposed Plan`.
+            if item_type == Some("Plan") {
+                let text = extract_string(item.get("text"))?;
+                return Some(SessionChatMessage {
+                    id: extract_string(item.get("id")).unwrap_or(id),
+                    role: SessionChatRole::Assistant,
+                    blocks: vec![text_block(text.trim_end().to_string())],
+                    timestamp,
+                    source: SessionChatSource::Transcript,
+                    turn_id: None,
+                    byte_offset: None,
+                    async_questions: None,
+                    queued: false,
+                });
+            }
             let role = match item_type {
                 Some("UserMessage") => SessionChatRole::User,
                 Some("AgentMessage") => SessionChatRole::Assistant,
