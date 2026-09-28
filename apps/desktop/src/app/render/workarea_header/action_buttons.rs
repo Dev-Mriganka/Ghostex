@@ -275,6 +275,7 @@ impl GhostexGpuiApp {
             .child(caret)
             .on_prepaint({
                 let anchor_state = anchor_state.clone();
+                let app = cx.entity().downgrade();
                 move |bounds, window, cx| {
                     let (first_capture, moved) = anchor_state.update(cx, |state, _| {
                         let first_capture = !state.trigger_bounds_captured;
@@ -286,6 +287,13 @@ impl GhostexGpuiApp {
                     if first_capture || moved {
                         window.request_animation_frame();
                     }
+                    GhostexGpuiApp::open_pending_titlebar_popup(
+                        app.clone(),
+                        &[kind],
+                        bounds,
+                        window,
+                        cx,
+                    );
                 }
             })
             .into_any_element()

@@ -70,6 +70,7 @@ import {
   windowGlassAvailable,
   windowGlassForTransparency,
   windowGlassPicturesAvailable,
+  windowGlassVideoAvailable,
   windowGlassStatusNote,
   type ThemeScheme,
 } from '../theme-simple-controls';
@@ -706,6 +707,7 @@ export function ThemeSettingsTab({
                   <div className='theme-stacked-row'>
                     <GlassLiveGallery
                       canChooseVideo={nativeFilePickerAvailable}
+                      videoAvailable={windowGlassVideoAvailable()}
                       darkOnly={darkOnlyGlass}
                       darkStyle={draft.windowGlassLiveStyleDark}
                       darkVideo={draft.windowGlassVideoDark}

@@ -66,9 +66,9 @@ pub(crate) async fn selection_requested() {
 pub(crate) const SCOPE_SESSION: &str = "session";
 pub(crate) const SCOPE_DEFAULT: &str = "default";
 
-/// CDXC:SessionChat 2026-09-18 DECISION:
-/// User: a chat model pick can apply to this session alone instead of changing the agent's saved default.
-/// Only Claude can honour it: its `/model` list answers `s` with "for this session only", while confirming Codex's picker rewrites `model` and `model_reasoning_effort` in `~/.codex/config.toml` with no opt-out (verified live 2026-09-18).
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: a chat model pick can apply to this session alone instead of changing the agent's saved default (2026-09-18), and Codex uses its own session choice too (2026-09-27).
+/// Claude's `/model` list answers `s` with "for this session only"; Codex 0.157 added `s session` to its reasoning lists, answered with "for this conversation". This supersedes Claude-only session picks, from when confirming Codex's picker always rewrote `model` and `model_reasoning_effort` in `~/.codex/config.toml`; an older Codex refuses the session pick instead of saving the default.
 /// An absent scope stays `default`, so a client that predates the field keeps its old behaviour.
 /// SEE-ALSO: server/src/session_chat_codex_picker.rs drives both scopes, packages/shared/session-chat.ts carries the wire type.
 pub(crate) fn read_scope(
@@ -93,7 +93,7 @@ pub(crate) fn read_scope(
             message: "A model selection scope is either session or default.".into(),
         });
     }
-    if provider != "claude" {
+    if !matches!(provider, "claude" | "codex") {
         return Err(DomainStateError {
             code: "invalidParams",
             message: "This agent's model picker always saves the choice as its default.".into(),

@@ -849,7 +849,7 @@ export type ghostexSettings = {
   windowGlassLiveStyleDark: WindowGlassLiveStyle;
   windowGlassLiveStyleLight: WindowGlassLiveStyle;
   windowGlassLiveSpeed: number;
-  /** How bright the Live style is drawn, 10 to 100 percent (default 45). */
+  /** How bright the Live style is drawn, 10 to 100 percent (default 60). */
   windowGlassLiveBrightness: number;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:

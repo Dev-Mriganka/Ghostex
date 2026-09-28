@@ -4,8 +4,6 @@ use std::collections::HashSet;
 // RefCell backs cross-platform runtime state (window frame persistence), not
 // just the macOS-only shims that first introduced the import.
 
-use gpui::Window;
-
 use crate::app::consts::*;
 use crate::app::helpers::*;
 use crate::app::model::*;
@@ -666,126 +664,6 @@ impl GhostexGpuiApp {
             focused_session_id: Some(key.session_id.clone()),
             visible_session_ids: vec![key.session_id],
         })
-    }
-
-    /*
-    CDXC:PromptSearch 2026-08-23:
-    Search by Prompt is a native child-window page, matching the Settings
-    ownership model instead of replacing a pane body. Prompt history is
-    machine-wide, so the page URL carries only the current visual theme while
-    the child surface receives the local gxserver bootstrap separately.
-    */
-    pub(crate) fn agents_find_runtime_url(&self) -> Option<String> {
-        let base_url = gpui_cef_html_entry_url("GHOSTEX_GPUI_FIND_URL", "find.html").ok()?;
-        let settings = shared_settings::shared_sidebar_settings_snapshot();
-        let mut params = vec![
-            (
-                "theme",
-                if gpui_session_chat_uses_light_theme(settings.object()) {
-                    "light"
-                } else {
-                    "dark"
-                }
-                .to_string(),
-            ),
-            (
-                "fontFamily",
-                gpui_session_chat_font_family_from_settings(settings.object()),
-            ),
-        ];
-        if window_glass_active() {
-            params.push(("windowGlass", "1".to_string()));
-        }
-        Some(append_url_query_params(base_url, &params))
-    }
-
-    pub(crate) fn receive_find_prompts_modal_host_action(
-        &mut self,
-        message: &serde_json::Value,
-        _window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        let Some(action) = message.get("action").and_then(serde_json::Value::as_str) else {
-            return;
-        };
-        match action {
-            "ready" => {
-                if let Some(handle) = self.app_modal_window.clone() {
-                    let _ = handle.update(cx, |host, modal_window, cx| {
-                        modal_window.activate_window();
-                        host.refresh_window_glass(cx);
-                        if let Some(surface) = &host.surface {
-                            surface.update(cx, |surface, _| surface.focus());
-                        }
-                    });
-                }
-            }
-            "close" => {
-                self.close_gpui_app_modal_window_and_restore_command_focus(cx);
-            }
-            "focusSession" => {
-                let project_id = message
-                    .get("projectId")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                let session_id = message
-                    .get("sessionId")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                if project_id.is_empty() || session_id.is_empty() {
-                    return;
-                }
-                self.close_gpui_app_modal_window_and_restore_command_focus(cx);
-                // CDXC:PromptSearch 2026-09-10 WHY:
-                // Direct native focus skipped the sidebar presentation update and project-switch coordination, so a result could attach into the outgoing workspace or leave its sidebar row hidden.
-                // Use the modal session activation route, then the same reveal request as the titlebar button to expand and scroll the owning sidebar containers.
-                let sidebar_session_id =
-                    gpui_combined_presentation_session_id(&project_id, &session_id);
-                if self.dispatch_gpui_command_palette_session_focus(&sidebar_session_id, cx) {
-                    self.reveal_sidebar_session(&sidebar_session_id, cx);
-                } else {
-                    self.dispatch_gpui_app_modal_toast(
-                        "warning",
-                        "Could not open session",
-                        "The sidebar is not ready. Try opening the search result again.",
-                        cx,
-                    );
-                }
-            }
-            "launchSession" => {
-                let command = message
-                    .get("command")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                let cwd = message
-                    .get("cwd")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                if command.is_empty() || cwd.is_empty() {
-                    return;
-                }
-                let title = message
-                    .get("title")
-                    .and_then(serde_json::Value::as_str)
-                    .unwrap_or_default()
-                    .to_string();
-                self.close_gpui_app_modal_window_and_restore_command_focus(cx);
-                self.dispatch_gpui_os_integration_command_message(
-                    serde_json::json!({
-                        "action": "createQuickTerminal",
-                        "command": command,
-                        "cwd": cwd,
-                        "title": title,
-                    }),
-                    cx,
-                );
-            }
-            _ => {}
-        }
     }
 
     /// Reconcile the per-session Chat surfaces that can occupy a workspace pane.

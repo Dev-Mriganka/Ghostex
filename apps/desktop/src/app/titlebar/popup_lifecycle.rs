@@ -53,10 +53,21 @@ impl GhostexGpuiApp {
             self.close_titlebar_extension_popup(window, cx);
         }
         self.close_gpui_titlebar_popup(None, window, cx);
+        /*
+        CDXC:Titlebar 2026-09-27 WHY:
+        A dropdown can be asked to open before its trigger has painted (a hotkey, a ⋯ menu row, the
+        very first frame), so its bounds are unknown. This used to call `request_animation_frame`,
+        which is only valid while a view paints: from an event or a task it unwrapped an empty view
+        stack and crashed the app, and even when it didn't the dropdown never opened. The request
+        is now remembered and the trigger's own prepaint opens it at its real bounds
+        (`open_pending_titlebar_popup`).
+        */
         let Some(trigger_bounds) = trigger_bounds else {
-            window.request_animation_frame();
+            self.pending_titlebar_popup_open = Some(kind);
+            cx.notify();
             return;
         };
+        self.pending_titlebar_popup_open = None;
 
         let main_app = cx.entity().downgrade();
         let content_height = self.titlebar_popup_content_height(kind);
@@ -184,12 +195,44 @@ impl GhostexGpuiApp {
         self.close_gpui_titlebar_popup(None, window, cx);
     }
 
+    /// Opens a dropdown that was asked for before its trigger had painted, now that the trigger at
+    /// `trigger_bounds` has painted. `kinds` are the dropdowns this trigger anchors. Runs deferred
+    /// from the trigger's prepaint, outside the paint.
+    pub(crate) fn open_pending_titlebar_popup(
+        app: gpui::WeakEntity<Self>,
+        kinds: &[GpuiTitlebarPopupKind],
+        trigger_bounds: Bounds<Pixels>,
+        window: &mut Window,
+        cx: &mut gpui::App,
+    ) {
+        let Some(entity) = app.upgrade() else {
+            return;
+        };
+        let Some(kind) = entity
+            .read(cx)
+            .pending_titlebar_popup_open
+            .filter(|kind| kinds.contains(kind))
+        else {
+            return;
+        };
+        window.defer(cx, move |window, cx| {
+            entity.update(cx, |app, cx| {
+                if app.pending_titlebar_popup_open == Some(kind) {
+                    app.set_gpui_titlebar_popup_open(kind, true, Some(trigger_bounds), window, cx);
+                }
+            });
+        });
+    }
+
     pub(crate) fn close_gpui_titlebar_popup(
         &mut self,
         kind: Option<GpuiTitlebarPopupKind>,
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) {
+        if kind.is_none_or(|kind| self.pending_titlebar_popup_open == Some(kind)) {
+            self.pending_titlebar_popup_open = None;
+        }
         let should_close = self
             .titlebar_popup_menu
             .as_ref()

@@ -581,7 +581,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   windowGlassLiveStyleDark: 'aurora',
   windowGlassLiveStyleLight: 'drift',
   windowGlassLiveSpeed: 1,
-  windowGlassLiveBrightness: 45,
+  windowGlassLiveBrightness: 60,
   windowGlassSidebarOpacityDark: DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT,
   windowGlassWorkAreaTintDark: DEFAULT_WINDOW_GLASS_WORK_AREA_TINT_DARK_PERCENT,
   windowGlassSidebarOpacityLight: DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_LIGHT_PERCENT,

@@ -3,6 +3,7 @@ mod app_modal_commands;
 mod bot_feed;
 mod create;
 mod delayed_send;
+mod find_prompts;
 mod git_menu;
 mod host_messages;
 mod modals;

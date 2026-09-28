@@ -59,7 +59,7 @@ export function AccountConnectFlow({
       clearInterval(timer);
     };
   }, [job?.id, job?.status]);
-  const start = async () => {
+  const start = async (stop?: NonNullable<AccountSetupJob['blockers']>) => {
     setStarting(true);
     setError('');
     try {
@@ -71,6 +71,10 @@ export function AccountConnectFlow({
         shareHistory: true,
         accountId: account?.registered ? account.id : undefined,
         selector: account?.selector,
+        ...(stop && {
+          stopCodex: true as const,
+          sleepSessions: stop.sessions.map(({ projectId, sessionId }) => ({ projectId, sessionId })),
+        }),
       });
       setJob(data.setupJobs?.filter((job) => !job.acknowledged && job.provider === provider).at(-1));
     } catch (cause) {
@@ -87,6 +91,8 @@ export function AccountConnectFlow({
         ? `xswap login ${quote(account.selector)}`
         : `xswap add --login --share-history --email ${quote(email)} --json`;
   const active = job && !['complete', 'failed'].includes(job.status);
+  const blockers = job?.status === 'failed' ? job.blockers : undefined;
+  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
   return (
     <div className='gx-account-connect-flow'>
       {job?.status === 'complete' ? (
@@ -181,6 +187,28 @@ export function AccountConnectFlow({
         <p role='alert'>
           <AccountText text={error || job?.error || ''} />
         </p>
+      )}
+      {blockers && (
+        <div className='gx-account-codex-blockers'>
+          {blockers.sessions.length > 0 && (
+            <ul>
+              {blockers.sessions.map((session) => (
+                <li key={`${session.projectId}:${session.sessionId}`}>{session.title}</li>
+              ))}
+            </ul>
+          )}
+          {blockers.others > 0 && (
+            <p>
+              {blockers.sessions.length > 0 ? 'Also closes ' : 'Closes '}
+              {plural(blockers.others, 'Codex window')} outside Ghostex.
+            </p>
+          )}
+          <Button variant='secondary' disabled={starting} onClick={() => void start(blockers)}>
+            {blockers.sessions.length > 0
+              ? `Sleep ${plural(blockers.sessions.length, 'session')} and continue`
+              : 'Close Codex and continue'}
+          </Button>
+        </div>
       )}
       {(terminal || job?.status === 'failed') && job?.output && (
         <pre className='gx-account-terminal-output'>

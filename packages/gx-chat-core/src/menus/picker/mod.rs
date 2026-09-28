@@ -29,7 +29,9 @@ pub mod traits;
 pub use crate::menus::picker::actions::handle;
 pub use crate::menus::picker::document::document;
 pub use crate::menus::picker::fork_branches::{ForkBranch, ForkBranchRow, ForkBranchTone};
-pub use crate::menus::picker::model_menu::{ModelMenuEntry, ModelMenuRow, ModelMenuTabId, ModelMenuView};
+pub use crate::menus::picker::model_menu::{
+    ModelMenuEntry, ModelMenuRow, ModelMenuTabId, ModelMenuView,
+};
 pub use crate::menus::picker::model_picker::{
     ModelPickerProvider, ModelPickerRequest, ModelPickerSelection, ModelSelectionScope,
 };

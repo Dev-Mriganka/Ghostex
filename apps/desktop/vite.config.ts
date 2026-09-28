@@ -21,13 +21,12 @@ import {
 const gpuiRoot = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = path.resolve(gpuiRoot, '..', '..');
 const sidebarOutDir = path.resolve(gpuiRoot, 'dist/sidebar');
-const cefHtmlEntries = ['find.html', 'kanban.html', 'manage.html', 'modal-host.html'] as const;
+const cefHtmlEntries = ['kanban.html', 'manage.html', 'modal-host.html'] as const;
 /*
  * CDXC:CefRuntime 2026-06-28-16:18:
  * GPUI CEF entry modules should describe the stable surface they mount, not the historical porting phase. Keep this explicit entry map as the source of truth for the sidebar, Kanban, and Manage bundle inputs so HTML wrappers, Vite output, and packaged resources stay aligned.
  */
 const cefHtmlEntryScripts = {
-  'find.html': path.resolve(gpuiRoot, 'sidebar/find-main.tsx'),
   'kanban.html': path.resolve(gpuiRoot, 'sidebar/kanban-main.tsx'),
   'manage.html': path.resolve(gpuiRoot, 'sidebar/manage-main.tsx'),
   'modal-host.html': path.resolve(gpuiRoot, 'views/modal-host.tsx'),
@@ -265,7 +264,7 @@ function replaceCefEntryModuleScript(html: string, bundledScript: string): strin
 
 /*
  * CDXC:CefRuntime 2026-09-21 WHY:
- * Inlining every image as a base64 data URL put about 18 MB of pet spritesheets and Discover screenshots inside modal-host.html's module script, so every Settings, Hotkeys, or Command Palette open showed a blank window while CEF parsed a 21 MB script; find.html (1.2 MB, no images) painted at once.
+ * Inlining every image as a base64 data URL put about 18 MB of pet spritesheets and Discover screenshots inside modal-host.html's module script, so every Settings, Hotkeys, or Command Palette open showed a blank window while CEF parsed a 21 MB script; the image-free Find page (1.2 MB) painted at once.
  * Scripts and stylesheets must stay inlined because a file:// page cannot load them, but images load fine from beside the page, so images above the threshold are referenced from the copies Vite already emits under assets/ and resolved against the document URL.
  * Small images stay inlined so icons and textures paint with the first frame.
  */
@@ -421,7 +420,6 @@ export default defineConfig({
        * The GPUI shell resolves the bundled pages through Contents/Resources/sidebar/<entry>.html. Keep the Vite HTML entries at the package root so production-style packaging and local development share those URLs.
        */
       input: {
-        find: path.resolve(gpuiRoot, 'find.html'),
         kanban: path.resolve(gpuiRoot, 'kanban.html'),
         manage: path.resolve(gpuiRoot, 'manage.html'),
         modalHost: path.resolve(gpuiRoot, 'modal-host.html'),

@@ -46,7 +46,7 @@ pub struct ModelPickerState {
     pub selection: ModelPickerSelection,
     pub closing: bool,
     pub saving: bool,
-    /// `this.sessionScope`: Claude's `/model` list can commit without saving a default.
+    /// `this.sessionScope`: the agent's own picker can commit without saving a default (Claude, Codex, OpenCode).
     pub session_scope: bool,
     /// The option key the picker was opened for, checked again when it finishes.
     pub session_key: String,

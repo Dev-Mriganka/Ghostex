@@ -312,7 +312,10 @@ enum CatalogOptions {
         agent: Box<CatalogAgent>,
         catalog: Box<AgentModelCatalog>,
     },
-    OpenCode { agent: Box<CatalogAgent>, catalog: Box<AgentModelCatalog> },
+    OpenCode {
+        agent: Box<CatalogAgent>,
+        catalog: Box<AgentModelCatalog>,
+    },
     Hermes {
         agent: Box<CatalogAgent>,
         catalog: Box<AgentModelCatalog>,
@@ -375,12 +378,30 @@ impl SessionOptionCatalog {
                     _ => Vec::new(),
                 }
             }
-            CatalogOptions::OpenCode {agent, catalog} => {
+            CatalogOptions::OpenCode { agent, catalog } => {
                 let mut options = Vec::new();
                 let efforts = agent.efforts_for_model(model_value);
-                if !efforts.is_empty() { options.push(reasoning_effort_picker(catalog, &efforts)); }
-                let mut mode = OptionDescriptor::new("mode", MODES_SECTION_LABEL, OptionCategory::Mode, OptionDispatch::ModelPicker);
-                mode.choices = Some(vec![OptionChoice {value:"build".into(), label:"Build".into(), ..Default::default()}, OptionChoice {value:"plan".into(), label:"Plan".into(), ..Default::default()}]);
+                if !efforts.is_empty() {
+                    options.push(reasoning_effort_picker(catalog, &efforts));
+                }
+                let mut mode = OptionDescriptor::new(
+                    "mode",
+                    MODES_SECTION_LABEL,
+                    OptionCategory::Mode,
+                    OptionDispatch::ModelPicker,
+                );
+                mode.choices = Some(vec![
+                    OptionChoice {
+                        value: "build".into(),
+                        label: "Build".into(),
+                        ..Default::default()
+                    },
+                    OptionChoice {
+                        value: "plan".into(),
+                        label: "Plan".into(),
+                        ..Default::default()
+                    },
+                ]);
                 options.push(mode);
                 options
             }
@@ -633,11 +654,17 @@ fn build_codex_catalog(catalog: &AgentModelCatalog, agent: &CatalogAgent) -> Ses
 // Cursor Agent
 // ---------------------------------------------------------------------------
 
-fn build_opencode_catalog(catalog: &AgentModelCatalog, agent: &CatalogAgent) -> SessionOptionCatalog {
+fn build_opencode_catalog(
+    catalog: &AgentModelCatalog,
+    agent: &CatalogAgent,
+) -> SessionOptionCatalog {
     let mut result = build_cursor_catalog(catalog, agent);
     result.model_icon = "opencode".into();
     result.model.dispatch = OptionDispatch::ModelPicker;
-    result.options = CatalogOptions::OpenCode {agent: Box::new(agent.clone()), catalog: Box::new(catalog.clone())};
+    result.options = CatalogOptions::OpenCode {
+        agent: Box::new(agent.clone()),
+        catalog: Box::new(catalog.clone()),
+    };
     result
 }
 

@@ -60,6 +60,8 @@ export type GlassLiveGalleryProps = {
   darkOnly: boolean;
   /** The host can open a file dialog (the desktop app); elsewhere a video cannot be chosen here. */
   canChooseVideo: boolean;
+  /** This platform can play the user's own video behind the glass (macOS); elsewhere "Your video" is not offered. */
+  videoAvailable: boolean;
   onPick: (appearance: Appearance, style: WindowGlassLiveStyle) => void;
   onChooseVideo: (appearance: Appearance) => void;
   onClearVideo: (appearance: Appearance) => void;
@@ -81,6 +83,7 @@ export function GlassLiveGallery({
   lightVideo,
   darkOnly,
   canChooseVideo,
+  videoAvailable,
   onPick,
   onChooseVideo,
   onClearVideo,
@@ -138,20 +141,22 @@ export function GlassLiveGallery({
             <span className='glass-live-name'>{option.label}</span>
           </button>
         ))}
-        <button
-          aria-checked={selected === 'video'}
-          className={cn('glass-live-card', 'glass-live-video-card', selected === 'video' && 'is-selected')}
-          onClick={pickVideo}
-          role='radio'
-          type='button'
-        >
-          <span aria-hidden='true' className='glass-live-poster glass-live-video-poster'>
-            <span className='glass-live-video-glyph' />
-          </span>
-          <span className='glass-live-name'>Your video</span>
-        </button>
+        {videoAvailable ? (
+          <button
+            aria-checked={selected === 'video'}
+            className={cn('glass-live-card', 'glass-live-video-card', selected === 'video' && 'is-selected')}
+            onClick={pickVideo}
+            role='radio'
+            type='button'
+          >
+            <span aria-hidden='true' className='glass-live-poster glass-live-video-poster'>
+              <span className='glass-live-video-glyph' />
+            </span>
+            <span className='glass-live-name'>Your video</span>
+          </button>
+        ) : null}
       </div>
-      {selected === 'video' ? (
+      {videoAvailable && selected === 'video' ? (
         <div className='glass-live-video-slot'>
           <span className='glass-live-video-file' title={video || undefined}>
             {video ? fileName(video) : 'No video chosen yet, so the glass shows the live blur.'}

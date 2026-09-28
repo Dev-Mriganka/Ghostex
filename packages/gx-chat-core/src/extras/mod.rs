@@ -31,5 +31,5 @@ pub mod working_words;
 pub use crate::extras::actions::handle;
 pub use crate::extras::document::document;
 pub use crate::extras::minimap::markers;
-pub use crate::extras::subagent_rows::{row_detail as subagent_row_detail, rows as subagent_rows};
 pub use crate::extras::settle::settle;
+pub use crate::extras::subagent_rows::{row_detail as subagent_row_detail, rows as subagent_rows};

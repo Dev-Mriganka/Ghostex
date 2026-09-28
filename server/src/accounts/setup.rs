@@ -1,4 +1,4 @@
-use super::{endpoint, helpers, model::Provider, store};
+use super::{codex_blockers, endpoint, helpers, model::Provider, store};
 use crate::{domain::DomainStateError, server::AppState};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use serde_json::{json, Map, Value};
@@ -138,6 +138,22 @@ pub(crate) fn dispatch(
         }
         command.cwd(&state.paths.home_dir);
         command.env("TERM", "dumb");
+        if provider == Provider::Codex {
+            let stop_codex = params.get("stopCodex").and_then(Value::as_bool) == Some(true);
+            if stop_codex {
+                let sessions = params
+                    .get("sleepSessions")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                codex_blockers::sleep_sessions(state, &sessions)?;
+            }
+            // The login runs in a terminal, so xswap would otherwise ask there; Settings offers its own button instead.
+            command.env(
+                "XSWAP_STOP_CODEX",
+                if stop_codex { "always" } else { "never" },
+            );
+        }
         let pair = native_pty_system()
             .openpty(PtySize {
                 rows: 30,
@@ -196,6 +212,10 @@ pub(crate) fn dispatch(
             }
             drop(pair.master);
             let transcript = output.join().unwrap_or_default();
+            let blockers = (provider == Provider::Codex && result.is_err())
+                .then(|| codex_blockers::pids_in_refusal(&transcript))
+                .filter(|pids| !pids.is_empty())
+                .map(|pids| codex_blockers::describe(&state, &pids));
             let result = result.and_then(|_| {
                 let selector = selector.or_else(|| transcript.char_indices().filter(|(_, c)| *c == '{').filter_map(|(index, _)| serde_json::from_str::<Value>(transcript[index..].trim()).ok()).find_map(|value| value.pointer("/account/number").and_then(Value::as_u64).map(|n| n.to_string()))).ok_or_else(|| DomainStateError::bad_request("The helper did not report the saved account. Update the helper and try again."))?;
                 if let Ok(mut job) = job.lock() { job.view["status"] = json!("saving"); }
@@ -215,7 +235,12 @@ pub(crate) fn dispatch(
                     }
                     Err(error) => {
                         job.view["status"] = json!("failed");
-                        job.view["error"] = json!(error.message);
+                        if let Some(blockers) = blockers {
+                            job.view["error"] = json!("Codex is still running and has to stop before this login can finish.");
+                            job.view["blockers"] = blockers;
+                        } else {
+                            job.view["error"] = json!(error.message);
+                        }
                     }
                 }
             }

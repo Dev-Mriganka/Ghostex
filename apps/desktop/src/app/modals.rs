@@ -819,17 +819,6 @@ impl GhostexGpuiApp {
                 return;
             };
             url
-        } else if modal == GpuiAppModalKind::FindPrompts {
-            let Some(url) = self.agents_find_runtime_url() else {
-                if let Some(window) = source_window {
-                    window.push_notification(
-                        Notification::warning("The GPUI Search by Prompt bundle is missing."),
-                        cx,
-                    );
-                }
-                return;
-            };
-            url
         } else if let GpuiAppModalKind::Extension(id) = modal {
             let Some((url, bridge_surface)) = self.extension_modal_runtime(id) else {
                 if let Some(window) = source_window {

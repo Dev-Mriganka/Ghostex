@@ -118,6 +118,7 @@ impl GhostexGpuiApp {
             },
         );
         let background = cx.background_executor().clone();
+        let started = std::time::Instant::now();
         cx.spawn(async move |this, cx| {
             let preview_pane_id = this
                 .update(cx, |this, _| {
@@ -209,6 +210,16 @@ impl GhostexGpuiApp {
                         placement,
                         ..
                     } => {
+                        support_logs::append(
+                            support_logs::GpuiSupportLog::TerminalFocus,
+                            "gpui.remoteAttach.openPlanLanded",
+                            serde_json::json!({
+                                "machineId": key.remote_machine_id,
+                                "elapsedMs": started.elapsed().as_millis() as u64,
+                                "stillFocused": this.remote_attach_request_is_focused(&key),
+                                "planReady": result.is_ok(),
+                            }),
+                        );
                         if !this.remote_attach_request_is_focused(&key) {
                             this.pending_keep_view_remote_focus.remove(&key);
                             if let (Some((pane_id, session_id)), Ok(plan)) =

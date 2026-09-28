@@ -7641,7 +7641,7 @@
       "section": "theming",
       "sectionTitle": "Theme",
       "type": "number",
-      "default": 45,
+      "default": 60,
       "agentWritable": true
     },
     {

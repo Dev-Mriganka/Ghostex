@@ -482,7 +482,13 @@ fn with_identity(state: &ChatState, params: Value) -> Value {
         _ => Map::new(),
     };
     if state.session.agent.as_deref() == Some("opencode") {
-        if let Some(id) = state.session.prompt.as_ref().and_then(|p|p.get("toolUseId")).and_then(Value::as_str) {
+        if let Some(id) = state
+            .session
+            .prompt
+            .as_ref()
+            .and_then(|p| p.get("toolUseId"))
+            .and_then(Value::as_str)
+        {
             object.insert("toolUseId".into(), json!(id));
         }
     }

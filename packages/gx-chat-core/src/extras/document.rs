@@ -62,7 +62,8 @@ pub fn document(state: &ChatState, context: &ChatContext, into: &mut Document) {
             agent_name,
         }
     });
-    into.loading_stage = (view_kind == "loading" && !show_welcome).then(|| extras.loading_stage.clone());
+    into.loading_stage =
+        (view_kind == "loading" && !show_welcome).then(|| extras.loading_stage.clone());
 }
 
 /// A notice or a question card is on screen, which is what the welcome gives its headline up for.
