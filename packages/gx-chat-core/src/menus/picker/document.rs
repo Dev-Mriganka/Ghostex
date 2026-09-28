@@ -1,4 +1,4 @@
-//! Family e2's picker keys: the model menu and its context, the open picker window, the model
+//! Family e2's picker keys: the model menu and its context, the model
 //! provider, the selection outbox and the fork branch strip.
 //!
 //! Port of the slice of `publish` in `packages/shared/session-chat-controller/native-host.ts`
@@ -35,10 +35,6 @@ pub fn document(state: &ChatState, context: &ChatContext, into: &mut Document) {
             &pickers.model_favorites,
             &state.menus.model_catalog,
         )),
-        None => Tri::Null,
-    };
-    into.model_picker = match pickers.model_picker.as_ref() {
-        Some(picker) => Tri::Value(picker.projection()),
         None => Tri::Null,
     };
     into.model_selection = Tri::Value(pickers.model_selection.to_json());

@@ -1,10 +1,7 @@
 use ghostex_gx_chat_core::menus::{
     catalog::parse_agent_model_catalog,
     option_catalog::{session_option_catalog, OptionDispatch},
-    picker::{
-        model_picker::{model_pick_scope, ModelPickerProvider, ModelSelectionScope},
-        request::create_model_picker_request,
-    },
+    picker::model_picker::{model_pick_scope, ModelPickerProvider, ModelSelectionScope},
 };
 use ghostex_gx_chat_core::questions::model::InteractivePrompt;
 use serde_json::json;
@@ -28,16 +25,6 @@ fn live_catalog_drives_opencode_model_effort_and_agent_controls() {
     let rows = options.options_for_model("provider/model");
     assert!(rows.iter().any(|row| row.id == "mode"));
     assert!(rows.iter().any(|row| row.id == "effort"));
-    let request = create_model_picker_request(
-        &catalog,
-        ModelPickerProvider::OpenCode,
-        Some("provider/model"),
-        Some("high"),
-        "test".into(),
-    )
-    .unwrap();
-    assert_eq!(request.model, "provider/model");
-    assert_eq!(request.effort, "high");
     assert_eq!(
         model_pick_scope(Some(ModelPickerProvider::OpenCode), false),
         ModelSelectionScope::Default

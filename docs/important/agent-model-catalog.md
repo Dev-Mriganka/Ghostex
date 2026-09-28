@@ -65,7 +65,6 @@ Per agent (`agents.<id>`):
 | `defaultEffort` | Optional.                                                                                      |
 | `fastMode`      | `{ available, command, scope }`. `scope` is `"model"` or `"session"`.                          |
 | `groups`        | Optional submenus: `[{ id, label, description? }]`. See "Grouping and order" below.            |
-| `quickPickerOrder` | Optional list of model `value`s: the quick picker's (Option+P) card order. Rows it does not name follow in `models` order. |
 | `models`        | Ordered list of rows; the dropdown shows them in this order.                                   |
 
 Per model (`agents.<id>.models[]`):
@@ -81,8 +80,6 @@ Per model (`agents.<id>.models[]`):
 | `fastMode`      | Whether this model can run in fast mode.                                                                                  |
 | `default`       | Optional; marks the CLI's own default row.                                                                                |
 | `group`         | Optional id from the agent's `groups`; the row is nested in that submenu instead of listed at the top level.               |
-| `quickPickerLabel` | Optional shorter name for the quick picker card ("Astra", "Opus 5.5"). For Codex the rest of `label` becomes the card's version line. |
-| `quickPickerHidden` | Optional; `true` keeps an ungrouped row out of the quick picker (grouped rows never show there).                     |
 | `terminalLabels` | Optional extra names the CLI prints for this model in its footer (an older release's spelling, like "Cursor Grok 4.6"). gxserver maps `label`, `pickerLabel` and these onto `value`. |
 
 Every other field (`cliVersion`, `modelCommand`, `notes`, `contextWindows`,
@@ -93,15 +90,13 @@ Label conventions already applied, keep them:
 - Codex ids read as words: "GPT 5.6 Sol", "GPT 5.4 Mini", "GPT 5.3 Codex Spark".
 - Cursor rows drop the "Claude" and "Cursor" words ("Opus 5", "Grok 4.6") and
   keep the literal row text in `pickerLabel`.
-- Claude 2.1.282's picker lists Opus 5.5 twice, "Opus 5.5" (`opus`, 200K)
-  and "Opus (1M context)" (`opus[1m]`), so the catalog has both rows with the
-  same label. The model menu folds a `[1m]` twin into its standard row and
-  offers a 200K/1M Context Window choice; picking the model from another model
-  starts on 1M, and the composer pill names the window only when it is 200K.
-  The 200K row is `quickPickerHidden`: the quick picker's one Opus card keeps a
-  session already on 200K there. `claude --model` also accepts `sonnet[1m]` and
-  `fable[1m]`, but the picker offers no row for them, so the catalog does not
-  either. Haiku 4.5 is given `efforts: []`.
+- Claude 2.1.284's picker has one "Opus 5.5" row and both `opus` and
+  `opus[1m]` run with a 1M window, so the catalog lists Opus 5.5 once as
+  `opus[1m]`. A `[1m]` row with a standard twin would give the model menu a
+  200K/1M Context Window choice; list a twin only when the CLI really offers
+  both sizes. `claude --model` also accepts `sonnet[1m]` and `fable[1m]`, but
+  the picker offers no row for them, so the catalog does not either. Haiku 4.5
+  is given `efforts: []`.
 - Antigravity's `value` is the MODEL part of the ids `agy models` prints
   (`gemini-3.8-flash`, not `gemini-3.8-flash-high`); the client appends
   `-<effort>` when it types `/model`. Rows without efforts (`claude-sonnet-4-6`,

@@ -109,14 +109,14 @@ impl DraftAgent {
 /// What the menus need to know about the session.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OptionMenuParams {
-    pub quick_picker: bool,
     pub can_pick_model: bool,
     pub working: bool,
     pub can_send_key: bool,
     /// A draft session's agent choices, or `None` once the draft is promoted.
     pub draft_agents: Option<Vec<DraftAgent>>,
     pub draft_agent_id: Option<String>,
-    /// Whether a model picker provider is available at all.
+    /// Whether the agent has a model provider, so model and effort picks go through the durable
+    /// model selection and stay available while the agent works.
     pub has_provider: bool,
     /// Why the last selection was abandoned, shown above the rows that offered it.
     pub selection_error: Option<String>,
@@ -149,7 +149,7 @@ pub fn native_option_menus(
         let presentation = option_rows(descriptor, state, caps);
         let base = command(&descriptor.id);
         let disabled = params.working
-            && !((params.quick_picker && (descriptor.id == "model" || descriptor.id == "effort"))
+            && !((params.has_provider && (descriptor.id == "model" || descriptor.id == "effort"))
                 || (queued_controls && (descriptor.id == "mode" || descriptor.id == "fastMode")));
         match presentation {
             OptionRows::Action { label } => {
@@ -253,15 +253,6 @@ pub fn native_option_menus(
             mode: Vec::new(),
         };
     };
-    if params.quick_picker {
-        let mut map = Map::new();
-        map.insert("type".to_string(), json!("toggleModelPicker"));
-        let mut item = NativeChatMenuItem::new("quick-picker");
-        item.label = Some("Quick picker".to_string());
-        item.hotkey_action = Some("openModelPicker".to_string());
-        item.command = Some(map);
-        model.push(item);
-    }
     // CDXC:SessionChat 2026-09-18 DECISION:
     // User: when a model choice cannot be applied, say so where it was chosen. A queued selection
     // retries quietly, so only an abandoned one reaches this row; the next choice replaces it.

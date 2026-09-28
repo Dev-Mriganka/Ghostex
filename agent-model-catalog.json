@@ -1,7 +1,7 @@
 {
   "_readme": "Do not edit blind. docs/important/agent-model-catalog.md explains the schema, how every Ghostex client loads this file from GitHub (with the bundled copy as the offline source), how to publish a change, and how to re-collect models, efforts and fast mode from the agent CLIs' own /model pickers.",
   "schemaVersion": 1,
-  "updatedAt": "2026-09-28T20:31:59Z",
+  "updatedAt": "2026-09-28T21:10:44Z",
   "effortLabels": {
     "none": "None",
     "minimal": "Minimal",
@@ -56,7 +56,7 @@
           "notes": "The /model picker shows its effort row for every model, but Haiku 4.5 has no effort tiers, so none are offered."
         }
       ],
-      "notes": "Re-read from the 2.1.284 /model picker on 2026-09-29: Default (recommended) / Opus 5.5, Fable 5.1, Sonnet 5.5, Haiku 4.5, then older models (Sonnet 5, Opus 5, Fable 5, Opus 4.8, 4.7, ...). The `sonnet` alias runs claude-sonnet-5-5, so Sonnet 5.5 replaces Sonnet 5, and Opus 5 is not listed: the user asked that Sonnet 5.5 and Opus 5.5 fully replace Sonnet 5 and Opus 5 wherever both are offered. Opus 5.5 is one `opus[1m]` row: the picker has no 200K Opus and `claude -p --model opus` reports a 1,000,000-token window, so the 200K `opus` twin was removed at the user's request and the model menu shows no Context Window choice for it. The older models are not listed, and neither are sonnet[1m] and fable[1m], which `claude --model` accepts but the picker never offers. Quick picker cards use the full versioned labels (no quickPickerLabel): the user asked that Claude models always show their version in the quick picker and the composer."
+      "notes": "Re-read from the 2.1.284 /model picker on 2026-09-29: Default (recommended) / Opus 5.5, Fable 5.1, Sonnet 5.5, Haiku 4.5, then older models (Sonnet 5, Opus 5, Fable 5, Opus 4.8, 4.7, ...). The `sonnet` alias runs claude-sonnet-5-5, so Sonnet 5.5 replaces Sonnet 5, and Opus 5 is not listed: the user asked that Sonnet 5.5 and Opus 5.5 fully replace Sonnet 5 and Opus 5 wherever both are offered. Opus 5.5 is one `opus[1m]` row: the picker has no 200K Opus and `claude -p --model opus` reports a 1,000,000-token window, so the 200K `opus` twin was removed at the user's request and the model menu shows no Context Window choice for it. The older models are not listed, and neither are sonnet[1m] and fable[1m], which `claude --model` accepts but the picker never offers."
     },
     "codex": {
       "name": "Codex CLI",
@@ -81,7 +81,6 @@
         {
           "value": "gpt-6-astra",
           "label": "GPT 6 Astra",
-          "quickPickerLabel": "Astra",
           "description": "Our most capable model for complex, demanding work.",
           "default": true,
           "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
@@ -91,7 +90,6 @@
         {
           "value": "gpt-6-sol",
           "label": "GPT 6 Sol",
-          "quickPickerLabel": "Sol",
           "description": "GPT-6 Sol Codex model.",
           "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
           "defaultEffort": "medium",
@@ -100,7 +98,6 @@
         {
           "value": "gpt-6-luna",
           "label": "GPT 6 Luna",
-          "quickPickerLabel": "Luna",
           "description": "GPT-6 Luna Codex model.",
           "efforts": ["low", "medium", "high", "xhigh", "max"],
           "defaultEffort": "medium",
@@ -154,7 +151,6 @@
           "label": "Legacy"
         }
       ],
-      "quickPickerOrder": ["auto", "grok-4.7", "cursor-grok-4.6", "gemini-3.8-flash", "claude-fable-5-1", "claude-opus-5-5", "claude-opus-4-8", "claude-sonnet-5-5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
       "models": [
         {
           "value": "auto",
@@ -553,7 +549,6 @@
           "label": "Legacy"
         }
       ],
-      "quickPickerOrder": ["gemini-3.8-flash", "gemini-3.1-pro", "claude-opus-4-6-thinking", "claude-sonnet-4-6", "gpt-oss-120b-medium"],
       "models": [
         {
           "value": "gemini-3.8-flash",

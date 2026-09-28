@@ -1,32 +1,10 @@
-//! The quick model picker's data and geometry.
+//! The model providers, the selection a pick carries, and the scope rules.
 //!
-//! Port of `packages/shared/session-chat-presentation/model-picker.ts`: the request the picker is
-//! opened with, the scope rules, the stage layout and the two cursor moves.
+//! Port of the surviving half of `packages/shared/session-chat-presentation/model-picker.ts`.
 
 use serde::{Deserialize, Serialize};
 
-/// One row of the quick picker.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModelPickerModel {
-    pub value: String,
-    pub label: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
-    pub efforts: Vec<EffortChoice>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub default_effort: Option<String>,
-}
-
-/// One effort level, with the catalog's label for it.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EffortChoice {
-    pub value: String,
-    pub label: String,
-}
-
-/// The agents whose lineup the quick picker can draw.
+/// The agents whose model lineup the model menu can draw.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ModelPickerProvider {
@@ -69,20 +47,7 @@ impl ModelPickerProvider {
     }
 }
 
-/// Everything the picker was opened with. Built once, then never changed.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModelPickerRequest {
-    /// Supplied by the host, never generated here: the core has no random source.
-    pub request_id: String,
-    pub provider: ModelPickerProvider,
-    pub models: Vec<ModelPickerModel>,
-    pub efforts: Vec<EffortChoice>,
-    pub model: String,
-    pub effort: String,
-}
-
-/// Where the cursor is.
+/// A model and effort choice.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelPickerSelection {
@@ -165,157 +130,16 @@ pub fn model_picker_scope_reason(provider: ModelPickerProvider) -> &'static str 
     }
 }
 
-/// A pane size the host measured.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PaneSize {
-    pub width: f64,
-    pub height: f64,
-}
-
-/// Everything `modelPickerLayout` returns, in the document's own spelling.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModelPickerLayout {
-    pub narrow: bool,
-    pub viewport_height: f64,
-    pub stage_width: f64,
-    pub short: bool,
-    pub scale: f64,
-    pub visible_models: f64,
-    pub first_visible: f64,
-    pub stage_height: f64,
-    pub rail_offset: f64,
-    pub center_y: f64,
-    pub effort_split: f64,
-}
-
-/// `modelPickerLayout`.
-pub fn model_picker_layout(
-    request: &ModelPickerRequest,
-    model_index: f64,
-    pane_size: PaneSize,
-    controls_height: f64,
-    pointer_rail_start: Option<f64>,
-) -> ModelPickerLayout {
-    let model_count = request.models.len() as f64;
-    let effort_count = request.efforts.len() as f64;
-    let narrow = pane_size.width <= 920.0;
-    let viewport_height = 1.0f64.max(pane_size.height - controls_height - 24.0);
-    let stage_width = 1180.0f64.max((effort_count / 2.0).ceil() * 284.0 + 328.0);
-    let width_scale = 0.01f64.max(
-        1.0f64.min((pane_size.width - 28.0) / if narrow { 240.0 } else { stage_width - 120.0 }),
-    );
-    let short = viewport_height - 24.0 < 3.0 * 142.0 * width_scale;
-    let scale = 0.01f64
-        .max(width_scale.min((viewport_height - 24.0) / if short { 200.0 } else { 3.0 * 142.0 }));
-    let visible_models = if short {
-        1.0
-    } else {
-        model_count.min(3.0f64.max(((viewport_height - 24.0) / (142.0 * scale)).floor()))
-    };
-    let first_visible = if short {
-        model_index
-    } else {
-        pointer_rail_start.unwrap_or_else(|| {
-            0.0f64.max(
-                (model_count - visible_models).min(model_index - (visible_models / 2.0).floor()),
-            )
-        })
-    };
-    let stage_height = viewport_height / scale;
-    let rail_offset = (stage_height - visible_models * 142.0) / 2.0 - first_visible * 142.0;
-    let center_y = 71.0 + model_index * 142.0 + rail_offset;
-    let effort_split = (effort_count / 2.0).ceil();
-    ModelPickerLayout {
-        narrow,
-        viewport_height,
-        stage_width,
-        short,
-        scale,
-        visible_models,
-        first_visible,
-        stage_height,
-        rail_offset,
-        center_y,
-        effort_split,
+/// `modelPickerProvider`: the model family an agent icon belongs to, if any.
+pub fn model_picker_provider(icon: Option<&str>) -> Option<ModelPickerProvider> {
+    match icon? {
+        "claude" => Some(ModelPickerProvider::Claude),
+        "codex" => Some(ModelPickerProvider::Codex),
+        "cursor-cli" | "cursor" => Some(ModelPickerProvider::Cursor),
+        "grok-build" | "grok" => Some(ModelPickerProvider::Grok),
+        "antigravity-cli" | "antigravity" => Some(ModelPickerProvider::Antigravity),
+        "opencode" => Some(ModelPickerProvider::OpenCode),
+        "hermes-agent" => Some(ModelPickerProvider::Hermes),
+        _ => None,
     }
-}
-
-/// `modelPickerChooseModel`: the selection after moving the cursor to `index`, keeping the effort
-/// when the new model offers it.
-pub fn model_picker_choose_model(
-    request: &ModelPickerRequest,
-    selection: &ModelPickerSelection,
-    index: i64,
-) -> Option<ModelPickerSelection> {
-    let next = index_of(&request.models, index)?;
-    let effort = if next
-        .efforts
-        .iter()
-        .any(|effort| effort.value == selection.effort)
-    {
-        selection.effort.clone()
-    } else {
-        next.efforts
-            .iter()
-            .find(|effort| Some(&effort.value) == next.default_effort.as_ref())
-            .or_else(|| next.efforts.first())
-            .map(|effort| effort.value.clone())
-            .unwrap_or_default()
-    };
-    Some(ModelPickerSelection {
-        model: next.value.clone(),
-        effort,
-    })
-}
-
-/// `modelPickerChooseEffort`: `None` when the model in the selection does not offer that effort.
-pub fn model_picker_choose_effort(
-    request: &ModelPickerRequest,
-    selection: &ModelPickerSelection,
-    index: i64,
-) -> Option<ModelPickerSelection> {
-    let next = index_of(&request.efforts, index)?;
-    let model = request
-        .models
-        .iter()
-        .find(|entry| entry.value == selection.model)?;
-    if !model.efforts.iter().any(|entry| entry.value == next.value) {
-        return None;
-    }
-    Some(ModelPickerSelection {
-        model: selection.model.clone(),
-        effort: next.value.clone(),
-    })
-}
-
-/// `modelPickerNextEffortIndex`: the next effort in `direction` the current model can take.
-pub fn model_picker_next_effort_index(
-    request: &ModelPickerRequest,
-    selection: &ModelPickerSelection,
-    direction: i64,
-) -> Option<i64> {
-    let effort_index = request
-        .efforts
-        .iter()
-        .position(|effort| effort.value == selection.effort)
-        .map(|index| index as i64)
-        .unwrap_or(-1);
-    let mut index = effort_index + direction;
-    while index >= 0 && index < request.efforts.len() as i64 {
-        if model_picker_choose_effort(request, selection, index).is_some() {
-            return Some(index);
-        }
-        index += direction;
-    }
-    None
-}
-
-/// `list[index]` with JavaScript's out-of-range behaviour: a negative or too large index is
-/// `undefined`, never a panic and never a wrap.
-fn index_of<T>(list: &[T], index: i64) -> Option<&T> {
-    usize::try_from(index)
-        .ok()
-        .and_then(|index| list.get(index))
 }
