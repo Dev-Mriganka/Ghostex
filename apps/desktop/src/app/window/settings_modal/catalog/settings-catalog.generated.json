@@ -617,6 +617,11 @@
               "subtitle": "Hide Last Active timestamps from session-card title rows."
             },
             {
+              "key": "highlightPendingQuestions",
+              "title": "Highlight unanswered questions",
+              "subtitle": "Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions."
+            },
+            {
               "key": "hideProjectHeaderDiffStats",
               "title": "Hide project git stats",
               "subtitle": "Hide +added/-removed line counts in sidebar project rows."
@@ -5931,6 +5936,22 @@
           ]
         },
         {
+          "id": "sleepingSessions",
+          "title": "Sleeping Sessions",
+          "settings": [
+            {
+              "key": "dimSleepingSessions",
+              "title": "Dim sleeping sessions",
+              "subtitle": "Fade sleeping sessions in the sidebar so they stand apart from awake ones."
+            },
+            {
+              "key": "wakeSleepingSessionsOnSelect",
+              "title": "Wake sleeping sessions when selected",
+              "subtitle": "Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident."
+            }
+          ]
+        },
+        {
           "id": "beta",
           "title": "Experimental",
           "settings": [
@@ -6011,6 +6032,7 @@
           "id": "advanced",
           "title": "Advanced",
           "sections": [
+            "sleepingSessions",
             "beta"
           ]
         }
@@ -7986,6 +8008,7 @@
           },
           "advanced": {
             "sections": [
+              "sleepingSessions",
               "beta"
             ],
             "title": "Advanced"
@@ -8002,6 +8025,7 @@
           "hideSessionAgentIconUntilHover",
           "hideBrowserFaviconUntilHover",
           "hideLastActiveTimeOnSessionCards",
+          "highlightPendingQuestions",
           "hideProjectHeaderDiffStats",
           "showProjectEditorDiffFileCount",
           "sidebarDefaultWidthPx",
@@ -8059,6 +8083,8 @@
           "keepAwakeDeactivateOnLowPowerMode",
           "keepAwakeDeactivateOnUserSwitch",
           "attentionNotificationActions",
+          "dimSleepingSessions",
+          "wakeSleepingSessionsOnSelect",
           "showBetaFeatures"
         ],
         "AGENT_HOOK_SUPPORTED_DEFAULT_AGENTS": [
@@ -8421,6 +8447,7 @@
             "hideSessionAgentIconUntilHover",
             "hideBrowserFaviconUntilHover",
             "hideLastActiveTimeOnSessionCards",
+            "highlightPendingQuestions",
             "hideProjectHeaderDiffStats",
             "showProjectEditorDiffFileCount",
             "hideMenuBarSessionStatusIndicators",
@@ -8525,6 +8552,8 @@
             "keepAwakeDeactivateOnUserSwitch"
           ],
           "advanced": [
+            "dimSleepingSessions",
+            "wakeSleepingSessionsOnSelect",
             "showBetaFeatures"
           ],
           "theming": [
@@ -8632,6 +8661,10 @@
             "actionCompletionSound",
             "copySound"
           ],
+          "sleepingSessions": [
+            "dimSleepingSessions",
+            "wakeSleepingSessionsOnSelect"
+          ],
           "beta": [
             "showBetaFeatures"
           ]
@@ -8691,6 +8724,7 @@
             "hideSessionAgentIconUntilHover",
             "hideBrowserFaviconUntilHover",
             "hideLastActiveTimeOnSessionCards",
+            "highlightPendingQuestions",
             "hideProjectHeaderDiffStats",
             "showProjectEditorDiffFileCount",
             "hideMenuBarSessionStatusIndicators",
@@ -8795,11 +8829,17 @@
             "keepAwakeDeactivateOnUserSwitch"
           ],
           "advanced": [
+            "dimSleepingSessions",
+            "wakeSleepingSessionsOnSelect",
             "showBetaFeatures"
           ]
         },
         "MAIN_SETTINGS_SUBSECTION_NAVIGATION": {
           "advanced": [
+            {
+              "id": "sleepingSessions",
+              "title": "Sleeping Sessions"
+            },
             {
               "id": "beta",
               "title": "Experimental"
@@ -8873,6 +8913,7 @@
           ]
         },
         "MAIN_SETTINGS_SUBSECTION_PARENT_IDS": {
+          "sleepingSessions": "advanced",
           "beta": "advanced",
           "theming": "appearance",
           "appIcon": "appearance",
@@ -11340,6 +11381,7 @@
           ],
           "showSessionCardHoverButtonsInContextMenu": true,
           "hideLastActiveTimeOnSessionCards": true,
+          "highlightPendingQuestions": false,
           "hideAccountEmails": false,
           "sidebarSessionTagListItems": [
             {
@@ -11681,6 +11723,8 @@
           "terminalBackgroundMode": "pure",
           "workspaceBackgroundColor": "",
           "clickToWakeSleepingSessions": true,
+          "dimSleepingSessions": false,
+          "wakeSleepingSessionsOnSelect": true,
           "customViews": [],
           "customViewTemplates": [],
           "viewScopes": {},

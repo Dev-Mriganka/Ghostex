@@ -20,7 +20,8 @@
 //! apps/desktop/src/app/gx_store/project_docs.rs.
 
 use ghostex_gx_core::{
-    CollectionsDocument, owns_collection_menu_command, plan_collection_menu_edit,
+    CollectionsDocument, SpacesDocument, keep_spaces_across_collection_edit,
+    owns_collection_menu_command, plan_collection_menu_edit,
 };
 use serde_json::Value;
 
@@ -66,7 +67,7 @@ impl GhostexGpuiApp {
             self.gx_store.collection_menu.hand_offs += 1;
             return false;
         }
-        let (held, _) = self.gx_store_project_documents(remote_machine_id.as_deref());
+        let (held, spaces) = self.gx_store_project_documents(remote_machine_id.as_deref());
         let plan = plan_collection_menu_edit(&held, command);
         let action = command
             .get("action")
@@ -92,9 +93,24 @@ impl GhostexGpuiApp {
         self.gx_store
             .diagnostics
             .collection_menu_ran(&action, true, self.gx_store.collection_menu);
+        // Ungroup keeps every project of the group in the group's Space (CDXC:Spaces 2026-09-28
+        // on `keep_spaces_across_collection_edit`).
+        let kept = spaces
+            .as_ref()
+            .and_then(|spaces| keep_spaces_across_collection_edit(spaces, &held, &document));
         match remote_machine_id {
-            Some(machine_id) => self.gx_store_send_remote_collections(&machine_id, &document, cx),
-            None => self.gx_document_edit::<CollectionsDocument>(document, cx),
+            Some(machine_id) => {
+                self.gx_store_send_remote_collections(&machine_id, &document, cx);
+                if let Some(kept) = kept {
+                    self.gx_store_send_remote_spaces(&machine_id, &kept, cx);
+                }
+            }
+            None => {
+                self.gx_document_edit::<CollectionsDocument>(document, cx);
+                if let Some(kept) = kept {
+                    self.gx_document_edit::<SpacesDocument>(kept, cx);
+                }
+            }
         }
         true
     }

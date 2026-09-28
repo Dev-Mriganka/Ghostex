@@ -1308,6 +1308,20 @@ export function ManageApp() {
     [fileOperation, projectEditorId, projectId]
   );
 
+  const openFileInCodeView = useCallback(
+    async (path: string) => {
+      try {
+        const response = await requestManageFiles({ action: 'openInCodeView', path, projectEditorId, projectId });
+        if (response.error) {
+          throw new Error(response.error);
+        }
+      } catch (openError) {
+        setError(openError instanceof Error ? openError.message : 'Could not open the file in Code view.');
+      }
+    },
+    [projectEditorId, projectId]
+  );
+
   const openFileContextMenu = useCallback((entry: ManageFileEntry, point: { x: number; y: number }) => {
     if (!canOpenManageEntryContextMenu(entry)) {
       return;
@@ -2756,6 +2770,7 @@ export function ManageApp() {
           onDraftContentChange={setDraftContent}
           onEditAnnotationNote={editAnnotationNote}
           onOpenDocument={(path) => void readFile(path)}
+          onOpenInCodeView={(path) => void openFileInCodeView(path)}
           onReload={() => {
             if (selectedPath) {
               void readFile(selectedPath, { discardDraft: true });

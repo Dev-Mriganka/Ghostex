@@ -158,13 +158,9 @@ pub fn project_menu(input: &ProjectMenuInput<'_>) -> Vec<MenuItem> {
         ));
     }
     menu.push(MenuItem::separator());
-    if group.can_create_session_group {
-        menu.push(MenuItem::row(
-            "New Group",
-            "plus",
-            MenuCommand::command(message::create_group(group_id)),
-        ));
-    }
+    // CDXC:ContextMenus 2026-09-29 DECISION:
+    // User: a project's menu does not have both New Group and Add to Group > New Project Group; only
+    // the second stays. A session still starts a session group with its own Move to New Group.
     menu.push(MenuItem::row(
         if input.hidden_group { "Unhide" } else { "Hide" },
         "eye-off",

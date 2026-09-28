@@ -1618,6 +1618,20 @@ pub(crate) fn agent_session_title_command(agent_name: Option<&str>, title: &str)
     }
 }
 
+/// CDXC:SessionChat 2026-09-27 DECISION:
+/// User: `/rename <name>` typed in a Hermes chat is sent as Hermes' own `/title <name>`. Hermes has no `/rename` and answered "Unknown command /rename", while the rename dialog already renames a Hermes session with `/title`.
+pub(crate) fn chat_rename_as_agent_title_command(
+    agent_name: Option<&str>,
+    text: &str,
+) -> Option<String> {
+    let (command, title) =
+        crate::session_chat_local_command::parse_session_chat_local_command(text)?;
+    (normalize_agent_name(agent_name).as_deref() == Some("hermes-agent")
+        && command.eq_ignore_ascii_case("/rename")
+        && !title.is_empty())
+    .then(|| agent_session_title_command(agent_name, &title))
+}
+
 pub(crate) fn requested_agent_title_command_submission(
     endpoint_path: &str,
     params: &Map<String, Value>,

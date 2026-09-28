@@ -58,6 +58,11 @@ const MAX_STORAGE_RETRIES: u32 = 3;
 const READ_RETRY: Duration = Duration::from_secs(5);
 const MAX_READ_RETRIES: u32 = 6;
 const READ_RETRY_SLOW: Duration = Duration::from_secs(30);
+/// How long a push that has to follow another document's push waits before it looks again, and
+/// how many times it looks before it is sent anyway, so a push that keeps failing cannot hold the
+/// other document back for the rest of the run.
+const PUSH_WAIT_RETRY_MS: u64 = 100;
+const MAX_PUSH_WAITS: u32 = 20;
 
 /// What one document says for itself.
 pub(crate) trait ClientDocument: SyncedDocument + 'static {
@@ -92,6 +97,11 @@ pub(crate) trait ClientDocument: SyncedDocument + 'static {
     /// The daemon's copy, read out of the store's side state. Asked again when a deferred echo is
     /// recovered, because nothing consumed the first one: the side state still holds it.
     fn server_state(app: &GhostexGpuiApp) -> Option<Value>;
+
+    /// Whether this document's push has to wait for another document's push to land first.
+    fn push_waits(_app: &GhostexGpuiApp) -> bool {
+        false
+    }
 }
 
 /// What this app run did with one document. Memory only; the record lines are built from it.
@@ -161,6 +171,8 @@ pub(crate) struct ClientDocumentHost<D: ClientDocument> {
     /// the whole field absent is "nothing owed".
     owed_write: Option<Option<String>>,
     write_retries: u32,
+    /// How many times the booked push has waited on [`ClientDocument::push_waits`].
+    push_waits: u32,
 }
 
 impl<D: ClientDocument> Default for ClientDocumentHost<D> {
@@ -177,6 +189,7 @@ impl<D: ClientDocument> Default for ClientDocumentHost<D> {
             deferred_echo: None,
             owed_write: None,
             write_retries: 0,
+            push_waits: 0,
         }
     }
 }
@@ -592,6 +605,12 @@ impl GhostexGpuiApp {
     }
 
     fn gx_document_push<D: ClientDocument>(&mut self, cx: &mut gpui::Context<Self>) {
+        if D::host(self).push_waits < MAX_PUSH_WAITS && D::push_waits(self) {
+            D::host(self).push_waits += 1;
+            self.gx_document_book_push::<D>(PUSH_WAIT_RETRY_MS, cx);
+            return;
+        }
+        D::host(self).push_waits = 0;
         let (document, revision) = D::host(self).sync.push_started();
         D::host(self).counters.pushes += 1;
         let params = serde_json::json!({ "state": document });

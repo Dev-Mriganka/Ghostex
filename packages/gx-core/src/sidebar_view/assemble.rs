@@ -19,9 +19,9 @@ use super::spaces::{
 };
 use super::view::{
     CollectionView, EmptyState, GroupView, MachineSummary, MachineTabView, OrderItem, OrderKind,
-    SidebarView, SpaceView,
+    SidebarView, SpaceProject, SpaceView,
 };
-use crate::keys::MachineId;
+use crate::keys::{parse_workspace_subgroup_id, MachineId};
 
 /// Everything the top level reads.
 pub(crate) struct AssembleInput<'a> {
@@ -91,6 +91,25 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         &project_of_group,
         &parent_project_of_group,
     );
+    // CDXC:Spaces 2026-09-28 WHY:
+    // A user-made session group has no project of its own, and the ported rule showed such a group
+    // only in Other, so New Group and Move to New Group looked like they did nothing in any Space.
+    // It is filed under the project it was made in: it shows, counts and reveals in that project's
+    // Space.
+    let space_project_of_group = |group_id: &str| -> Option<SpaceProject> {
+        let (project_id, parent_project_id) =
+            projects_by_group.get(group_id).copied().or_else(|| {
+                let (project, _) = parse_workspace_subgroup_id(group_id)?;
+                projects_by_group
+                    .get(project.to_sidebar_group_id().as_str())
+                    .copied()
+            })?;
+        Some(SpaceProject {
+            project_id: project_id.to_string(),
+            parent_project_id: parent_project_id.map(str::to_string),
+            collection_id: collection_id_by_project.get(project_id).cloned(),
+        })
+    };
     let bots_mode = effective_sidebar_mode(input.settings, input.ui) == SidebarMode::Bots;
     let is_bot_group = |group_id: &str| bot_groups.contains(group_id);
 
@@ -117,15 +136,17 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         if is_bot_group(group_id) {
             return false;
         }
-        let project = projects_by_group.get(group_id).copied();
+        let project = space_project_of_group(group_id);
         selection_shows_project(
             selection,
             &spaces_state,
-            project.map(|(project_id, _)| project_id),
+            project.as_ref().map(|project| project.project_id.as_str()),
             project
-                .and_then(|(project_id, _)| collection_id_by_project.get(project_id))
-                .map(String::as_str),
-            project.and_then(|(_, parent)| parent),
+                .as_ref()
+                .and_then(|project| project.collection_id.as_deref()),
+            project
+                .as_ref()
+                .and_then(|project| project.parent_project_id.as_deref()),
         )
     };
 
@@ -138,16 +159,17 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
     });
     let active_space_id = match (&selection, active_group_id) {
         (Some(selection), Some(group_id)) if !is_bot_group(group_id) => {
-            let project_id = project_of_group(group_id);
+            let project = space_project_of_group(group_id);
             Some(space_for_group(
                 &spaces_state,
                 selection,
-                project_id.as_deref(),
-                project_id
-                    .as_deref()
-                    .and_then(|project_id| collection_id_by_project.get(project_id))
-                    .map(String::as_str),
-                parent_project_of_group(group_id).as_deref(),
+                project.as_ref().map(|project| project.project_id.as_str()),
+                project
+                    .as_ref()
+                    .and_then(|project| project.collection_id.as_deref()),
+                project
+                    .as_ref()
+                    .and_then(|project| project.parent_project_id.as_deref()),
             ))
         }
         _ => None,
@@ -243,6 +265,7 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
             collection_color: None,
             collection_id: project_of_group(&plan.group_id)
                 .and_then(|project_id| collection_id_by_project.get(&project_id).cloned()),
+            space_project: space_project_of_group(&plan.group_id),
         });
     }
 

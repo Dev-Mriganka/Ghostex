@@ -504,6 +504,11 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'hideLastActiveTimeOnSessionCards',
       DEFAULT_ghostex_SETTINGS.hideLastActiveTimeOnSessionCards
     ),
+    highlightPendingQuestions: readBoolean(
+      source,
+      'highlightPendingQuestions',
+      DEFAULT_ghostex_SETTINGS.highlightPendingQuestions
+    ),
     sidebarSessionTagListItems: normalizeSidebarSessionTagListItems(source.sidebarSessionTagListItems),
     /**
      * CDXC:SessionSleep 2026-05-28-08:06:
@@ -1027,6 +1032,12 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       source,
       'clickToWakeSleepingSessions',
       DEFAULT_ghostex_SETTINGS.clickToWakeSleepingSessions
+    ),
+    dimSleepingSessions: readBoolean(source, 'dimSleepingSessions', DEFAULT_ghostex_SETTINGS.dimSleepingSessions),
+    wakeSleepingSessionsOnSelect: readBoolean(
+      source,
+      'wakeSleepingSessionsOnSelect',
+      DEFAULT_ghostex_SETTINGS.wakeSleepingSessionsOnSelect
     ),
     customViews: normalizeGhostexCustomViews(source.customViews),
     customViewTemplates: normalizeProjectViewTemplates(source.customViewTemplates),

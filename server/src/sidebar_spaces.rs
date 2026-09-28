@@ -88,15 +88,172 @@ pub fn update_sidebar_spaces(
 /// and both broadcasts land as one ordered mutation.
 pub fn prune_sidebar_spaces_for_collections(
     db: &Connection,
+    previous_collections_state: &Value,
     collections_state: &Value,
 ) -> Result<Option<Value>, DomainStateError> {
     let previous = read_stored_sidebar_spaces_state(db)?;
-    let normalized = normalize_sidebar_spaces_state(&previous, collections_state);
+    let carried = carry_sidebar_spaces_across_collections(
+        &previous,
+        previous_collections_state,
+        collections_state,
+    );
+    let normalized = normalize_sidebar_spaces_state(&carried, collections_state);
     if normalized == previous {
         return Ok(None);
     }
     write_sidebar_spaces_state(db, &normalized)?;
     Ok(Some(normalized))
+}
+
+/// Keeps every project in the Space it was in across a collections change: a new collection that
+/// no Space lists joins the Space its projects were in, and a project that leaves every collection
+/// keeps its old collection's Space. Joining an existing collection still takes that collection's
+/// Space. Runs before the normalizer, which then strips the grouped projects' own membership.
+///
+/// CDXC:Spaces 2026-09-28 SEE-ALSO:
+/// packages/gx-core/src/project_docs/space_edits.rs (`keep_spaces_across_collection_edit`) holds
+/// the user's decision and applies the same rule optimistically in the desktop and web sidebars.
+/// Doing it here too covers `ghostex group-project`, remote machines, and a client whose Spaces
+/// push lands before its collections push and was checked against the old collections.
+fn carry_sidebar_spaces_across_collections(
+    spaces_state: &Value,
+    previous_collections_state: &Value,
+    collections_state: &Value,
+) -> Value {
+    let previous_collections = collection_project_ids(previous_collections_state);
+    let next_collections = collection_project_ids(collections_state);
+    let Some(space_map) = spaces_state.get("spaces").and_then(Value::as_object) else {
+        return spaces_state.clone();
+    };
+    let mut space_order: Vec<&str> = spaces_state
+        .get("order")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|space_id| space_map.contains_key(*space_id))
+        .collect();
+    for space_id in space_map.keys() {
+        if !space_order.contains(&space_id.as_str()) {
+            space_order.push(space_id);
+        }
+    }
+    let space_listing = |field: &str, member_id: &str| -> Option<String> {
+        space_order
+            .iter()
+            .find(|space_id| {
+                space_map
+                    .get(**space_id)
+                    .and_then(|space| space.get(field))
+                    .and_then(Value::as_array)
+                    .is_some_and(|members| {
+                        members
+                            .iter()
+                            .any(|member| member.as_str() == Some(member_id))
+                    })
+            })
+            .map(|space_id| (*space_id).to_string())
+    };
+    let space_before = |project_id: &str| -> Option<String> {
+        match previous_collections
+            .iter()
+            .find(|(_, project_ids)| project_ids.iter().any(|id| id == project_id))
+        {
+            Some((collection_id, _)) => space_listing("memberCollectionIds", collection_id),
+            None => space_listing("memberProjectIds", project_id),
+        }
+    };
+    let mut additions: Vec<(String, &'static str, String)> = Vec::new();
+    for (collection_id, project_ids) in &next_collections {
+        let is_new = !previous_collections
+            .iter()
+            .any(|(previous_id, _)| previous_id == collection_id);
+        if !is_new || space_listing("memberCollectionIds", collection_id).is_some() {
+            continue;
+        }
+        if let Some(space_id) = project_ids
+            .iter()
+            .find_map(|project_id| space_before(project_id))
+        {
+            additions.push((space_id, "memberCollectionIds", collection_id.clone()));
+        }
+    }
+    for (collection_id, project_ids) in &previous_collections {
+        for project_id in project_ids {
+            let still_grouped = next_collections
+                .iter()
+                .any(|(_, next_ids)| next_ids.contains(project_id));
+            if still_grouped || space_listing("memberProjectIds", project_id).is_some() {
+                continue;
+            }
+            if let Some(space_id) = space_listing("memberCollectionIds", collection_id) {
+                additions.push((space_id, "memberProjectIds", project_id.clone()));
+            }
+        }
+    }
+    let mut carried = spaces_state.clone();
+    for (space_id, field, member_id) in additions {
+        let Some(space) = carried
+            .get_mut("spaces")
+            .and_then(|spaces| spaces.get_mut(&space_id))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let members = space
+            .entry(field)
+            .or_insert_with(|| Value::Array(Vec::new()));
+        if !members.is_array() {
+            *members = Value::Array(Vec::new());
+        }
+        if let Some(members) = members.as_array_mut() {
+            if !members
+                .iter()
+                .any(|member| member.as_str() == Some(member_id.as_str()))
+            {
+                members.push(Value::String(member_id));
+            }
+        }
+    }
+    carried
+}
+
+/// Each collection's id and project ids, in the order the collections document lists them.
+fn collection_project_ids(collections_state: &Value) -> Vec<(String, Vec<String>)> {
+    let Some(entries) = collections_state
+        .get("collections")
+        .and_then(Value::as_object)
+    else {
+        return Vec::new();
+    };
+    let mut ordered: Vec<&str> = collections_state
+        .get("order")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|collection_id| entries.contains_key(*collection_id))
+        .collect();
+    for collection_id in entries.keys() {
+        if !ordered.contains(&collection_id.as_str()) {
+            ordered.push(collection_id);
+        }
+    }
+    ordered
+        .into_iter()
+        .map(|collection_id| {
+            let project_ids = entries
+                .get(collection_id)
+                .and_then(|collection| collection.get("projectIds"))
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect();
+            (collection_id.to_string(), project_ids)
+        })
+        .collect()
 }
 
 /// CDXC:Spaces 2026-09-07 SEE-ALSO:

@@ -103,17 +103,15 @@ pub(crate) fn create_agent_session_params_for_project(
             "Ghostex has no launch command for agent \"{agent_id}\", so it did not create the session. Use a built-in agent id (for example claude, codex or hermes-agent) or one configured for this project."
         )));
     }
-    let has_launch_startup_text = launch_plan_object
-        .get("startupText")
-        .and_then(Value::as_str)
-        .is_some_and(|value| !value.trim().is_empty());
+    /*
+    CDXC:SessionStatus 2026-09-27 WHY: A new session starts "working" only when its launch submits a first prompt (`firstUserMessage`). The launch plan's startup text is the agent command alone and every agent launch has one, so keying on it started every session "working". Claude and Codex hide that by projection and settle it with their own titles and hooks, but an agent that fires nothing before its first turn (Hermes runs `on_session_start` from its first conversation turn) read "working" at an empty prompt until the user typed.
+    */
+    let launch_submits_prompt =
+        read_text_from_map(&launch_plan_object, "firstUserMessage").is_some();
     let agent_activity = if runtime_settings.get("agentActivity").is_some() {
         normalize_agent_activity_value(runtime_settings.get("agentActivity"), "idle")
     } else {
-        default_activity(
-            Some(&agent_id),
-            has_launch_startup_text.then_some("working"),
-        )
+        default_activity(Some(&agent_id), launch_submits_prompt.then_some("working"))
     };
     runtime_settings.insert("agentActivity".to_string(), agent_activity);
     runtime_settings.insert(
@@ -461,7 +459,39 @@ pub(crate) fn resolve_agent_launch_command(
         icon,
         accept_all_mode == Some("disabled"),
     );
-    with_codex_no_daemon(agent_id, icon, &command)
+    let command = with_codex_no_daemon(agent_id, icon, &command);
+    #[cfg(windows)]
+    let command = native_cli_command(&command);
+    command
+}
+
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// PowerShell picks an agent's .ps1 shim before its vendor-supplied .cmd launcher, which fails under the default Restricted policy. Resolve known bare agent commands before adding launch or resume wrappers so both paths use the native launcher selected by CLI discovery, preserving custom shell commands and arguments.
+#[cfg(windows)]
+fn native_cli_command(command: &str) -> String {
+    // Unit tests assert exact commands, which must not depend on the CLIs installed on the machine.
+    if cfg!(test) {
+        return command.to_string();
+    }
+    let trimmed = command.trim_start();
+    let binary = trimmed.split_whitespace().next().unwrap_or_default();
+    if crate::agent_cli::catalog::CATALOG
+        .iter()
+        .any(|agent| agent.binary == binary)
+    {
+        if let Some(path) = crate::platform::live_path::find(binary, &[]) {
+            if let Some(extension @ ("cmd" | "bat")) =
+                path.extension().and_then(|extension| extension.to_str())
+            {
+                return format!(
+                    "{}{binary}.{extension}{}",
+                    &command[..command.len() - trimmed.len()],
+                    &trimmed[binary.len()..]
+                );
+            }
+        }
+    }
+    command.to_string()
 }
 
 /// Validate supplied launch options before an empty or non-string value can be mistaken for an omitted option.

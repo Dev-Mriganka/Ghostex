@@ -262,6 +262,10 @@ goes to that machine's Recent Projects, which Quick Access lists); when it held
 the active session, Ghostex stays in the current Space and switches to an awake
 session of the next project in the list.
 Session rows show the agent icon, title, status, tags, and last-active time.
+In Settings > Sidebar, enable Show Advanced to find **Highlight unanswered
+questions**. It adds a soft pink background to sessions with a detected unanswered
+question, even while the agent keeps working. It is off by default and currently
+supports Codex asynchronous questions (`highlightPendingQuestions`).
 Ctrl+Tab and Ctrl+Shift+Tab (also Cmd+Shift+] and Cmd+Shift+[ on Mac) move to
 the next or previous session shown in the sidebar, the same keys Chrome uses
 to switch tabs. Sessions inside collapsed projects or sections, or hidden by a
@@ -282,6 +286,13 @@ A project added with Add Project (from the More menu, from the "Add Project"
 button that an empty project list or empty Space shows, or by right-clicking
 the empty sidebar area) joins the Space that is open at the time and appears at
 the top of it; add a project while Other is selected to leave it out of every
+Space.
+Grouping never moves a project out of its Space: a group made with Add to Group
+> New Project Group joins the Space its project is in, and a project taken out
+of a group (Remove from Group, Ungroup, or dragging it out) stays in that
+group's Space. Adding a project to an existing group in another Space moves it
+to that group's Space, and the sidebar switches there with the project focused.
+A session group made with a session's Move to New Group shows in the project's
 Space.
 In Add Project, select the computer whose folders you want to browse. Local
 folder starts in your home folder, and External drives and other folders shows
@@ -519,6 +530,7 @@ custom tag by name. Claude and Codex name their own sessions; Ghostex
 syncs those names without running a first-prompt title job or blocking terminal
 input. Pi and OMP use the Title Generation Agent for first-prompt names.
 Manual Generate Name and `/rename` in chat remain available for Claude and Codex.
+In a Hermes chat, `/rename <name>` is sent as Hermes' own `/title <name>`.
 ZCode sessions rename from the sidebar and `ghostex rename-command` too: the name
 is saved in ZCode's own session store once its session row exists (after the
 first prompt), and ZCode's automatic naming will not replace it. Before that,
@@ -540,7 +552,8 @@ when you open it.
   header's ⋯ menu sleeps many at once and shows CPU and RAM per session. Clean RAM
   copies a diagnosis prompt; paste it into an agent session to reduce RAM use.
   Sleeping sidebar sessions keep their normal title color and show a dimmer
-  last-active time on the right; awake sessions show a stronger timestamp. Use `ghostex sleep|wake <selector>` to
+  last-active time on the right; turn on Settings > Advanced > Dim sleeping
+  sessions to fade the whole row instead (`dimSleepingSessions`). Use `ghostex sleep|wake <selector>` to
   sleep or wake a session.
 - A sleeping session wakes when you ask for it. Clicking its row in the
   sidebar wakes it. Selecting its tab, opening its project, or
@@ -548,7 +561,11 @@ when you open it.
   its name and a Resume button instead; click anywhere in the pane or press a key to
   wake the session. With
   Click to Wake Sleeping Panes turned off, those wake right away
-  (`clickToWakeSleepingSessions`).
+  (`clickToWakeSleepingSessions`). To stop a sidebar click from waking a
+  sleeping session, turn off Settings > Advanced > Wake sleeping sessions when
+  selected: the click then opens the session with its Resume button, and it
+  wakes only when you click the pane or press a key
+  (`wakeSleepingSessionsOnSelect`).
 - Drag pinned sessions to reorder them within their project. Rows stay in place
   while an icon-and-title ghost follows the pointer; the insertion line marks
   where the session moves when you drop it.
@@ -595,6 +612,7 @@ when you open it.
   resumes work. Close After Done closes a pane once its command exits.
 
 Related settings: `autoSleep*`, `clickToWakeSleepingSessions`,
+`dimSleepingSessions`, `wakeSleepingSessionsOnSelect`,
 `showSessionIdInTerminalPanes`, `sessionTitleGenerationAgent`,
 `renameSessionOnDoubleClick`.
 
@@ -673,6 +691,10 @@ beside the value on desktop, mobile, and web. Copying keeps the original text.
 Use Cmd+P (Recent Sessions) to jump between chats across projects, or
 Cmd+[ and Cmd+] to go back and forward through visited sessions, the same keys
 Chrome uses (Ctrl+Alt+Shift+[ and Ctrl+Alt+Shift+] on Windows and Linux).
+On Windows and macOS, the mouse Back/Forward buttons follow the same visited
+sessions and projects as the header arrows. Inside Settings on Windows, they move through
+the pages you visited since opening Settings and restore each page's scroll
+position. Choosing a new page after going back replaces the forward history.
 Recently visited chats show their loaded messages while catching up with the
 agent. On desktop, returning to a recently visited chat also restores its account
 badge, context usage, and status line while their values refresh. The status
@@ -713,8 +735,8 @@ Paste images into an answer to add numbered image references and the same
 clickable thumbnails as the composer. The references stay with the saved answer.
 
 Press Ctrl+Shift+Down to scroll the focused chat to the bottom, including while
-typing. The Scroll to bottom button shows your current shortcut on desktop and web;
-mobile shows the button without a keyboard shortcut. Both stop any
+typing. On desktop and web, hover the Scroll to bottom button to see your current
+shortcut; mobile shows the button without a keyboard shortcut. Both stop any
 ongoing scroll momentum so the conversation settles at the bottom. This takes
 priority over paragraph selection or adding a cursor in the composer; rebind or
 clear Scroll Chat to Bottom in Settings > Hotkeys (`scrollChatToBottom`).
@@ -756,8 +778,9 @@ Slash commands sent from chat stay in the conversation after a reload, together
 with any captured output. Long command output expands when clicked; model, effort,
 Fast mode, and compaction results keep their status rows.
 During `/compact`, Claude, Codex, Cursor, and Grok Build show a compaction card above the input.
-Cursor's `/summarize` uses the same flow. Claude shows its reported progress;
-Codex, Cursor, and Grok Build show a looping bar. Messages sent or queued during compaction
+Cursor's `/summarize` and Hermes's `/compress` use the same flow. Claude shows its reported progress;
+Codex, Cursor, Grok Build, and Hermes show a looping bar. A Hermes `/compress` sent from chat that
+finds nothing to compact shows Nothing to compress. Messages sent or queued during compaction
 wait until it finishes without a delivery warning.
 To compact before sending a new prompt, press `⌥Enter` on macOS or `Alt+Enter` on Windows and Linux in the chat box,
 Option-click Send (Alt-click on Windows and Linux), or right-click Send and choose Compact & Send. Ghostex sends `/compact` first,
@@ -1488,7 +1511,9 @@ Cmd+Shift+U jumps to the latest unread notification, and Cmd+Ctrl+U pushes the
 current session to the back of the unread queue and jumps to the next one.
 Clearing a session's attention by selecting it in the sidebar, focusing its
 terminal, or pressing Escape also marks its notification read, including one
-you previously moved to the back of the unread queue.
+you previously moved to the back of the unread queue. It works the other way
+too: marking a notification read, or using Mark all read, clears the
+finished or needs-input mark on its session in the sidebar.
 Scripts and agent hooks can post their own rows with
 `ghostex notify --title <text> [--body <text>]`.
 

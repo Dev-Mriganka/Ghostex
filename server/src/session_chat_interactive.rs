@@ -138,7 +138,8 @@ fn normalize_hook_event_name(value: &str) -> String {
 pub fn is_post_tool_hook_event(event_name: Option<&str>) -> bool {
     matches!(
         normalize_hook_event_name(event_name.unwrap_or_default()).as_str(),
-        "post_tool_use" | "post_tool_use_failure"
+        // `post_tool_call` is Hermes' spelling.
+        "post_tool_use" | "post_tool_use_failure" | "post_tool_call"
     )
 }
 

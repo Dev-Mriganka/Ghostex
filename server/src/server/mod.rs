@@ -2013,6 +2013,7 @@ async fn route_http(
                 and live sidebar clients converge without re-sending project rows.
                 */
                 let _event_sequence = lock_presentation_event_sequence(&state)?;
+                let previous_collections = read_sidebar_project_collections(db)?;
                 let collections = update_sidebar_project_collections(db, params)?;
                 let revision = increment_presentation_revision(db)?;
                 state.event_hub.broadcast(json!({
@@ -2022,7 +2023,7 @@ async fn route_http(
                     "sidebarProjectCollections": collections.clone(),
                     "type": "sidebarProjectCollectionsChanged",
                 }));
-                broadcast_pruned_sidebar_spaces(&state, db, &collections)?;
+                broadcast_pruned_sidebar_spaces(&state, db, &previous_collections, &collections)?;
                 Ok(json!({ "sidebarProjectCollections": collections }))
             },
         ),
@@ -2045,6 +2046,7 @@ async fn route_http(
                         )
                     })?;
                 let _event_sequence = lock_presentation_event_sequence(&state)?;
+                let previous_collections = read_sidebar_project_collections(db)?;
                 let collections =
                     assign_project_to_sidebar_collection(db, &project_id, collection_title)?;
                 let revision = increment_presentation_revision(db)?;
@@ -2055,7 +2057,7 @@ async fn route_http(
                     "sidebarProjectCollections": collections.clone(),
                     "type": "sidebarProjectCollectionsChanged",
                 }));
-                broadcast_pruned_sidebar_spaces(&state, db, &collections)?;
+                broadcast_pruned_sidebar_spaces(&state, db, &previous_collections, &collections)?;
                 Ok(json!({
                     "projectId": project_id,
                     "sidebarProjectCollections": collections,

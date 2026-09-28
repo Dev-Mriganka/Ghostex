@@ -822,7 +822,7 @@ fn handoff(
 
 /// A Hermes profile's own lineup, which gxserver reads from the profile and sends with the
 /// session (`modelCatalog`, `session_chat_hermes_status.rs`): the default model, then the models
-/// its sessions used. A pick goes through the daemon's queue like every quick-picker agent's, and
+/// its sessions used. A pick goes through the daemon's queue like every other model provider's, and
 /// gxserver types `/model <name> --reasoning <level>`. The effort starts on the level gxserver
 /// sends as the default (the session's starting level, else the profile's), because Hermes never
 /// shows the one it runs.

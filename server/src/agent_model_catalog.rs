@@ -393,7 +393,6 @@ fn is_valid_agent(agent: &Value) -> bool {
     };
     non_blank(agent.get("name"))
         && agent.get("efforts").is_some_and(string_list)
-        && optional_string_list(agent.get("quickPickerOrder"))
         && agent
             .get("models")
             .and_then(Value::as_array)

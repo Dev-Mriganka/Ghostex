@@ -198,21 +198,6 @@ pub(crate) fn activity_for_hook_event(
         if lower == "postcompact" {
             return payload_compact_trigger_is_manual(payload).then(|| "idle".to_string());
         }
-        /*
-        CDXC:SessionChat 2026-08-24:
-        SessionStart is the ONLY hook Claude Code fires when /compact or /clear
-        finishes — the UserPromptSubmit that submitted the command marked the
-        session "working" and no Stop ever follows, which left sessions (and the
-        prompt-queue scheduler gating on them) stuck working forever after a
-        manual compaction. Every SessionStart source (startup, resume, clear,
-        compact) means the CLI is sitting at its input prompt, so map it to
-        idle. An AUTO-compact mid-turn also fires this and blips the session
-        idle; the next PreToolUse or working-spinner title restores it, and the
-        queue stays safe behind its transcript-lifecycle gate.
-        */
-        if matches!(lower.as_str(), "sessionstart" | "session-start") {
-            return Some("idle".to_string());
-        }
         if matches!(
             lower.as_str(),
             "notification" | "notify" | "permissionrequest"
@@ -273,6 +258,28 @@ pub(crate) fn activity_for_hook_event(
             return Some("working".to_string());
         }
     }
+    /*
+    CDXC:AgentHooks 2026-09-28 WHY:
+    SessionStart (Kiro: agentSpawn) fires while the CLI waits at its input prompt: startup, resume, a new or cleared conversation, and it is the only hook Claude fires when /clear finishes. Most agents settled idle on it only through the notify hook's stateless default status, which also invented idle for every mid-turn event nothing maps, so the rule is explicit now. Two exceptions stay unmapped: OpenCode's plugin reports every mid-turn session.updated as SessionStart, and Claude's compaction SessionStart (source compact) also fires mid-turn after an auto-compact, while a manual /compact settles through PostCompact. gxserver's table leaves SessionStart to the status posted here, because the Claude rule needs the payload.
+    */
+    if compact == "agentspawn"
+        || (compact == "sessionstart"
+            && agent_key != "opencode"
+            && !(matches!(agent_key, "claude" | "openclaude")
+                && payload.get("source").and_then(Value::as_str) == Some("compact")))
+    {
+        return Some("idle".to_string());
+    }
+    /*
+    CDXC:AgentHooks 2026-09-28 WHY:
+    Hermes fires post_tool_call after every tool, mid-turn; only post_llm_call and on_session_end end its turn. Left unmapped, the hook posted its stateless default status (idle) and gxserver applied it, so each finished tool dropped the session to idle until the next tool began, and a long execute_code or the final reply showed no dot (observed 2026-09-28 in the Dobby bot, session G9eas). Its clarify tool asks the user and waits in the terminal, like an approval, so that pre_tool_call needs the user.
+    */
+    if compact == "pretoolcall"
+        && first_string([payload.get("tool_name"), payload.get("toolName")])
+            .is_some_and(|tool| crate::session_chat_interactive::is_ask_user_question_tool(&tool))
+    {
+        return Some("attention".to_string());
+    }
     if matches!(
         compact.as_str(),
         "agentstart"
@@ -291,6 +298,7 @@ pub(crate) fn activity_for_hook_event(
             // Devin's post-compaction event fires mid-turn, so the turn is
             // still running (unlike Claude's manual PostCompact).
             | "postcompaction"
+            | "posttoolcall"
             | "posttooluse"
             | "posttoolusefailure"
             | "prellmcall"
@@ -437,7 +445,7 @@ pub(crate) fn is_prompt_event(event_name: &str) -> bool {
 /// AgentEnd preserves suspended/aborted/error reasons, while Mastra 0.35's Stop reports suspended runs as complete, so Stop is deliberately not installed.
 /// The agent_done Notification duplicates AgentEnd and must not ring a second time; child events must not move the lead session.
 /// SEE-ALSO: server/src/agents/activity.rs and server/src/agent_hooks/notify_runtime.rs.
-pub(crate) fn mastra_hook_activity(event_name: &str, payload: &Value) -> Option<String> {
+fn mastra_hook_activity(event_name: &str, payload: &Value) -> Option<String> {
     let activity = match event_name.to_ascii_lowercase().as_str() {
         "sessionstart" | "sessionend" | "interrupt" => "idle",
         "userpromptsubmit" | "agentstart" | "pretooluse" | "posttooluse" => "working",

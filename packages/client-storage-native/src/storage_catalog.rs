@@ -62,12 +62,6 @@ pub const CATALOG: &[CatalogStore] = &[
         Records,
     ),
     store(
-        "addRepository",
-        "ghostex.addRepository.lastLocation",
-        false,
-        Local,
-    ),
-    store(
         "exportOptions",
         "ghostex.exportTranscript.includeOptions",
         false,
@@ -282,37 +276,11 @@ pub const CATALOG: &[CatalogStore] = &[
         Local,
     ),
     store(
-        "openTarget",
-        "ghostex.titlebar.lastOpenTargetId",
-        false,
-        Local,
-    ),
-    store(
-        "lastAction",
-        "ghostex.titlebar.lastActionCommandByProject:",
-        true,
-        Records,
-    ),
-    store(
         "keepAwake",
         "ghostex.titlebar.keepAwakeRuntime",
         false,
         Local,
     ),
-    store(
-        "keepAwakeSync",
-        "ghostex.titlebar.keepAwakeRuntimeSync",
-        false,
-        Local,
-    ),
-    store(
-        "lidSleep",
-        "ghostex.titlebar.lidSleepPrevention",
-        false,
-        Local,
-    ),
-    store("titlebarGit", "ghostex.titlebar.gitState.", true, Records),
-    store("tipsRead", "ghostex.titlebar.tips.readIds", false, Local),
     store(
         "modelCatalog",
         "ghostex.agentModelCatalog.v1",

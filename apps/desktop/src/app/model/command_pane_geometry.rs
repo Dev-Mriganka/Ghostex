@@ -48,6 +48,18 @@ pub(crate) fn gpui_click_to_wake_sleeping_sessions_from_shared_settings(
         .unwrap_or(true)
 }
 
+/// `wakeSleepingSessionsOnSelect`, true when missing or malformed like shared Settings. See the
+/// SessionSleep decision on `select_sleeping_local_workspace_tab`.
+pub(crate) fn gpui_wake_sleeping_sessions_on_select_from_shared_settings(
+    settings: &shared_settings::SharedSidebarSettingsSnapshot,
+) -> bool {
+    settings
+        .object()
+        .get("wakeSleepingSessionsOnSelect")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true)
+}
+
 pub(crate) fn command_pane_click_to_wake_sleeping_sessions_from_shared_settings(
     settings: &shared_settings::SharedSidebarSettingsSnapshot,
 ) -> bool {

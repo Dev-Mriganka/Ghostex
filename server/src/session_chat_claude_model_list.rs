@@ -14,9 +14,21 @@ const CLAUDE_MODEL_PICKER_TITLE: &str = "Select model";
 /// Proof that this Claude build binds the session-only key. Without it `s` would type into the
 /// list's filter instead, so the driver refuses rather than guessing.
 const CLAUDE_SESSION_ONLY_FOOTER: &str = "to use this session only";
+/// The whole footer while the highlight sits on a row this Claude build cannot pick
+/// ("Sonnet 5.5  Update Claude Code to use this model"): Enter and `s` are not offered there.
+const CLAUDE_CANCEL_ONLY_FOOTER: &str = "Esc to cancel";
 pub(super) const CLAUDE_SESSION_ONLY_KEY: &str = "s";
 const CLAUDE_APPLIED_PREFIX: &str = "⎿ Set model to ";
 const CLAUDE_SESSION_ONLY_SUFFIX: &str = " for this session only";
+/// Option+P (Escape, `p`): Claude's shortcut to the same list, which opens over a draft.
+const CLAUDE_MODEL_SHORTCUT: &str = "\u{1b}p";
+/// The notice above the input after a pick from the list the shortcut opened:
+/// "Model set to opus (claude-opus-5-5) for this session only". No `/model` was echoed, so there
+/// is no reply line, and the notice clears itself after a few seconds.
+const CLAUDE_SHORTCUT_PICK_PREFIX: &str = "Model set to ";
+const CLAUDE_SHORTCUT_DEFAULT_SUFFIX: &str = " and saved as your default for new sessions";
+/// The notice sits above the input box, which the status line can push this far from the tail.
+const CLAUDE_SHORTCUT_NOTICE_TAIL_LINES: usize = 12;
 const CLAUDE_CURSOR: char = '\u{276f}';
 /// Scroll hints the cursor column shows on the first painted row (`↑ 3.`) and the last (`↓ 10.`)
 /// when the window hides rows beyond them.
@@ -34,8 +46,13 @@ const CLAUDE_ARROW_LEFT: &str = "\u{1b}[D";
 /// The effort rail's levels left to right. A model offers a subset in this order, and the rail
 /// wraps at both ends (Claude Code 2.1.281: Low, Medium, High, xHigh, Max, Ultracode on Opus).
 const CLAUDE_EFFORT_ORDER: [&str; 6] = ["low", "medium", "high", "xhigh", "max", "ultracode"];
-/// Every jump paints at least one unread row, so this bounds a list of this many windows.
-const CLAUDE_WINDOW_JUMP_LIMIT: usize = 24;
+/// Every jump paints at least one unread row, so this bounds a list of this many windows. A one-row
+/// window on a short chat pane makes it a bound on rows, and Claude Code 2.1.283 lists 22.
+const CLAUDE_WINDOW_JUMP_LIMIT: usize = 64;
+/// How long a list without its footer must stay unchanged before it counts as clipped by the pane.
+/// A clipped list never changes; Claude repaints slowly while a turn runs, so a half-painted frame
+/// can hold still for a moment.
+const CLAUDE_CLIPPED_SETTLE_MS: u64 = 1_500;
 /// The rail wraps, so every supported level is reachable; the bound stops a stuck rail.
 pub(super) const CLAUDE_EFFORT_STEP_LIMIT: usize = 8;
 /// The footer is the last line the open list draws; a closed one is followed by Claude's
@@ -59,9 +76,27 @@ struct ClaudeModelList {
     hidden: u32,
     effort: Option<String>,
     effort_unsupported: bool,
+    footer: ClaudeListFooter,
+}
+
+/// What the list's last line says about the highlighted row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ClaudeListFooter {
+    /// Enter, `s` and Esc: the row can be picked for this session only.
+    SessionOnly,
+    /// Only "Esc to cancel": the row needs a newer Claude Code.
+    CancelOnly,
+    /// The pane is too short for the footer (and the effort rail) to be painted at all. A frame
+    /// caught mid-paint reads the same way, so only a frame that stays put counts as one.
+    Clipped,
 }
 
 impl ClaudeModelList {
+    /// A frame whose footer was painted, which is what every step after opening the list reads.
+    fn painted(self) -> Option<Self> {
+        (self.footer != ClaudeListFooter::Clipped).then_some(self)
+    }
+
     fn selected(&self) -> Option<u32> {
         self.rows
             .iter()
@@ -145,15 +180,42 @@ fn effort_label(line: &str) -> Option<String> {
 /// draws, and the proof this build binds the session-only key — takes the last COMPLETE frame
 /// instead. Reading from the last title alone picked up half-drawn lists, which is why choosing
 /// Sonnet or Haiku reported no such row while Opus, higher up, was already painted.
+///
+/// CDXC:SessionChat 2026-09-28 WHY:
+/// A highlight on a row this Claude build cannot use ("Update Claude Code to use this model")
+/// shortens the footer to "Esc to cancel". Requiring the session-only footer made that frame
+/// unreadable, so a search walking a short pane's window past such a row timed out, pressed
+/// Escape and retried every five seconds, retyping `/model` into the pane and holding the user's
+/// next message behind it. That frame is read too when it is the last line on screen, and so is a
+/// list that a pane of about ten rows cuts off above its footer: that one stayed open unseen, so
+/// Escape was never sent and every retry found no input box. `footer` records which was read.
 fn claude_model_list(screen: &str) -> Option<ClaudeModelList> {
     let lines = screen_lines_spaced(screen);
-    let footer = lines
+    let last_painted = lines.iter().rposition(|line| !line.trim().is_empty())?;
+    let last_title = lines
         .iter()
-        .rposition(|line| line.contains(CLAUDE_SESSION_ONLY_FOOTER))?;
+        .rposition(|line| line.trim() == CLAUDE_MODEL_PICKER_TITLE)?;
+    let session_only_footer = lines
+        .iter()
+        .rposition(|line| line.contains(CLAUDE_SESSION_ONLY_FOOTER));
+    let (footer, kind) = if lines[last_painted].trim() == CLAUDE_CANCEL_ONLY_FOOTER {
+        (last_painted, ClaudeListFooter::CancelOnly)
+    } else if let Some(footer) = session_only_footer.filter(|footer| *footer > last_title) {
+        (footer, ClaudeListFooter::SessionOnly)
+    } else {
+        (last_painted + 1, ClaudeListFooter::Clipped)
+    };
     let title = lines[..footer]
         .iter()
         .rposition(|line| line.trim() == CLAUDE_MODEL_PICKER_TITLE)?;
     let body = &lines[title + 1..footer];
+    // A complete older frame inside the body means the title belongs to another list.
+    if body
+        .iter()
+        .any(|line| line.contains(CLAUDE_SESSION_ONLY_FOOTER))
+    {
+        return None;
+    }
     let mut rows = Vec::new();
     let mut last_row = 0;
     for (index, line) in body.iter().enumerate() {
@@ -172,6 +234,21 @@ fn claude_model_list(screen: &str) -> Option<ClaudeModelList> {
         return None;
     }
     let below = &body[last_row + 1..];
+    // A clipped list is the last thing on screen: only its own trailing lines may follow the rows,
+    // never Claude's reply or input box after it closed.
+    if kind == ClaudeListFooter::Clipped
+        && !below.iter().all(|line| {
+            let line = line.trim();
+            line.is_empty()
+                || line.starts_with(CLAUDE_HIDDEN_ROWS_PREFIX)
+                || line.starts_with("Use /")
+                || line.contains(CLAUDE_EFFORT_UNSUPPORTED)
+                || effort_label(line).is_some()
+                || line.chars().all(|ch| CLAUDE_SCROLL_HINTS.contains(&ch))
+        })
+    {
+        return None;
+    }
     Some(ClaudeModelList {
         rows,
         hidden: below
@@ -182,6 +259,7 @@ fn claude_model_list(screen: &str) -> Option<ClaudeModelList> {
         effort_unsupported: below
             .iter()
             .any(|line| line.contains(CLAUDE_EFFORT_UNSUPPORTED)),
+        footer: kind,
     })
 }
 
@@ -196,6 +274,8 @@ pub(super) fn claude_model_picker_open(screen: &str) -> bool {
         .filter(|line| !line.trim().is_empty())
         .take(CLAUDE_PICKER_TAIL_LINES)
         .any(|line| line.contains(CLAUDE_SESSION_ONLY_FOOTER))
+        || claude_model_list(screen)
+            .is_some_and(|list| list.footer != ClaudeListFooter::SessionOnly)
 }
 
 /// Claude's acknowledgement of a session-only pick, below the `/model` it echoed.
@@ -236,6 +316,44 @@ fn claude_session_only_applied(screen: &str, model: &str, effort: Option<&str>) 
         && effort.is_none_or(|effort| tail.trim() == format!("with {effort} effort"))
 }
 
+/// Claude's notice of a pick from the list Option+P opened, once the list has closed.
+fn claude_shortcut_pick_applied(screen: &str, model: &str, session_only: bool) -> bool {
+    if claude_model_picker_open(screen)
+        || crate::session_chat_composer::detect_session_chat_composer_readiness(
+            Some("claude"),
+            screen,
+            None,
+        )
+        .state
+            != crate::session_chat_composer::SessionChatComposerState::Ready
+    {
+        return false;
+    }
+    let suffix = if session_only {
+        CLAUDE_SESSION_ONLY_SUFFIX
+    } else {
+        CLAUDE_SHORTCUT_DEFAULT_SUFFIX
+    };
+    screen_lines(screen)
+        .iter()
+        .rev()
+        .filter(|line| !line.trim().is_empty())
+        .take(CLAUDE_SHORTCUT_NOTICE_TAIL_LINES)
+        .any(|line| {
+            let Some(rest) = line
+                .split_once(CLAUDE_SHORTCUT_PICK_PREFIX)
+                .and_then(|(_, rest)| rest.trim_end().strip_suffix(suffix))
+            else {
+                return false;
+            };
+            // The alias Claude took, then the full model id in parentheses.
+            let (alias, id) = rest
+                .split_once(" (")
+                .map_or((rest, ""), |(alias, id)| (alias, id.trim_end_matches(')')));
+            alias == model || (!id.is_empty() && claude_model_label_matches(id, model))
+        })
+}
+
 fn effort_rank(effort: &str) -> Option<usize> {
     CLAUDE_EFFORT_ORDER
         .iter()
@@ -248,11 +366,40 @@ fn cancelled_error() -> DomainStateError {
 
 impl PickerDriver<'_> {
     /// The list as painted now, with its highlight.
+    ///
+    /// A clipped list counts only once two captures a moment apart read the same frame, and then
+    /// ends the pick: neither the effort rail nor the proof that `s` picks for this session only
+    /// is on screen. The error is final, so the list is not reopened every five seconds.
     async fn claude_model_list(&self, step: &str) -> Result<ClaudeModelList, DomainStateError> {
-        self.wait_for(step, |screen| {
-            claude_model_list(screen).filter(|list| list.selected().is_some())
-        })
-        .await
+        let mut clipped: Option<(ClaudeModelList, std::time::Instant)> = None;
+        let list = self
+            .wait_for(step, |screen| {
+                let list = claude_model_list(screen).filter(|list| list.selected().is_some())?;
+                if list.footer != ClaudeListFooter::Clipped {
+                    return Some(list);
+                }
+                match &clipped {
+                    Some((seen, since))
+                        if *seen == list
+                            && since.elapsed()
+                                >= std::time::Duration::from_millis(CLAUDE_CLIPPED_SETTLE_MS) =>
+                    {
+                        Some(list)
+                    }
+                    Some((seen, _)) if *seen == list => None,
+                    _ => {
+                        clipped = Some((list, std::time::Instant::now()));
+                        None
+                    }
+                }
+            })
+            .await?;
+        if list.footer == ClaudeListFooter::Clipped {
+            return Err(unsupported_selection(
+                "The terminal is too short to show Claude's model list. Make the pane taller and pick the model again.",
+            ));
+        }
+        Ok(list)
     }
 
     /// Moves the highlight from where it is straight to row `to` in one burst of arrows, and
@@ -279,7 +426,9 @@ impl PickerDriver<'_> {
         };
         self.write(&key.repeat(presses as usize)).await?;
         self.wait_for("move Claude model highlight", |screen| {
-            claude_model_list(screen).filter(|list| list.selected() == Some(to))
+            claude_model_list(screen)
+                .and_then(ClaudeModelList::painted)
+                .filter(|list| list.selected() == Some(to))
         })
         .await
     }
@@ -314,6 +463,7 @@ impl PickerDriver<'_> {
             let landed = self
                 .wait_for("confirm Claude effort", |screen| {
                     claude_model_list(screen)?
+                        .painted()?
                         .effort
                         .filter(|landed| *landed != current)
                 })
@@ -349,6 +499,9 @@ impl PickerDriver<'_> {
     /// `/model <name>` and `/effort <name>` always save the pick as Claude's default for new
     /// sessions, so a session-only pick drives the bare `/model` list instead: move to the row,
     /// set the effort on its rail, and answer `s`.
+    ///
+    /// CDXC:SessionChat 2026-09-29 DECISION:
+    /// User: when Claude Code's terminal input holds text and the user picks the model with the mouse, simulate Option+P and pick the model that way, since typing `/model` is blocked then. Option+P opens this same list over the draft and the draft stays in the input after `s` or Enter (verified live on Claude Code 2.1.284). The default scope comes here only then, with its effort cleared: Enter on the list saves the model but not the effort, so `/effort` still waits for the input. Ultracode waits too: its switch is only on the `/effort` slider.
     pub(super) async fn drive_claude_session_only(
         &self,
         plan: &CodexPickerPlan,
@@ -367,14 +520,12 @@ impl PickerDriver<'_> {
         {
             return Err(agent_busy("Waiting for Claude's input box."));
         }
-        // Never replace a terminal draft while applying a queued setting.
-        if crate::session_chat_composer::claude_composer_input_text(&screen)
+        let over_draft = crate::session_chat_composer::claude_composer_input_text(&screen)
             .is_some_and(|text| !text.trim().is_empty())
-            && self.claude_input_holds_draft().await
-        {
-            return Err(agent_busy(
-                "Waiting for the text in Claude's terminal input to be sent or cleared.",
-            ));
+            && self.claude_input_holds_draft().await;
+        if !plan.session_only && !over_draft {
+            // The draft went: the default scope's own `/model` path takes the pick on the retry.
+            return Err(agent_busy("Waiting to apply the model with /model."));
         }
         let (model, effort) = super::claude_effort_slider::claude_live_selection(plan, &screen);
         let applied = |current: Option<&String>, value: &str| {
@@ -384,36 +535,47 @@ impl PickerDriver<'_> {
         if model_applied && applied(effort.as_ref(), &plan.effort) {
             return Ok(());
         }
-        if model_applied {
-            return self.drive_claude_effort_session_only(&plan.effort).await;
+        if over_draft
+            && (plan.effort == "ultracode"
+                || (!plan.effort.is_empty() && effort.as_deref() == Some("ultracode")))
+        {
+            return Err(agent_busy(
+                "Waiting for the text in Claude's terminal input to be sent or cleared.",
+            ));
+        }
+        if model_applied && !over_draft {
+            return self
+                .drive_claude_effort_slider(&plan.effort, CLAUDE_SESSION_ONLY_KEY)
+                .await;
         }
 
-        self.write(&crate::session_chat_send::build_session_chat_paste_bytes(
-            CLAUDE_MODEL_COMMAND,
-        ))
-        .await?;
-        self.wait_for("type Claude model command", |screen| {
-            crate::session_chat_composer::claude_composer_input_text(screen)
-                .is_some_and(|text| text.trim() == CLAUDE_MODEL_COMMAND)
-                .then_some(())
-        })
-        .await?;
-        self.write(CODEX_SUBMIT).await?;
+        if over_draft {
+            self.write(CLAUDE_MODEL_SHORTCUT).await?;
+        } else {
+            self.write(&crate::session_chat_send::build_session_chat_paste_bytes(
+                CLAUDE_MODEL_COMMAND,
+            ))
+            .await?;
+            self.wait_for("type Claude model command", |screen| {
+                crate::session_chat_composer::claude_composer_input_text(screen)
+                    .is_some_and(|text| text.trim() == CLAUDE_MODEL_COMMAND)
+                    .then_some(())
+            })
+            .await?;
+            self.write(CODEX_SUBMIT).await?;
+        }
         let list = self.claude_model_list("open Claude model list").await?;
-        let (mut list, mut found) = self.find_claude_model_row(list, &plan.model).await?;
-        // The row the confirmation will name; the base row when the list has no 1M row.
-        let mut applied_model = plan.model.clone();
         /*
         CDXC:AgentProviders 2026-09-28 WHY:
-        Claude Code 2.1.283 lists no "(1M context)" row on accounts where the plain model already runs with a 1M window ("Opus 5.5" reports context_window_size 1000000), so a session-only pick of `opus[1m]` was refused and its effort never applied, leaving the chat on "Opus 5.5 · Medium". Pick the base row instead: on those builds it is the 1M model, and the statusline reading (`claude_statusline_model_choice`) reports the window Claude actually gives.
+        Claude Code 2.1.283 lists no "(1M context)" row on accounts where the plain model already runs with a 1M window ("Opus 5.5" reports context_window_size 1000000), so a session-only pick of `opus[1m]` was refused and its effort never applied, leaving the chat on "Opus 5.5 · Medium". Pick the base row instead: on those builds it is the 1M model, and the statusline reading (`claude_statusline_model_choice`) reports the window Claude actually gives. One walk down the list looks for both rows, so the fallback costs no second pass.
         */
-        if !found {
-            if let Some(base) = plan.model.strip_suffix("[1m]") {
-                (list, found) = self.find_claude_model_row(list, base).await?;
-                applied_model = base.to_string();
-            }
+        let mut candidates = vec![plan.model.as_str()];
+        if let Some(base) = plan.model.strip_suffix("[1m]") {
+            candidates.push(base);
         }
-        if !found {
+        let (list, found) = self.find_claude_model_row(list, &candidates).await?;
+        // The row the confirmation will name; the base row when the list has no 1M row.
+        let Some(applied_model) = found.map(|index| candidates[index].to_string()) else {
             if (self.cancelled)() {
                 return Err(cancelled_error());
             }
@@ -421,8 +583,21 @@ impl PickerDriver<'_> {
                 "Claude's model list does not offer {} in this session, so it cannot be applied without changing your default.",
                 plan.model
             )));
+        };
+        if list.footer == ClaudeListFooter::CancelOnly {
+            return Err(unsupported_selection(format!(
+                "Claude Code must be updated before it can use {applied_model}."
+            )));
         }
 
+        // Ultracode is a switch beside the effort slider since Claude Code 2.1.284, not a level on
+        // this rail: the rail takes Max and the slider below sets the switch.
+        let requested_effort = plan.effort.clone();
+        let mut rail_plan = plan.clone();
+        if rail_plan.effort == "ultracode" {
+            rail_plan.effort = "max".to_string();
+        }
+        let plan = &rail_plan;
         // A model without effort levels (Haiku) takes the pick without one.
         let mut effort_adjusted = false;
         if !plan.effort.is_empty() && !list.effort_unsupported {
@@ -430,7 +605,7 @@ impl PickerDriver<'_> {
                 Some(effort) => effort,
                 None => {
                     self.wait_for("read Claude effort", |screen| {
-                        claude_model_list(screen)?.effort
+                        claude_model_list(screen)?.painted()?.effort
                     })
                     .await?
                 }
@@ -439,11 +614,41 @@ impl PickerDriver<'_> {
         }
 
         let effort = effort_adjusted.then_some(plan.effort.as_str());
-        self.write(CLAUDE_SESSION_ONLY_KEY).await?;
-        self.wait_for("applied Claude session model", |screen| {
-            claude_session_only_applied(screen, &applied_model, effort).then_some(())
+        self.write(if plan.session_only {
+            CLAUDE_SESSION_ONLY_KEY
+        } else {
+            super::claude_effort_slider::CLAUDE_CONFIRM_KEY
         })
         .await?;
+        let screen = self
+            .await_claude_switch("applied Claude session model", |screen| {
+                if over_draft {
+                    claude_shortcut_pick_applied(screen, &applied_model, plan.session_only)
+                } else {
+                    // While a turn runs Claude switches at once but prints no "Set model to …" under
+                    // the `/model` it echoed; its own model report then proves the pick, which
+                    // differed from it before the key was pressed.
+                    claude_session_only_applied(screen, &applied_model, effort)
+                        || super::claude_effort_slider::claude_live_selection(plan, screen)
+                            .0
+                            .is_some_and(|live| {
+                                live == applied_model
+                                    || live.strip_suffix("[1m]") == Some(applied_model.as_str())
+                            })
+                }
+            })
+            .await?;
+        // The Ultracode switch survives a model change, so the level alone is not the whole pick.
+        // Over a draft Ultracode was ruled out above, and `/effort` would type into the draft.
+        let wanted = requested_effort.as_str();
+        if !over_draft && !wanted.is_empty() && !list.effort_unsupported {
+            let (_, live) = super::claude_effort_slider::claude_live_selection(plan, &screen);
+            if live.as_deref() != Some(wanted) {
+                return self
+                    .drive_claude_effort_slider(wanted, CLAUDE_SESSION_ONLY_KEY)
+                    .await;
+            }
+        }
         Ok(())
     }
 
@@ -452,21 +657,29 @@ impl PickerDriver<'_> {
     /// and Claude reads labels loosely: "Opus 4.8" further down also names `opus`. So the row
     /// meant is the FIRST match from the top. Starting at row 1 and jumping a whole window at a
     /// time keeps that rule while reading each window once.
+    ///
+    /// `models` is in order of preference; the answer is the index of the one whose row the
+    /// highlight moved to. The walk stops early only once the first choice is on screen.
     async fn find_claude_model_row(
         &self,
         mut list: ClaudeModelList,
-        model: &str,
-    ) -> Result<(ClaudeModelList, bool), DomainStateError> {
+        models: &[&str],
+    ) -> Result<(ClaudeModelList, Option<usize>), DomainStateError> {
         if list.first() > 1 {
             list = self.jump_claude_highlight(list, 1).await?;
         }
+        let mut rows: Vec<Option<u32>> = vec![None; models.len()];
         for _ in 0..CLAUDE_WINDOW_JUMP_LIMIT {
             if (self.cancelled)() {
                 return Err(cancelled_error());
             }
-            if let Some(row) = list.row_for(model) {
-                list = self.jump_claude_highlight(list, row).await?;
-                return Ok((list, true));
+            for (row, model) in rows.iter_mut().zip(models) {
+                if row.is_none() {
+                    *row = list.row_for(model);
+                }
+            }
+            if rows.first().is_some_and(Option::is_some) {
+                break;
             }
             let (last, total) = (list.last(), list.total());
             if last >= total {
@@ -479,6 +692,14 @@ impl PickerDriver<'_> {
                 .jump_claude_highlight(list, (last + window).min(total))
                 .await?;
         }
-        Ok((list, false))
+        let Some((index, row)) = rows
+            .iter()
+            .enumerate()
+            .find_map(|(index, row)| row.map(|row| (index, row)))
+        else {
+            return Ok((list, None));
+        };
+        list = self.jump_claude_highlight(list, row).await?;
+        Ok((list, Some(index)))
     }
 }

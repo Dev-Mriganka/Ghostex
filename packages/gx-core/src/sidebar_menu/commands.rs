@@ -386,10 +386,6 @@ pub(crate) mod message {
         json!({ "type": "copyWorkspaceProjectRemoteUrl", "remoteUrl": remote_url })
     }
 
-    pub(crate) fn create_group(group_id: &str) -> Value {
-        json!({ "type": "createGroup", "groupId": group_id })
-    }
-
     pub(crate) fn wake_project_sleeping_sessions(group_id: &str) -> Value {
         json!({ "type": "wakeProjectSleepingSessions", "groupId": group_id })
     }

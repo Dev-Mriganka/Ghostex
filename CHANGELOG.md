@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## 10.5.5 - 2026-09-28
+
+**Ghostex 10.5.5 is out.** A big round of Windows fixes, from agent startup and accented typing to mouse Back and Forward, Hermes bot sessions that keep their status and chat, large files that open at any size, an optional highlight for unanswered questions, and keyboard and terminal fixes.
+
+### 🪟 Windows
+- **Agent sessions start reliably on Windows,** using each CLI's own launcher and PowerShell for Grok, and a session that fails to start says why instead of hanging, thanks to @gvastethecreator.
+- **Accented characters compose correctly in the terminal.** A dead key waits for the next letter instead of typing the accent on its own, thanks to @gvastethecreator.
+- **Mouse Back and Forward buttons follow your visited sessions and projects,** and inside Settings they move between the pages you visited and restore each page's scroll position, thanks to @gvastethecreator.
+- **Model controls appear as soon as their data arrives,** instead of waiting on a skeleton until you hover them, thanks to @gvastethecreator.
+- **Menus behave like native ones:** sidebar menus close when you switch to another app, frosted menus no longer close before your click lands, and the pointer updates correctly over pop-ups, thanks to @gvastethecreator.
+- **Terminal block and border characters draw without gaps,** thanks to @gvastethecreator.
+
+### 🤖 Bots and Hermes sessions
+- **A Hermes session keeps its own status, chat and name** when its subagents or nested runs report in, and its subagents show in the Subagents card, thanks to @banozz0.
+- **Hermes chats show every step message,** and `/rename` in a Hermes chat renames the conversation in Hermes too.
+- **The default Hermes bot always opens as itself,** even after `hermes profile use` switched Hermes to another profile.
+- **Sessions no longer blink idle mid-turn,** including while Claude compacts automatically.
+
+### ⌨️ Keyboard and terminals
+- **Typing keeps working after you click beside the terminal.** Backspace and Pinyin input no longer stop after a click on the terminal's margin or the agent bar.
+- **Clicking empty space in a chat sends your typing to the chat box.**
+- **The terminal find bar works on Windows and Linux:** typing, Enter, the arrows, Escape and the close button all act on the search.
+- **The terminal's padding always matches its background,** in dark and light mode, and waking a session in light mode no longer flashes white.
+
+### 🗂 Files and the sidebar
+- **Files opens large files at any size.** Only Markdown keeps its 2 MB editing limit, and a larger Markdown file offers Open in Code view.
+- **Highlight unanswered questions** gives sessions with a waiting question a soft pink background, thanks to @alp82. Turn it on in Settings > Sidebar with Show Advanced on; it currently covers Codex's questions.
+
 ## 10.5.0 - 2026-09-28
 
 **Ghostex 10.5.0 is out.** Bots turns the sidebar into your Hermes agents with a feed of every scheduled run, glass backdrops come to Windows and Linux, terminals start on pure black or white, chat shows a delivery icon beside each prompt, Codex's fullscreen view works everywhere, and a large batch of Windows fixes.

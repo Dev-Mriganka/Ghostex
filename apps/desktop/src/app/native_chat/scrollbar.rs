@@ -54,11 +54,15 @@ impl NativeChatView {
     /// appear. The component's own rule shows the bar on any offset change, and the offset of a list
     /// following its tail moves with every streamed line, so the bar is shown from the list's scroll
     /// handler instead, which gpui calls for the reader's wheel scrolls only.
+    ///
+    /// CDXC:SessionChat 2026-09-28 DECISION:
+    /// "Make the scrollbar stick to the side in the chat view when it's wide, like we do when it's narrow." The bar draws in this column (`viewport_from_layout`), not in the list's viewport, which gpui-component uses by default: on a wide pane the list sits between the minimap's gutters, so the bar floated left of the minimap rail instead of on the pane's right edge, and it ended at the list's bottom rather than the pane's.
     pub(super) fn transcript_scrollbar(&self, p: &ChatAppearance) -> AnyElement {
         let track = self.scrollbar_track.get();
         let measured = track > px(0.0);
         let mut bar = Scrollbar::vertical(&self.list)
             .id("chat-transcript-scrollbar")
+            .viewport_from_layout()
             .thickness(px(THICKNESS * p.scale))
             .mode(ScrollbarMode::Scrolling)
             .shown_by_host_scroll(self.transcript_scrolled_at);

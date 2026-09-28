@@ -15,7 +15,7 @@ use serde_json::{Map, Value};
 
 use crate::event::StorageKey;
 use crate::menus::picker::model_picker::{
-    model_picker_supports_session_scope, ModelPickerRequest, ModelPickerSelection,
+    model_picker_supports_session_scope, ModelPickerProvider, ModelPickerSelection,
     ModelSelectionScope,
 };
 
@@ -305,14 +305,15 @@ pub fn model_selection_unchanged(
     desired: Option<&ModelSelectionIntent>,
     current_model: Option<&str>,
     current_effort: Option<&str>,
-    request: Option<&ModelPickerRequest>,
+    provider: Option<ModelPickerProvider>,
+    effortless: bool,
     scope: Option<ModelSelectionScope>,
 ) -> bool {
     // Where the agent can tell the two scopes apart, the same model with the other scope is a
     // change: it promotes a session-only choice to the saved default, or spares the default from
     // a pending one.
-    if let (Some(scope), Some(request)) = (scope, request) {
-        if model_picker_supports_session_scope(request.provider) {
+    if let (Some(scope), Some(provider)) = (scope, provider) {
+        if model_picker_supports_session_scope(provider) {
             match desired {
                 Some(desired) => {
                     if desired.scope.unwrap_or_default() != scope {
@@ -332,13 +333,6 @@ pub fn model_selection_unchanged(
         return desired.model == selection.model && desired.effort == selection.effort;
     }
     let model_matches = Some(selection.model.as_str()) == current_model;
-    let effort_matches = selection.effort.as_str() == current_effort.unwrap_or("")
-        || request.is_some_and(|request| {
-            request
-                .models
-                .iter()
-                .find(|entry| entry.value == selection.model)
-                .is_some_and(|entry| entry.efforts.is_empty())
-        });
+    let effort_matches = selection.effort.as_str() == current_effort.unwrap_or("") || effortless;
     model_matches && effort_matches
 }

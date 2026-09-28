@@ -15,7 +15,12 @@ pub(super) async fn request(
             params,
             Duration::from_secs(60),
         ),
-        None => gxserver_post_typed_operation(endpoint, params, Duration::from_secs(60)),
+        None => gxserver_post_typed_operation_across_restart(
+            endpoint,
+            params,
+            Duration::from_secs(60),
+            Duration::from_secs(5),
+        ),
     }
     .map_err(|message| json!({"message":message,"endpoint":endpoint}))?;
     let (status, body) = response;

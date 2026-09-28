@@ -25,6 +25,7 @@ How to use this file:
 - **Hide agent icon until hover** `hideSessionAgentIconUntilHover` (boolean, default false) [advanced]: Hide session agent icons until a session row is hovered.
 - **Hide browser favicon until hover** `hideBrowserFaviconUntilHover` (boolean, default false) [advanced]: Hide browser page favicons until a session row is hovered.
 - **Hide last active time** `hideLastActiveTimeOnSessionCards` (boolean, default true) [advanced]: Hide Last Active timestamps from session-card title rows.
+- **Highlight unanswered questions** `highlightPendingQuestions` (boolean, default false) [advanced]: Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.
 - **Hide project git stats** `hideProjectHeaderDiffStats` (boolean, default false) [advanced]: Hide +added/-removed line counts in sidebar project rows.
 - **Show changed-file count** `showProjectEditorDiffFileCount` (boolean, default false) [advanced]: Show changed-file counts in sidebar project row git stats.
 - **Show Menu Bar Session Indicators** `hideMenuBarSessionStatusIndicators` (boolean, default false): Show the menu bar session status badges.
@@ -164,6 +165,10 @@ How to use this file:
 - **Copy Sound** `copySound` (boolean, default false): Play a short sound when copying to the clipboard, including text from the chat composer.
 ### Advanced
 
+#### Sleeping Sessions
+
+- **Dim sleeping sessions** `dimSleepingSessions` (boolean, default false) [advanced]: Fade sleeping sessions in the sidebar so they stand apart from awake ones.
+- **Wake sleeping sessions when selected** `wakeSleepingSessionsOnSelect` (boolean, default true) [advanced]: Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.
 #### Experimental
 
 - **Enable Experimental Features** `showBetaFeatures` (boolean, default false) [advanced]: Show experimental surfaces: OS Integration settings, Browser color scheme, and Keep Awake.

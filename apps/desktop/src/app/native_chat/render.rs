@@ -186,6 +186,12 @@ impl Render for NativeChatView {
             .id("native-session-chat")
             .role(gpui::Role::Group)
             .aria_label("Session chat")
+            /*
+            CDXC:SessionChat 2026-09-28 WHY:
+            User: clicking the chat transcript and then typing must send the keys to the chat box (the 2026-09-22 background typing decision in edit_shortcuts.rs). A press on empty transcript space hit nothing focusable, so focus stayed wherever it was and the keys never passed this view's capture listener, which is what hands them to the composer. The view takes focus itself; GPUI gives a press to the innermost focusable element, so the composer, the answer fields and the transcript text keep their own clicks.
+            */
+            .track_focus(&self.surface_focus)
+            .tab_stop(false)
             .size_full()
             .min_w_0()
             .min_h_0()

@@ -1699,9 +1699,9 @@ static NSEvent *GhostexGpuiNormalizedNavigationKeyEvent(NSEvent *event) {
   // keyboard layout, so matching by keycode alone is safe. Cleanliness is
   // judged by the CGEvent unicode payload — the field TSM reads — because
   // the NSEvent-level characters always look correct for these keys.
-  // Dirty events are rebuilt via keyEventWithType, whose derived CGEvent
-  // carries an empty payload: the shape TSM treats as a normal function
-  // key (doCommand dispatch) instead of committable text.
+  // Dirty events are copied from their CGEvent with the payload removed:
+  // the shape TSM treats as a normal function key (doCommand dispatch)
+  // instead of committable text.
   static const GhostexGpuiNavigationKeyNormalization normalizations[] = {
       {123, NSLeftArrowFunctionKey, YES, YES},
       {124, NSRightArrowFunctionKey, YES, YES},
@@ -1763,32 +1763,40 @@ static NSEvent *GhostexGpuiNormalizedNavigationKeyEvent(NSEvent *event) {
     if (cgEvent) {
       CGEventKeyboardGetUnicodeString(cgEvent, 8, &payloadLength, payload);
     }
+    /*
+     CDXC:Hotkeys 2026-09-28 WHY:
+     A Backspace translated through the keyboard layout carries a 0x08
+     payload. Rebuilding it
+     with keyEventWithType: as a DEL (0x7F) event made the macOS Pinyin input
+     method decline it (doCommandBySelector:deleteBackward: instead of
+     editing its marked text), so every Backspace during a pinyin
+     composition was swallowed (GitHub #112 follow-up). The original CGEvent
+     copied with its payload removed is edited normally, so a dirty event is
+     never rebuilt, and a DEL payload is not treated as clean for Backspace.
+     */
     BOOL payloadClean =
         payloadLength == 0 ||
-        (payloadLength == 1 && payload[0] == (UniChar)canonicalCharacter);
-    if (payloadClean) {
+        (entry.functionModifier && payloadLength == 1 &&
+         payload[0] == (UniChar)canonicalCharacter);
+    if (payloadClean || !cgEvent) {
       return event;
     }
 
-    NSString *canonicalCharacters =
-        [NSString stringWithCharacters:&canonicalCharacter length:1];
-    NSEventModifierFlags canonicalFlags = event.modifierFlags;
+    CGEventRef stripped = CGEventCreateCopy(cgEvent);
+    if (!stripped) {
+      return event;
+    }
+    CGEventKeyboardSetUnicodeString(stripped, 0, NULL);
+    CGEventFlags flags = CGEventGetFlags(stripped);
     if (entry.functionModifier) {
-      canonicalFlags |= NSEventModifierFlagFunction;
+      flags |= kCGEventFlagMaskSecondaryFn;
     }
     if (entry.numericPad) {
-      canonicalFlags |= NSEventModifierFlagNumericPad;
+      flags |= kCGEventFlagMaskNumericPad;
     }
-    NSEvent *normalized = [NSEvent keyEventWithType:event.type
-                                           location:event.locationInWindow
-                                      modifierFlags:canonicalFlags
-                                          timestamp:event.timestamp
-                                       windowNumber:event.windowNumber
-                                            context:nil
-                                         characters:canonicalCharacters
-                        charactersIgnoringModifiers:canonicalCharacters
-                                          isARepeat:event.isARepeat
-                                            keyCode:event.keyCode];
+    CGEventSetFlags(stripped, flags);
+    NSEvent *normalized = [NSEvent eventWithCGEvent:stripped];
+    CFRelease(stripped);
     return normalized ?: event;
   }
 

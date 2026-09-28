@@ -2,9 +2,9 @@ use crate::app::model::*;
 use crate::*;
 
 impl GhostexGpuiApp {
-    /// CDXC:SessionSleep 2026-09-23 DECISION:
-    /// User (reviewing PR 152, choosing the narrow version): a sleeping session wakes when you ask for it, and only then. Clicking its sidebar row still wakes it (Advanced > Split Right, which also woke it, was removed on 2026-09-27); opening its project, and the first visit to a project after a restart, select it and show the "Press Any Key to Wake" placeholder instead, with Click to Wake Sleeping Panes on.
-    /// Those indirect selections post a focus with `keep_sleeping`, and an already-mapped sleeping tab is then selected exactly like a tab-strip click, so `select_agents_tab` applies Click to Wake Sleeping Panes as it does there. A session with no tab yet still wakes, because attaching it is what starts its provider.
+    /// CDXC:SessionSleep 2026-09-29 DECISION:
+    /// User (reviewing PR 152, choosing the narrow version): a sleeping session wakes when you ask for it, and only then. Clicking its sidebar row still wakes it by default (Advanced > Split Right, which also woke it, was removed on 2026-09-27); opening its project, and the first visit to a project after a restart, select it and show the Resume placeholder instead, with Click to Wake Sleeping Panes on. User (issue 177, 2026-09-29): Advanced > Wake sleeping sessions when selected, when turned off, makes a row click (and the slot hotkeys and session walk that share its route) select the session asleep the same way; a session with no tab yet gets its tab staged as the placeholder (`stage_native_sidebar_session_tab`). This supersedes the 2026-09-23 text, under which a row click always woke.
+    /// Those indirect selections post a focus with `keep_sleeping`, and an already-mapped sleeping tab is then selected exactly like a tab-strip click, so `select_agents_tab` applies Click to Wake Sleeping Panes as it does there. Any other session with no tab yet still wakes, because attaching it is what starts its provider.
     /// SEE-ALSO: `resume_restored_workspace_surfaced_terminals` in apps/desktop/src/app/workspace_terminals.rs.
     pub(crate) fn select_sleeping_local_workspace_tab(
         &mut self,

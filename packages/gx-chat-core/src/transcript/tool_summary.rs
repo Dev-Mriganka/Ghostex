@@ -168,13 +168,15 @@ fn json_string_literal(text: &str, at: usize) -> Option<&str> {
     None
 }
 
-/// `(?:\bcmd|["']cmd["']|\bcommand|["']command["'])\s*:\s*("(?:\\.|[^"\\])*")` with the `s` flag.
+/// Every match of `(?:\bcmd|["']cmd["']|\bcommand|["']command["'])\s*:\s*("(?:\\.|[^"\\])*")` with the `s` flag.
 ///
-/// Returns the JSON string literal the command hides behind, still quoted.
-fn embedded_command_literal(input: &str) -> Option<&str> {
+/// Returns the JSON string literals the commands hide behind, still quoted, in source order. Codex's code mode batches several `tools.exec_command({cmd})` calls into one script (`Promise.allSettled([...])`), so the first match alone hides the rest.
+fn embedded_command_literals(input: &str) -> Vec<&str> {
     let bytes = input.as_bytes();
+    let mut literals = Vec::new();
+    let mut resume = 0;
     for start in 0..input.len() {
-        if !input.is_char_boundary(start) {
+        if start < resume || !input.is_char_boundary(start) {
             continue;
         }
         let rest = &input[start..];
@@ -219,10 +221,22 @@ fn embedded_command_literal(input: &str) -> Option<&str> {
             at += input[at..].chars().next().map_or(0, char::len_utf8);
         }
         if let Some(literal) = json_string_literal(input, at) {
-            return Some(literal);
+            resume = at + literal.len();
+            literals.push(literal);
         }
     }
-    None
+    literals
+}
+
+/// The commands a freeform Codex script runs, parsed out of their JSON string literals.
+fn embedded_commands(text: &str) -> Vec<String> {
+    embedded_command_literals(text)
+        .into_iter()
+        .filter_map(|literal| match serde_json::from_str::<Value>(literal) {
+            Ok(Value::String(parsed)) => Some(parsed),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The command a tool ran, dug out of whatever shape the harness recorded it in.
@@ -236,11 +250,10 @@ fn command_text(input: &Value) -> String {
                     return command_text(&parsed);
                 }
             }
-            if let Some(literal) = embedded_command_literal(text) {
-                // Keep the freeform source as the honest preview when it is not JSON.
-                if let Ok(Value::String(parsed)) = serde_json::from_str::<Value>(literal) {
-                    return parsed;
-                }
+            // Keep the freeform source as the honest preview when no command literal parses.
+            let commands = embedded_commands(text);
+            if !commands.is_empty() {
+                return commands.join("\n");
             }
             text.clone()
         }
@@ -283,6 +296,20 @@ pub fn command_detail(input: &Value) -> Option<String> {
 
 /// First three non-empty command lines, flattened into the compact tool row.
 pub fn summarize_command_input(input: &Value) -> String {
+    // A script that runs several commands names each one, rather than running them together as one line.
+    if let Value::String(text) = input {
+        let trimmed = js_trim(text);
+        if !(trimmed.starts_with('{') || trimmed.starts_with('[')) {
+            let commands = embedded_commands(text);
+            if commands.len() > 1 {
+                return commands
+                    .iter()
+                    .map(|command| summarize_command_input(&Value::String(command.clone())))
+                    .collect::<Vec<_>>()
+                    .join(" \u{b7} ");
+            }
+        }
+    }
     let text = command_text(input);
     let lines: Vec<&str> = split_newlines(&text)
         .into_iter()

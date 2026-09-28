@@ -941,7 +941,7 @@ pub struct GhostexGpuiApp {
     pub(crate) agents_delayed_send_countdown_ticker_active: bool,
     pub(crate) agents_delayed_send_persistence_ticker_active: bool,
     pub(crate) titlebar_dropdown_focus_handle: FocusHandle,
-    /// Drawn on the window body row, inside the root element that owns the app's `on_action`
+    /// Drawn on a zero-size child of the window body row, inside the root element that owns the app's `on_action`
     /// listeners, and never focused. A menu row whose opener's focus is no longer drawn dispatches
     /// from here (see `GpuiContextMenu::popup_menu_item`).
     pub(crate) root_action_focus_handle: FocusHandle,
@@ -989,6 +989,8 @@ pub struct GhostexGpuiApp {
 
 impl Drop for GhostexGpuiApp {
     fn drop(&mut self) {
+        #[cfg(target_os = "windows")]
+        crate::navigation_history::windows_mouse::unregister(self.parent_ns_view);
         #[cfg(target_os = "macos")]
         unregister_gpui_app_shots_callback_target();
         #[cfg(target_os = "macos")]

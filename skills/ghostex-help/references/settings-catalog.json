@@ -201,6 +201,21 @@
       "agentWritable": true
     },
     {
+      "key": "highlightPendingQuestions",
+      "title": "Highlight unanswered questions",
+      "subtitle": "Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "sidebar",
+      "groupTitle": "Sidebar",
+      "section": "sidebar",
+      "sectionTitle": "Sidebar",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "agentWritable": true
+    },
+    {
       "key": "hideProjectHeaderDiffStats",
       "title": "Hide project git stats",
       "subtitle": "Hide +added/-removed line counts in sidebar project rows.",
@@ -2728,6 +2743,36 @@
       "sectionTitle": "Sounds",
       "type": "boolean",
       "default": false,
+      "agentWritable": true
+    },
+    {
+      "key": "dimSleepingSessions",
+      "title": "Dim sleeping sessions",
+      "subtitle": "Fade sleeping sessions in the sidebar so they stand apart from awake ones.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "advanced",
+      "groupTitle": "Advanced",
+      "section": "sleepingSessions",
+      "sectionTitle": "Sleeping Sessions",
+      "type": "boolean",
+      "default": false,
+      "advanced": true,
+      "agentWritable": true
+    },
+    {
+      "key": "wakeSleepingSessionsOnSelect",
+      "title": "Wake sleeping sessions when selected",
+      "subtitle": "Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "advanced",
+      "groupTitle": "Advanced",
+      "section": "sleepingSessions",
+      "sectionTitle": "Sleeping Sessions",
+      "type": "boolean",
+      "default": true,
+      "advanced": true,
       "agentWritable": true
     },
     {

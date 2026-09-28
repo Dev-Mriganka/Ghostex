@@ -52,7 +52,7 @@ export const FindPromptResultRow = memo(function FindPromptResultRow({
         // real `.group` class (a project group row) that sets display:grid and
         // justify-self:center, and it silently centered and shrank every result.
         'ghostex-find-row flex cursor-default gap-2 rounded-lg px-2 py-2 transition-colors',
-        selected ? 'bg-accent/70 ring-1 ring-inset ring-border' : 'hover:bg-accent/30'
+        selected ? 'bg-foreground/10 ring-1 ring-inset ring-foreground/15' : 'hover:bg-foreground/5'
       )}
       data-find-row-index={row.index}
       data-selected={selected ? 'true' : undefined}

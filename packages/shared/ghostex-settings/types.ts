@@ -516,6 +516,7 @@ export type ghostexSettings = {
    */
   showSessionCardHoverButtonsInContextMenu: boolean;
   hideLastActiveTimeOnSessionCards: boolean;
+  highlightPendingQuestions: boolean;
   hideAccountEmails: boolean;
   /**
    * CDXC:Sessions 2026-06-13-17:50:
@@ -875,6 +876,12 @@ export type ghostexSettings = {
    * pane body.
    */
   clickToWakeSleepingSessions: boolean;
+  /**
+   * CDXC:SessionSleep 2026-09-29 DECISION:
+   * User (issue 177): two Advanced options for sleeping sessions. By default a sleeping row dims only its last-active time; Dim sleeping sessions (off by default) fades the whole row. Wake sleeping sessions when selected, when turned off, makes selecting a sleeping row show its Resume pill instead of waking it, so switching sessions does not bring slept sessions back by accident.
+   */
+  dimSleepingSessions: boolean;
+  wakeSleepingSessionsOnSelect: boolean;
   customViews: GhostexCustomView[];
   customViewTemplates: ProjectViewTemplate[];
   /**

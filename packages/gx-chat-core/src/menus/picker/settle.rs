@@ -1,8 +1,8 @@
 //! What family e2 has to do before a document can be assembled.
 //!
 //! [`crate::menus::picker::document`] and [`crate::menus::context::document`] are pure, the way
-//! `crate::document::assemble` needs them to be, but four things are carried rather than derived:
-//! the open picker's two animations and its key highlights run on deadlines, the fork branch
+//! `crate::document::assemble` needs them to be, but three things are carried rather than derived:
+//! the fork branch
 //! family is read once and kept, the starred model list and the context preferences arrive from
 //! storage, and the agent model catalog is pushed in. All of that is the mutating half of the
 //! TypeScript's `publish` and of its timer queue, so it runs here, once per event.
@@ -17,14 +17,12 @@ use crate::menus::context::status::ContextDetailsAgent;
 use crate::menus::picker::favorites::{parse_model_favorites, MODEL_FAVORITES_STORE};
 use crate::menus::picker::fork_branches::ForkBranch;
 use crate::menus::picker::model_picker::{
-    ModelPickerRequest, ModelPickerSelection, ModelSelectionScope,
+    ModelPickerProvider, ModelPickerSelection, ModelSelectionScope,
 };
 use crate::menus::picker::selection::{model_selection_unchanged, MODEL_OUTBOX_RETRY_MS};
 use crate::state::{ChatContext, ChatState};
 use crate::wire::{ChatRpcMethod, RpcOutcome};
 
-/// The picker's own deadline key in `state.core.timers`.
-pub const MODEL_PICKER_TIMER: &str = "menus.picker.animation";
 /// The model outbox's retry key.
 pub const MODEL_OUTBOX_TIMER: &str = "menus.picker.outbox";
 
@@ -54,8 +52,8 @@ pub fn settle(
     adopt_scoped_outbox(state);
     // CDXC:SessionChat 2026-09-22 WHY:
     // `PickersState::model_menu_context` and `catalogs` had NO writer, so every arm that reads
-    // them (`toggleModelPicker`, the model menu's pick and its scope line, the picker's own
-    // settle) bailed on `None` and the model picker could not be opened at all. The TypeScript
+    // them (the model menu's pick and its scope line) bailed on `None` and the model menu could
+    // not pick at all. The TypeScript
     // reads `chat.modelProvider` and `chat.sessionOptions` off `controller.current()`, a fresh
     // computation, so recomputing them once per event here is the same read.
     let inputs = crate::menus::picker::inputs::menu_inputs(state, context);
@@ -168,7 +166,6 @@ pub fn settle(
         });
     }
 
-    effects.extend(settle_picker_timers(state, context));
     // A due retry clears the wait, and the delivery below picks the intent up again.
     if state.core.timer_fired(MODEL_OUTBOX_TIMER) {
         state.pickers.model_selection.retry_at_ms = None;
@@ -200,43 +197,12 @@ fn settle_fork_branches(state: &mut ChatState, request_id: u64, outcome: &RpcOut
     state.core.request_publish();
 }
 
-/// Runs the open picker's deadlines, and applies the choice when its close animation ends.
-fn settle_picker_timers(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
-    let Some(picker) = state.pickers.model_picker.as_mut() else {
-        return Vec::new();
-    };
-    let Some(outcome) = picker.expire(context.now_ms) else {
-        return Vec::new();
-    };
-    state.pickers.model_picker = None;
-    let Some(selection) = outcome.selection else {
-        return Vec::new();
-    };
-    // The session may have changed under the picker while it was closing.
-    let session_key = state
-        .pickers
-        .model_menu_context
-        .as_ref()
-        .and_then(|menu| menu.session_key.clone())
-        .unwrap_or_default();
-    if session_key != outcome.session_key {
-        return Vec::new();
-    }
-    queue_model_selection(
-        state,
-        selection,
-        Some(&outcome.request),
-        outcome.scope,
-        context.random_id(0),
-    )
-}
-
-/// Puts a model and effort choice into the durable outbox, unless it would change nothing. Shared
-/// by the quick picker's close and the model menu's keyboard pick.
+/// Puts a model and effort choice into the durable outbox, unless it would change nothing: the
+/// model menu's pick when it carries a reasoning level.
 pub(crate) fn queue_model_selection(
     state: &mut ChatState,
     selection: ModelPickerSelection,
-    request: Option<&ModelPickerRequest>,
+    provider: Option<ModelPickerProvider>,
     scope: ModelSelectionScope,
     id: String,
 ) -> Vec<Effect> {
@@ -250,12 +216,23 @@ pub(crate) fn queue_model_selection(
         .model_menu_context
         .as_ref()
         .and_then(|menu| menu.effort_value.clone());
+    // A model the catalog lists without reasoning levels matches whatever effort the agent shows.
+    let effortless = provider
+        .and_then(|provider| state.menus.model_catalog.agents.get(provider.as_str()))
+        .and_then(|agent| {
+            agent
+                .models
+                .iter()
+                .find(|model| model.value == selection.model)
+        })
+        .is_some_and(|model| model.efforts.is_empty());
     if model_selection_unchanged(
         &selection,
         state.pickers.desired_selection(),
         current_model.as_deref(),
         current_effort.as_deref(),
-        request,
+        provider,
+        effortless,
         Some(scope),
     ) {
         return Vec::new();
@@ -293,7 +270,7 @@ fn settle_outbox_delivery(state: &mut ChatState, _context: &ChatContext) -> Vec<
     let Some(intent) = selection.outbox.clone() else {
         return Vec::new();
     };
-    // `canQueue`: the daemon carries `pendingModelSelection` and the agent has a quick picker.
+    // `canQueue`: the daemon carries `pendingModelSelection`.
     if state.session.pending_model_selection.is_absent() {
         return Vec::new();
     }
@@ -426,23 +403,8 @@ fn settle_desired_receipt(state: &mut ChatState, context: &ChatContext) {
     }
 }
 
-/// Arms the one timer the picker's animations and the outbox retry share.
+/// Arms the outbox retry timer.
 fn arm_timers(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
-    match state
-        .pickers
-        .model_picker
-        .as_ref()
-        .and_then(|picker| picker.next_deadline())
-    {
-        Some(deadline) => state.core.timers.arm(
-            MODEL_PICKER_TIMER,
-            context.now_ms,
-            deadline - context.now_ms,
-        ),
-        None => {
-            state.core.timers.cancel(MODEL_PICKER_TIMER);
-        }
-    }
     match state.pickers.model_selection.retry_at_ms {
         Some(deadline) => state.core.timers.arm(
             MODEL_OUTBOX_TIMER,

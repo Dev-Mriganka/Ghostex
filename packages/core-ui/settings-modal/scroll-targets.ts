@@ -10,7 +10,7 @@ import { type MainSettingsScrollTargetId, type MainSettingsSectionRefs } from '.
 export function getActiveSettingsModalScrollViewport(dialogElement: HTMLElement | null): HTMLElement | null {
   return (
     dialogElement
-      ?.querySelector<HTMLElement>("[role='tabpanel'][data-state='active']")
+      ?.querySelector<HTMLElement>("[role='tabpanel']:not([hidden])")
       ?.querySelector<HTMLElement>("[data-slot='scroll-area-viewport']") ?? null
   );
 }

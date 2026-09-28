@@ -73,6 +73,9 @@ impl GhostexGpuiApp {
         );
         let stale = group.is_stale && !session.is_browser();
         let sleeping = session.lifecycle_state.as_deref() == Some("sleeping");
+        // CDXC:SessionSleep 2026-09-29 DECISION: User (issue 177): by default a sleeping row dims only its last-active time; Advanced > Dim sleeping sessions fades the whole row, and hovering it brings the row back to full strength so its hover buttons stay readable.
+        let dim_sleeping =
+            sleeping && !hovered && hud["settings"]["dimSleepingSessions"].as_bool() == Some(true);
         let icon = super::icons::session_icon(session, hud, appearance, hovered);
         let double_click_rename = hud["settings"]["renameSessionOnDoubleClick"].as_bool()
             == Some(true)
@@ -103,6 +106,7 @@ impl GhostexGpuiApp {
             .and_then(Value::as_u64)
             .unwrap_or(0)
             > 0;
+        let question_fill = super::status::pending_question_fill(&hud["settings"], question);
         let timer = session.details.get("timerLabel").and_then(Value::as_str);
         let show_time = hud
             .get("settings")
@@ -141,6 +145,7 @@ impl GhostexGpuiApp {
                 .relative().h(px(SESSION_HEIGHT * scale)).w_full().min_w_0().pl(px(5.0 * scale)).pr(px(6.0 * scale)).gap(px(6.0 * scale)).rounded(px(5.0 * scale))
                 .cursor_default()
                 .when(stale, |row| row.opacity(0.55))
+                .when(dim_sleeping && !stale, |row| row.opacity(0.5))
                 .when(self.native_sidebar.is_dragging("session", &session_id), |row| row.opacity(0.2))
                 .when_some(completion, |row, start| row.opacity(super::status::completion_opacity(start)))
                 .when(visible && !focused, |row| row.bg(appearance.visible))
@@ -151,6 +156,7 @@ impl GhostexGpuiApp {
                 .when_some(drop_position, |row, position| row.child(super::drag::drop_line(position, scale)))
                 .when(!focused, |row| row.hover(|row| row.bg(appearance.session_hover)))
                 .when(focused, |row| row.child(super::decorations::session_outline(appearance)))
+                .when_some(question_fill, |row, fill| row.bg(fill).hover(move |row| row.bg(fill)))
                 .child(self.render_native_session_identity(session, icon, appearance, cx))
                 .children(self.render_native_session_decorations(session, appearance, cx))
                 .when_some(self.native_sidebar.reveal_flash.as_ref().filter(|(id, _)| id == &session.session_id).map(|(_, start)| *start), |row, start| row.child(super::scroll::reveal_flash(start, scale)))

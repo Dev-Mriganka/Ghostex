@@ -13,7 +13,8 @@ use ghostex_gx_protocol::{ChatBlock, ChatMessage, ChatRole};
 use crate::transcript::foreign::STREAMING_ID;
 use crate::transcript::jsstr::js_trim;
 use crate::transcript::noise::{
-    is_command_output_turn, is_command_turn, is_hidden_message, suppressed_turn_label,
+    is_command_output_turn, is_command_turn, is_compaction_record, is_hidden_message,
+    suppressed_turn_label,
 };
 
 /// One finished user turn: the prompt, the work under it, and the reply that settled it.
@@ -103,16 +104,26 @@ pub fn summary_mode_turns(
         if let Some(final_message) = &turn.final_message {
             turn.earlier_replies = earlier_replies(&turn.active_work, final_message);
         }
+        let final_at = turn.final_message.as_ref().and_then(|final_message| {
+            turn.active_work
+                .iter()
+                .position(|row| row.id == final_message.id)
+        });
         turn.outcome = turn
             .active_work
             .iter()
-            .filter(|row| {
+            .enumerate()
+            .filter(|(at, row)| {
+                // A compaction after the reply, or under a `/compress` that has none, is the seam
+                // before the next turn, as in verbose mode.
+                let seam = final_at.is_none_or(|final_at| *at > final_at);
                 is_command_output_turn(row)
                     || suppressed_turn_label(row).as_deref() == Some("Interrupted")
+                    || (seam && is_compaction_record(row))
                     // A side question stays in view in summary mode too.
                     || crate::transcript::side_question::is_side_question_message(row)
             })
-            .cloned()
+            .map(|(_, row)| row.clone())
             .collect();
     }
     if is_working {
@@ -155,7 +166,11 @@ pub fn partition_completed_work(messages: &[ChatMessage]) -> (Vec<ChatMessage>, 
     let mut visible_artifacts = Vec::new();
     let mut collapsed_work = Vec::new();
     for message in messages {
-        if is_visible_assistant_artifact(message) || message.role == ChatRole::User {
+        // The "Interrupted" marker stays in view as it does in summary mode; Claude's used to be a user row, gxserver's own is a system row.
+        if is_visible_assistant_artifact(message)
+            || message.role == ChatRole::User
+            || suppressed_turn_label(message).as_deref() == Some("Interrupted")
+        {
             visible_artifacts.push(message.clone());
         } else {
             collapsed_work.push(message.clone());
@@ -196,6 +211,10 @@ pub fn final_assistant_message_ids(messages: &[ChatMessage], is_working: bool) -
         // mid-response on both sides of it. Ending the turn there put a copy affordance under
         // commentary that the agent then kept building on.
         if suppressed_turn_label(message).is_some() && !is_command_turn(message) {
+            // An interrupted response has no final reply: its commentary folds into "Worked for" and the marker closes the turn, instead of the marker drawing above text the agent wrote before it was stopped.
+            if suppressed_turn_label(message).as_deref() == Some("Interrupted") {
+                final_assistant_id = None;
+            }
             continue;
         }
         if message.role == ChatRole::User {
@@ -267,11 +286,18 @@ pub fn completed_work_render_items(
         }
         let turn_messages = &messages[index + 1..next_user_index];
         let final_index = turn_messages.iter().rposition(has_agent_response_content);
+        // Stopped after its last text: the turn folds with no final reply, and the marker (kept in view by `partition_completed_work`) ends it.
+        let interrupted = final_index.is_some_and(|at| {
+            turn_messages[at + 1..]
+                .iter()
+                .any(|row| suppressed_turn_label(row).as_deref() == Some("Interrupted"))
+        });
+        let final_index = final_index.filter(|_| !interrupted);
         let interacted_inline_diff = turn_messages
             .iter()
             .any(|row| interacted_message_ids.contains(&row.id));
         let interacted_grouped_diff = interacted_message_ids.contains(&message.id);
-        if (message.deferred_work.is_none() && final_index.is_none())
+        if (message.deferred_work.is_none() && final_index.is_none() && !interrupted)
             || (index >= active_start && !interacted_grouped_diff)
             || interacted_inline_diff
         {
@@ -284,6 +310,18 @@ pub fn completed_work_render_items(
         }
 
         let final_message = final_index.map(|at| turn_messages[at].clone());
+        /*
+        CDXC:SessionChat 2026-09-28 WHY:
+        A compaction the reader runs between turns (Hermes `/compress`, Codex `/compact`) is
+        recorded as a system row after the previous turn's reply, with no user row of its own, so
+        the fold swallowed it and drew it above that reply. It is the seam before the next turn,
+        not work.
+        */
+        let trailing_compactions: Vec<&ChatMessage> = final_index
+            .map_or(&[][..], |at| &turn_messages[at + 1..])
+            .iter()
+            .filter(|row| is_compaction_record(row))
+            .collect();
         let raw_start = raw_index(&message.id).expect("a rendered row comes from the raw list");
         let raw_end = messages
             .get(next_user_index)
@@ -295,11 +333,19 @@ pub fn completed_work_render_items(
             user: message.clone(),
             work: raw_messages[(raw_start + 1).min(raw_end)..raw_end]
                 .iter()
-                .filter(|row| Some(&row.id) != final_id.as_ref())
+                .filter(|row| {
+                    Some(&row.id) != final_id.as_ref()
+                        && !trailing_compactions.iter().any(|seam| seam.id == row.id)
+                })
                 .cloned()
                 .collect(),
             final_message,
         })));
+        items.extend(
+            trailing_compactions
+                .into_iter()
+                .map(|row| RenderItem::Message(Box::new(row.clone()))),
+        );
         index = next_user_index;
     }
     items

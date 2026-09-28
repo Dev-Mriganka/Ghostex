@@ -176,7 +176,7 @@ fn read_conversations(
 
 /// The user rows Hermes writes itself, as its `_SYNTHETIC_USER_ROW_PREFIXES` lists them. Its other
 /// injected rows (the tool-limit request, recovery nudges) carry no tag and read as the starter's.
-const HERMES_INJECTED_PREFIXES: [&str; 9] = [
+pub(crate) const HERMES_INJECTED_PREFIXES: [&str; 9] = [
     "[System:",
     "[CONTEXT",
     "[PRIOR CONTEXT",

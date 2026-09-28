@@ -7,7 +7,7 @@ account-switch-card.css, drawn from the core's `accountSwitchCard` projection
 usage levels come from `menus/accounts_presentation.rs` in the core.
 
 CDXC:AgentProviders 2026-09-25 DECISION:
-User: make the card bigger when the pane has room, drop the bars under the usage tiles, stop the tile name (Fable) looking the same as its reset time (3d 4h), and show the agent icon once, left of the title, not on both account rows (docs/2026-09-24/account-switch-card-roomy/01-no-bars.html). The card is 430px in a narrow pane and scales up to 516px / 576px from 600px / 760px pane widths. Each tile shows a semibold name, a smaller muted reset line with a clock, and a large percent; the tile at 100% keeps its stronger outline. This supersedes the 2026-09-23 tile-edge bars and "smaller" card; the rest of that decision (neutral ink, accent for the target and progress, numbered steps with the moving line) stands, as does the 2026-09-16 backdrop that blocks the pointer until the switch finishes.
+User: drop the bars under the usage tiles, stop the tile name (Fable) looking the same as its reset time (3d 4h), and show the agent icon once, left of the title, not on both account rows (docs/2026-09-24/account-switch-card-roomy/01-no-bars.html). 2026-09-29: "reduce this one's size when the chat view is large by 30%", then "make it bigger by 15%": in a pane 760px or wider the card is the former 576px card at 70%, then 15% larger, so about 464px with its text scaled to match; narrower panes keep the 430px card. This supersedes the 2026-09-25 growth to 516px / 576px. Each tile shows a semibold name, a smaller muted reset line with a clock, and a large percent; the tile at 100% keeps its stronger outline. This supersedes the 2026-09-23 tile-edge bars and "smaller" card; the rest of that decision (neutral ink, accent for the target and progress, numbered steps with the moving line) stands, as does the 2026-09-16 backdrop that blocks the pointer until the switch finishes.
 */
 
 use super::{
@@ -337,13 +337,11 @@ impl NativeChatView {
             return None;
         }
         let zoom = appearance.scale;
-        // The card is 430px in a narrow pane and grows, text and all, as the pane gets wider.
+        // A wide pane draws the card, text and all, at the former 1.34 scale shrunk 30% then grown 15%.
         let pane_width = f32::from(self.bounds.get().size.width) / zoom;
         let s = zoom
             * if pane_width >= 760.0 {
-                1.34
-            } else if pane_width >= 600.0 {
-                1.2
+                1.34 * 0.7 * 1.15
             } else {
                 1.0
             };

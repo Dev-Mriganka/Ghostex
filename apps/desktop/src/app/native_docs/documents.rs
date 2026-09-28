@@ -86,6 +86,21 @@ impl GhostexGpuiApp {
         });
     }
 
+    /// Opens a Markdown file too large for the Markdown editor in the Code view.
+    pub(crate) fn native_docs_open_in_code_view(&mut self, path: &str, cx: &mut Context<Self>) {
+        let request = self.native_docs_request("openInCodeView", json!({ "path": path }));
+        self.run_docs_files_request(request.to_string(), cx, move |this, response, cx| {
+            if let Some(error) = response["error"].as_str() {
+                this.dispatch_gpui_workspace_action_toast(
+                    "error",
+                    "Couldn't open the file in Code view",
+                    error,
+                    cx,
+                );
+            }
+        });
+    }
+
     /// SVG images: switches between the picture and its source in the code editor.
     pub(crate) fn native_docs_toggle_svg_source(&mut self, path: &str, cx: &mut Context<Self>) {
         let Some(document) = self.native_docs.document_mut(path) else {

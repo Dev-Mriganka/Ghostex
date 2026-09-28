@@ -18,8 +18,8 @@ use crate::menus::context::{ContextDetailsAgent, ContextDetailsPreferences, Cont
 use crate::menus::picker::model_menu::ModelMenuCatalogs;
 use crate::menus::picker::projection::model_menu_projection;
 use crate::menus::picker::{
-    ForkBranch, ModelMenuContext, ModelMenuRow, ModelMenuView, ModelPickerState,
-    ModelSelectionIntent, ModelSelectionState,
+    ForkBranch, ModelMenuContext, ModelMenuRow, ModelMenuView, ModelSelectionIntent,
+    ModelSelectionState,
 };
 
 /// What family e2's surfaces remember between frames.
@@ -32,8 +32,6 @@ pub struct PickersState {
     pub model_menu_context: Option<ModelMenuContext>,
     /// Every provider's model lineup, as e1's session option catalog answers it.
     pub catalogs: ModelMenuCatalogs,
-    /// The full model picker window, or `None` when it is closed.
-    pub model_picker: Option<ModelPickerState>,
     /// The merged model pill's menu: which tab is open and what was typed into its search.
     ///
     /// `tab` of `None` is "not opened yet", which is what makes the opening tab the session's own

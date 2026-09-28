@@ -300,8 +300,6 @@ pub(crate) struct QuickAccessSnapshot {
     #[serde(default)]
     pub(crate) action_hotkeys: Vec<String>,
     #[serde(default)]
-    pub(crate) hint: String,
-    #[serde(default)]
     pub(crate) editor: Option<QuickAccessPromptEditor>,
     #[serde(default)]
     pub(crate) tag_composer: Option<QuickAccessTagComposer>,

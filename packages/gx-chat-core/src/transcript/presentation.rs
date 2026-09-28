@@ -606,7 +606,9 @@ pub fn build_scope(
                                     .deferred_work
                                     .as_ref()
                                     .and_then(|deferred| deferred.completed_at)
-                            }),
+                            })
+                            // An interrupted turn has no final reply; it ran until its last row.
+                            .or_else(|| turn.work.iter().rev().find_map(|row| row.timestamp)),
                     ),
                     files,
                     files_label: format!(

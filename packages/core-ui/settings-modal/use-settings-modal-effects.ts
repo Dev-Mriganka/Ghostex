@@ -22,6 +22,7 @@ export function useSettingsModalEffects({
   appIconSectionRef,
   autoSleepSectionRef,
   betaSectionRef,
+  sleepingSessionsSectionRef,
   browserSectionRef,
   chatSectionRef,
   dialogContentRef,
@@ -59,6 +60,7 @@ export function useSettingsModalEffects({
   appIconSectionRef: RefObject<HTMLDivElement | null>;
   autoSleepSectionRef: RefObject<HTMLDivElement | null>;
   betaSectionRef: RefObject<HTMLDivElement | null>;
+  sleepingSessionsSectionRef: RefObject<HTMLDivElement | null>;
   browserSectionRef: RefObject<HTMLDivElement | null>;
   chatSectionRef: RefObject<HTMLDivElement | null>;
   dialogContentRef: RefObject<HTMLDivElement | null>;
@@ -101,7 +103,7 @@ export function useSettingsModalEffects({
      * scroll position.
      */
     const targetSectionRef = getMainSettingsSectionRef(initialSection, {
-      advanced: betaSectionRef,
+      advanced: sleepingSessionsSectionRef,
       appearance: themingSectionRef,
       autoSleep: autoSleepSectionRef,
       fileOpening: fileOpeningSectionRef,
@@ -113,6 +115,7 @@ export function useSettingsModalEffects({
       sessionCards: sessionCardsSectionRef,
       sidebar: sidebarSectionRef,
       sounds: soundsSectionRef,
+      sleepingSessions: sleepingSessionsSectionRef,
       beta: betaSectionRef,
       statusIndicators: statusIndicatorsSectionRef,
       system: powerSectionRef,

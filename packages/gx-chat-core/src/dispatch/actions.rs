@@ -112,17 +112,6 @@ pub fn owner(kind: &ActionKind) -> Option<Family> {
         | ActionKind::SaveNote => Family::Composer,
 
         ActionKind::SelectOption
-        | ActionKind::ToggleModelPicker
-        | ActionKind::ModelPickerMeasure
-        | ActionKind::ModelPickerPane
-        | ActionKind::ModelPickerKey
-        | ActionKind::ModelPickerKeyUp
-        | ActionKind::ModelPickerBlur
-        | ActionKind::ModelPickerControl
-        | ActionKind::ModelPickerScroll
-        | ActionKind::ModelPickerModel
-        | ActionKind::ModelPickerEffort
-        | ActionKind::ModelPickerCancel
         | ActionKind::ModelMenuView
         | ActionKind::ModelMenuFavorite
         | ActionKind::ModelMenuPick

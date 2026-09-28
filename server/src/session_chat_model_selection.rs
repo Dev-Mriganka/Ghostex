@@ -229,7 +229,12 @@ pub(crate) fn enqueue(
     let transaction =
         rusqlite::Transaction::new_unchecked(&db, rusqlite::TransactionBehavior::Immediate)
             .map_err(storage_error)?;
-    let previous = read_pending(&transaction, project, session_id);
+    // CDXC:SessionChat 2026-09-29 WHY:
+    // A failed change never reached the agent and never will, so a new pick replaces it instead of
+    // merging into it: inheriting a Fast mode the account cannot turn on made every later Mode or
+    // model pick fail on that toggle again, and the pick itself was never applied.
+    let previous =
+        read_pending(&transaction, project, session_id).filter(|pending| pending.state != "failed");
     let model = if model.is_empty() {
         previous
             .as_ref()

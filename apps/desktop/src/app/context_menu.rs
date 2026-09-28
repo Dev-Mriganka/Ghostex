@@ -432,7 +432,10 @@ impl GpuiContextMenu {
     /// while it held focus) or nothing had focus, GPUI starts the dispatch at the window root, above
     /// the app's `on_action` listeners, and the row did nothing: `+` → Code after closing Code. Those
     /// rows dispatch from the app's always-drawn `root_action_focus_handle` instead; menus opened
-    /// from another window keep the old path because that handle is not drawn there.
+    /// from another window keep the old path because that handle is not drawn there. Whether the
+    /// opener still reaches a handler is asked with `is_action_available_in` (an undrawn handle
+    /// resolves to the window root), because the fallback handle sits on a zero-size leaf and no
+    /// longer contains the rest of the body.
     fn popup_menu_item(&self, row: &ContextMenuRow) -> PopupMenuItem {
         let action = row.action.boxed_clone();
         let source_window = self.source_window;
@@ -461,9 +464,8 @@ impl GpuiContextMenu {
                         let root_focus =
                             root_focus.map(|app| app.read(cx).root_action_focus_handle.clone());
                         let drawn_source_focus = source_focus.filter(|focus| {
-                            root_focus
-                                .as_ref()
-                                .is_none_or(|root| root.contains(focus, window))
+                            root_focus.is_none()
+                                || window.is_action_available_in(action.as_ref(), focus)
                         });
                         match (drawn_source_focus, root_focus) {
                             (Some(focus), _) => {

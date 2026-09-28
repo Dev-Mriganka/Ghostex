@@ -242,8 +242,29 @@ fn advanced_effort_picker_rows(screen: &str) -> Option<Vec<PickerRow>> {
     })
 }
 
+/// Claude's "Switch model?" or "Switch effort?" warning ("This conversation is cached for the
+/// current model…"), answered with its "Yes, switch to …" row.
+fn claude_switch_warning_answer(screen: &str) -> Option<String> {
+    use crate::session_chat_resume_prompt::{
+        detect_session_chat_terminal_picker, SessionChatTerminalPickerKind,
+    };
+    let picker = detect_session_chat_terminal_picker(screen)?;
+    if !matches!(
+        picker.kind,
+        SessionChatTerminalPickerKind::SwitchModel | SessionChatTerminalPickerKind::SwitchEffort
+    ) {
+        return None;
+    }
+    picker
+        .rows
+        .iter()
+        .position(|row| row.label.starts_with("Yes, switch to "))
+        .and_then(|index| picker.answer_key(index))
+}
+
 fn any_picker_open(screen: &str) -> bool {
-    claude_model_picker_open(screen)
+    claude_switch_warning_answer(screen).is_some()
+        || claude_model_picker_open(screen)
         || claude_effort_slider::claude_effort_slider_open(screen)
         || screen_lines(screen).iter().any(|line| {
             line == CODEX_MODEL_PICKER_TITLE
@@ -545,6 +566,38 @@ impl PickerDriver<'_> {
         }
     }
 
+    /// CDXC:SessionChat 2026-09-29 WHY:
+    /// Once a conversation has history, Claude Code 2.1.284 answers a session-only model pick (`s` in
+    /// the `/model` list) and an effort slider confirmation with "Switch model?" / "Switch effort?"
+    /// ("Your next response will be slower and use more tokens"). Only the typed `/model <name>` path
+    /// answered it, so every session-only pick in a real conversation timed out with the warning
+    /// open and retried forever. The warning follows the pick this job just made, so it is answered
+    /// with its "Yes, switch to" row, whatever name it prints.
+    ///
+    /// Waits for `applied`, answering the warning on the way, and returns the applied screen.
+    async fn await_claude_switch(
+        &self,
+        step: &str,
+        applied: impl Fn(&str) -> bool,
+    ) -> Result<String, DomainStateError> {
+        let answer = self
+            .wait_for(step, |screen| {
+                if applied(screen) {
+                    return Some(Err(screen.to_string()));
+                }
+                claude_switch_warning_answer(screen).map(Ok)
+            })
+            .await?;
+        match answer {
+            Err(screen) => Ok(screen),
+            Ok(key) => {
+                self.write(&key).await?;
+                self.wait_for(step, |screen| applied(screen).then(|| screen.to_string()))
+                    .await
+            }
+        }
+    }
+
     async fn cancel_dialog(&self) {
         for _ in 0..PICKER_CANCEL_ESCAPES {
             let still_open = self
@@ -685,9 +738,24 @@ impl PickerDriver<'_> {
                 .is_some_and(|text| !text.trim().is_empty())
                 && self.claude_input_holds_draft().await
             {
+                // Option+P opens the model list over the draft; `/effort` has no such shortcut.
+                if field == "model" {
+                    let mut model_plan = plan.clone();
+                    model_plan.effort.clear();
+                    self.drive_claude_session_only(&model_plan).await?;
+                    continue;
+                }
                 return Err(agent_busy(
                     "Waiting for the text in Claude's terminal input to be sent or cleared.",
                 ));
+            }
+            // `/effort <level>` cannot turn Ultracode off, so any change to or from it uses the slider.
+            if field == "effort"
+                && (value == "ultracode" || current.as_deref() == Some("ultracode"))
+            {
+                self.drive_claude_effort_slider(value, claude_effort_slider::CLAUDE_CONFIRM_KEY)
+                    .await?;
+                continue;
             }
             let result = self.change_claude_option(field, value, &command).await;
             if result.is_err() && !(self.cancelled)() {

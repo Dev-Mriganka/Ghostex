@@ -17,67 +17,16 @@ use std::time::Instant;
 // RefCell backs cross-platform runtime state (window frame persistence), not
 // just the macOS-only shims that first introduced the import.
 
-use crate::app::context_menu::GpuiContextMenu;
 use anyhow::Result;
-use gpui::Pixels;
 use gpui::Window;
 use gpui_component::WindowExt;
 use gpui_component::notification::Notification;
 
-use crate::app::actions::*;
 use crate::app::helpers::*;
 use crate::app::model::*;
 use crate::*;
 
 impl GhostexGpuiApp {
-    pub(crate) fn show_gpui_keep_awake_menu(
-        &mut self,
-        position: gpui::Point<Pixels>,
-        window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        /*
-        CDXC:KeepAwake 2026-06-24-13:16:
-        The GPUI Keep Awake titlebar control is a menu launcher on both left-click and right-click, matching macOS titlebar semantics. The owned GPUI popup window exposes only the shared duration choices, the running-only stop action, and Power Settings; it must not become a direct toggle, React overlay, hidden hit region, persistent runtime store, or broad process killer.
-        */
-        let settings =
-            shared_settings::shared_sidebar_settings_snapshot().keep_awake_titlebar_settings();
-        if !settings.titlebar_control_visible() {
-            window.push_notification(
-                Notification::warning("Keep Awake is hidden by current Settings."),
-                cx,
-            );
-            cx.notify();
-            return;
-        }
-
-        self.refresh_gpui_keep_awake_runtime();
-        let active_duration = self
-            .keep_awake_runtime
-            .as_ref()
-            .map(|runtime| runtime.duration_minutes);
-        let mut menu = GpuiContextMenu::new().menu_with_disabled(
-            "Keep awake period",
-            true,
-            Box::new(GpuiKeepAwakeMenuLabel),
-        );
-        for duration in shared_settings::KEEP_AWAKE_DURATION_OPTIONS {
-            menu = menu.menu_with_check(
-                duration.menu_label(),
-                active_duration == Some(*duration),
-                Box::new(StartGpuiKeepAwakePeriod {
-                    duration_minutes: duration.minutes(),
-                }),
-            );
-        }
-        if self.keep_awake_runtime.is_some() {
-            menu = menu.menu("Don't keep awake", Box::new(StopGpuiKeepAwake));
-        }
-        menu.separator()
-            .menu("Power Settings...", Box::new(OpenGpuiPowerSettingsModal))
-            .show(position, window, cx);
-    }
-
     pub(crate) fn open_gpui_power_settings_modal_from_titlebar(
         &mut self,
         window: &mut Window,

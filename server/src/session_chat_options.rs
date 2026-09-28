@@ -666,14 +666,16 @@ fn is_model_version_suffix(rest: &str) -> bool {
     }
 }
 
-/// CDXC:AgentProviders 2026-09-22 WHY:
-/// Claude Code 2.1.280 moved the `opus` alias onto Opus 5.5, leaving the older
-/// Opus 5 reachable only as `claude-opus-5`, which is the catalog id for it.
-/// Both print as "Opus <version>", so the version digits are the only thing
-/// that tells the two rows apart.
+/// CDXC:AgentProviders 2026-09-29 WHY:
+/// Claude Code moved the `opus` alias onto Opus 5.5 (2.1.280) and `sonnet` onto
+/// Sonnet 5.5 (2.1.284), leaving Opus 5 and Sonnet 5 reachable only as
+/// `claude-opus-5` and `claude-sonnet-5`. Each pair prints as "<Family>
+/// <version>", so the version digits are the only thing that keeps a session
+/// still on the older model from reading as the alias's row.
 fn claude_model_value(family_value: &str, version: &str) -> &'static str {
     match (family_value, version) {
         ("opus", "5") => "claude-opus-5",
+        ("sonnet", "5") => "claude-sonnet-5",
         _ => match family_value {
             "fable" => "fable",
             "opus" => "opus",
@@ -686,10 +688,17 @@ fn claude_model_value(family_value: &str, version: &str) -> &'static str {
 
 fn match_claude_model(segment: &str) -> Option<SessionChatDetectedChoice> {
     let says_long_context = segment.ends_with(" (1M)") || segment.ends_with(" (1M context)");
-    // Opus 5.5's `opus` and `opus[1m]` rows share the bare label "Opus 5.5", so
-    // a footer without the 1M marker must never be read as the `[1m]` row.
+    // While the catalog lists both a `[1m]` row and its standard twin under one
+    // label, a footer without the 1M marker is the twin, never the `[1m]` row.
+    // Opus 5.5 is a single `opus[1m]` row since Claude Code 2.1.284 offers no
+    // 200K Opus, so its bare "Opus 5.5" is that row.
     if let Some(value) = crate::agent_model_catalog::model_value_for_label("claude", segment)
-        .filter(|value| says_long_context || !value.ends_with("[1m]"))
+        .filter(|value| {
+            says_long_context
+                || value.strip_suffix("[1m]").is_none_or(|base| {
+                    crate::agent_model_catalog::catalog_model("claude", base).is_none()
+                })
+        })
     {
         return Some(SessionChatDetectedChoice {
             value,
@@ -1388,6 +1397,16 @@ fn hermes_context_usage(segments: &[&str]) -> Option<SessionChatContextUsage> {
     (!usage.is_empty()).then_some(usage)
 }
 
+/// Hermes's status bar (`☤ model │ … │ ⏲ 3s │ …`), which it repaints under its output.
+pub(crate) fn is_hermes_statusline(line: &str) -> bool {
+    line.contains('\u{2502}') && match_hermes_statusline(line).is_some()
+}
+
+/// The hint Hermes paints above its status bar while a slash command runs.
+pub(crate) fn is_hermes_busy_hint(line: &str) -> bool {
+    line.contains("command in progress · ")
+}
+
 fn match_hermes_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
     let segments: Vec<&str> = line.split('\u{2502}').map(str::trim).collect();
     if segments.len() < 4
@@ -1563,6 +1582,15 @@ pub fn detect_session_chat_selection(
             break;
         }
     }
+    if agent == SessionChatOptionAgent::Claude
+        && claude_ultracode_on_lines(&scanned_lines) == Some(true)
+    {
+        found.effort = Some(SessionChatDetectedChoice {
+            value: "ultracode".to_string(),
+            label: "ultracode".to_string(),
+            source: SessionChatOptionEvidence::Terminal,
+        });
+    }
     if found.model.is_none() && found.effort.is_none() && found.mode.is_none() {
         return None;
     }
@@ -1585,6 +1613,33 @@ pub fn detect_session_chat_selection(
         }
     }
     Some(found)
+}
+
+/// CDXC:AgentProviders 2026-09-29 WHY:
+/// Claude Code 2.1.284 made Ultracode a switch beside the effort level ("high · ultracode"), and
+/// neither its statusline JSON nor a custom status line names it: the only live sign is the
+/// "ultracode" label on the top border of Claude's input box. Chat keeps Ultracode as the level
+/// after Max, so a session with the switch on reads as effort `ultracode`, and the model picker
+/// uses the same reading to decide whether a pick is already applied.
+/// SEE-ALSO: server/src/session_chat_claude_effort_slider.rs `drive_claude_effort_slider`.
+pub(crate) fn claude_ultracode_on(screen: &str) -> Option<bool> {
+    claude_ultracode_on_lines(&scan_window(screen))
+}
+
+/// `lines` oldest first, as `scan_window` returns them. `None` when no input box is on screen.
+fn claude_ultracode_on_lines(lines: &[String]) -> Option<bool> {
+    let bottom = lines.iter().rposition(|line| is_divider_line(line))?;
+    let top = lines[..bottom]
+        .iter()
+        .rposition(|line| is_divider_line(line))?;
+    if !lines[top + 1].trim_start().starts_with('\u{276f}') {
+        return None;
+    }
+    Some(
+        lines[top]
+            .split(|ch: char| ch == '\u{2500}' || ch.is_whitespace())
+            .any(|word| word == "ultracode"),
+    )
 }
 
 pub(crate) fn transcript_tail_text(path: &Path) -> std::io::Result<String> {
@@ -1681,6 +1736,14 @@ pub(crate) fn claude_transcript_model_choice(model: &str) -> Option<SessionChatD
             format!("{id}[{variant}]"),
             format!("{label} ({})", variant.to_ascii_uppercase()),
         ),
+        // Opus 5.5 is one `opus[1m]` row (Claude Code 2.1.284 offers no 200K
+        // Opus), so a bare id the catalog lists only as its 1M row reads as it.
+        None if crate::agent_model_catalog::catalog_model("claude", id).is_none()
+            && crate::agent_model_catalog::catalog_model("claude", &format!("{id}[1m]"))
+                .is_some() =>
+        {
+            (format!("{id}[1m]"), label)
+        }
         None => (id.to_string(), label),
     };
     Some(SessionChatDetectedChoice {
@@ -1833,8 +1896,14 @@ pub(crate) fn claude_statusline_model_choice(
         .and_then(|window| window.get("context_window_size"))
         .and_then(Value::as_u64)
         .is_some_and(|size| size >= 1_000_000);
+    // Fable 5.1 and Sonnet 5.5 run with a 1M window too but have only one catalog row, which a
+    // `fable[1m]` reading matched nothing in.
     if reports_long_context && !id.contains('[') {
-        return claude_transcript_model_choice(&format!("{id}[1m]"));
+        if let Some(long) = claude_transcript_model_choice(&format!("{id}[1m]")).filter(|long| {
+            crate::agent_model_catalog::catalog_model("claude", &long.value).is_some()
+        }) {
+            return Some(long);
+        }
     }
     claude_transcript_model_choice(id)
 }
@@ -2194,6 +2263,15 @@ fn overlay_session_chat_option_selection(
     }
 }
 
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// Claude's footer prints "Opus 5.5" for both context sizes, so the screen alone reads `opus`, the 200K twin, while the statusline JSON Claude pipes to Ghostex reads `opus[1m]` from its own `context_window_size`. Chat took whichever reading arrived last, so the composer pill showed "200K" and dropped it again every few seconds on a 1M session. The terminal still names the model (the 2026-09-08 decision below); the statusline only adds the window the footer cannot print, when both name the same model. This is the rule the model picker already used to decide a pick was applied.
+/// SEE-ALSO: server/src/session_chat_claude_effort_slider.rs `claude_live_selection`.
+pub(crate) fn claude_long_context_twin(model: &str, statusline: Option<&str>) -> Option<String> {
+    let statusline = statusline?;
+    (!model.contains('[') && statusline.strip_suffix("[1m]") == Some(model))
+        .then(|| statusline.to_string())
+}
+
 /// Precedence, lowest first: transcript (a turn behind), statusline payload
 /// (live, but only what Claude puts in it), terminal screen (live, and the
 /// only source for the permission mode footer).
@@ -2208,11 +2286,20 @@ fn merge_session_chat_option_selections(
     terminal: Option<SessionChatDetectedSelection>,
 ) -> Option<SessionChatDetectedSelection> {
     let mut merged = transcript.unwrap_or_default();
+    let statusline_model = statusline
+        .as_ref()
+        .and_then(|statusline| statusline.model.as_ref())
+        .map(|model| model.value.clone());
     if let Some(statusline) = statusline {
         overlay_session_chat_option_selection(&mut merged, statusline);
     }
     if let Some(terminal) = terminal {
         overlay_session_chat_option_selection(&mut merged, terminal);
+    }
+    if let Some(model) = merged.model.as_mut() {
+        if let Some(long) = claude_long_context_twin(&model.value, statusline_model.as_deref()) {
+            model.value = long;
+        }
     }
     (merged.model.is_some()
         || merged.effort.is_some()
@@ -2448,10 +2535,7 @@ pub fn detect_session_chat_terminal_state(
                     activity,
                 ))
         });
-    let (fleet, fleet_observed) = if matches!(
-        agent,
-        Some(SessionChatOptionAgent::Codex | SessionChatOptionAgent::Claude)
-    ) {
+    let (fleet, fleet_observed) = if crate::session_chat_fleet_status::has_fleet_reader(agent) {
         match repository
             .get_session(project_id, session_id)
             .ok()
@@ -2667,7 +2751,8 @@ mod tests {
         for (segment, value) in [
             ("Opus 4.5", "opus"),
             ("Opus", "opus"),
-            ("Sonnet 5", "sonnet"),
+            ("Sonnet 5.5", "sonnet"),
+            ("Sonnet 5", "claude-sonnet-5"),
             ("Haiku", "haiku"),
         ] {
             let text = format!("  Ctx Used: 1.0% | 2.0% | $1.00 | {segment} | max\n");

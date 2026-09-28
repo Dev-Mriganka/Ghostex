@@ -67,6 +67,7 @@ export type ProjectDocsRequest = {
     | 'createFolder'
     | 'move'
     | 'revealInFinder'
+    | 'openInCodeView'
     | 'openDocsFoldersSettings'
     | 'openDocsFile'
     | 'annotationSendTarget'

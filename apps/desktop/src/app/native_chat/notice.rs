@@ -75,6 +75,19 @@ impl NativeChatView {
                     .into_any_element(),
             );
         }
+        // The command a collapsed approval card is asking to run (`collapsedDetail` in the chat core).
+        if collapsed && notice["collapsedDetail"].is_string() {
+            body.push(
+                div()
+                    .id("notice-collapsed-detail")
+                    .font_family(crate::app::native_chat::fonts::CHAT_MONO)
+                    .text_size(px(12.0 * p.scale))
+                    .line_height(px(17.0 * p.scale))
+                    .text_color(p.card_muted)
+                    .child(text(notice, "collapsedDetail"))
+                    .into_any_element(),
+            );
+        }
         if answerable {
             let mut rows = div()
                 .id("notice-choices")

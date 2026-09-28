@@ -126,8 +126,6 @@ pub struct Document {
     pub model_menu_context: Tri<Value>,
     /// The projected model menu, or `null` when closed. Family e.
     pub model_menu: Tri<Value>,
-    /// The full model picker window, or `null` when closed. Family e.
-    pub model_picker: Tri<Value>,
     /// The provider the model pills belong to. Absent, not null, before the agent is known:
     /// `publish` spreads `computeNativeChatOptions(...)` in, and that object simply has no
     /// `modelProvider` key until there is one, so `JSON.stringify` leaves it out. Family e.

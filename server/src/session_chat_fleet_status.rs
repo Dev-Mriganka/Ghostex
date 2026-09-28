@@ -1,5 +1,5 @@
 //! CDXC:SessionStatus 2026-09-06 WHY:
-//! Subagents and Claude monitors can outlive the lead turn while nobody follows its chat. Probe running Claude/Codex sessions on the daemon's clock so the shared status projection discovers and retires that work without an open chat.
+//! Subagents and Claude monitors can outlive the lead turn while nobody follows its chat. Probe running Claude, Codex and Hermes sessions on the daemon's clock so the shared status projection discovers and retires that work without an open chat.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -61,6 +61,18 @@ pub(crate) fn record_agent_start(
         .map(Some)
 }
 
+/// The agents `read_fleet` can read a subagent roster for.
+pub(crate) fn has_fleet_reader(agent: Option<SessionChatOptionAgent>) -> bool {
+    matches!(
+        agent,
+        Some(
+            SessionChatOptionAgent::Claude
+                | SessionChatOptionAgent::Codex
+                | SessionChatOptionAgent::Hermes
+        )
+    )
+}
+
 pub(crate) fn read_fleet(
     session: &serde_json::Value,
     screen: Option<&str>,
@@ -71,6 +83,9 @@ pub(crate) fn read_fleet(
         }
         Some(SessionChatOptionAgent::Codex) => {
             crate::session_chat_codex_fleet::read_codex_fleet(session)
+        }
+        Some(SessionChatOptionAgent::Hermes) => {
+            crate::session_chat_hermes_fleet::read_hermes_fleet(session)
         }
         _ => Ok(None),
     }
@@ -143,10 +158,7 @@ fn refresh_fleet_status(state: &AppState, shutdown: &tokio::sync::broadcast::Rec
             return;
         }
         let agent = session_chat_agent_for_session(&session);
-        if !matches!(
-            session_chat_option_agent(agent.as_deref()),
-            Some(SessionChatOptionAgent::Claude | SessionChatOptionAgent::Codex)
-        ) {
+        if !has_fleet_reader(session_chat_option_agent(agent.as_deref())) {
             continue;
         }
         let (Some(project_id), Some(session_id)) = (

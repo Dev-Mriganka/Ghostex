@@ -144,15 +144,13 @@ pub fn plan_space_sleep(
         .groups
         .iter()
         .map(|group| {
-            let context = group.core.project_context.as_ref();
+            let project = group.space_project.as_ref();
             selection_shows_project(
                 &selection,
                 &spaces,
-                context.map(|context| context.project_id.as_str()),
-                group.collection_id.as_deref(),
-                context
-                    .and_then(|context| context.worktree.as_ref())
-                    .map(|worktree| worktree.parent_project_id.as_str()),
+                project.map(|project| project.project_id.as_str()),
+                project.and_then(|project| project.collection_id.as_deref()),
+                project.and_then(|project| project.parent_project_id.as_deref()),
             )
         })
         .collect();

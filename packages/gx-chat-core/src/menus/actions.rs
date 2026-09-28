@@ -19,18 +19,7 @@ use crate::wire::ChatRpcMethod;
 /// Handles one action family e owns.
 pub fn handle(state: &mut ChatState, action: &UserAction, context: &ChatContext) -> Vec<Effect> {
     match action.kind {
-        ActionKind::ToggleModelPicker
-        | ActionKind::ModelPickerMeasure
-        | ActionKind::ModelPickerPane
-        | ActionKind::ModelPickerKey
-        | ActionKind::ModelPickerKeyUp
-        | ActionKind::ModelPickerBlur
-        | ActionKind::ModelPickerControl
-        | ActionKind::ModelPickerScroll
-        | ActionKind::ModelPickerModel
-        | ActionKind::ModelPickerEffort
-        | ActionKind::ModelPickerCancel
-        | ActionKind::ModelMenuView
+        ActionKind::ModelMenuView
         | ActionKind::ModelMenuFavorite
         | ActionKind::ModelMenuPick
         | ActionKind::ModelMenuTrait

@@ -362,6 +362,43 @@ impl GhostexGpuiApp {
         });
     }
 
+    /// Docs' "Open in Code view", offered for a Markdown file too large for the Markdown editor:
+    /// the file opens in the active project's Code view, the way a chat file link does.
+    pub(crate) fn open_docs_file_in_code_view(
+        &mut self,
+        file_path: std::path::PathBuf,
+        cx: &mut gpui::Context<Self>,
+    ) -> Result<(), String> {
+        if gpui_titlebar_mode_hidden_from_settings(TitlebarMode::Source)
+            || !self.titlebar_mode_available(TitlebarMode::Source)
+        {
+            return Err("Code view is not available for this project.".to_string());
+        }
+        if let Some(reason) = self.embedded_code_editor_unavailable_reason() {
+            return Err(reason.to_string());
+        }
+        let project_path = self
+            .latest_sidebar_project_snapshot
+            .as_ref()
+            .and_then(|snapshot| snapshot.in_memory_project_path.clone())
+            .ok_or_else(|| "No active project can open this file in Code view.".to_string())?;
+        self.pending_source_file_open = Some(PendingSourceFileOpen {
+            column: None,
+            file_path,
+            line: None,
+            origin: PendingSourceFileOpenOrigin::SessionChat,
+            project_path,
+            remote_target: None,
+            remote_working_directory: None,
+        });
+        self.defer_in_main_window(cx, |this, window, cx| {
+            this.switch_workarea_from_hotkey(TitlebarMode::Source, window, cx);
+            this.mark_project_editor_mode_awake(TitlebarMode::Source, cx);
+            this.focus_project_editor_surface(TitlebarMode::Source, window, cx);
+        });
+        Ok(())
+    }
+
     pub(crate) fn open_gpui_agents_hub_file_in_built_in_editor(
         &mut self,
         command: &serde_json::Map<String, serde_json::Value>,

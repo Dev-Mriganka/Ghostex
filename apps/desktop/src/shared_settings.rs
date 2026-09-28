@@ -456,21 +456,7 @@ impl SharedKeepAwakeDurationMinutes {
             Self::FiveHours => 300,
         }
     }
-
-    pub fn menu_label(self) -> &'static str {
-        match self {
-            Self::UntilTurnedOff => "Until turned off",
-            Self::TwoHours => "For 2 hours",
-            Self::FiveHours => "For 5 hours",
-        }
-    }
 }
-
-pub const KEEP_AWAKE_DURATION_OPTIONS: &[SharedKeepAwakeDurationMinutes] = &[
-    SharedKeepAwakeDurationMinutes::UntilTurnedOff,
-    SharedKeepAwakeDurationMinutes::TwoHours,
-    SharedKeepAwakeDurationMinutes::FiveHours,
-];
 
 /// Which built-in buttons the Agents tab strip action cluster draws. Global
 /// Actions render alongside whichever of these the user kept.

@@ -101,6 +101,7 @@ pub mod session_chat_fork_stitch;
 pub mod session_chat_grok_blocking;
 pub mod session_chat_hermes;
 pub mod session_chat_hermes_blocking;
+pub(crate) mod session_chat_hermes_fleet;
 pub mod session_chat_hermes_status;
 pub(crate) mod session_chat_history;
 pub mod session_chat_interactive;

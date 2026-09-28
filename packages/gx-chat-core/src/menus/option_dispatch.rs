@@ -28,14 +28,14 @@ pub enum QueuedOption {
 
 /// `queueSessionChatOption`: whether the choice belongs to the daemon's queue rather than the TUI.
 ///
-/// CDXC:SessionChat 2026-09-09 DECISION: Every quick-picker provider needs the durable delivery callback, including on draft sessions (Grok Build models and efforts change directly from chat).
+/// CDXC:SessionChat 2026-09-09 DECISION: Every model provider needs the durable delivery callback, including on draft sessions (Grok Build models and efforts change directly from chat).
 pub fn queue_session_chat_option(
     descriptor: &OptionDescriptor,
     value: Option<&str>,
     catalog: Option<&SessionOptionCatalog>,
     state: &OptionState,
     queued_controls: bool,
-    quick_picker: bool,
+    has_provider: bool,
     scope: Option<&str>,
 ) -> Option<QueuedOption> {
     if queued_controls {
@@ -57,7 +57,7 @@ pub fn queue_session_chat_option(
     let (Some(value), Some(catalog)) = (value, catalog) else {
         return None;
     };
-    if !quick_picker || (descriptor.id != catalog.model.id && descriptor.id != "effort") {
+    if !has_provider || (descriptor.id != catalog.model.id && descriptor.id != "effort") {
         return None;
     }
     let model = if descriptor.id == catalog.model.id {

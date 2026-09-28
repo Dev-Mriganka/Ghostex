@@ -1,4 +1,4 @@
-//! The five quick-picker agents' names and icons.
+//! The model-menu agents' names and icons.
 //!
 //! `packages/shared/session-chat-controller/native-model-picker.ts` and
 //! `session-chat-presentation/model-menu.ts` both called `getDefaultSidebarAgentById(provider)` and

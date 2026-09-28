@@ -208,18 +208,15 @@ impl NativeChatView {
                 )
             })
             .tooltip(move |window, cx| {
-                // The configured chord, so rebinding it in Settings > Hotkeys changes the tooltip too.
-                let hotkey = match action {
-                    "summaryMode" => {
-                        crate::app::hotkeys::gpui_configured_hotkey_label("toggleChatSummaryMode")
-                    }
+                let hotkey_id = match action {
+                    "summaryMode" => Some("toggleChatSummaryMode"),
+                    "sessionNote" => Some("sessionNote"),
+                    "stashPrompt" => Some("stashPrompt"),
+                    "attachPath" => Some("attachFileOrFolder"),
                     _ => None,
                 };
-                let text = match hotkey.filter(|hotkey| !hotkey.is_empty()) {
-                    Some(hotkey) => format!("{label} ({hotkey})"),
-                    None => label.to_owned(),
-                };
-                gpui_component::tooltip::Tooltip::new(text).build(window, cx)
+                gpui_component::tooltip::Tooltip::new(tooltip_with_hotkey(label, hotkey_id))
+                    .build(window, cx)
             })
             .on_click(
                 cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
@@ -595,5 +592,16 @@ impl NativeChatView {
             .when(maximized, |this| this.h_full().min_h_0())
             .child(footer)
             .into_any_element()
+    }
+}
+
+/// The tooltip text with the action's configured chord after it, so rebinding it in Settings > Hotkeys changes the tooltip too.
+pub(super) fn tooltip_with_hotkey(label: &str, hotkey_id: Option<&str>) -> String {
+    match hotkey_id
+        .and_then(crate::app::hotkeys::gpui_configured_hotkey_label)
+        .filter(|hotkey| !hotkey.is_empty())
+    {
+        Some(hotkey) => format!("{label} ({hotkey})"),
+        None => label.to_owned(),
     }
 }

@@ -160,17 +160,6 @@ action_kinds! {
 
     // Options, models and accounts.
     SelectOption => "selectOption",
-    ToggleModelPicker => "toggleModelPicker",
-    ModelPickerMeasure => "modelPickerMeasure",
-    ModelPickerPane => "modelPickerPane",
-    ModelPickerKey => "modelPickerKey",
-    ModelPickerKeyUp => "modelPickerKeyUp",
-    ModelPickerBlur => "modelPickerBlur",
-    ModelPickerControl => "modelPickerControl",
-    ModelPickerScroll => "modelPickerScroll",
-    ModelPickerModel => "modelPickerModel",
-    ModelPickerEffort => "modelPickerEffort",
-    ModelPickerCancel => "modelPickerCancel",
     ModelMenuView => "modelMenuView",
     ModelMenuFavorite => "modelMenuFavorite",
     ModelMenuPick => "modelMenuPick",

@@ -238,11 +238,16 @@ pub(crate) async fn handle_read_subagent(
             .filter(|a| {
                 matches!(
                     a,
-                    SessionChatTranscriptAgent::Codex | SessionChatTranscriptAgent::Claude | SessionChatTranscriptAgent::OpenCode
+                    SessionChatTranscriptAgent::Codex
+                        | SessionChatTranscriptAgent::Claude
+                        | SessionChatTranscriptAgent::OpenCode
+                        | SessionChatTranscriptAgent::Hermes
                 )
             })
             .ok_or_else(|| {
-                anyhow::anyhow!("Subagent transcripts are supported for Codex, Claude and OpenCode v2.")
+                anyhow::anyhow!(
+                    "Subagent transcripts are supported for Codex, Claude, OpenCode v2 and Hermes."
+                )
             })?;
         let root_id = read_runtime_text(&session, "agentSessionId")
             .ok_or_else(|| anyhow::anyhow!("The session has no transcript identity yet."))?;
@@ -268,6 +273,13 @@ pub(crate) async fn handle_read_subagent(
                     agent_type:info["agent"].as_str().map(str::to_string)}
             },
             SessionChatTranscriptAgent::Codex => codex_child(&root, &root_id, &selector)?,
+            SessionChatTranscriptAgent::Hermes => ChildTranscript {
+                name: crate::session_chat_hermes_fleet::hermes_subagent_title(&root_id, &selector)?,
+                path: crate::session_chat_hermes::resolve_hermes_chat_transcript_path(&selector)
+                    .ok_or_else(|| anyhow::anyhow!("This subagent's transcript is not available yet."))?,
+                id: selector.clone(),
+                agent_type: None,
+            },
             _ => claude_child(&root, &selector)?,
         };
         match read_session_chat_tail_page(family, &child.path, limit, before_offset)? {
@@ -289,7 +301,7 @@ pub(crate) async fn handle_read_subagent(
                     "status": if messages.is_empty() { "empty" } else { "ready" },
                     "messages": messages, "hasMore": has_more, "beforeOffset": before_offset,
                     "epoch": 0, "seq": 0,
-                    "agent": if family == SessionChatTranscriptAgent::OpenCode { "opencode" } else if family == SessionChatTranscriptAgent::Codex { "codex" } else { "claude" },
+                    "agent": match family { SessionChatTranscriptAgent::OpenCode => "opencode", SessionChatTranscriptAgent::Codex => "codex", SessionChatTranscriptAgent::Hermes => "hermes", _ => "claude" },
                     "agentSessionId": child.id, "subagent": details,
                 });
                 if let Some(lifecycle) = lifecycle { result["lifecycle"] = serde_json::to_value(lifecycle)?; }

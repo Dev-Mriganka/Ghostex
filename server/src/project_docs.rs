@@ -28,6 +28,7 @@ silently stops.
 */
 const DOCS_TREE_MAX_ENTRIES: usize = 20_000;
 const DOCS_TREE_MAX_DEPTH: usize = 12;
+/// CDXC:Docs 2026-09-28 SEE-ALSO: `MANAGE_FILE_PREVIEW_MAX_BYTES` in apps/desktop/src/app/helpers/os_cli/process_and_constants.rs holds the decision: only files that open in the Markdown editor keep these limits.
 const FILE_PREVIEW_MAX_BYTES: u64 = 2_000_000;
 pub const FILE_SAVE_MAX_BYTES: usize = 2_000_000;
 const GIT_BASELINE_MAX_BYTES: usize = 1024 * 1024;
@@ -1230,6 +1231,18 @@ fn file_entry(
     })
 }
 
+/// Whether Docs opens this file in its Markdown editor, the only kind the preview and save
+/// limits apply to.
+fn opens_in_markdown_editor(path: &str) -> bool {
+    let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
+    name.rsplit_once('.').is_some_and(|(_, extension)| {
+        matches!(
+            extension.to_ascii_lowercase().as_str(),
+            "md" | "markdown" | "mdown" | "mkdn" | "mdx"
+        )
+    })
+}
+
 /*
 CDXC:Docs 2026-08-09:
 Every response carries the path the Docs page addressed, mount segment
@@ -1260,7 +1273,7 @@ fn project_file_preview_with_baseline(
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("");
-    if metadata.len() > FILE_PREVIEW_MAX_BYTES {
+    if metadata.len() > FILE_PREVIEW_MAX_BYTES && opens_in_markdown_editor(name) {
         return Ok(unsupported_preview(
             "File is too large to preview.",
             name,
@@ -1350,7 +1363,7 @@ fn save_project_file(
     content: Option<&str>,
 ) -> Result<Value, String> {
     let content = content.ok_or_else(|| "No file content was provided.".to_string())?;
-    if content.len() > FILE_SAVE_MAX_BYTES {
+    if content.len() > FILE_SAVE_MAX_BYTES && path.is_some_and(opens_in_markdown_editor) {
         return Err("File is too large to save from the Files view.".to_string());
     }
     let path = docs_path(context, path)?;

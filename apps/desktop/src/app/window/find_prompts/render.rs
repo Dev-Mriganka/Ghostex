@@ -26,7 +26,7 @@ use gpui::{
     ParentElement as _, Render, Rgba, SharedString, StatefulInteractiveElement as _, Styled as _,
     StyledText, Window, canvas, div, list, point, px, relative, svg,
 };
-use gpui_component::input::Input;
+use gpui_component::input::{Input, Textarea};
 use gpui_component::scroll::Scrollbar;
 use gpui_component::{h_flex, v_flex};
 use std::time::Duration;
@@ -36,6 +36,7 @@ const ICON_STAR: &str = "modals/find/star.svg";
 const ICON_STAR_FILLED: &str = "modals/find/star-filled.svg";
 const ICON_EYE: &str = "modals/find/eye.svg";
 const ICON_COPY: &str = "modals/find/copy.svg";
+const ICON_CHECK: &str = "titlebar/check.svg";
 const ICON_GIT_FORK: &str = "modals/find/git-fork.svg";
 const ICON_CHEVRON_DOWN: &str = "modals/find/chevron-down.svg";
 
@@ -64,7 +65,8 @@ fn hotkey(chord: &str) -> String {
 }
 
 impl Render for GpuiFindPromptsModalWindow {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_preview_input(window, cx);
         let p = self.p;
         div()
             .id("find-prompts-window")
@@ -88,6 +90,27 @@ impl Render for GpuiFindPromptsModalWindow {
 }
 
 impl GpuiFindPromptsModalWindow {
+    /// Gives the read-only preview text area the selected prompt and the wrap mode, only when they
+    /// changed, so a render does not re-lay out the text.
+    fn sync_preview_input(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let text = self
+            .selected_text
+            .clone()
+            .or_else(|| self.selected_row().map(|row| row.text.clone()))
+            .unwrap_or_default();
+        if text != self.preview_input_text {
+            self.preview_input_text = text.clone();
+            self.preview_input
+                .update(cx, |input, cx| input.set_value(text, window, cx));
+        }
+        if self.wrap_preview != self.preview_input_wrap {
+            self.preview_input_wrap = self.wrap_preview;
+            let wrap = self.wrap_preview;
+            self.preview_input
+                .update(cx, |input, cx| input.set_soft_wrap(wrap, window, cx));
+        }
+    }
+
     /// The query row: chevron and input on the left, the filter dropdowns and actions on the right.
     fn render_toolbar(&self, cx: &mut Context<Self>) -> AnyElement {
         let p = self.p;
@@ -160,7 +183,11 @@ impl GpuiFindPromptsModalWindow {
         ));
         buttons.push(self.toolbar_button(
             "find-copy",
-            ICON_COPY,
+            if self.copied_visible {
+                ICON_CHECK
+            } else {
+                ICON_COPY
+            },
             "Copy",
             false,
             false,
@@ -850,11 +877,6 @@ impl GpuiFindPromptsModalWindow {
             .when(self.project.is_some(), |this| {
                 this.child(div().flex_shrink_0().child("project filter on"))
             });
-        let text = self
-            .selected_text
-            .clone()
-            .or_else(|| row.map(|row| row.text.clone()))
-            .unwrap_or_default();
         let preview_body = if loading_without_row {
             self.pulse(
                 "find-preview-skeleton",
@@ -865,9 +887,13 @@ impl GpuiFindPromptsModalWindow {
                 ),
             )
         } else {
-            div()
-                .when(!self.wrap_preview, |this| this.whitespace_nowrap())
-                .child(text)
+            // `.p_0()` replaces the editor's own inset, so the text lines up with the path line above.
+            Textarea::new(&self.preview_input)
+                .readonly(true)
+                .appearance(false)
+                .bordered(false)
+                .focus_bordered(false)
+                .p_0()
                 .into_any_element()
         };
         let preview = div()
@@ -1065,8 +1091,8 @@ impl GpuiFindPromptsModalWindow {
                 .left_0()
                 .size_full()
                 .occlude()
-                // React drew background/95 over a backdrop blur; nothing in a window can blur what it drew, so the fill is a little more opaque instead.
-                .bg(hsla(p.background_at(0.97)))
+                // React drew background/95 over a backdrop blur; nothing in a window can blur what it drew, so the full-prompt view sits on the solid menu colour (the window colour, or its lifted solid twin under glass, where the window fill is see-through).
+                .bg(hsla(p.popover))
                 .child(
                     h_flex()
                         .flex_shrink_0()

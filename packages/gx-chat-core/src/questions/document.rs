@@ -100,6 +100,23 @@ fn decorate_notice(raw: &Value, notice: &TerminalNotice) -> Value {
         "secondaryChoice".to_string(),
         json!(notice.secondary_choice_position()),
     );
+    // CDXC:SessionChat 2026-09-29 WHY:
+    // A collapsed command approval showed only "Would you like to run the following command?" and its buttons, so "Yes, proceed" was one click away from a command the card never named. The `$ ` lines of the dialog body are what is being approved; the renderers draw them under the title while the card is collapsed.
+    // SEE-ALSO: apps/desktop/src/app/native_chat/notice.rs, apps/mobile/app/src/chat/native/cards/NoticeCard.tsx.
+    let commands: Vec<&str> = raw
+        .get("dialog")
+        .and_then(|dialog| dialog.get("body"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("$ "))
+        .collect();
+    if commands.is_empty() {
+        object.remove("collapsedDetail");
+    } else {
+        object.insert("collapsedDetail".to_string(), json!(commands.join("\n")));
+    }
     match notice.dialog.as_ref() {
         Some(dialog) => {
             let mut decorated = raw

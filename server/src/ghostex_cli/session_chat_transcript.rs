@@ -504,7 +504,19 @@ fn tool_call_summary(input: Option<&Value>) -> String {
                 parsed = value;
                 &parsed
             }
-            Err(_) => return first_line(text),
+            Err(_) => {
+                // Codex's code mode runs shell commands from a JavaScript script; name the commands, not the script's first line.
+                let commands =
+                    crate::session_transcript_export::javascript_string_fields(text, "cmd");
+                if commands.is_empty() {
+                    return first_line(text);
+                }
+                return commands
+                    .iter()
+                    .map(|command| first_line(command))
+                    .collect::<Vec<_>>()
+                    .join(" \u{b7} ");
+            }
         },
         None => input,
     };

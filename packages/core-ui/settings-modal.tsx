@@ -491,6 +491,7 @@ export function SettingsModal({
       normalizedInitialSettings.showAdvancedSettings
     )
   );
+  const pageHistoryRef = useRef({ pages: [activeTab], index: 0 });
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const showAdvancedSettingsId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -510,6 +511,7 @@ export function SettingsModal({
   const statusIndicatorsSectionRef = useRef<HTMLDivElement>(null);
   const sessionCardsSectionRef = useRef<HTMLDivElement>(null);
   const betaSectionRef = useRef<HTMLDivElement>(null);
+  const sleepingSessionsSectionRef = useRef<HTMLDivElement>(null);
   const agentsOnboardingSectionRef = useRef<HTMLDivElement>(null);
   const sidebarSectionRef = useRef<HTMLDivElement>(null);
   const themingSectionRef = useRef<HTMLDivElement>(null);
@@ -635,11 +637,59 @@ export function SettingsModal({
     const visibleTab = resolveSettingsModalTabForVisibility(nextTab, {
       showOSIntegrationSettingsTab,
     });
+    const history = pageHistoryRef.current;
+    if (history.pages[history.index] !== visibleTab) {
+      history.pages = [...history.pages.slice(0, history.index + 1), visibleTab].slice(-100);
+      history.index = history.pages.length - 1;
+    }
     rememberActiveScrollPosition();
     rememberSettingsModalTab(visibleTab);
     persistSettingsModalNavigation(visibleTab);
     setActiveTabState(visibleTab);
   };
+
+  /**
+   * CDXC:Settings 2026-09-28 DECISION:
+   * User: keep the current close behavior and use the mouse Back/Forward buttons to navigate between Settings pages.
+   */
+  const navigateSettingsHistory = (direction: 'back' | 'forward') => {
+    if (isFirstLaunchSetup) return;
+    const history = pageHistoryRef.current;
+    const step = direction === 'back' ? -1 : 1;
+    let index = history.index + step;
+    while (index >= 0 && index < history.pages.length) {
+      const tab = history.pages[index];
+      if (
+        tab !== activeTab &&
+        (tab !== 'osIntegration' || showOSIntegrationSettingsTab) &&
+        (tab !== 'debugging' || draft.showAdvancedSettings)
+      ) {
+        rememberActiveScrollPosition();
+        history.index = index;
+        setSettingsSearchQuery('');
+        rememberSettingsModalTab(tab);
+        persistSettingsModalNavigation(tab);
+        setActiveTabState(tab);
+        return;
+      }
+      index += step;
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onHostMessage = (event: Event) => {
+      const message = (event as CustomEvent).detail;
+      if (
+        message?.type === 'navigateSettingsHistory' &&
+        (message.direction === 'back' || message.direction === 'forward')
+      ) {
+        navigateSettingsHistory(message.direction);
+      }
+    };
+    window.addEventListener('ghostex-app-modal-host-message', onHostMessage);
+    return () => window.removeEventListener('ghostex-app-modal-host-message', onHostMessage);
+  });
 
   const toggleSettingsSidebarPage = (pageId: SettingsModalTab) => {
     setExpandedSettingsSidebarPages((expandedPages) => ({
@@ -661,6 +711,7 @@ export function SettingsModal({
     rememberActiveScrollPosition();
     rememberSettingsModalTab(nextTab);
     persistSettingsModalNavigation(nextTab);
+    pageHistoryRef.current = { pages: [nextTab], index: 0 };
     setActiveTabState(nextTab);
   }, [initialTab, isOpen]);
 
@@ -813,11 +864,12 @@ export function SettingsModal({
   });
   const mainSettingsSectionRefs: MainSettingsSectionRefs = {
     agents: agentsOnboardingSectionRef,
-    advanced: betaSectionRef,
+    advanced: sleepingSessionsSectionRef,
     appearance: themingSectionRef,
     appIcon: appIconSectionRef,
     autoSleep: autoSleepSectionRef,
     beta: betaSectionRef,
+    sleepingSessions: sleepingSessionsSectionRef,
     fileOpening: fileOpeningSectionRef,
     browser: browserSectionRef,
     chat: chatSectionRef,
@@ -914,6 +966,7 @@ export function SettingsModal({
     appIconSectionRef,
     autoSleepSectionRef,
     betaSectionRef,
+    sleepingSessionsSectionRef,
     browserSectionRef,
     chatSectionRef,
     dialogContentRef,
@@ -1304,6 +1357,15 @@ export function SettingsModal({
                                 label='Hide last active time'
                                 {...getSettingModificationProps('hideLastActiveTimeOnSessionCards')}
                                 onChange={(checked) => updateDraft('hideLastActiveTimeOnSessionCards', checked)}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.sidebar, 'highlightPendingQuestions') ? (
+                              <ToggleField
+                                checked={draft.highlightPendingQuestions}
+                                description='Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.'
+                                label='Highlight unanswered questions'
+                                {...getSettingModificationProps('highlightPendingQuestions')}
+                                onChange={(checked) => updateDraft('highlightPendingQuestions', checked)}
                               />
                             ) : null}
                             {mainSettingVisible(settingsSearch.sidebar, 'hideProjectHeaderDiffStats') ? (
@@ -2715,6 +2777,29 @@ export function SettingsModal({
                                 ]}
                                 description='Run the current completion sound and notification flow, or open system notification permissions.'
                                 label='Completion Alerts'
+                              />
+                            ) : null}
+                          </SettingsSection>
+                        ) : null}
+
+                        {mainSubsectionVisible('sleepingSessions', settingsSearch.sleepingSessions) ? (
+                          <SettingsSection sectionRef={sleepingSessionsSectionRef} title='Sleeping Sessions'>
+                            {mainSettingVisible(settingsSearch.sleepingSessions, 'dimSleepingSessions') ? (
+                              <ToggleField
+                                checked={draft.dimSleepingSessions}
+                                description='Fade sleeping sessions in the sidebar so they stand apart from awake ones.'
+                                label='Dim sleeping sessions'
+                                {...getSettingModificationProps('dimSleepingSessions')}
+                                onChange={(checked) => updateDraft('dimSleepingSessions', checked)}
+                              />
+                            ) : null}
+                            {mainSettingVisible(settingsSearch.sleepingSessions, 'wakeSleepingSessionsOnSelect') ? (
+                              <ToggleField
+                                checked={draft.wakeSleepingSessionsOnSelect}
+                                description='Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.'
+                                label='Wake sleeping sessions when selected'
+                                {...getSettingModificationProps('wakeSleepingSessionsOnSelect')}
+                                onChange={(checked) => updateDraft('wakeSleepingSessionsOnSelect', checked)}
                               />
                             ) : null}
                           </SettingsSection>

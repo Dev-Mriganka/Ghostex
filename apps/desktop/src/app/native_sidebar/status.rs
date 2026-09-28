@@ -150,3 +150,13 @@ pub(crate) fn completion_opacity(start: web_time::Instant) -> f32 {
     }
     1.0
 }
+
+/// CDXC:SessionStatus 2026-09-28 DECISION:
+/// User chose the soft fill, only for confirmed human input, as an Advanced setting off by default. Pending questions remain highlighted while working; generic attention is not evidence of a question. Design evidence: branch prototype/sidebar-attention-2026-09-28.
+pub(crate) fn pending_question_fill(
+    settings: &serde_json::Value,
+    pending_question: bool,
+) -> Option<gpui::Rgba> {
+    (pending_question && settings["highlightPendingQuestions"].as_bool() == Some(true))
+        .then(|| rgb(0xf472b6).opacity(0.12))
+}

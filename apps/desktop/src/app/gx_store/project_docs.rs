@@ -122,6 +122,18 @@ impl ClientDocument for SpacesDocument {
             .and_then(|machine| machine.side_state().spaces.as_ref())
             .and_then(|state| serde_json::to_value(state).ok())
     }
+
+    /// CDXC:Spaces 2026-09-28 WHY:
+    /// gxserver checks a Spaces document against the Project Groups it holds: a grouped project
+    /// loses its direct membership and an unknown group is dropped. The two pushes run on separate
+    /// connections, so a Spaces edit made with a Project Groups edit (a new group filed in the
+    /// project's Space, a project that left a group keeping its Space, a project dropped on a
+    /// Space) could land first, be checked against the old groups, and lose the member it filed.
+    ///
+    /// SEE-ALSO: server/src/sidebar_spaces.rs (`carry_sidebar_spaces_across_collections`).
+    fn push_waits(app: &GhostexGpuiApp) -> bool {
+        app.gx_store.collections.sync.is_pending()
+    }
 }
 
 impl GhostexGpuiApp {
@@ -271,6 +283,26 @@ impl GhostexGpuiApp {
                 let request_id = super::host::now_ms();
                 self.gx_store.pending_collection_rename = Some((collection_id, request_id));
                 self.gx_store_update_sidebar_list(cx);
+            }
+            ProjectWrite::FollowToSpace { space_id, group_id } => {
+                // The Space's own intent rather than a `selectSpace` through the dispatch, which
+                // would also restore the Space's last session and focus another project.
+                self.gx_store_apply_sidebar_ui_intent(
+                    ghostex_gx_core::SidebarUiIntent::SelectSpace { space_id },
+                    cx,
+                );
+                // A remote project's focus attaches one of its sessions, which filing it never did.
+                let project = ghostex_gx_core::ProjectKey::parse_sidebar_group_id(&group_id)
+                    .filter(|project| project.machine.is_local());
+                let already_active = project.as_ref().is_some_and(|project| {
+                    self.gx_store.core.focus().active_project.as_ref() == Some(project)
+                });
+                if project.is_some() && !already_active {
+                    self.dispatch_native_sidebar_command(
+                        json!({ "type": "focusGroup", "groupId": group_id }),
+                        cx,
+                    );
+                }
             }
             ProjectWrite::OpenSpaceEditor {
                 section_key,

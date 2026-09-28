@@ -237,7 +237,17 @@ impl<'a> DomainRepository<'a> {
             reject_stopped_session_revive(&current, params, "update-session")?;
         }
         let updated_at = now_iso();
-        let session = merge_session_update(&self.server_id, current, &updated_at, params)?;
+        let was_pinned = current.get("isPinned").and_then(Value::as_bool) == Some(true);
+        let mut session = merge_session_update(&self.server_id, current, &updated_at, params)?;
+        if !was_pinned
+            && session.get("isPinned").and_then(Value::as_bool) == Some(true)
+            && !params.contains_key("sidebarOrder")
+        {
+            let order = self.next_pinned_sidebar_order(&project_id, &session_id)?;
+            if let Some(object) = session.as_object_mut() {
+                object.insert("sidebarOrder".to_string(), Value::from(order));
+            }
+        }
         self.db
             .execute(
                 r#"
@@ -277,6 +287,40 @@ impl<'a> DomainRepository<'a> {
             )
             .map_err(sql_error)?;
         Ok(session)
+    }
+
+    /// CDXC:Sessions 2026-09-29 DECISION: User: "when i pin a session in the sidebar of the gpui app make sure we pin it to the bottom of the pinned list not the top". Pinned rows keep the order `sidebarOrder` gives them, so a newly pinned session takes the slot after the last pinned one. A sibling without a saved order (any sort mode but Manual) sorts after every numbered one, so those siblings are numbered in their current order first; otherwise the new row would jump above them.
+    fn next_pinned_sidebar_order(&self, project_id: &str, session_id: &str) -> DomainResult<i64> {
+        let mut pinned: Vec<Value> = self
+            .list_sessions(Some(project_id))?
+            .into_iter()
+            .filter(|other| {
+                other.get("isPinned").and_then(Value::as_bool) == Some(true)
+                    && other.get("sessionId").and_then(Value::as_str) != Some(session_id)
+            })
+            .collect();
+        pinned.sort_by_cached_key(crate::presentation::session_attributes::session_sort_key);
+        let has_unordered = pinned
+            .iter()
+            .any(|other| other.get("sidebarOrder").and_then(Value::as_f64).is_none());
+        if !has_unordered {
+            let max = pinned
+                .iter()
+                .filter_map(|other| other.get("sidebarOrder").and_then(Value::as_f64))
+                .fold(0.0_f64, f64::max);
+            return Ok(max.floor() as i64 + 1000);
+        }
+        for (index, other) in pinned.iter().enumerate() {
+            if let Some(other_id) = other.get("sessionId").and_then(Value::as_str) {
+                self.db
+                    .execute(
+                        "UPDATE sessions SET sidebarOrder = ?3 WHERE projectId = ?1 AND sessionId = ?2",
+                        params![project_id, other_id, ((index + 1) * 1000) as i64],
+                    )
+                    .map_err(sql_error)?;
+            }
+        }
+        Ok(((pinned.len() + 1) * 1000) as i64)
     }
 
     pub fn update_session_order(&self, params: &Map<String, Value>) -> DomainResult<Vec<Value>> {

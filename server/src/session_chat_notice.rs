@@ -711,6 +711,21 @@ impl NoticeScreen {
         if line.starts_with('\u{203a}') || line.len() > 200 {
             return false;
         }
+        // PowerShell's default prompt ends in `>`, which is also common in
+        // agent prose. Require the PowerShell prefix and a filesystem path.
+        if let Some(path) = line
+            .strip_prefix("PS ")
+            .and_then(|line| line.strip_suffix('>'))
+        {
+            let path = path.trim();
+            if path.starts_with("\\\\")
+                || (path.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
+                    && path.as_bytes().get(1) == Some(&b':')
+                    && matches!(path.as_bytes().get(2), Some(b'\\' | b'/')))
+            {
+                return true;
+            }
+        }
         matches!(
             line.chars().last(),
             Some('$') | Some('%') | Some('#') | Some('\u{276f}') | Some('\u{279c}')
@@ -993,6 +1008,11 @@ const CODEX_RULES: &[NoticeRule] = &[
         detail: "The codex process appears to have exited in this terminal. Messages sent from chat cannot reach it until it is started again.",
         blocks_input: true,
         signatures: &[
+            NoticeSignature {
+                scope: NoticeScope::Exit,
+                parts: &[NoticePart::Text("Error: cannot launch detached daemon;")],
+                corroborators: &[],
+            },
             NoticeSignature {
                 scope: NoticeScope::Exit,
                 parts: &[NoticePart::Text(
@@ -1813,6 +1833,24 @@ fn notice_from_hermes_blocking_screen(
     )])
 }
 
+fn notice_from_hermes_turn_error(
+    screen: &NoticeScreen,
+    error: String,
+) -> SessionChatTerminalNotice {
+    SessionChatTerminalNotice::new(
+        SESSION_CHAT_NOTICE_AGENT_ERROR,
+        SessionChatTerminalNoticeSeverity::Error,
+        SessionChatTerminalNoticeSource::Screen,
+        "Hermes could not finish the turn",
+    )
+    .with_input_blocking(false)
+    .with_detail(error)
+    .with_screen_tail(screen.screen_tail())
+    .with_actions(vec![SessionChatTerminalNoticeAction::switch_to_terminal(
+        OPEN_TERMINAL.label,
+    )])
+}
+
 fn notice_from_omp_blocking_screen(
     screen: &NoticeScreen,
     blocking: crate::session_chat_omp_blocking::OmpBlockingScreen,
@@ -1847,6 +1885,39 @@ pub fn classify_session_chat_terminal_notice(
     let screen = NoticeScreen::new(screen_text);
     if screen.folded.is_empty() {
         return None;
+    }
+    if screen.ends_with_shell_prompt()
+        && [
+            "ParseException",
+            "BadExpression",
+            "CommandNotFoundException",
+            "UnauthorizedAccess",
+        ]
+        .iter()
+        .any(|error| {
+            matches_parts(
+                &flatten_tail(&screen.folded, NOTICE_EXIT_SCAN_LINES),
+                &[
+                    NoticePart::Text("FullyQualifiedErrorId :"),
+                    NoticePart::Gap(80),
+                    NoticePart::Text(error),
+                ],
+            )
+        })
+    {
+        return Some(
+            SessionChatTerminalNotice::new(
+                SESSION_CHAT_NOTICE_AGENT_EXITED,
+                SessionChatTerminalNoticeSeverity::Error,
+                SessionChatTerminalNoticeSource::Screen,
+                "The agent failed to start",
+            )
+            .with_detail("PowerShell could not run the agent's startup command. Check the error in the terminal before starting it again.")
+            .with_screen_tail(screen.screen_tail())
+            .with_actions(vec![SessionChatTerminalNoticeAction::switch_to_terminal(
+                OPEN_TERMINAL.label,
+            )]),
+        );
     }
     if agent == SessionChatOptionAgent::Codex
         && crate::session_chat_codex_lock::is_locked(screen_text)
@@ -2006,6 +2077,11 @@ pub fn classify_session_chat_terminal_notice(
             crate::session_chat_hermes_blocking::detect_hermes_blocking_screen(screen_text)
         {
             return Some(notice_from_hermes_blocking_screen(&screen, blocking));
+        }
+        if let Some(error) =
+            crate::session_chat_hermes_blocking::detect_hermes_turn_error(screen_text)
+        {
+            return Some(notice_from_hermes_turn_error(&screen, error));
         }
     }
     if agent == SessionChatOptionAgent::Omp {

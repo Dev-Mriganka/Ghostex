@@ -420,11 +420,6 @@ pub(crate) fn is_long_context_value(value: &str) -> bool {
     value.ends_with(LONG_CONTEXT_SUFFIX)
 }
 
-/// The standard-context twin a long-context value folds into (`opus[1m]` is `opus`).
-pub(crate) fn standard_context_value(value: &str) -> Option<&str> {
-    value.strip_suffix(LONG_CONTEXT_SUFFIX)
-}
-
 /// The long-context twin of a value (`opus` is `opus[1m]`), whether or not the catalog has it.
 pub(crate) fn long_context_value(value: &str) -> String {
     format!("{value}{LONG_CONTEXT_SUFFIX}")
@@ -438,7 +433,6 @@ pub(crate) fn long_context_value(value: &str) -> String {
 /// agent, starts it on 1M; picking it again while the session already runs it at 200K keeps
 /// 200K, so a deliberate 200K choice is only undone through the Context Window button. This
 /// supersedes carrying the previous model's window over and falling back to the catalog default.
-/// SEE-ALSO: `create_model_picker_request` in request.rs (the quick picker's card).
 pub fn model_menu_pick_value(entry: &ModelMenuEntry, current_model: Option<&str>) -> String {
     if let Some(current) = current_model {
         if entry

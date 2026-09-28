@@ -2569,6 +2569,27 @@ export const MANAGE_STYLES = `
     overflow-wrap: anywhere;
   }
 
+  .manage-preview-message[data-has-action="true"] {
+    flex-direction: column;
+  }
+
+  .manage-preview-message-action {
+    align-items: center;
+    background: transparent;
+    border: 1px solid var(--manage-border-strong);
+    border-radius: 7px;
+    color: var(--manage-text);
+    cursor: pointer;
+    display: inline-flex;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+  }
+
+  .manage-preview-message-action:hover {
+    background: var(--manage-accent-muted);
+  }
+
   /*
    * CDXC:Docs 2026-09-16 WHY:
    * This block used to reset the header padding below 960px, which outranked the room the header keeps for the sidebar corner button and let the file icon slide under it.

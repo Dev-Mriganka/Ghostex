@@ -55,7 +55,6 @@ gpui::actions!(
         OpenGpuiPowerSettingsModal,
         SleepGpuiPetOverlay,
         GoToGhostexFromGpuiPetOverlay,
-        GpuiKeepAwakeMenuLabel,
         FocusWorkspaceLeft,
         FocusWorkspaceRight,
         FocusWorkspaceUp,

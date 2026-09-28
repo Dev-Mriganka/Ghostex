@@ -25,7 +25,7 @@ use gpui::{
     Keystroke, ListAlignment, ListOffset, ListState, Pixels, Rgba, ScrollHandle, SharedString,
     Subscription, Window, WindowId, point, px,
 };
-use gpui_component::input::{InputEvent, InputState};
+use gpui_component::input::{InputEvent, InputState, TextareaState};
 use serde_json::json;
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -80,14 +80,6 @@ impl FindNotice {
             detail: Some(detail.into()),
         }
     }
-
-    fn info(message: &str) -> Self {
-        Self {
-            kind: FindNoticeKind::Info,
-            message: SharedString::new(message),
-            detail: None,
-        }
-    }
 }
 
 pub(crate) struct GpuiFindPromptsModalWindow {
@@ -127,6 +119,9 @@ pub(crate) struct GpuiFindPromptsModalWindow {
     pub(super) expanded_prompt: bool,
     pub(super) loading: bool,
     pub(super) notice: Option<FindNotice>,
+    /// Bumped on every copy; the Copy button shows a check until its timer for this count ends.
+    pub(super) copied: u64,
+    pub(super) copied_visible: bool,
     search_generation: u64,
     /// The (matched, rows, offset, selection) a page was last requested for, so a page that does
     /// not bring the selection in is not requested again (the React effect's dependency list).
@@ -135,6 +130,11 @@ pub(crate) struct GpuiFindPromptsModalWindow {
     pub(super) list: ListState,
     pub(super) pending_reveal: bool,
     pub(super) preview_scroll: ScrollHandle,
+    /// The bottom pane's prompt text as a read-only text area so it can be selected and copied,
+    /// and the text and wrap mode it was last given (`sync_preview_input`).
+    pub(super) preview_input: Entity<TextareaState>,
+    pub(super) preview_input_text: SharedString,
+    pub(super) preview_input_wrap: bool,
     pub(super) expanded_scroll: ScrollHandle,
     /// Unix seconds, refreshed every 30s so "6m ago" keeps moving.
     pub(super) now: i64,
@@ -167,6 +167,15 @@ impl GpuiFindPromptsModalWindow {
                 InputState::new(window, cx).placeholder("Search every prompt you have sent");
             input.set_placeholder_color(Some(muted));
             input
+        });
+        // CDXC:PromptSearch 2026-09-29 DECISION:
+        // User: "also allow me to copy text from the prompt text shown at the bottom". The preview is a
+        // read-only text area that grows to its text inside the pane's own scroller, so mouse selection
+        // and Cmd+C work while the pane keeps its keyboard scrolling.
+        let preview_input = cx.new(|cx| {
+            TextareaState::new(window, cx)
+                .soft_wrap(true)
+                .auto_grow(1, 100_000)
         });
         let menu_search = cx.new(|cx| {
             let mut input = InputState::new(window, cx).placeholder("Filter projects...");
@@ -266,12 +275,17 @@ impl GpuiFindPromptsModalWindow {
             expanded_prompt: false,
             loading: true,
             notice: None,
+            copied: 0,
+            copied_visible: false,
             search_generation: 0,
             paged_for: None,
             view_rows: Vec::new(),
             list: ListState::new(0, ListAlignment::Top, px(240.0)).measure_all(),
             pending_reveal: false,
             preview_scroll: ScrollHandle::new(),
+            preview_input,
+            preview_input_text: SharedString::default(),
+            preview_input_wrap: true,
             expanded_scroll: ScrollHandle::new(),
             now: unix_now(),
             reduce_motion: crate::app::helpers::gpui_macos_reduce_motion_enabled(),
@@ -638,7 +652,25 @@ impl GpuiFindPromptsModalWindow {
             ClipboardItem::new_string(text.to_string()),
             cx,
         );
-        self.notice = Some(FindNotice::info("Prompt copied to the clipboard."));
+        // CDXC:PromptSearch 2026-09-29 DECISION:
+        // User: "when i click on copy and other actions please just show an indicator, don't show a whole
+        // line bottom of the modal". Copy's own icon turns into a check for a moment (the label stays, so
+        // the toolbar does not shift); the notice line is kept for failures only.
+        self.copied = self.copied.wrapping_add(1);
+        self.copied_visible = true;
+        let copied = self.copied;
+        cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(1200))
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.copied == copied {
+                    this.copied_visible = false;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
         cx.notify();
     }
 

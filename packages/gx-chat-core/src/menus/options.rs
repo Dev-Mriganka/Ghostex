@@ -26,11 +26,12 @@ use crate::state::{ChatContext, ChatState};
 
 /// `modelPickerProvider(icon)`, as the option pills need it: the provider's wire spelling.
 ///
-/// The rule itself is family e2's (`crate::menus::picker::request::model_picker_provider`); this
+/// The rule itself is family e2's (`crate::menus::picker::model_picker::model_picker_provider`); this
 /// is the same answer with `ModelPickerProvider::as_str` applied, because the pills publish
 /// `modelProvider` as a plain string. It was a second copy of the table until 2026-09-22.
 pub fn model_picker_provider(icon: Option<&str>) -> Option<&'static str> {
-    crate::menus::picker::request::model_picker_provider(icon).map(|provider| provider.as_str())
+    crate::menus::picker::model_picker::model_picker_provider(icon)
+        .map(|provider| provider.as_str())
 }
 
 /// `modelPickerSupportsSessionScope(provider)`, keyed by the wire spelling.
@@ -62,7 +63,6 @@ pub struct OptionLabels {
     pub account_indicator: Option<String>,
     pub options_title: String,
     pub options_tooltip: String,
-    pub model_quick_picker: bool,
     pub show_model: bool,
     pub show_options: bool,
 }
@@ -163,7 +163,6 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
     // heading the model menu two fields away draws from the same value.
     let selection_error = state.pickers.model_selection.selection_error.clone();
     let menu_params = OptionMenuParams {
-        quick_picker: provider.is_some(),
         can_pick_model,
         working: crate::session::working::is_working(state),
         can_send_key,
@@ -221,7 +220,6 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
                 ""
             },
         ),
-        model_quick_picker: provider.is_some(),
         show_model: catalog.is_some() || !option_menus.model.is_empty(),
         show_options: !option_menus.options.is_empty()
             || (pill_values.options.is_none()
@@ -229,6 +227,17 @@ pub fn compute_native_chat_options(state: &ChatState, _context: &ChatContext) ->
                     .as_ref()
                     .is_some_and(|catalog| options_may_resolve(catalog, can_send_key))),
     };
+    // A completed screen read without a model is an unset control, not a
+    // pending read. Keep the same settled state on every chat renderer.
+    if state.session.screen_probed {
+        if option_labels.show_model && option_labels.model.is_none() {
+            option_labels.model = Some("Model".to_string());
+            option_labels.model_display = option_labels.model.clone();
+        }
+        if option_labels.show_options && option_labels.options.is_none() {
+            option_labels.options = Some("Options".to_string());
+        }
+    }
     let bot = state
         .session
         .selected_options

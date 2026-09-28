@@ -12,7 +12,7 @@ use crate::app::window::{FindPromptsModalCommand, GpuiFindPromptsModalWindow};
 impl GhostexGpuiApp {
     pub(crate) fn open_gpui_find_prompts_modal(&mut self, cx: &mut Context<Self>) {
         let settings = crate::shared_settings::shared_sidebar_settings_snapshot();
-        let light = crate::app::helpers::gpui_session_chat_uses_light_theme(settings.object());
+        let light = crate::CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed);
         let font_family = find_prompts_font_family(
             settings
                 .object()

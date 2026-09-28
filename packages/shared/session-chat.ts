@@ -630,6 +630,8 @@ export interface SessionChatTerminalActivity {
   percent?: number;
   /** Seconds the CLI reported, only when it painted them. */
   elapsedSeconds?: number;
+  /** `compacting` only: the token counter painted after the clock (`↓ 901 tokens`), as shown. */
+  tokens?: string;
   /** ISO-8601 millis; stable for the whole run, so a local clock can tick. */
   detectedAt: string;
   /** `claude-tool` only: the tool block painted under the row, as shown on the terminal. */

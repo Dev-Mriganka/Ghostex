@@ -17,6 +17,8 @@ fn app_modal_host_background() -> Hsla {
 }
 
 pub(crate) struct GpuiAppModalHostWindow {
+    #[cfg(target_os = "windows")]
+    _mouse_navigation_release: gpui::Subscription,
     pub(crate) current_modal: GpuiAppModalKind,
     pub(crate) initial_window_size: Size<Pixels>,
     is_ready: bool,
@@ -166,6 +168,17 @@ impl GpuiAppModalHostWindow {
             Vec::new()
         };
         cx.new(move |_cx| Self {
+            #[cfg(target_os = "windows")]
+            _mouse_navigation_release: {
+                crate::navigation_history::windows_mouse::register_modal(
+                    parent_ns_view,
+                    _cx.weak_entity(),
+                    _cx.to_async(),
+                );
+                _cx.on_release(move |_, _| {
+                    crate::navigation_history::windows_mouse::unregister(parent_ns_view);
+                })
+            },
             current_modal: modal,
             initial_window_size,
             is_ready: !uses_react_modal_host,

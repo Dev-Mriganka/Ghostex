@@ -303,6 +303,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
    * diff stats.
    */
   hideLastActiveTimeOnSessionCards: SIDEBAR_SETTINGS_PRESET_SETTINGS.recommended.hideLastActiveTimeOnSessionCards,
+  highlightPendingQuestions: false,
   hideAccountEmails: false,
   /**
    * CDXC:Sessions 2026-06-13-17:50:
@@ -589,6 +590,8 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   terminalBackgroundMode: 'pure',
   workspaceBackgroundColor: '',
   clickToWakeSleepingSessions: true,
+  dimSleepingSessions: false,
+  wakeSleepingSessionsOnSelect: true,
   customViews: [],
   customViewTemplates: [],
   viewScopes: {},
