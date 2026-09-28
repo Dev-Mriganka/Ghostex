@@ -1,5 +1,5 @@
 import { postAppModalHostMessage } from '../app-modal-host-bridge';
-import { GXSERVER_PROTOCOL_VERSION } from '@/packages/shared/gxserver-protocol';
+import { GXSERVER_PROTOCOL_VERSION, gxserverRpcErrorMessage } from '@/packages/shared/gxserver-protocol';
 import { createAppToastRequest } from '@/packages/shared/app-toast-contract';
 import type { AccountsTransport, AgentAccountsState } from '@/packages/shared/agent-accounts';
 export interface AccountsConnection {
@@ -50,9 +50,9 @@ export function getAccountsConnections(): AccountsConnection[] {
         const envelope = (await response.json()) as {
           ok: boolean;
           result: AgentAccountsState;
-          error?: { message?: string };
         };
-        if (!response.ok || !envelope.ok) throw new Error(envelope.error?.message || 'The account request failed.');
+        if (!response.ok || !envelope.ok)
+          throw new Error(gxserverRpcErrorMessage(envelope) ?? 'The account request failed.');
         return envelope.result;
       },
     },

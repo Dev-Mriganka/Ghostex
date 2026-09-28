@@ -87,16 +87,18 @@ export function withViewsOn(
 }
 
 /**
- * CDXC:Onboarding 2026-09-15 DECISION:
- * User: "consider we're testing the case where the user doesn't have codex and claude clis installed ... i want the
- * user to be able to install them from the first time flow so everything flows smoothly." These three always have a
- * row on the Agents panel; a missing one shows an Install button that runs the same gxserver CLI job Settings >
- * Agents uses (packages/core-ui/agent-cli). Every other catalog agent installs from the Install guide popup.
+ * CDXC:Onboarding 2026-09-28 DECISION:
+ * User: "We need to implement installing claude/codex/cursor/grok through the setup flow if not installed, and from
+ * the agents page in settings." These four always have a row on the Agents panel (supersedes the 2026-09-15 list of
+ * three, which left Grok to the Install guide); a missing one shows an Install button that runs the same gxserver CLI
+ * job Settings > Agents uses (packages/core-ui/agent-cli), with each agent's official installer (PowerShell on
+ * Windows). Every other catalog agent installs from the Install guide popup.
  */
 export const ONBOARDING_PRIMARY_AGENTS: readonly (readonly [agentId: string, name: string])[] = [
   ['claude', 'Claude Code'],
   ['codex', 'Codex CLI'],
   ['cursor', 'Cursor Agent'],
+  ['grok', 'Grok Build'],
 ];
 
 /** Display name for any catalog agent: the host's detection name when it reported one, else the sidebar catalog. */

@@ -28,7 +28,13 @@ export function AgentCliControls({
     running,
     refresh,
     start: startJob,
-  } = useAgentCliJob({ agentId, connection, eager: Boolean(definition), onInstalled });
+    addToPath,
+  } = useAgentCliJob({
+    agentId,
+    connection,
+    eager: Boolean(definition),
+    onInstalled,
+  });
 
   if (!definition) return null;
   const installed = Boolean(state?.executablePath);
@@ -41,7 +47,7 @@ export function AgentCliControls({
   const method = methods.find((entry) => entry.id === selected);
   const status = state
     ? installed
-      ? (state.version ?? 'Installed')
+      ? `${state.version ?? 'Installed'}${state.updateAvailable && state.latestVersion ? ` · ${state.latestVersion} available` : ''}`
       : 'Not installed'
     : loading
       ? 'Checking CLI…'
@@ -73,7 +79,10 @@ export function AgentCliControls({
               onClick={(event) => {
                 if (vscode) {
                   event.preventDefault();
-                  vscode.postMessage({ type: 'openExternalUrl', url: definition.docsUrl! });
+                  vscode.postMessage({
+                    type: 'openExternalUrl',
+                    url: definition.docsUrl!,
+                  });
                 }
               }}
             >
@@ -95,6 +104,17 @@ export function AgentCliControls({
       {state?.executablePath ? (
         <code className='break-all text-xs text-muted-foreground'>{state.executablePath}</code>
       ) : null}
+      {state?.pathDirectory ? (
+        <div className='flex flex-wrap items-center justify-between gap-2'>
+          <p className='min-w-0 flex-1 text-xs text-muted-foreground'>
+            New terminals will not find {definition.binary}: <code className='break-all'>{state.pathDirectory}</code> is
+            not on your PATH.
+          </p>
+          <Button disabled={!connection || running} onClick={() => void addToPath()} size='sm' variant='outline'>
+            Add to PATH
+          </Button>
+        </div>
+      ) : null}
       {!connection ? (
         <p className='text-xs text-muted-foreground'>Connect to a computer to manage its agent CLIs.</p>
       ) : null}
@@ -105,7 +125,10 @@ export function AgentCliControls({
         <>
           <div className='flex flex-wrap items-center gap-2'>
             <SettingsSelect
-              items={methods.map((entry) => ({ label: entry.label, value: entry.id }))}
+              items={methods.map((entry) => ({
+                label: entry.label,
+                value: entry.id,
+              }))}
               disabled={running}
               onValueChange={(value) => setMethodId(value ?? undefined)}
               value={selected ?? null}
@@ -135,9 +158,11 @@ export function AgentCliControls({
                 <IconDownload aria-hidden='true' />
               )}
               {running
-                ? state?.job?.operation === 'update'
-                  ? 'Updating…'
-                  : 'Installing…'
+                ? state?.job?.status === 'queued'
+                  ? 'Waiting…'
+                  : state?.job?.operation === 'update'
+                    ? 'Updating…'
+                    : 'Installing…'
                 : installed
                   ? 'Update CLI'
                   : 'Install CLI'}
@@ -162,11 +187,13 @@ export function AgentCliControls({
       {state?.job ? (
         <div className='min-w-0 text-xs' aria-live='polite'>
           <p className={state.job.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'}>
-            {state.job.status === 'running'
-              ? 'Running. You can close Settings and return to check progress.'
-              : state.job.status === 'failed'
-                ? (state.job.error ?? 'CLI operation failed.')
-                : 'CLI command completed. Start a new session to use the installed version.'}
+            {state.job.status === 'queued'
+              ? 'Waiting for another CLI install or update to finish.'
+              : state.job.status === 'running'
+                ? 'Running. You can close Settings and return to check progress.'
+                : state.job.status === 'failed'
+                  ? (state.job.error ?? 'CLI operation failed.')
+                  : 'CLI command completed. Start a new session to use the installed version.'}
           </p>
           {state.job.output ? (
             <details className='mt-2'>

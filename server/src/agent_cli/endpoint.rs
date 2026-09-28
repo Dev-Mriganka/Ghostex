@@ -1,11 +1,11 @@
 use super::{
-    catalog::{self, CATALOG},
-    mise, process,
+    catalog::{self, Definition, CATALOG},
+    latest, mise, path_setup, process,
 };
 use crate::{domain::DomainStateError, paths::GxserverPaths};
 use serde_json::{json, Map, Value};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::{Arc, LazyLock, Mutex},
     time::Duration,
@@ -21,10 +21,22 @@ static JOBS: LazyLock<Mutex<HashMap<(PathBuf, String), Job>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static PROBES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(4);
 
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// Installs and updates run one at a time (installers can share an npm prefix, the user PATH and the shell profile), but a second request waits in the queue instead of being refused, so onboarding can install Claude, Codex, Cursor and Grok from one pass.
+static RUNNER: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 pub(crate) async fn dispatch(
     paths: &GxserverPaths,
     params: &Map<String, Value>,
 ) -> Result<Value, DomainStateError> {
+    let home = paths.agent_config_home_dir().to_path_buf();
+    let action = params
+        .get("action")
+        .and_then(Value::as_str)
+        .unwrap_or("read");
+    if action == "list" {
+        return list(&home).await;
+    }
     let agent_id = params
         .get("agentId")
         .and_then(Value::as_str)
@@ -33,32 +45,76 @@ pub(crate) async fn dispatch(
         .iter()
         .find(|entry| entry.agent_id == agent_id)
         .ok_or_else(|| error("Unknown agent CLI."))?;
-    let action = params
-        .get("action")
-        .and_then(Value::as_str)
-        .unwrap_or("read");
-    if !matches!(action, "read" | "start") {
-        return Err(error("Unknown CLI action."));
+    match action {
+        "read" => read(definition, &home).await,
+        "start" => start(definition, &home, params).await,
+        "addToPath" => add_to_path(definition, &home).await,
+        _ => Err(error("Unknown CLI action.")),
     }
-    let home = paths.agent_config_home_dir().to_path_buf();
-    let key = (home.clone(), agent_id.to_string());
+}
+
+/// Every catalog agent's state in one reply, for the Agents page and `ghostex agent-cli status`.
+async fn list(home: &Path) -> Result<Value, DomainStateError> {
+    let states = futures_util::future::join_all(
+        CATALOG.iter().map(|definition| read(definition, home)),
+    )
+    .await;
+    let agents = states.into_iter().collect::<Result<Vec<_>, _>>()?;
+    Ok(json!({ "agents": agents }))
+}
+
+fn is_active(progress: &Value) -> bool {
+    matches!(progress["status"].as_str(), Some("queued" | "running"))
+}
+
+async fn read(definition: &'static Definition, home: &Path) -> Result<Value, DomainStateError> {
+    let key = (home.to_path_buf(), definition.agent_id.clone());
     let previous = JOBS.lock().map_err(error)?.get(&key).cloned();
-    if action == "read" {
-        if let Some(job) = &previous {
-            if job.progress["status"] == "running" {
-                let mut state = job.state.clone();
-                state["job"] = job.progress.clone();
-                return Ok(state);
-            }
+    if let Some(job) = &previous {
+        if is_active(&job.progress) {
+            let mut state = job.state.clone();
+            state["job"] = job.progress.clone();
+            return Ok(state);
         }
     }
-    let mut state = read_state(definition, &home).await?;
-    if action == "read" {
-        if let Some(job) = previous {
-            state["job"] = job.progress;
-        }
+    let mut state = read_state(definition, home).await?;
+    if let Some(job) = previous {
+        state["job"] = job.progress;
+    }
+    Ok(state)
+}
+
+async fn add_to_path(
+    definition: &'static Definition,
+    home: &Path,
+) -> Result<Value, DomainStateError> {
+    let state = read_state(definition, home).await?;
+    let Some(directory) = state["pathDirectory"].as_str().map(PathBuf::from) else {
         return Ok(state);
+    };
+    let owned_home = home.to_path_buf();
+    tokio::task::spawn_blocking(move || path_setup::ensure_on_path(&directory, &owned_home))
+        .await
+        .map_err(error)?
+        .map_err(error)?;
+    read(definition, home).await
+}
+
+async fn start(
+    definition: &'static Definition,
+    home: &Path,
+    params: &Map<String, Value>,
+) -> Result<Value, DomainStateError> {
+    let key = (home.to_path_buf(), definition.agent_id.clone());
+    if JOBS
+        .lock()
+        .map_err(error)?
+        .get(&key)
+        .is_some_and(|job| is_active(&job.progress))
+    {
+        return Err(error("This CLI is already being installed or updated."));
     }
+    let mut state = read_state(definition, home).await?;
     let operation = params
         .get("operation")
         .and_then(Value::as_str)
@@ -93,16 +149,16 @@ pub(crate) async fn dispatch(
         .as_str()
         .ok_or_else(|| error("Missing CLI command."))?
         .to_string();
+    let env = if method_id == "native" {
+        definition.native_env()
+    } else {
+        BTreeMap::new()
+    };
     let id = uuid::Uuid::new_v4().to_string();
     let progress =
-        json!({"id":id,"operation":operation,"command":script,"status":"running","output":""});
+        json!({"id":id,"operation":operation,"command":script,"status":"queued","output":""});
     {
         let mut jobs = JOBS.lock().map_err(error)?;
-        if jobs.values().any(|job| job.progress["status"] == "running") {
-            return Err(error(
-                "Another CLI install or update is still running. Wait for it to finish.",
-            ));
-        }
         jobs.insert(
             key.clone(),
             Job {
@@ -112,43 +168,19 @@ pub(crate) async fn dispatch(
         );
     }
     state["job"] = progress;
+    let home = home.to_path_buf();
     tokio::spawn(async move {
-        let output_key = key.clone();
-        let result = process::run(&script, &home, Duration::from_secs(900), move |chunk| {
-            if let Ok(mut jobs) = JOBS.lock() {
-                if let Some(job) = jobs.get_mut(&output_key) {
-                    let mut output = job.progress["output"]
-                        .as_str()
-                        .unwrap_or_default()
-                        .to_string();
-                    output.push_str(&chunk);
-                    if output.len() > 64 * 1024 {
-                        let mut start = output.len() - 64 * 1024;
-                        while !output.is_char_boundary(start) {
-                            start += 1;
-                        }
-                        output.drain(..start);
-                    }
-                    job.progress["output"] = json!(output);
-                }
-            }
+        let _turn = RUNNER.lock().await;
+        set_job_status(&key, "running");
+        let result = process::run(&script, &home, &env, Duration::from_secs(900), {
+            let key = key.clone();
+            move |chunk| append_output(&key, &chunk)
         })
         .await;
-        let verification = if result.is_ok() {
-            Some(read_state(definition, &home).await)
-        } else {
-            None
+        let result = match result {
+            Ok(()) => finish(definition, &home, &key).await,
+            Err(error) => Err(error),
         };
-        let result = result.and_then(|_| {
-            let verified = verification.unwrap().map_err(|error| error.message)?;
-            if !verified["executablePath"].is_string() {
-                return Err("The installer exited successfully, but the CLI is still missing from PATH. Check the installation docs and refresh after fixing PATH.".to_string());
-            }
-            if let Some(reason) = verified["versionError"].as_str() {
-                return Err(format!("The installer finished, but the CLI version check failed: {reason}"));
-            }
-            Ok(())
-        });
         if let Ok(mut jobs) = JOBS.lock() {
             if let Some(job) = jobs.get_mut(&key) {
                 job.progress["status"] = json!(if result.is_ok() {
@@ -165,85 +197,180 @@ pub(crate) async fn dispatch(
     Ok(state)
 }
 
+/// Re-checks the CLI after its installer exited successfully, and puts its folder on PATH when the
+/// installer did not (see `path_setup::ensure_on_path`).
+async fn finish(
+    definition: &'static Definition,
+    home: &Path,
+    key: &(PathBuf, String),
+) -> Result<(), String> {
+    let mut verified = read_state(definition, home)
+        .await
+        .map_err(|error| error.message)?;
+    if !verified["executablePath"].is_string() {
+        return Err("The installer exited successfully, but the CLI is still missing. Check the installation docs, then refresh.".to_string());
+    }
+    if let Some(directory) = verified["pathDirectory"].as_str().map(PathBuf::from) {
+        let owned_home = home.to_path_buf();
+        let outcome =
+            tokio::task::spawn_blocking(move || path_setup::ensure_on_path(&directory, &owned_home))
+                .await
+                .map_err(|error| error.to_string())?;
+        match outcome {
+            Ok(Some(message)) => append_output(key, &format!("\n{message}\n")),
+            Ok(None) => {}
+            Err(message) => append_output(key, &format!("\n{message}\n")),
+        }
+        verified = read_state(definition, home)
+            .await
+            .map_err(|error| error.message)?;
+    }
+    if let Some(reason) = verified["versionError"].as_str() {
+        return Err(format!(
+            "The installer finished, but the CLI version check failed: {reason}"
+        ));
+    }
+    Ok(())
+}
+
+fn set_job_status(key: &(PathBuf, String), status: &str) {
+    if let Ok(mut jobs) = JOBS.lock() {
+        if let Some(job) = jobs.get_mut(key) {
+            job.progress["status"] = json!(status);
+        }
+    }
+}
+
+fn append_output(key: &(PathBuf, String), chunk: &str) {
+    if let Ok(mut jobs) = JOBS.lock() {
+        if let Some(job) = jobs.get_mut(key) {
+            let mut output = job.progress["output"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
+            output.push_str(chunk);
+            if output.len() > 64 * 1024 {
+                let mut start = output.len() - 64 * 1024;
+                while !output.is_char_boundary(start) {
+                    start += 1;
+                }
+                output.drain(..start);
+            }
+            job.progress["output"] = json!(output);
+        }
+    }
+}
+
 async fn read_state(
-    definition: &'static catalog::Definition,
+    definition: &'static Definition,
     home: &Path,
 ) -> Result<Value, DomainStateError> {
     let _permit = PROBES.acquire().await.map_err(error)?;
     let owned_home = home.to_path_buf();
-    let (executable, methods, detected_method) = tokio::task::spawn_blocking(move || {
-        crate::agent_hooks::probing::refresh_cli_environment(&owned_home);
-        let executable = process::resolve(&definition.binary, &owned_home);
-        let mise = mise::installation(definition, executable.as_deref(), &owned_home);
-        let executable = mise
-            .as_ref()
-            .map(|installation| installation.executable.clone())
-            .or(executable);
-        let methods = catalog::methods(
-            definition,
-            executable.as_deref(),
-            &owned_home,
-            mise.as_ref(),
-        );
-        let detected = if mise
-            .as_ref()
-            .is_some_and(|installation| installation.tool.is_some())
-        {
-            Some("mise".to_string())
-        } else {
-            executable
+    let (executable, methods, detected_method, path_directory) =
+        tokio::task::spawn_blocking(move || {
+            crate::agent_hooks::probing::refresh_cli_environment(&owned_home);
+            let install_dirs = definition.install_dirs(&owned_home);
+            let executable =
+                process::resolve_agent(&definition.binary, &install_dirs, &owned_home);
+            let mise = mise::installation(definition, executable.as_deref(), &owned_home);
+            let executable = mise
+                .as_ref()
+                .map(|installation| installation.executable.clone())
+                .or(executable);
+            let methods = catalog::methods(
+                definition,
+                executable.as_deref(),
+                &owned_home,
+                mise.as_ref(),
+            );
+            let detected = if mise
+                .as_ref()
+                .is_some_and(|installation| installation.tool.is_some())
+            {
+                Some("mise".to_string())
+            } else {
+                executable
+                    .as_deref()
+                    .and_then(|path| catalog::detected_method(path, definition))
+            };
+            // Only a folder the agent's own installer uses is offered for PATH, never an arbitrary one.
+            let path_directory = executable
                 .as_deref()
-                .and_then(|path| catalog::detected_method(path, definition))
-        };
-        (executable, methods, detected)
-    })
-    .await
-    .map_err(error)?;
+                .and_then(|path| Path::new(path).parent())
+                .filter(|directory| {
+                    install_dirs
+                        .iter()
+                        .any(|known| same_directory(known, directory))
+                })
+                .filter(|directory| !path_setup::on_path(directory, &owned_home))
+                .map(Path::to_path_buf);
+            (executable, methods, detected, path_directory)
+        })
+        .await
+        .map_err(error)?;
     let mut state =
         json!({"agentId":definition.agent_id,"platform":std::env::consts::OS,"methods":methods});
-    if let Some(path) = executable {
-        state["executablePath"] = json!(path);
-        if let Some(method) = &detected_method {
-            state["detectedMethodId"] = json!(method);
-        }
-        let output = Arc::new(Mutex::new(String::new()));
-        let capture = output.clone();
-        let args = definition
-            .version_args
-            .clone()
-            .unwrap_or_else(|| vec!["--version".into()]);
-        let invoke = if cfg!(windows) { "& " } else { "" };
-        let script = format!(
-            "{invoke}{} {}",
-            process::quote(&path),
-            args.iter()
-                .map(|arg| process::quote(arg))
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-        match process::run(&script, home, Duration::from_secs(5), move |chunk| {
+    let Some(path) = executable else {
+        return Ok(state);
+    };
+    state["executablePath"] = json!(path);
+    if let Some(method) = &detected_method {
+        state["detectedMethodId"] = json!(method);
+    }
+    if let Some(directory) = path_directory {
+        state["pathDirectory"] = json!(directory.to_string_lossy());
+    }
+    let output = Arc::new(Mutex::new(String::new()));
+    let capture = output.clone();
+    let args = definition
+        .version_args
+        .clone()
+        .unwrap_or_else(|| vec!["--version".into()]);
+    let (version, latest_version) = tokio::join!(
+        process::run_executable(&path, &args, home, Duration::from_secs(5), move |chunk| {
             if let Ok(mut output) = capture.lock() {
                 if output.len() < 4096 {
                     output.push_str(&chunk);
                 }
             }
-        })
-        .await
-        {
-            Ok(()) => {
-                let text = output.lock().map_err(error)?.clone();
-                if let Some(line) = text
-                    .lines()
-                    .map(str::trim)
-                    .find(|line| !line.is_empty() && line.chars().any(|ch| ch.is_ascii_digit()))
-                {
-                    state["version"] = json!(line.chars().take(160).collect::<String>());
-                }
+        }),
+        latest::latest(definition),
+    );
+    match version {
+        Ok(()) => {
+            let text = output.lock().map_err(error)?.clone();
+            if let Some(line) = text
+                .lines()
+                .map(str::trim)
+                .find(|line| !line.is_empty() && line.chars().any(|ch| ch.is_ascii_digit()))
+            {
+                state["version"] = json!(line.chars().take(160).collect::<String>());
             }
-            Err(reason) => state["versionError"] = json!(reason),
         }
+        Err(reason) => state["versionError"] = json!(reason),
+    }
+    if let Some(latest_version) = latest_version {
+        let current = state["version"].as_str().and_then(latest::version_in);
+        state["updateAvailable"] = json!(current
+            .as_deref()
+            .is_some_and(|current| latest::is_newer(&latest_version, current)));
+        state["latestVersion"] = json!(latest_version);
     }
     Ok(state)
+}
+
+fn same_directory(left: &Path, right: &Path) -> bool {
+    let key = |path: &Path| {
+        let text = path.to_string_lossy();
+        let text = text.trim_end_matches(['\\', '/']).to_string();
+        if cfg!(windows) {
+            text.to_lowercase()
+        } else {
+            text
+        }
+    };
+    key(left) == key(right)
 }
 
 fn error(message: impl std::fmt::Display) -> DomainStateError {

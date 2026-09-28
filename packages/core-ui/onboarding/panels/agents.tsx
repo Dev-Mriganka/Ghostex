@@ -233,6 +233,10 @@ export function AgentsPanel({ props, flow, setFlow, go, toast }: PanelProps) {
     ([agentId]) => !agents.some((agent) => agent.agentId === agentId && agent.installed)
   ).map(([agentId]) => ({ agentId, name: catalogAgentName(agents, agentId) }));
   const otherMissing = missing.filter((agent) => !ONBOARDING_PRIMARY_AGENTS.some(([id]) => id === agent.agentId));
+  /** The list box is 228px tall; past three rows they shrink so a fourth primary agent is not hidden below the fold. */
+  const listRows = installed.length + missingPrimary.length;
+  const compactRows = listRows > 3;
+  const rowHeight = compactRows ? Math.max(50, Math.floor((228 - 8 * (listRows - 1)) / listRows)) : 68;
   const otherNames = otherMissing.slice(0, 3).map((agent) => agent.name);
   const computerUsePill =
     computerUseState === 'installing' ? (
@@ -267,8 +271,13 @@ export function AgentsPanel({ props, flow, setFlow, go, toast }: PanelProps) {
               role='radio'
               aria-checked={selected}
               tabIndex={0}
-              className={'glass arow3' + (selected ? ' sel' : '') + (scanning ? ' pending' : '')}
-              style={{ height: 68, flex: 'none' }}
+              className={
+                'glass arow3' +
+                (selected ? ' sel' : '') +
+                (scanning ? ' pending' : '') +
+                (compactRows ? ' compact' : '')
+              }
+              style={{ height: rowHeight, flex: 'none' }}
               title={agent.detail}
               onClick={() => pickDefault(agent.agentId)}
               onKeyDown={(event) => event.key === ' ' && pickDefault(agent.agentId)}
@@ -292,6 +301,8 @@ export function AgentsPanel({ props, flow, setFlow, go, toast }: PanelProps) {
             name={agent.name}
             connection={cliConnection}
             scanning={scanning}
+            height={rowHeight}
+            compact={compactRows}
             onEvent={onInstallEvent}
             onOpenGuide={() => setGuideOpen(true)}
           />
@@ -464,6 +475,8 @@ function MissingAgentRow({
   name,
   connection,
   scanning,
+  height,
+  compact,
   onEvent,
   onOpenGuide,
 }: {
@@ -471,24 +484,28 @@ function MissingAgentRow({
   name: string;
   connection: AgentCliConnection | undefined;
   scanning: boolean;
+  height: number;
+  compact: boolean;
   onEvent: (event: AgentInstallEvent) => void;
   onOpenGuide: () => void;
 }) {
   const row = useAgentInstallRow({ agentId, name, connection, eager: Boolean(connection), onEvent });
   const subtitle = row.error
     ? row.error
-    : row.running
-      ? `Installing${row.method ? ` with ${row.method.label}` : ''}…`
-      : row.installed
-        ? 'Installed, press Rescan'
-        : row.method
-          ? `Not installed · ${row.method.label}`
-          : 'Not installed';
+    : row.queued
+      ? 'Waiting for the other installs…'
+      : row.running
+        ? `Installing${row.method ? ` with ${row.method.label}` : ''}…`
+        : row.installed
+          ? 'Installed, press Rescan'
+          : row.method
+            ? `Not installed · ${row.method.label}`
+            : 'Not installed';
   const action = scanning ? (
     <span className='detpill wait'>Scanning…</span>
   ) : row.running ? (
     <span className='detpill wait'>
-      <Spinner /> Installing…
+      <Spinner /> {row.queued ? 'Waiting…' : 'Installing…'}
     </span>
   ) : row.checking ? (
     <span className='detpill wait'>Checking…</span>
@@ -510,8 +527,8 @@ function MissingAgentRow({
   );
   return (
     <div
-      className={'glass arow3 missing' + (scanning ? ' pending' : '')}
-      style={{ height: 68, flex: 'none' }}
+      className={'glass arow3 missing' + (scanning ? ' pending' : '') + (compact ? ' compact' : '')}
+      style={{ height, flex: 'none' }}
       data-agent={agentId}
     >
       <span className='radio-gap' />

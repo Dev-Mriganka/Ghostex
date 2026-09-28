@@ -465,6 +465,10 @@ pub fn usage() -> String {
             "Communicate and coordinate with other agents",
         ),
         format_help_command(
+            "agent-cli status | install <agent> | update <agent> [--json]",
+            "Install, update, and check the agent CLIs (claude, codex, cursor, grok, …)",
+        ),
+        format_help_command(
             "agents-orchestration --help",
             "Show Ghostex Agents skill setup (launch and coordinate other agents)",
         ),

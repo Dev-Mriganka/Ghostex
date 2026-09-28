@@ -1,3 +1,4 @@
+pub(crate) mod live_path;
 pub(crate) mod process;
 #[cfg(windows)]
 pub(crate) mod process_files;

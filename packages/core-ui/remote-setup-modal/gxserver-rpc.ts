@@ -2,6 +2,7 @@ import {
   GXSERVER_PROTOCOL_VERSION,
   type GxserverProtocolVersion,
   type GxserverRpcEndpointPath,
+  gxserverRpcErrorMessage,
 } from '@/packages/shared/gxserver-protocol';
 
 /**
@@ -59,12 +60,10 @@ const GPUI_BOOTSTRAP_REMOTE_SETUP_RPC: RemoteSetupRpc = async (path, params) => 
   } catch {
     body = undefined;
   }
-  const envelope = body as { error?: { message?: string }; ok?: boolean; result?: unknown } | undefined;
+  const envelope = body as { ok?: boolean; result?: unknown } | undefined;
   if (!response.ok || envelope?.ok !== true) {
     throw new Error(
-      typeof envelope?.error?.message === 'string'
-        ? envelope.error.message
-        : `gxserver rejected ${path} (${response.status || 'no response'}).`
+      gxserverRpcErrorMessage(envelope) ?? `gxserver rejected ${path} (${response.status || 'no response'}).`
     );
   }
   return envelope.result;

@@ -1,6 +1,12 @@
 import { AgentCliControls } from '../../agent-cli/controls';
+import { AgentCliRowAction } from '../../agent-cli/row-action';
 import { useAgentCliConnections } from '../../agent-cli/transport';
-import type { AgentCliConnection } from '@/packages/shared/agent-cli-maintenance';
+import { useAgentCliList } from '../../agent-cli/use-agent-cli-list';
+import {
+  AGENT_CLI_CATALOG,
+  type AgentCliConnection,
+  type AgentCliState,
+} from '@/packages/shared/agent-cli-maintenance';
 import { DragDropProvider, type DragDropEventHandlers } from '@dnd-kit/react';
 import { isSortableOperation, useSortable } from '@dnd-kit/react/sortable';
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -175,6 +181,11 @@ export function AgentsSettingsTab({
   const cliConnection = cliConnectionId
     ? cliConnections.find((connection) => connection.id === cliConnectionId)
     : cliConnections[0];
+  const cliList = useAgentCliList(cliConnection, isActive);
+  const onCliChanged = () => {
+    onRequestAgentHookStatus?.();
+    cliList.refresh();
+  };
   const agentApprovalsControlId = useId();
   const agentHooksAvailableForUninstall = hasRemovableAgentHooks(agentHookStatus);
   const [editorState, setEditorState] = useState<SettingsAgentEditorState>();
@@ -593,7 +604,8 @@ export function AgentsSettingsTab({
                             acceptAllMode={agent.acceptAllMode ?? 'inherit'}
                             agent={agent}
                             cliConnection={cliConnection}
-                            onCliInstalled={onRequestAgentHookStatus}
+                            cliListState={cliList.states.get(defaultAgentId ?? agent.agentId)}
+                            onCliInstalled={onCliChanged}
                             vscode={vscode}
                             hookStatus={hookAgentId ? hookStatusByAgentId.get(hookAgentId) : undefined}
                             index={index}
@@ -812,6 +824,7 @@ export function getAgentHookStatusClassName(
  */
 export function SettingsAgentRow({
   cliConnection,
+  cliListState,
   onCliInstalled,
   vscode,
   acceptAllMode,
@@ -833,6 +846,8 @@ export function SettingsAgentRow({
   supportsHooks,
 }: {
   cliConnection?: AgentCliConnection;
+  /** This agent's entry from the tab's one `list` request (installed version, update available). */
+  cliListState?: AgentCliState;
   onCliInstalled?: () => void;
   vscode?: WebviewApi;
   acceptAllMode: AgentAcceptAllMode;
@@ -879,8 +894,15 @@ export function SettingsAgentRow({
     : hookStatus?.status === 'updateRequired'
       ? 'Update hook'
       : 'Install hook';
+  const cliAgentId = getDefaultSidebarAgentByIcon(agent.icon)?.agentId ?? agent.agentId;
+  const cliMissing = cliListState ? !cliListState.executablePath : hookStatus?.status === 'cliMissing';
+  const showCliAction =
+    Boolean(cliConnection) &&
+    AGENT_CLI_CATALOG.some((entry) => entry.agentId === cliAgentId) &&
+    (cliMissing || Boolean(cliListState?.updateAvailable));
+  // A hook cannot be installed for a CLI that is not there; the row offers Install CLI instead.
   const showInlineInstall =
-    supportsHooks && !hookInstalled && hookStatus?.status !== 'notRequired' && !isHookStatusPending;
+    supportsHooks && !hookInstalled && hookStatus?.status !== 'notRequired' && !isHookStatusPending && !cliMissing;
   const hookInstallDisabled = !onInstallHook || isHookStatusLoading;
   const hookInstallDisabledReason = isHookStatusLoading
     ? 'Hook status is being checked.'
@@ -934,6 +956,15 @@ export function SettingsAgentRow({
             {getAgentHookStatusText(hookStatus, isHookStatusPending)}
           </span>
         ) : null}
+        {showCliAction ? (
+          <AgentCliRowAction
+            agentId={cliAgentId}
+            cliMissing={cliMissing}
+            connection={cliConnection}
+            listState={cliListState}
+            onChanged={onCliInstalled}
+          />
+        ) : null}
         {showInlineInstall ? (
           <SettingButton
             className='shrink-0'
@@ -967,7 +998,7 @@ export function SettingsAgentRow({
         <div className='settings-list-panel border-t border-border/70' id={panelId}>
           <AgentCliControls
             key={cliConnection?.id ?? 'disconnected'}
-            agentId={getDefaultSidebarAgentByIcon(agent.icon)?.agentId ?? agent.agentId}
+            agentId={cliAgentId}
             connection={cliConnection}
             onInstalled={onCliInstalled}
             vscode={vscode}

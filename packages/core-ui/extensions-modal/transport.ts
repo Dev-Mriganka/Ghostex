@@ -1,4 +1,8 @@
-import { GXSERVER_PROTOCOL_VERSION, type GxserverProtocolVersion } from '@/packages/shared/gxserver-protocol';
+import {
+  GXSERVER_PROTOCOL_VERSION,
+  type GxserverProtocolVersion,
+  gxserverRpcErrorMessage,
+} from '@/packages/shared/gxserver-protocol';
 import type {
   GhostexExtensionStatePatch,
   GhostexExtensionsCatalogResult,
@@ -72,12 +76,10 @@ async function rpc<TResult>(path: string, params: Record<string, unknown>): Prom
   } catch {
     body = undefined;
   }
-  const envelope = body as { error?: { message?: string }; ok?: boolean; result?: TResult } | undefined;
+  const envelope = body as { ok?: boolean; result?: TResult } | undefined;
   if (!response.ok || envelope?.ok !== true) {
     throw new Error(
-      typeof envelope?.error?.message === 'string'
-        ? envelope.error.message
-        : `gxserver rejected ${path} (${response.status || 'no response'}).`
+      gxserverRpcErrorMessage(envelope) ?? `gxserver rejected ${path} (${response.status || 'no response'}).`
     );
   }
   return envelope.result as TResult;

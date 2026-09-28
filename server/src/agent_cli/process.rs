@@ -1,32 +1,42 @@
-use std::{path::Path, process::Stdio, time::Duration};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+    process::Stdio,
+    time::Duration,
+};
 use tokio::{io::AsyncReadExt, process::Command};
 
+/// Re-probed now (and written back to the hook-status cache), so the Agents page and hook status agree
+/// right after an install. Windows reads the live registry PATH through `platform::live_path`.
 pub(crate) fn resolve(binary: &str, home: &Path) -> Option<String> {
-    #[cfg(windows)]
-    {
-        let shell = crate::platform::shell::command_shell();
-        let mut command = crate::platform::process::background_command(&shell.executable);
-        command.current_dir(home).args(shell.profileless_script_args(&format!(
-            "{}; (Get-Command {} -CommandType Application,ExternalScript -ErrorAction SilentlyContinue | Select-Object -First 1).Source",
-            WINDOWS_REFRESH_PATH,
-            quote(binary),
-        )));
-        return crate::agent_hooks::probing::run_command_stdout_with_timeout(
-            command,
-            Duration::from_secs(3),
-        )
-        .map(|path| path.trim().to_string())
-        .filter(|path| !path.is_empty());
-    }
-    #[cfg(not(windows))]
     crate::agent_hooks::probing::resolve_cli_command(binary, home)
 }
 
-#[cfg(windows)]
-const WINDOWS_REFRESH_PATH: &str = "$env:Path = @([Environment]::GetEnvironmentVariable('Path','User'), [Environment]::GetEnvironmentVariable('Path','Machine'), $env:Path) -join ';'";
+/// The agent's binary on PATH, otherwise in one of the folders its official installer uses.
+pub(crate) fn resolve_agent(binary: &str, install_dirs: &[PathBuf], home: &Path) -> Option<String> {
+    resolve(binary, home).or_else(|| {
+        crate::platform::live_path::find_in(binary, install_dirs)
+            .map(|path| path.to_string_lossy().into_owned())
+    })
+}
 
-fn command(script: &str, home: &Path) -> Command {
-    let shell = if !cfg!(windows) && script.contains('|') {
+/// Windows PowerShell 5.1, which every Windows has and every vendor installer is written for (Cursor's calls
+/// `Get-WmiObject`, which PowerShell 7 only reaches through a compatibility session).
+#[cfg(windows)]
+fn windows_powershell() -> String {
+    std::env::var_os("SystemRoot")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(r"C:\Windows"))
+        .join(r"System32\WindowsPowerShell\v1.0\powershell.exe")
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn command(script: &str, home: &Path, env: &BTreeMap<String, String>) -> Command {
+    #[cfg(windows)]
+    let shell = crate::platform::shell::command_shell_for_path(&windows_powershell());
+    #[cfg(not(windows))]
+    let shell = if script.contains('|') {
         crate::platform::shell::command_shell_for_path("/bin/bash")
     } else {
         crate::platform::shell::command_shell()
@@ -36,8 +46,14 @@ fn command(script: &str, home: &Path) -> Command {
     command.process_group(0);
     #[cfg(windows)]
     command.creation_flags(0x0800_0000);
+    /*
+    CDXC:AgentProviders 2026-09-28 WHY:
+    A fresh Windows keeps the Restricted execution policy, which refuses npm's `npm.ps1` shim and scripts an installer starts, so the job runs with a process-scoped Bypass as the installers' own instructions do. `$ErrorActionPreference = 'Stop'` is not set around the command: it leaks into `irm … | iex` vendor scripts and turned Cursor's harmless `Get-WmiObject` warning into an abort after its installer had already deleted the previous install. Success is the command's own result plus the re-check that follows every job. Progress bars are off (they slow downloads in 5.1), TLS 1.2 is forced for 5.1, and output is UTF-8 so installer check marks survive.
+    */
     #[cfg(windows)]
-    let script = format!("$ErrorActionPreference = 'Stop'; $global:LASTEXITCODE = 0; {WINDOWS_REFRESH_PATH}; {script}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}");
+    let script = format!(
+        "$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.Encoding]::UTF8; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $global:LASTEXITCODE = 0; {script}; if (-not $?) {{ if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}; exit 1 }}; if ($LASTEXITCODE) {{ exit $LASTEXITCODE }}"
+    );
     #[cfg(not(windows))]
     let script = if script.contains('|') {
         // The download must fail the operation even when the installer receives an empty pipe.
@@ -45,6 +61,12 @@ fn command(script: &str, home: &Path) -> Command {
     } else {
         script.to_string()
     };
+    #[cfg(windows)]
+    {
+        command.args(["-ExecutionPolicy", "Bypass"]);
+        // A tool installed a moment ago (by this job or another program) is on the registry PATH, not on ours.
+        command.env("PATH", crate::platform::live_path::value());
+    }
     command.args(shell.profileless_script_args(&script));
     #[cfg(not(windows))]
     command.env(
@@ -59,6 +81,7 @@ fn command(script: &str, home: &Path) -> Command {
         .env("HOME", home)
         .env("NO_COLOR", "1")
         .env("TERM", "dumb")
+        .envs(env)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -77,12 +100,55 @@ pub(crate) fn quote(value: &str) -> String {
 pub(crate) async fn run(
     script: &str,
     home: &Path,
+    env: &BTreeMap<String, String>,
     timeout: Duration,
     output: impl Fn(String) + Clone + Send + 'static,
 ) -> Result<(), String> {
-    let mut child = command(script, home)
-        .spawn()
-        .map_err(|error| error.to_string())?;
+    wait(command(script, home, env), timeout, output).await
+}
+
+/// Runs `executable args…` directly, without a shell per probe. Only a PowerShell script shim needs one.
+pub(crate) async fn run_executable(
+    executable: &str,
+    args: &[String],
+    home: &Path,
+    timeout: Duration,
+    output: impl Fn(String) + Clone + Send + 'static,
+) -> Result<(), String> {
+    if executable.to_ascii_lowercase().ends_with(".ps1") {
+        let script = format!(
+            "& {} {}",
+            quote(executable),
+            args.iter().map(|arg| quote(arg)).collect::<Vec<_>>().join(" ")
+        );
+        return run(&script, home, &BTreeMap::new(), timeout, output).await;
+    }
+    let mut command = Command::new(executable);
+    #[cfg(unix)]
+    command.process_group(0);
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000);
+    #[cfg(windows)]
+    command.env("PATH", crate::platform::live_path::value());
+    command
+        .args(args)
+        .current_dir(home)
+        .env("HOME", home)
+        .env("NO_COLOR", "1")
+        .env("TERM", "dumb")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    wait(command, timeout, output).await
+}
+
+async fn wait(
+    mut command: Command,
+    timeout: Duration,
+    output: impl Fn(String) + Clone + Send + 'static,
+) -> Result<(), String> {
+    let mut child = command.spawn().map_err(|error| error.to_string())?;
     let pid = child.id();
     let stdout = child.stdout.take().ok_or("CLI stdout unavailable")?;
     let stderr = child.stderr.take().ok_or("CLI stderr unavailable")?;

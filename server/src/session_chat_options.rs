@@ -1821,6 +1821,24 @@ Model and effort are the live session values (Claude re-runs the script on
 `/model`, `/effort`, each assistant message, compaction and mode changes),
 so they outrank the transcript, which only learns a change on the next turn.
 */
+/// CDXC:AgentProviders 2026-09-28 WHY:
+/// Claude Code 2.1.283 on a Max account runs Opus 5.5 with a 1M window but reports it as `claude-opus-5-5` ("Opus 5.5"), with no `[1m]` suffix, and its `/model` list has no separate 1M row. Reading the id alone showed "Opus 5.5 · 200K" for a session Claude itself measured at 1,000,000 tokens. The payload's `context_window_size` is Claude's own answer, so a model with a 1M catalog row that reports a window of at least 1M reads as that row.
+/// SEE-ALSO: server/src/session_chat_claude_effort_slider.rs `claude_live_selection` decides "already applied" from the same reading.
+pub(crate) fn claude_statusline_model_choice(
+    payload: &serde_json::Map<String, Value>,
+) -> Option<SessionChatDetectedChoice> {
+    let id = transcript_text(payload.get("model")?.get("id"))?;
+    let reports_long_context = payload
+        .get("context_window")
+        .and_then(|window| window.get("context_window_size"))
+        .and_then(Value::as_u64)
+        .is_some_and(|size| size >= 1_000_000);
+    if reports_long_context && !id.contains('[') {
+        return claude_transcript_model_choice(&format!("{id}[1m]"));
+    }
+    claude_transcript_model_choice(id)
+}
+
 fn read_session_chat_statusline_selection(
     hook_state_directory: &Path,
     agent_session_id: Option<&str>,
@@ -1835,11 +1853,7 @@ fn read_session_chat_statusline_selection(
         label: label.to_string(),
         source: SessionChatOptionEvidence::Statusline,
     };
-    let model = payload
-        .get("model")
-        .and_then(|model| transcript_text(model.get("id")))
-        .and_then(claude_transcript_model_choice)
-        .map(|found| choice(&found.value, &found.label));
+    let model = claude_statusline_model_choice(payload).map(|found| choice(&found.value, &found.label));
     let effort = payload
         .get("effort")
         .and_then(|effort| transcript_text(effort.get("level")))

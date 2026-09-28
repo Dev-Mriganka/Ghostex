@@ -38,6 +38,39 @@ pub(crate) fn process_creation_filetime(process_id: i64) -> Option<u64> {
     }
 }
 
+/// Whether this process runs an executable image that is no longer the installed file at its path.
+///
+/// CDXC:ServerDaemon 2026-09-28 WHY:
+/// The desktop refreshes the managed Windows package by renaming the old binaries into `.retired-native` while they may still be running. A gxserver started during that refresh kept executing the retired image, but `build-identity.json` already named the new build, so health reported the new identity and the app never restarted it: a day of installed fixes never ran (the chat Subagents card stayed empty). Compare the file mapped as this image with the installed path so a superseded daemon reports a mismatched identity and the app restarts it.
+/// SEE-ALSO: `refresh` in apps/desktop/src/windows_terminal_backend/native_package.rs; `gpui_probe_local_gxserver_health_with_diagnostics` in apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs.
+#[cfg(windows)]
+pub(crate) fn running_image_superseded() -> bool {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::{
+        ProcessStatus::K32GetMappedFileNameW, Threading::GetCurrentProcess,
+    };
+    // `current_exe` is the path the loader recorded at startup, not where the image lives now.
+    let Ok(installed) = std::env::current_exe().and_then(std::fs::canonicalize) else {
+        return false;
+    };
+    let mut name = vec![0u16; 32_768];
+    // Any address inside this executable names the file its image section maps, renames included.
+    let length = unsafe {
+        K32GetMappedFileNameW(
+            GetCurrentProcess(),
+            running_image_superseded as *const std::ffi::c_void,
+            name.as_mut_ptr(),
+            name.len() as u32,
+        )
+    } as usize;
+    if length == 0 {
+        return false;
+    }
+    let mut mapped = std::ffi::OsString::from(r"\\?\GLOBALROOT");
+    mapped.push(std::ffi::OsString::from_wide(&name[..length]));
+    std::fs::canonicalize(mapped).is_ok_and(|running| running != installed)
+}
+
 /// CDXC:RemoteMachines 2026-09-14 WHY:
 /// A server started over Windows SSH must outlive the exec channel without keeping
 /// that channel's inheritable handles open. Otherwise the CLI exits but the phone

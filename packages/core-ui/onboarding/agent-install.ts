@@ -28,8 +28,10 @@ export type AgentInstallRow = {
   method: AgentCliMethod | undefined;
   /** The first read has not answered yet. */
   checking: boolean;
-  /** A job is running (or was just started). */
+  /** A job is running or waiting its turn (or was just started). */
   running: boolean;
+  /** The job waits for another agent's install to finish (gxserver runs one at a time). */
+  queued: boolean;
   /** gxserver already finds the CLI on PATH even though detection has not caught up yet. */
   installed: boolean;
   /** The failure to show under the row: a start that was refused, or the job's own error / last line. */
@@ -72,7 +74,7 @@ export function useAgentInstallRow({
   const reported = useRef<{ job?: string; line?: string; ended?: string }>({});
   useEffect(() => {
     if (!jobId) return;
-    if (jobStatus === 'running' && !tracked.current.has(jobId)) tracked.current.add(jobId);
+    if ((jobStatus === 'queued' || jobStatus === 'running') && !tracked.current.has(jobId)) tracked.current.add(jobId);
     if (!tracked.current.has(jobId)) return;
     const seen = reported.current;
     if (seen.job !== jobId) {
@@ -107,6 +109,7 @@ export function useAgentInstallRow({
     method: defaultAgentCliInstallMethod(state),
     checking: job.loading && !state,
     running: job.running,
+    queued: jobStatus === 'queued',
     installed: Boolean(state?.executablePath),
     error: actionError ?? (jobStatus === 'failed' ? (jobError ?? line ?? 'The install failed.') : undefined),
     install: () => {

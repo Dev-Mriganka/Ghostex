@@ -208,6 +208,11 @@
   width: auto;
   padding: 0 10px;
 }
+.gx-onboarding .arow3.compact .abox {
+  width: 40px;
+  height: 40px;
+  margin-right: 14px;
+}
 .gx-onboarding .detpill.on {
   color: #3be3a2;
   border-color: rgba(59, 227, 162, 0.4);

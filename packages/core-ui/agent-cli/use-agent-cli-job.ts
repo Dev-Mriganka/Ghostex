@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  AgentCliConnection,
-  AgentCliJob,
-  AgentCliMethod,
-  AgentCliState,
+import {
+  isAgentCliJobActive,
+  type AgentCliConnection,
+  type AgentCliJob,
+  type AgentCliMethod,
+  type AgentCliState,
 } from '@/packages/shared/agent-cli-maintenance';
 
 /** How often a running install/update job is re-read from gxserver. */
@@ -29,7 +30,7 @@ export type AgentCliJobHook = {
   actionError: string | undefined;
   /** `start` was called and its reply has not arrived yet. */
   starting: boolean;
-  /** `starting`, or the server reports a running job. */
+  /** `starting`, or the server reports a queued or running job. */
   running: boolean;
   /** Re-read the CLI state now. */
   refresh: () => void;
@@ -37,6 +38,8 @@ export type AgentCliJobHook = {
   start: (operation: 'install' | 'update', methodId: string) => Promise<void>;
   /** Read the state when it is not loaded yet, then install through `defaultAgentCliInstallMethod`. */
   install: () => Promise<void>;
+  /** Put the installed CLI's folder on the user's PATH (`state.pathDirectory`). */
+  addToPath: () => Promise<void>;
 };
 
 /**
@@ -111,8 +114,9 @@ export function useAgentCliJob({
   const jobId = state?.job?.id;
   const jobStatus = state?.job?.status;
   const jobOutput = state?.job?.output;
+  const jobActive = isAgentCliJobActive(state?.job);
   useEffect(() => {
-    if (!connection || jobStatus !== 'running') return;
+    if (!connection || !jobActive) return;
     const signal = { active: true };
     const timer = setTimeout(() => void read(signal), AGENT_CLI_JOB_POLL_MS);
     return () => {
@@ -120,7 +124,7 @@ export function useAgentCliJob({
       clearTimeout(timer);
     };
     // Every poll returns a new state object; keying on the job fields restarts the timer only after a read landed.
-  }, [connection, jobId, jobStatus, jobOutput, read]);
+  }, [connection, jobActive, jobId, jobStatus, jobOutput, read]);
 
   const refresh = useCallback(() => setRefreshCount((value) => value + 1), []);
 
@@ -130,7 +134,12 @@ export function useAgentCliJob({
       setStarting(true);
       setActionError(undefined);
       try {
-        const next = await connection.request({ action: 'start', agentId, operation, methodId });
+        const next = await connection.request({
+          action: 'start',
+          agentId,
+          operation,
+          methodId,
+        });
         if (!mounted.current) return;
         setState(next);
         setRefreshCount((value) => value + 1);
@@ -163,7 +172,12 @@ export function useAgentCliJob({
       const method = defaultAgentCliInstallMethod(current);
       if (!method) throw new Error('No install method is available on this computer. Follow the install docs.');
       if (method.unavailableReason) throw new Error(method.unavailableReason);
-      const next = await connection.request({ action: 'start', agentId, operation: 'install', methodId: method.id });
+      const next = await connection.request({
+        action: 'start',
+        agentId,
+        operation: 'install',
+        methodId: method.id,
+      });
       if (!mounted.current) return;
       setState(next);
     } catch (cause) {
@@ -177,15 +191,30 @@ export function useAgentCliJob({
     }
   }, [agentId, connection, state]);
 
+  const addToPath = useCallback(async () => {
+    if (!connection) return;
+    setStarting(true);
+    setActionError(undefined);
+    try {
+      const next = await connection.request({ action: 'addToPath', agentId });
+      if (mounted.current) setState(next);
+    } catch (cause) {
+      if (mounted.current) setActionError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (mounted.current) setStarting(false);
+    }
+  }, [agentId, connection]);
+
   return {
     state,
     loading,
     error,
     actionError,
     starting,
-    running: starting || jobStatus === 'running',
+    running: starting || jobActive,
     refresh,
     start,
     install,
+    addToPath,
   };
 }

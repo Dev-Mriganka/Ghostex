@@ -36,7 +36,7 @@ pub(crate) fn create_authenticated_health(state: &AppState) -> ServerHealthRespo
         product: minimal.product,
         protocol_version: minimal.protocol_version,
         version: minimal.version,
-        build_identity: state.build_identity.clone(),
+        build_identity: reported_build_identity(state),
         capabilities: GXSERVER_CAPABILITIES
             .iter()
             .map(|capability| (*capability).to_string())
@@ -50,6 +50,16 @@ pub(crate) fn create_authenticated_health(state: &AppState) -> ServerHealthRespo
         started_at: state.metadata.started_at.clone(),
         tools: get_gxserver_tool_statuses(),
     }
+}
+
+/// The identity clients compare with the installed build. A daemon still running a replaced image
+/// must not claim the build that replaced it, or the app keeps it (see `running_image_superseded`).
+fn reported_build_identity(state: &AppState) -> String {
+    #[cfg(windows)]
+    if crate::platform::process::running_image_superseded() {
+        return format!("{}:superseded", state.build_identity);
+    }
+    state.build_identity.clone()
 }
 
 /*

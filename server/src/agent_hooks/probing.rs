@@ -143,6 +143,12 @@ pub(crate) fn resolve_cli_command(command: &str, home_dir: &Path) -> Option<Stri
     refresh_resolved_command_path(command, home_dir)
 }
 
+/// The PATH entries the user's login shell sets up, which is what a new session's shell starts with.
+#[cfg_attr(windows, allow(dead_code))]
+pub(crate) fn login_shell_path(home_dir: &Path) -> Vec<String> {
+    super::probe_cache::login_shell_path_entries(home_dir)
+}
+
 pub(crate) fn refresh_cli_environment(home_dir: &Path) {
     super::probe_cache::invalidate_login_shell_path(home_dir);
 }

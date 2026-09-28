@@ -58,20 +58,7 @@ pub(crate) fn notify(args: Vec<String>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Resolved over the live registry PATH, so a CLI installed while gxserver runs is not reported missing.
 pub(crate) fn resolve_command(command: &str) -> Option<String> {
-    let extensions = std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".into());
-    let path = std::env::var_os("PATH")?;
-    for directory in std::env::split_paths(&path).filter(|path| path.is_absolute()) {
-        let candidate = directory.join(command);
-        if candidate.extension().is_some() && candidate.is_file() {
-            return Some(candidate.to_string_lossy().into_owned());
-        }
-        for extension in extensions.split(';').chain(Some(".ps1")) {
-            let candidate = directory.join(format!("{command}{extension}"));
-            if candidate.is_file() {
-                return Some(candidate.to_string_lossy().into_owned());
-            }
-        }
-    }
-    None
+    crate::platform::live_path::find(command, &[]).map(|path| path.to_string_lossy().into_owned())
 }

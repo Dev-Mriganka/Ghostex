@@ -10,13 +10,10 @@ use std::{
 /// CDXC:AgentProviders 2026-09-18 WHY:
 /// Windows reported cswap, xswap, claude and codex as missing while they were installed and on PATH.
 /// Two causes: the lookup joined the bare name, so it never matched `xswap.exe`; and a long-running gxserver keeps the PATH it started with, so an installer that appends to the user PATH (codex-swap's install.ps1) stays invisible until the app restarts.
-/// Resolve PATHEXT candidates and merge the live user/machine PATH, the same refresh `agent_cli::process::resolve` performs.
+/// `platform::live_path` resolves PATHEXT spellings over the live registry PATH; this adds the helpers' own install directories.
 /// SEE-ALSO: server/src/accounts/launch.rs, server/src/agent_hooks/windows.rs.
 pub(crate) fn executable(home: &Path, name: &str) -> Option<PathBuf> {
-    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
-        .map(|p| std::env::split_paths(&p).collect())
-        .unwrap_or_default();
-    dirs.extend([home.join(".local/bin"), home.join(".cargo/bin")]);
+    let mut dirs = vec![home.join(".local/bin"), home.join(".cargo/bin")];
     // CDXC:AgentProviders 2026-09-06 WHY:
     // A GUI or systemd launch may omit Homebrew from PATH even after the account helper is installed.
     #[cfg(target_os = "macos")]
@@ -29,168 +26,14 @@ pub(crate) fn executable(home: &Path, name: &str) -> Option<PathBuf> {
         home.join(".linuxbrew/bin"),
         PathBuf::from("/home/linuxbrew/.linuxbrew/bin"),
     ]);
+    // codex-swap's Windows installer owns this directory and adds it to the user PATH.
     #[cfg(windows)]
-    {
-        dirs.extend(windows::registry_path_directories());
-        // codex-swap's Windows installer owns this directory and adds it to the user PATH.
-        if let Some(local) = std::env::var_os("LOCALAPPDATA").map(PathBuf::from) {
-            dirs.push(local.join("Programs").join("codex-swap"));
-        }
+    if let Some(local) = std::env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+        dirs.push(local.join("Programs").join("codex-swap"));
     }
-    dirs.into_iter()
-        .flat_map(|dir| candidates(&dir, name))
-        .find(|p| {
-            p.metadata().is_ok_and(|m| {
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    m.is_file() && m.permissions().mode() & 0o111 != 0
-                }
-                #[cfg(not(unix))]
-                {
-                    m.is_file()
-                }
-            })
-        })
+    crate::platform::live_path::find(name, &dirs)
 }
 
-#[cfg(not(windows))]
-fn candidates(dir: &Path, name: &str) -> Vec<PathBuf> {
-    vec![dir.join(name)]
-}
-
-/// Windows executability is the extension, not a permission bit, so every PATHEXT spelling is a candidate.
-#[cfg(windows)]
-fn candidates(dir: &Path, name: &str) -> Vec<PathBuf> {
-    let mut paths = vec![dir.join(name)];
-    let extensions = std::env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
-    paths.extend(
-        extensions
-            .split(';')
-            .map(str::trim)
-            .filter(|extension| extension.starts_with('.'))
-            .map(|extension| dir.join(format!("{name}{extension}"))),
-    );
-    paths
-}
-
-#[cfg(windows)]
-mod windows {
-    use std::{ffi::OsString, os::windows::ffi::OsStringExt, path::PathBuf};
-    use windows_sys::Win32::System::Registry::{
-        RegCloseKey, RegGetValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE,
-        KEY_READ, REG_VALUE_TYPE, RRF_RT_REG_EXPAND_SZ, RRF_RT_REG_SZ,
-    };
-
-    const USER_ENVIRONMENT: &str = "Environment";
-    const MACHINE_ENVIRONMENT: &str =
-        r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
-
-    /// The PATH the next process would inherit, which an installer can have changed since gxserver started.
-    pub(super) fn registry_path_directories() -> Vec<PathBuf> {
-        [
-            (HKEY_CURRENT_USER, USER_ENVIRONMENT),
-            (HKEY_LOCAL_MACHINE, MACHINE_ENVIRONMENT),
-        ]
-        .into_iter()
-        .filter_map(|(root, subkey)| read_value(root, subkey, "Path"))
-        .flat_map(|value| {
-            std::env::split_paths(&value)
-                .filter(|path| path.is_absolute())
-                .collect::<Vec<_>>()
-        })
-        .collect()
-    }
-
-    fn wide(text: &str) -> Vec<u16> {
-        text.encode_utf16().chain(Some(0)).collect()
-    }
-
-    fn read_value(root: HKEY, subkey: &str, name: &str) -> Option<OsString> {
-        let mut key: HKEY = std::ptr::null_mut();
-        // SAFETY: the key handle is closed on every path out of this function.
-        if unsafe { RegOpenKeyExW(root, wide(subkey).as_ptr(), 0, KEY_READ, &mut key) } != 0 {
-            return None;
-        }
-        let value = read_string(key, name);
-        // SAFETY: `key` was opened successfully above and is not used afterwards.
-        unsafe { RegCloseKey(key) };
-        value
-    }
-
-    fn read_string(key: HKEY, name: &str) -> Option<OsString> {
-        // REG_EXPAND_SZ is requested unexpanded so %USERPROFILE% style entries are not silently dropped; they are expanded below.
-        let flags = RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ;
-        let name = wide(name);
-        let mut kind: REG_VALUE_TYPE = 0;
-        let mut bytes: u32 = 0;
-        // SAFETY: a null buffer with a zero length asks only for the required size.
-        if unsafe {
-            RegGetValueW(
-                key,
-                std::ptr::null(),
-                name.as_ptr(),
-                flags,
-                &mut kind,
-                std::ptr::null_mut(),
-                &mut bytes,
-            )
-        } != 0
-            || bytes == 0
-        {
-            return None;
-        }
-        let mut buffer = vec![0_u16; bytes as usize / 2 + 1];
-        let mut length = bytes;
-        // SAFETY: `buffer` holds at least `length` bytes and `length` is updated to what was written.
-        if unsafe {
-            RegGetValueW(
-                key,
-                std::ptr::null(),
-                name.as_ptr(),
-                flags,
-                &mut kind,
-                buffer.as_mut_ptr().cast(),
-                &mut length,
-            )
-        } != 0
-        {
-            return None;
-        }
-        let characters = (length as usize / 2).min(buffer.len());
-        let text = &buffer[..characters];
-        let text = &text[..text
-            .iter()
-            .position(|unit| *unit == 0)
-            .unwrap_or(characters)];
-        (!text.is_empty()).then(|| expand(&OsString::from_wide(text)))
-    }
-
-    fn expand(value: &OsString) -> OsString {
-        let Some(text) = value.to_str() else {
-            return value.clone();
-        };
-        let mut expanded = String::with_capacity(text.len());
-        let mut rest = text;
-        while let Some(start) = rest.find('%') {
-            let Some(end) = rest[start + 1..].find('%').map(|index| start + 1 + index) else {
-                break;
-            };
-            let name = &rest[start + 1..end];
-            // A literal `%` pair with no matching variable stays as written rather than becoming an empty path entry.
-            match std::env::var(name) {
-                Ok(replacement) if !name.is_empty() => {
-                    expanded.push_str(&rest[..start]);
-                    expanded.push_str(&replacement);
-                }
-                _ => expanded.push_str(&rest[..=end]),
-            }
-            rest = &rest[end + 1..];
-        }
-        expanded.push_str(rest);
-        OsString::from(expanded)
-    }
-}
 pub(crate) fn json_command(home: &Path, name: &str, args: &[&str]) -> Result<Value, String> {
     let binary =
         executable(home, name).ok_or_else(|| format!("Install {name} on this computer first."))?;

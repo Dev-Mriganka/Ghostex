@@ -6,7 +6,24 @@
     "npmPackage": "@openai/codex",
     "brewFormula": "codex",
     "brewCask": true,
-    "miseTool": "codex"
+    "miseTool": "codex",
+    "native": {
+      "install": "curl -fsSL https://chatgpt.com/codex/install.sh | sh",
+      "update": "codex update",
+      "windowsInstall": "irm https://chatgpt.com/codex/install.ps1 | iex",
+      "env": {
+        "CODEX_NON_INTERACTIVE": "1"
+      },
+      "pathMarkers": ["/packages/standalone/", "/programs/openai/codex/"]
+    },
+    "installDirs": {
+      "windows": ["%LOCALAPPDATA%/Programs/OpenAI/Codex/bin"],
+      "unix": ["~/.local/bin"]
+    },
+    "latestVersion": {
+      "url": "https://releases.openai.com/codex/channels/latest",
+      "jsonField": "tag_name"
+    }
   },
   {
     "agentId": "claude",
@@ -21,7 +38,14 @@
       "windowsInstall": "irm https://claude.ai/install.ps1 | iex"
     },
     "wingetId": "Anthropic.ClaudeCode",
-    "miseTool": "claude"
+    "miseTool": "claude",
+    "installDirs": {
+      "windows": ["~/.local/bin"],
+      "unix": ["~/.local/bin"]
+    },
+    "latestVersion": {
+      "url": "https://downloads.claude.ai/claude-code-releases/latest"
+    }
   },
   {
     "agentId": "cursor",
@@ -30,9 +54,14 @@
     "native": {
       "install": "curl -fsSL https://cursor.com/install | bash",
       "update": "cursor-agent update",
-      "windowsInstall": "irm 'https://cursor.com/install?win32=true' | iex"
+      "windowsInstall": "irm 'https://cursor.com/install?win32=true' | iex",
+      "pathMarkers": ["/cursor-agent/"]
     },
-    "miseTool": "cursor-agent"
+    "miseTool": "cursor-agent",
+    "installDirs": {
+      "windows": ["%LOCALAPPDATA%/cursor-agent"],
+      "unix": ["~/.local/bin"]
+    }
   },
   {
     "agentId": "pi",
@@ -89,9 +118,18 @@
     "versionArgs": ["version"],
     "native": {
       "install": "curl -fsSL https://x.ai/cli/install.sh | bash",
-      "update": "grok update"
+      "update": "grok update",
+      "windowsInstall": "irm https://x.ai/cli/install.ps1 | iex"
     },
-    "miseTool": "grok"
+    "miseTool": "grok",
+    "npmPackage": "@xai-official/grok",
+    "installDirs": {
+      "windows": ["~/.grok/bin"],
+      "unix": ["~/.grok/bin", "~/.local/bin"]
+    },
+    "latestVersion": {
+      "url": "https://x.ai/cli/stable"
+    }
   },
   {
     "agentId": "antigravity",

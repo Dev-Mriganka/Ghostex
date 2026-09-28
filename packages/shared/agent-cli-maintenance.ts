@@ -21,7 +21,19 @@ export type AgentCliCatalogEntry = {
   wingetId?: string;
   miseTool?: string;
   versionArgs?: string[];
-  native?: { install: string; update?: string; windowsInstall?: string };
+  native?: {
+    install: string;
+    update?: string;
+    windowsInstall?: string;
+    /** Variables the official installer and updater need (`CODEX_NON_INTERACTIVE`). */
+    env?: Record<string, string>;
+    /** Lowercase `/`-separated path fragments only the official installer produces. */
+    pathMarkers?: string[];
+  };
+  /** Folders the official installer uses (`~` and `%VAR%` expanded by gxserver), searched even when not on PATH. */
+  installDirs?: { windows?: string[]; unix?: string[] };
+  /** The vendor's release channel for "update available": plain text, or one field of a JSON reply. */
+  latestVersion?: { url: string; jsonField?: string };
 };
 
 /**
@@ -42,7 +54,8 @@ export function agentCliCatalogInstallCommand(entry: AgentCliCatalogEntry): stri
 }
 
 export type AgentCliRequest = {
-  action: 'read' | 'start';
+  /** `addToPath` puts an installed CLI's folder on the user's PATH when its installer did not. */
+  action: 'read' | 'start' | 'addToPath';
   agentId: string;
   operation?: 'install' | 'update';
   methodId?: string;
@@ -59,7 +72,8 @@ export type AgentCliJob = {
   id: string;
   operation: 'install' | 'update';
   command: string;
-  status: 'running' | 'succeeded' | 'failed';
+  /** `queued` waits for another agent's install or update: gxserver runs one at a time. */
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
   output: string;
   error?: string;
 };
@@ -71,12 +85,25 @@ export type AgentCliState = {
   version?: string;
   versionError?: string;
   detectedMethodId?: string;
+  /** The installer's folder holding the CLI when new terminals will not find it (not on PATH). */
+  pathDirectory?: string;
+  /** Newest release on the vendor's channel (or npm), when the agent publishes one. */
+  latestVersion?: string;
+  /** `latestVersion` is newer than the installed `version`. */
+  updateAvailable?: boolean;
   methods: AgentCliMethod[];
   job?: AgentCliJob;
 };
+
+/** A job that has not finished yet: waiting its turn or running. */
+export function isAgentCliJobActive(job: AgentCliJob | undefined): boolean {
+  return job?.status === 'queued' || job?.status === 'running';
+}
 
 export type AgentCliConnection = {
   id: string;
   label: string;
   request: (request: AgentCliRequest) => Promise<AgentCliState>;
+  /** Every catalog agent's state in one round trip (`action: 'list'`). */
+  list?: () => Promise<AgentCliState[]>;
 };

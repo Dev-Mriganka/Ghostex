@@ -399,36 +399,19 @@ impl PickerDriver<'_> {
         })
         .await?;
         self.write(CODEX_SUBMIT).await?;
-        let mut list = self.claude_model_list("open Claude model list").await?;
-
-        // CDXC:SessionChat 2026-09-27 WHY:
-        // The list paints only a window of its rows (ten on a tall pane, one on a short chat pane),
-        // and Claude reads labels loosely: "Opus 4.8" further down also names `opus`. So the row
-        // meant is the FIRST match from the top. Starting at row 1 and jumping a whole window at a
-        // time keeps that rule while reading each window once.
-        if list.first() > 1 {
-            list = self.jump_claude_highlight(list, 1).await?;
-        }
-        let mut found = false;
-        for _ in 0..CLAUDE_WINDOW_JUMP_LIMIT {
-            if (self.cancelled)() {
-                return Err(cancelled_error());
+        let list = self.claude_model_list("open Claude model list").await?;
+        let (mut list, mut found) = self.find_claude_model_row(list, &plan.model).await?;
+        // The row the confirmation will name; the base row when the list has no 1M row.
+        let mut applied_model = plan.model.clone();
+        /*
+        CDXC:AgentProviders 2026-09-28 WHY:
+        Claude Code 2.1.283 lists no "(1M context)" row on accounts where the plain model already runs with a 1M window ("Opus 5.5" reports context_window_size 1000000), so a session-only pick of `opus[1m]` was refused and its effort never applied, leaving the chat on "Opus 5.5 · Medium". Pick the base row instead: on those builds it is the 1M model, and the statusline reading (`claude_statusline_model_choice`) reports the window Claude actually gives.
+        */
+        if !found {
+            if let Some(base) = plan.model.strip_suffix("[1m]") {
+                (list, found) = self.find_claude_model_row(list, base).await?;
+                applied_model = base.to_string();
             }
-            if let Some(row) = list.row_for(&plan.model) {
-                list = self.jump_claude_highlight(list, row).await?;
-                found = true;
-                break;
-            }
-            let (last, total) = (list.last(), list.total());
-            if last >= total {
-                break;
-            }
-            // Moving past the window's bottom scrolls it until the highlight is its last row, so
-            // this paints the next window whole.
-            let window = list.rows.len() as u32;
-            list = self
-                .jump_claude_highlight(list, (last + window).min(total))
-                .await?;
         }
         if !found {
             if (self.cancelled)() {
@@ -458,9 +441,44 @@ impl PickerDriver<'_> {
         let effort = effort_adjusted.then_some(plan.effort.as_str());
         self.write(CLAUDE_SESSION_ONLY_KEY).await?;
         self.wait_for("applied Claude session model", |screen| {
-            claude_session_only_applied(screen, &plan.model, effort).then_some(())
+            claude_session_only_applied(screen, &applied_model, effort).then_some(())
         })
         .await?;
         Ok(())
+    }
+
+    /// CDXC:SessionChat 2026-09-27 WHY:
+    /// The list paints only a window of its rows (ten on a tall pane, one on a short chat pane),
+    /// and Claude reads labels loosely: "Opus 4.8" further down also names `opus`. So the row
+    /// meant is the FIRST match from the top. Starting at row 1 and jumping a whole window at a
+    /// time keeps that rule while reading each window once.
+    async fn find_claude_model_row(
+        &self,
+        mut list: ClaudeModelList,
+        model: &str,
+    ) -> Result<(ClaudeModelList, bool), DomainStateError> {
+        if list.first() > 1 {
+            list = self.jump_claude_highlight(list, 1).await?;
+        }
+        for _ in 0..CLAUDE_WINDOW_JUMP_LIMIT {
+            if (self.cancelled)() {
+                return Err(cancelled_error());
+            }
+            if let Some(row) = list.row_for(model) {
+                list = self.jump_claude_highlight(list, row).await?;
+                return Ok((list, true));
+            }
+            let (last, total) = (list.last(), list.total());
+            if last >= total {
+                break;
+            }
+            // Moving past the window's bottom scrolls it until the highlight is its last row, so
+            // this paints the next window whole.
+            let window = list.rows.len() as u32;
+            list = self
+                .jump_claude_highlight(list, (last + window).min(total))
+                .await?;
+        }
+        Ok((list, false))
     }
 }

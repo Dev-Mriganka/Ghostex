@@ -747,6 +747,15 @@ export interface GxserverRpcErrorResponse {
   requestId?: string;
 }
 
+/**
+ * The reason a failed gxserver reply gives. `error` is only the code; the text a person can act on ("Install npm
+ * on this computer first.") is the top-level `message`.
+ */
+export function gxserverRpcErrorMessage(body: unknown): string | undefined {
+  const message = (body as Partial<GxserverRpcErrorResponse> | undefined)?.message;
+  return typeof message === "string" && message.trim() ? message : undefined;
+}
+
 export interface GxserverAgentSettings {
   agentAcceptAllEnabled: boolean;
   defaultPromptAgentId: string;

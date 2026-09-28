@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::{path::Path, sync::LazyLock};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +21,9 @@ pub(crate) struct Definition {
     pub winget_id: Option<String>,
     pub native: Option<Native>,
     pub version_args: Option<Vec<String>>,
+    #[serde(default)]
+    pub install_dirs: InstallDirs,
+    pub latest_version: Option<LatestVersion>,
 }
 
 #[derive(Deserialize)]
@@ -25,6 +32,68 @@ pub(crate) struct Native {
     install: String,
     update: Option<String>,
     windows_install: Option<String>,
+    /// Variables the official installer and updater need, such as `CODEX_NON_INTERACTIVE`.
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
+    /// Lowercase, `/`-separated path fragments that only this agent's official installer produces.
+    #[serde(default)]
+    path_markers: Vec<String>,
+}
+
+/// Folders the official installer puts the binary in, `~` and `%VAR%` expanded. An installer that does not
+/// add its folder to PATH (Claude's) still leaves a CLI Ghostex can find, and put on PATH.
+#[derive(Default, Deserialize)]
+pub(crate) struct InstallDirs {
+    #[serde(default)]
+    windows: Vec<String>,
+    #[serde(default)]
+    unix: Vec<String>,
+}
+
+/// Where the newest published version is read: a plain-text version, or one field of a JSON reply.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LatestVersion {
+    pub url: String,
+    pub json_field: Option<String>,
+}
+
+impl Definition {
+    pub(crate) fn install_dirs(&self, home: &Path) -> Vec<PathBuf> {
+        let dirs = if cfg!(windows) {
+            &self.install_dirs.windows
+        } else {
+            &self.install_dirs.unix
+        };
+        dirs.iter()
+            .filter_map(|dir| expand_dir(dir, home))
+            .collect()
+    }
+
+    pub(crate) fn native_env(&self) -> BTreeMap<String, String> {
+        self.native
+            .as_ref()
+            .map(|native| native.env.clone())
+            .unwrap_or_default()
+    }
+}
+
+fn expand_dir(template: &str, home: &Path) -> Option<PathBuf> {
+    let mut text = template.to_string();
+    if let Some(rest) = text.strip_prefix("~/") {
+        text = format!("{}/{rest}", home.to_string_lossy());
+    }
+    while let Some(start) = text.find('%') {
+        let end = start + 1 + text[start + 1..].find('%')?;
+        let value = std::env::var(&text[start + 1..end]).ok()?;
+        text.replace_range(start..=end, &value);
+    }
+    let path = if cfg!(windows) {
+        PathBuf::from(text.replace('/', "\\"))
+    } else {
+        PathBuf::from(text)
+    };
+    path.is_absolute().then_some(path)
 }
 
 #[derive(Clone, Serialize)]
@@ -157,9 +226,10 @@ pub(crate) fn methods(
     methods
 }
 
+/// Prerequisites (npm, curl, brew, winget, mise) come from the shared 60 second probe cache: a list of every
+/// agent asks for the same few tools many times over.
 fn missing_command(command: &str, home: &Path) -> Option<String> {
-    super::process::resolve(command, home)
-        .is_none()
+    (!crate::agent_hooks::probing::command_exists(command, home))
         .then(|| format!("Install {command} on this computer first."))
 }
 
@@ -214,6 +284,15 @@ pub(crate) fn detected_method(path: &str, definition: &Definition) -> Option<Str
             || (cfg!(windows) && original.contains("/appdata/roaming/npm/"))
         {
             return Some("npm".into());
+        }
+    }
+    if let Some(native) = &definition.native {
+        if native
+            .path_markers
+            .iter()
+            .any(|marker| normalized.contains(marker.as_str()) || original.contains(marker.as_str()))
+        {
+            return Some("native".into());
         }
     }
     if definition.native.is_some()

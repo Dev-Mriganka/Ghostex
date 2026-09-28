@@ -94,9 +94,7 @@ pub(super) fn claude_live_selection(
         .map(|choice| choice.value.clone());
     let payload_model = payload
         .as_ref()
-        .and_then(|payload| payload.get("model").and_then(|model| model.get("id")))
-        .and_then(Value::as_str)
-        .and_then(crate::session_chat_options::claude_transcript_model_choice)
+        .and_then(crate::session_chat_options::claude_statusline_model_choice)
         .map(|choice| choice.value);
     let model = match (terminal_model, payload_model) {
         (Some(terminal), Some(payload))

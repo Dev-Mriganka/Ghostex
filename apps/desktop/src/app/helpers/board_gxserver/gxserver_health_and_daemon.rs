@@ -25,9 +25,25 @@ pub(crate) fn gpui_gxserver_rpc_result(
     */
     let (status_code, body) = gxserver_post_typed_operation(endpoint, params, timeout)?;
     if !(200..300).contains(&status_code) {
-        return Err(format!("gxserver request failed with HTTP {status_code}."));
+        return Err(gpui_gxserver_rpc_error_message(status_code, &body));
     }
     parse_gpui_gxserver_rpc_result(&body)
+}
+
+/// CDXC:ServerApi 2026-09-28 WHY:
+/// Every refusal here surfaced as "gxserver request failed with HTTP 503." in toasts such as "Session attach unavailable", hiding the reason gxserver sent (a wmx timeout, a missing project folder, a session that could not be woken). gxserver's `{ok:false, error:<code>, message}` envelope carries that reason as plain user-facing text, so show it and keep the status line only as the fallback.
+fn gpui_gxserver_rpc_error_message(status_code: u16, body: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("message")
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|message| !message.is_empty())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| format!("gxserver request failed with HTTP {status_code}."))
 }
 
 pub(crate) fn gpui_update_portless_gxserver_state(
