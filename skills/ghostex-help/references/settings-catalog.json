@@ -1237,9 +1237,37 @@
       "agentWritable": false
     },
     {
-      "key": "workspaceBackgroundColor",
+      "key": "terminalBackgroundMode",
       "title": "Terminal background",
-      "subtitle": "Only changes the terminal panes. Leave on Follow theme to match your theme.",
+      "subtitle": "Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "terminal",
+      "groupTitle": "Terminal",
+      "section": "terminal",
+      "sectionTitle": "Terminal",
+      "type": "enum",
+      "default": "pure",
+      "options": [
+        {
+          "label": "Black / white",
+          "value": "pure"
+        },
+        {
+          "label": "Follow theme",
+          "value": "theme"
+        },
+        {
+          "label": "Custom color",
+          "value": "custom"
+        }
+      ],
+      "agentWritable": true
+    },
+    {
+      "key": "workspaceBackgroundColor",
+      "title": "Terminal background color",
+      "subtitle": "Custom terminal background, painted behind terminal text in dark mode.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "terminal",
@@ -1248,7 +1276,6 @@
       "sectionTitle": "Terminal",
       "type": "string",
       "default": "",
-      "advanced": true,
       "agentWritable": true
     },
     {
@@ -7968,7 +7995,7 @@
     {
       "key": "accounts",
       "title": "Accounts, usage stats and automatic continuation",
-      "subtitle": "Current CLI login, Claude cswap, Codex xswap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.",
+      "subtitle": "Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.",
       "tab": "accounts",
       "tabTitle": "Accounts",
       "section": "accounts",

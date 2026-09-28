@@ -91,7 +91,8 @@ How to use this file:
 #### Terminal
 
 - **Ghostty settings actions** `ghosttySettingsActions` (Settings UI row without a settings key; use `ghostex settings open`) [advanced]: Recommended Ghostty settings, Ghostty config file, Ghostty docs, and Ghostty defaults.
-- **Terminal background** `workspaceBackgroundColor` (text, default (empty)) [advanced]: Only changes the terminal panes. Leave on Follow theme to match your theme.
+- **Terminal background** `terminalBackgroundMode` (one of pure | theme | custom; default pure): Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode. Option labels: pure = Black / white, theme = Follow theme, custom = Custom color.
+- **Terminal background color** `workspaceBackgroundColor` (text, default (empty)): Custom terminal background, painted behind terminal text in dark mode.
 - **Background Image** `terminalBackgroundImage` (text, default (empty)) [advanced]: Absolute path to an image drawn behind terminal panes.
 - **Background Image Opacity** `terminalBackgroundImageOpacity` (number default 1) [advanced]: Blend the background image toward the terminal background color.
 - **Background Image Fit** `terminalBackgroundImageFit` (one of cover | contain | stretch | natural; default cover) [advanced]: How the background image is scaled inside each pane. Option labels: cover = Cover, contain = Contain, stretch = Stretch, natural = Natural size.
@@ -266,7 +267,7 @@ How to use this file:
 
 ### Accounts
 
-- **Accounts, usage stats and automatic continuation** `accounts` (Settings UI row without a settings key; use `ghostex settings open`): Current CLI login, Claude cswap, Codex xswap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.
+- **Accounts, usage stats and automatic continuation** `accounts` (Settings UI row without a settings key; use `ghostex settings open`): Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.
 - **Hide account emails** `hideAccountEmails` (boolean, default false) [not agent-writable]: Hide account email addresses in the Accounts page and account switchers.
 ## Agents (tab `agents`)
 

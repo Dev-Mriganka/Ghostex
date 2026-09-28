@@ -207,9 +207,7 @@ view from the strip.
   agent, the feedback is copied to the clipboard instead and a toast says so.
   Sending leaves Files on screen. Sent notes stay visible with a Sent mark;
   Send offers the new notes first and, once everything has been sent, sends
-  all of them again, and the Review menu offers Resend all. With notes in
-  several files, the Review menu sends the new notes across all files as one
-  message. Notes stay until you clear them with Clear. In a chat, the Reply by Annotating button below an
+  all of them again. Send covers the open file's notes. Notes stay until you clear them with Clear. In a chat, the Reply by Annotating button below an
   agent reply (between Copy message and Save to md) opens that reply in Files so
   it can be annotated the same way, with the feedback going back to that
   session. Folders appear as they load, and search fills in while
@@ -723,8 +721,10 @@ returns that prompt for editing. If the chat cannot reconnect after the rewind,
 choose Retry synchronization in the dialog to reconnect without rewinding again
 (`ghostex rewind-session-chat <session> --message-id <message-id>` retries the same pending target).
 Sending in a new chat shows your message immediately in the conversation while
-Ghostex waits for the agent to be ready. It appears once, with a waiting status;
-you can retry or remove it if delivery fails. Prompts you explicitly
+Ghostex waits for the agent to be ready. It appears once, with a spinner beside the
+bubble's bottom-left corner while it waits; you can retry or remove it if delivery fails.
+A message sent while the agent is still working shows a play button there instead:
+click it to interrupt the agent (one Escape) so it takes that message right away. Prompts you explicitly
 queue stay in the list above the input. This also applies when reopening the chat
 or continuing on another device.
 Claude children stay in the Subagents card while the terminal lists them, including
@@ -818,7 +818,8 @@ the location in the machine’s file manager. It requires a local desktop path.
 Videos, audio files, and PDFs added to a chat are labelled Video #1, Audio #1, or PDF #1,
 and clicking one (or choosing Open Video from its menu) opens it in the system's default
 app on macOS, Windows, and Linux instead of the code editor.
-Right-click an opened chat image preview to close it. Click the picture itself to step
+Right-click the picture in an opened chat image preview for Copy Image, Copy Path, Save Image,
+Reset Zoom (while zoomed in) and Dismiss; right-click around it to close the preview. Click the picture itself to step
 through three zoom levels, the last one showing it pixel for pixel, and once more to return
 it to the fitted size; the cursor shows whether the next click still zooms. Each step keeps the
 spot you clicked under the pointer, and dragging a zoomed picture moves it around.
@@ -969,6 +970,14 @@ reset the one whose limit resets first, Most used first keeps draining the
 account already in use, and Same as last session reuses the account of the last
 session. Pick a specific account instead to always start
 with it. When the rule finds no account, new sessions use the current CLI login.
+Each provider on Settings > Accounts also lists its account helper, Claude Swap
+(cswap) or Codex Swap (xswap), with three icon buttons: Update (shown when a
+newer release is out; otherwise a check mark that checks again when clicked),
+Reinstall, and Uninstall, which asks first and keeps saved logins and shared
+conversations. Hover a button to see the installed and latest versions. Ghostex
+runs the update with the tool that installed the helper (uv or pipx for cswap;
+Homebrew, Cargo or the Windows installer for xswap); for a helper installed some
+other way the buttons are off, so update it the way you installed it.
 Before sending a session's first message, use the model menu's Switch Agent CLI
 to change between Claude and Codex. The new agent uses its Account for new
 sessions rule, just like the sidebar agent button, while the terminal and your
@@ -1087,6 +1096,15 @@ files. Save your edits, then close the prompt file to return to the agent. To
 cancel, close it without saving and choose Don't Save if asked. Dev Servers detects
 localhost URLs from output and lists them in the ⋯ menu's Dev servers panel.
 
+Codex 0.157 and later draw the conversation full screen by default, so its
+terminal keeps no scrollback of its own. The mouse wheel, PageUp and PageDown
+scroll Codex's own view, dragging selects text inside Codex (Codex copies it when
+you let go), Shift+drag makes a normal terminal selection of what is on screen,
+and Command-click still opens links in Ghostex. Stop in the chat works even while
+you are scrolled up or have text selected. To go back to the terminal's own
+scrollback, type `/tui` in Codex, choose Scrollback, then restart the session
+(Sleep and Wake it, or Full Reload).
+
 Terminals follow the app theme by default. The Theme page in Settings holds
 Appearance, and its Advanced part holds Chat theme and Terminal theme.
 Terminal theme can override the app with Light, Dark, or System. The palette
@@ -1097,12 +1115,16 @@ are GitHub Light and GitHub Dark. All open terminals refresh automatically when 
 app, system, or terminal theme changes, including idle terminals and terminals in
 inactive projects. The appearance override and light palette apply to Ghostex only.
 
+Terminal background (Settings, Terminal) is Black / white by default: pure black
+behind dark terminals and pure white behind light ones. Choose Follow theme to use
+the theme's background color instead, or Custom color to pick your own for dark mode.
+
 Terminal links (`ghostex://terminal`) without a folder open in the active local
 project. A folder supplied in the link takes precedence.
 
 Related settings: `terminalFontFamily`, `terminalFontSize`,
 `terminalGhosttyTheme`, `terminalColorScheme`, `terminalGhosttyLightTheme`,
-`terminalCursorStyle`, `terminalPane*PaddingPx`,
+`terminalBackgroundMode`, `workspaceBackgroundColor`, `terminalCursorStyle`, `terminalPane*PaddingPx`,
 `terminalScrollbackLimitMb`, `terminalCopyOnSelect`, `promptEditorBackend`,
 `terminalDevServerDetectionEnabled`.
 
