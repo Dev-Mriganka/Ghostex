@@ -180,6 +180,8 @@ pub(crate) struct NativeChatView {
     pub(super) subagent_focus: gpui::FocusHandle,
     /// Whether the open viewer has already taken focus, so a redraw does not steal it back every frame.
     pub(super) subagent_focused: bool,
+    /// The whole chat view's own focus (`render.rs`), taken by a click on the transcript's empty space.
+    pub(super) surface_focus: gpui::FocusHandle,
     pub(crate) pane_focused: bool,
     /// Whether this chat's composer field itself holds the keyboard, which is what the `@`, `$` and
     /// `/` picker window keys off (`suggestions/window.rs`).
@@ -382,6 +384,7 @@ impl NativeChatView {
             subagent_list,
             subagent_focus: cx.focus_handle(),
             subagent_focused: false,
+            surface_focus: cx.focus_handle(),
             pane_focused: false,
             composer_focused: false,
             short_pane_composer_open: false,
