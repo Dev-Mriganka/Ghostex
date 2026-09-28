@@ -22,9 +22,11 @@ the same discipline the Actions snapshot and the git menu state follow after a
 per-frame `readSidebarHud` call once cost this titlebar its frame rate.
 */
 
+mod controller;
 #[cfg(target_os = "macos")]
 mod native_gestures;
-mod controller;
+#[cfg(target_os = "windows")]
+pub(crate) mod windows_mouse;
 
 pub(crate) use controller::NavigationHistoryHost;
 
