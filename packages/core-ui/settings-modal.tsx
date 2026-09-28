@@ -1356,6 +1356,15 @@ export function SettingsModal({
                                 onChange={(checked) => updateDraft('hideLastActiveTimeOnSessionCards', checked)}
                               />
                             ) : null}
+                            {mainSettingVisible(settingsSearch.sidebar, 'highlightPendingQuestions') ? (
+                              <ToggleField
+                                checked={draft.highlightPendingQuestions}
+                                description='Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.'
+                                label='Highlight unanswered questions'
+                                {...getSettingModificationProps('highlightPendingQuestions')}
+                                onChange={(checked) => updateDraft('highlightPendingQuestions', checked)}
+                              />
+                            ) : null}
                             {mainSettingVisible(settingsSearch.sidebar, 'hideProjectHeaderDiffStats') ? (
                               <ToggleField
                                 checked={draft.hideProjectHeaderDiffStats}

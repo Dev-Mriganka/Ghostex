@@ -25,6 +25,7 @@ How to use this file:
 - **Hide agent icon until hover** `hideSessionAgentIconUntilHover` (boolean, default false) [advanced]: Hide session agent icons until a session row is hovered.
 - **Hide browser favicon until hover** `hideBrowserFaviconUntilHover` (boolean, default false) [advanced]: Hide browser page favicons until a session row is hovered.
 - **Hide last active time** `hideLastActiveTimeOnSessionCards` (boolean, default true) [advanced]: Hide Last Active timestamps from session-card title rows.
+- **Highlight unanswered questions** `highlightPendingQuestions` (boolean, default false) [advanced]: Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.
 - **Hide project git stats** `hideProjectHeaderDiffStats` (boolean, default false) [advanced]: Hide +added/-removed line counts in sidebar project rows.
 - **Show changed-file count** `showProjectEditorDiffFileCount` (boolean, default false) [advanced]: Show changed-file counts in sidebar project row git stats.
 - **Show Menu Bar Session Indicators** `hideMenuBarSessionStatusIndicators` (boolean, default false): Show the menu bar session status badges.

@@ -516,6 +516,7 @@ export type ghostexSettings = {
    */
   showSessionCardHoverButtonsInContextMenu: boolean;
   hideLastActiveTimeOnSessionCards: boolean;
+  highlightPendingQuestions: boolean;
   hideAccountEmails: boolean;
   /**
    * CDXC:Sessions 2026-06-13-17:50:

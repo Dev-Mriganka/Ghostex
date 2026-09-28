@@ -103,6 +103,7 @@ impl GhostexGpuiApp {
             .and_then(Value::as_u64)
             .unwrap_or(0)
             > 0;
+        let question_fill = super::status::pending_question_fill(&hud["settings"], question);
         let timer = session.details.get("timerLabel").and_then(Value::as_str);
         let show_time = hud
             .get("settings")
@@ -151,6 +152,7 @@ impl GhostexGpuiApp {
                 .when_some(drop_position, |row, position| row.child(super::drag::drop_line(position, scale)))
                 .when(!focused, |row| row.hover(|row| row.bg(appearance.session_hover)))
                 .when(focused, |row| row.child(super::decorations::session_outline(appearance)))
+                .when_some(question_fill, |row, fill| row.bg(fill).hover(move |row| row.bg(fill)))
                 .child(self.render_native_session_identity(session, icon, appearance, cx))
                 .children(self.render_native_session_decorations(session, appearance, cx))
                 .when_some(self.native_sidebar.reveal_flash.as_ref().filter(|(id, _)| id == &session.session_id).map(|(_, start)| *start), |row, start| row.child(super::scroll::reveal_flash(start, scale)))

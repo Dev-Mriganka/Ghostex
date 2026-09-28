@@ -433,6 +433,11 @@ export function getSettingsSearchSectionDefinitions() {
           title: 'Hide last active time',
         },
         {
+          key: 'highlightPendingQuestions',
+          subtitle: 'Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.',
+          title: 'Highlight unanswered questions',
+        },
+        {
           key: 'hideProjectHeaderDiffStats',
           subtitle: 'Hide +added/-removed line counts in sidebar project rows.',
           title: 'Hide project git stats',

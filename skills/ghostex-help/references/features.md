@@ -251,6 +251,10 @@ goes to that machine's Recent Projects, which Quick Access lists); when it held
 the active session, Ghostex stays in the current Space and switches to an awake
 session of the next project in the list.
 Session rows show the agent icon, title, status, tags, and last-active time.
+In Settings > Sidebar, enable Show Advanced to find **Highlight unanswered
+questions**. It adds a soft pink background to sessions with a detected unanswered
+question, even while the agent keeps working. It is off by default and currently
+supports Codex asynchronous questions (`highlightPendingQuestions`).
 Ctrl+Tab and Ctrl+Shift+Tab (also Cmd+Shift+] and Cmd+Shift+[ on Mac) move to
 the next or previous session shown in the sidebar, the same keys Chrome uses
 to switch tabs. Sessions inside collapsed projects or sections, or hidden by a

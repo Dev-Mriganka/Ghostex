@@ -504,6 +504,11 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'hideLastActiveTimeOnSessionCards',
       DEFAULT_ghostex_SETTINGS.hideLastActiveTimeOnSessionCards
     ),
+    highlightPendingQuestions: readBoolean(
+      source,
+      'highlightPendingQuestions',
+      DEFAULT_ghostex_SETTINGS.highlightPendingQuestions
+    ),
     sidebarSessionTagListItems: normalizeSidebarSessionTagListItems(source.sidebarSessionTagListItems),
     /**
      * CDXC:SessionSleep 2026-05-28-08:06:
