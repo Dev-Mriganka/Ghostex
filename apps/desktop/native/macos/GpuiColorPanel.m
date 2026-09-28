@@ -48,7 +48,9 @@ static uint32_t GhostexColorPanelRGB(NSColor *color) {
 - (void)finish {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   NSColorPanel *panel = [NSColorPanel sharedColorPanel];
-  if (panel.target == self) {
+  // NSColorPanel has `setTarget:` but no readable `target`; the panel is ours while this object is
+  // the current chooser.
+  if (gGhostexColorPanelTarget == self) {
     [panel setTarget:nil];
     [panel setAction:NULL];
   }
