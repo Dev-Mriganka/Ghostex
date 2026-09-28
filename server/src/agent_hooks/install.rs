@@ -347,6 +347,11 @@ pub(crate) struct HookInspection {
     pub(crate) ghostex_hook_present: bool,
 }
 
+/// Plugin files (JSON string literals) and Kimi's TOML basic strings store the hook path with each backslash doubled, so a Windows path only matches in that escaped form.
+fn text_contains_hook_path(text: &str, path: &str) -> bool {
+    text.contains(path) || text.contains(&path.replace('\\', "\\\\"))
+}
+
 /// CDXC:AgentHooks 2026-09-27 WHY:
 /// Windows paths and commands contain backslashes and quotes. Compare decoded JSON commands and serialized JavaScript path literals so a fresh install is not reported as stale.
 pub(crate) fn inspect_agent_hook_installation(
@@ -398,7 +403,10 @@ pub(crate) fn inspect_agent_hook_installation(
                     let current = loader_visible
                         && !marker.is_empty()
                         && text.contains(&current_plugin_marker(marker))
-                        && text.contains(&path_string(&hook_paths.notify_hook_path));
+                        && text_contains_hook_path(
+                            &text,
+                            &path_string(&hook_paths.notify_hook_path),
+                        );
                     HookInspection {
                         current_hook_installed: current,
                         ghostex_hook_present: current
@@ -426,9 +434,9 @@ pub(crate) fn inspect_agent_hook_installation(
                 .map(|path| read_file_text(path))
                 .collect::<Vec<_>>();
             let current = !texts.is_empty()
-                && texts
-                    .iter()
-                    .all(|text| text.contains(&marker) && text.contains(&notify_hook_path));
+                && texts.iter().all(|text| {
+                    text.contains(&marker) && text_contains_hook_path(text, &notify_hook_path)
+                });
             HookInspection {
                 current_hook_installed: current,
                 ghostex_hook_present: texts.iter().any(|text| {

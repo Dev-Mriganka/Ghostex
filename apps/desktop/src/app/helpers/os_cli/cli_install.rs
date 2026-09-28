@@ -480,7 +480,10 @@ pub(crate) fn gpui_is_ghostex_app_owned_command_realpath(command: &str, realpath
     let managed_gxserver_dir = crate::shared_settings::ghostex_storage_paths().gxserver_data_dir();
     let is_managed_ghostex_cli = realpath
         .file_name()
-        .map(|file_name| file_name.eq_ignore_ascii_case("ghostex"))
+        .map(|file_name| {
+            file_name.eq_ignore_ascii_case("ghostex")
+                || (cfg!(windows) && file_name.eq_ignore_ascii_case("ghostex.exe"))
+        })
         .unwrap_or(false)
         && gpui_path_is_relative_to(realpath, &managed_gxserver_dir);
     is_managed_ghostex_cli
