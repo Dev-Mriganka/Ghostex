@@ -1,4 +1,5 @@
 use gpui::ClipboardItem;
+use gpui::Focusable as _;
 use gpui::InteractiveElement as _;
 use gpui::IntoElement;
 use gpui::KeyDownEvent;
@@ -376,7 +377,12 @@ impl Render for GhostexGpuiApp {
                     chat.update(cx, |chat, cx| chat.composer_key_down(event, window, cx));
                     return;
                 }
-                if this.focused_gpui_engine_terminal_view().is_none() {
+                let Some(terminal) = this.focused_gpui_engine_terminal_view() else {
+                    return;
+                };
+                // A focused terminal deliberately lets composition keys reach the platform
+                // text input handler. Forwarding them again here would commit the accent early.
+                if terminal.read(cx).focus_handle(cx).is_focused(window) {
                     return;
                 }
                 let Some(text) = committed_terminal_text_from_key_down_event(event) else {
