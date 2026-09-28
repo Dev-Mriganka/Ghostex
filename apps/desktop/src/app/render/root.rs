@@ -832,7 +832,6 @@ impl Render for GhostexGpuiApp {
                     this.go_to_ghostex_from_gpui_pet_overlay(window, cx);
                 }),
             )
-            .on_action(cx.listener(|_this, _: &GpuiKeepAwakeMenuLabel, _window, _cx| {}))
             .on_action(
                 cx.listener(|this, _: &OpenGpuiCommandPaletteModal, window, cx| {
                     this.open_gpui_app_modal_from_titlebar(

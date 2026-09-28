@@ -81,38 +81,6 @@ impl GhostexGpuiApp {
         self.gx_store_git_titlebar_action(selector, cx)
     }
 
-    pub(crate) fn show_titlebar_settings_menu(
-        &self,
-        position: gpui::Point<Pixels>,
-        window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        /*
-        CDXC:AppModal 2026-06-24-11:09:
-        The GPUI titlebar Settings glyph opens this GPUI popup menu so Settings, Hotkeys, and Command Palette all have typed titlebar actions into the shared React app-modal host. Keep this menu in an owned popup window and action-backed, with no visual-only dropdown, fake control, WebKit surface, overlay, hidden hit region, or generic fallback behavior.
-
-        CDXC:Sessions 2026-06-24-11:53:
-        Previous Sessions is exposed from the same titlebar GPUI popup menu so GPUI opens the shared history/restore modal through a typed app-modal action rather than duplicating the React UI or adding an overlay surface.
-
-        CDXC:AgentLauncher 2026-06-24-12:26:
-        Agents Hub belongs in the same typed GPUI app-modal route as the Settings utility surfaces. The menu action must open the shared React Hub in the owned CEF app-modal host while Rust supplies the real filesystem catalog/content bridge instead of duplicate modal UI or fallback rows.
-
-        CDXC:Settings 2026-06-24-12:22:
-        Configure Agents, Configure Actions, and Open Targets belong in the same typed GPUI popup menu because macOS/React already treat them as Settings-modal entry points. Keep the menu action-backed so GPUI opens the shared Settings host with the requested initial tab instead of introducing a second modal surface.
-        */
-        GpuiContextMenu::new()
-            .menu("Settings", Box::new(OpenGpuiSettingsModal))
-            .menu("Extensions", Box::new(OpenGpuiExtensionsModal))
-            .menu("Hotkeys", Box::new(OpenGpuiHotkeysModal))
-            .menu("Quick Access", Box::new(OpenGpuiCommandPaletteModal))
-            .menu("Configure Agents", Box::new(OpenGpuiConfigureAgentsModal))
-            .menu("Configure Actions", Box::new(OpenGpuiConfigureActionsModal))
-            .menu("Open Targets", Box::new(OpenGpuiOpenTargetsModal))
-            .menu("Previous Sessions", Box::new(OpenGpuiPreviousSessionsModal))
-            .menu("Agents Hub", Box::new(OpenGpuiAgentsHubModal))
-            .show(position, window, cx);
-    }
-
     pub(crate) fn show_gpui_titlebar_customize_menu(
         &self,
         position: gpui::Point<Pixels>,
@@ -169,43 +137,5 @@ impl GhostexGpuiApp {
         self.titlebar_popup_menu
             .as_ref()
             .is_some_and(|state| state.kind == kind)
-    }
-
-    pub(crate) fn show_gpui_open_targets_menu(
-        &mut self,
-        trigger_bounds: Option<Bounds<Pixels>>,
-        window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        /*
-        CDXC:Titlebar 2026-06-24-12:50:
-        The visible GPUI titlebar folder control mirrors macOS Open In behavior with an in-app gpui-component PopupMenu. Menu rows remain typed GPUI actions, Configure routes to the shared Open Targets Settings tab, and the control must not add React overlays, WebKit dropdowns, invisible hit regions, hit-test overrides, or synthetic coordinate routing.
-        */
-        self.set_gpui_titlebar_popup_open(
-            GpuiTitlebarPopupKind::OpenTargets,
-            !self.titlebar_popup_menu_open(GpuiTitlebarPopupKind::OpenTargets),
-            trigger_bounds,
-            window,
-            cx,
-        );
-    }
-
-    pub(crate) fn show_gpui_titlebar_actions_menu(
-        &mut self,
-        trigger_bounds: Option<Bounds<Pixels>>,
-        window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        /*
-        CDXC:Titlebar 2026-06-24-14:24:
-        Right-clicking the visible GPUI titlebar Actions play control opens an in-app gpui-component PopupMenu of sidebar actions plus Configure. Rows dispatch typed GPUI actions by visible index into the current projected action list, unconfigured rows route through the existing Settings > Actions path, and the control must not add React overlays, WebKit dropdowns, invisible hit regions, hit-test overrides, or synthetic coordinate routing.
-        */
-        self.set_gpui_titlebar_popup_open(
-            GpuiTitlebarPopupKind::Actions,
-            !self.titlebar_popup_menu_open(GpuiTitlebarPopupKind::Actions),
-            trigger_bounds,
-            window,
-            cx,
-        );
     }
 }

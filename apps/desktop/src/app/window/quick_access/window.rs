@@ -17,7 +17,7 @@ use super::actions_menu::{QuickAccessMenuRequest, QuickAccessOpenMenu};
 use super::chrome::{
     QuickAccessMenuFrames, QuickAccessMenuPaint, QuickAccessMenuState, capture_bounds,
     quick_access_filter_trigger, quick_access_footer, quick_access_search_bar,
-    quick_access_select_menu, quick_access_tooltip, segments_as_select, visible_options,
+    quick_access_select_menu, segments_as_select, visible_options,
 };
 use super::editor::{quick_access_prompt_editor, quick_access_tag_composer};
 use super::model::{QuickAccessSnapshot, QuickAccessTabId, QuickAccessToolbar};
@@ -31,7 +31,7 @@ use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, FocusHandle, Focusable, FontWeight,
     InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, Point, Render,
     ScrollHandle, SharedString, StatefulInteractiveElement as _, Styled as _, Subscription, Window,
-    div, point, px, svg,
+    div, point, px,
 };
 use gpui_component::input::{InputEvent, InputState, TextareaState};
 use gpui_component::v_flex;
@@ -856,11 +856,7 @@ impl GpuiQuickAccessWindow {
                     .min_h_0()
                     .w_full()
                     .relative()
-                    .child(self.render_list(p, snapshot, cx))
-                    .children(
-                        (!snapshot.hint.is_empty())
-                            .then(|| self.render_stash_hint(p, &snapshot.hint, cx)),
-                    ),
+                    .child(self.render_list(p, snapshot, cx)),
             )
             .into_any_element()
     }
@@ -1061,43 +1057,6 @@ impl GpuiQuickAccessWindow {
                 this.post(json!({ "type": "loadMore" }), cx);
             }))
             .children(children)
-            .into_any_element()
-    }
-
-    /// `.ghostex-stashed-prompts-stash-hint`: the 28px info pill in the corner.
-    fn render_stash_hint(
-        &self,
-        p: &QuickAccessPalette,
-        hint: &str,
-        _cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let p = *p;
-        let hint = hint.to_string();
-        div()
-            .id("quick-access-stash-hint")
-            .absolute()
-            .right(px(10.0))
-            .bottom(px(10.0))
-            .size(px(28.0))
-            .flex()
-            .items_center()
-            .justify_center()
-            .rounded_full()
-            .border_1()
-            .border_color(hsla(gpui::Rgba {
-                a: 0.18,
-                ..p.foreground
-            }))
-            .bg(hsla(p.raised))
-            .text_color(hsla(p.muted))
-            .hover(move |this| this.bg(hsla(p.raised_hover)))
-            .tooltip(move |window, cx| quick_access_tooltip(hint.clone(), window, cx))
-            .child(
-                svg()
-                    .path(super::chrome::asset_icon_path("info-circle"))
-                    .size(px(16.0))
-                    .text_color(hsla(p.muted)),
-            )
             .into_any_element()
     }
 }

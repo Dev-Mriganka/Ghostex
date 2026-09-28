@@ -53,13 +53,6 @@ export const storageCatalog = Object.freeze({
     enumCodec(['1']),
     { ...protectedDisk, maxEntryBytes: KiB, maxBytes: 64 * KiB, maxEntries: 500 }
   ),
-  addRepository: define(
-    'addRepository',
-    'Add repository',
-    core + 'add-repository-modal.tsx',
-    'ghostex.addRepository.lastLocation',
-    textCodec
-  ),
   exportOptions: define(
     'exportOptions',
     'Transcript export',
@@ -475,56 +468,12 @@ export const storageCatalog = Object.freeze({
     'ghostex.promptAgent.renameSession',
     textCodec
   ),
-  openTarget: define(
-    'openTarget',
-    'Open in target',
-    desktop + 'views/titlebar/settings-io.ts',
-    'ghostex.titlebar.lastOpenTargetId',
-    textCodec
-  ),
-  lastAction: define(
-    'lastAction',
-    'Last project command',
-    desktop + 'views/titlebar/settings-io.ts',
-    'ghostex.titlebar.lastActionCommandByProject:',
-    textCodec,
-    disk
-  ),
   keepAwake: define(
     'keepAwake',
     'Keep Awake runtime',
     desktop + 'src/app/gx_store/sidebar_ui_storage.rs',
     'ghostex.titlebar.keepAwakeRuntime',
     objectCodec
-  ),
-  keepAwakeSync: define(
-    'keepAwakeSync',
-    'Keep Awake synchronization',
-    desktop + 'views/titlebar/project-state.ts',
-    'ghostex.titlebar.keepAwakeRuntimeSync',
-    objectCodec
-  ),
-  lidSleep: define(
-    'lidSleep',
-    'Lid sleep prevention',
-    desktop + 'views/titlebar/app.tsx',
-    'ghostex.titlebar.lidSleepPrevention',
-    enumCodec(['enabled', 'disabled'])
-  ),
-  titlebarGit: define(
-    'titlebarGit',
-    'Titlebar Git cache',
-    desktop + 'views/titlebar/project-state.ts',
-    'ghostex.titlebar.gitState.',
-    objectCodec,
-    cache
-  ),
-  tipsRead: define(
-    'tipsRead',
-    'Read tips',
-    desktop + 'views/titlebar/project-state.ts',
-    'ghostex.titlebar.tips.readIds',
-    stringListCodec
   ),
   modelCatalog: define(
     'modelCatalog',
