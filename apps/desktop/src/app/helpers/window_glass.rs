@@ -264,8 +264,11 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
     // backends (gpui_macos window_wallpaper.rs / window_live.rs, gpui_windows directx_backdrop.rs,
     // gpui_linux); Settings offers them only there.
     WINDOW_GLASS_WALLPAPER.store(
-        cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
-            && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
+        cfg!(any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "linux"
+        )) && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
         Ordering::Relaxed,
     );
     WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN.store(
@@ -307,8 +310,11 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
             != Some(false);
     }
     window_glass_live::refresh_window_glass_live(object);
-    let active = cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
-        && wanted
+    let active = cfg!(any(
+        target_os = "macos",
+        target_os = "windows",
+        target_os = "linux"
+    )) && wanted
         && !system_reduces_transparency();
     WINDOW_GLASS_SYSTEM_BLOCKED.store(
         cfg!(any(target_os = "macos", target_os = "windows")) && system_reduces_transparency(),

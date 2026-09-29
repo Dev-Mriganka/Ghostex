@@ -133,7 +133,11 @@ impl GhostexGpuiApp {
                     // is nudged down to share the buttons' visual centre line. DirectWrite already
                     // places them about 2px lower than Core Text does, so Windows needs less.
                     .relative()
-                    .top(px(if cfg!(target_os = "windows") { 1.0 } else { 3.0 }))
+                    .top(px(if cfg!(target_os = "windows") {
+                        1.0
+                    } else {
+                        3.0
+                    }))
                     .text_size(px(13.5))
                     .line_height(px(TITLEBAR_CONTROL_HEIGHT))
                     .when_some(project_icon, |this, image| {

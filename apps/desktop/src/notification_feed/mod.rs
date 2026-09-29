@@ -38,7 +38,6 @@ use crate::{
     titlebar_tooltip, titlebar_tooltip_label,
 };
 
-
 const NOTIFICATION_BELL_ICON: &str = "titlebar/bell.svg";
 const NOTIFICATION_BELL_ICON_SIZE: f32 = 15.0;
 /// The app-wide attention blue (`--attention-dot` in the shared theme).

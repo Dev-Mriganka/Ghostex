@@ -70,7 +70,8 @@ pub(super) fn write(
     now_ms: i64,
 ) -> Result<(), &'static str> {
     match backend {
-        Backend::Local => crate::app::gx_store::with_write_connection(|connection| match value {
+        Backend::Local => crate::app::gx_store::with_write_connection(|connection| {
+            match value {
             Some(raw) => connection
                 .execute(
                     "INSERT INTO preferences VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
@@ -82,6 +83,7 @@ pub(super) fn write(
                 .execute("DELETE FROM preferences WHERE key=?1", [name])
                 .map(|_| ())
                 .map_err(|_| "write"),
+        }
         }),
         Backend::Records(bounds) => match value {
             Some(raw) => write_record(record_store(bounds), name, raw, now_ms).map(|_| ()),

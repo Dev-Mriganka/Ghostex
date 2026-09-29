@@ -263,11 +263,7 @@ impl GhostexGpuiApp {
         self.record_session_chat_lifecycle(session_id, "sessionChat.nativePageRemoved", "warmPool");
     }
 
-    fn evict_parked_native_chat_view(
-        &mut self,
-        project_id: &str,
-        session_id: TerminalSessionId,
-    ) {
+    fn evict_parked_native_chat_view(&mut self, project_id: &str, session_id: TerminalSessionId) {
         let Some(parked) = self
             .parked_agents_chat_runtimes_by_project
             .get_mut(project_id)

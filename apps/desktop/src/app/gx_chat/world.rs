@@ -22,6 +22,7 @@ use super::frame;
 use super::host_records;
 use super::identity::ChatIdentity;
 use super::locale;
+use super::outbox::{self, Workers};
 use super::platform;
 use super::queries;
 use super::refusals;
@@ -30,7 +31,6 @@ use super::saves;
 use super::storage;
 use super::store::ChatStore;
 use super::transport::{self, Transport};
-use super::outbox::{self, Workers};
 
 /// What a drained chat hands its view. The desktop's `native_chat` knows it as `ChatRuntimeOutput`,
 /// the name the web build's own runtime uses for the same two cases.
@@ -747,21 +747,36 @@ fn perform(
             }
         }
         Effect::Subscribe { limit, catalog } => {
-            if let Some(identity) = world.store.get(key).map(|retained| retained.identity.clone()) {
+            if let Some(identity) = world
+                .store
+                .get(key)
+                .map(|retained| retained.identity.clone())
+            {
                 world.transport.follow(key, &identity, limit);
             }
             // `broker.ts` posted the catalog in effect with every `catalog` subscribe.
-            if let Some(catalog) = catalog.then(|| world.transport.catalog().cloned()).flatten() {
+            if let Some(catalog) = catalog
+                .then(|| world.transport.catalog().cloned())
+                .flatten()
+            {
                 answers.push(Event::ModelCatalogChanged { catalog });
             }
         }
         Effect::Unsubscribe => {
-            if let Some(identity) = world.store.get(key).map(|retained| retained.identity.clone()) {
+            if let Some(identity) = world
+                .store
+                .get(key)
+                .map(|retained| retained.identity.clone())
+            {
                 world.transport.unfollow(key, &identity);
             }
         }
         Effect::Reconnect => {
-            if let Some(identity) = world.store.get(key).map(|retained| retained.identity.clone()) {
+            if let Some(identity) = world
+                .store
+                .get(key)
+                .map(|retained| retained.identity.clone())
+            {
                 world.transport.refresh(&identity);
             }
         }

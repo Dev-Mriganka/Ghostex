@@ -127,7 +127,10 @@ fn install_tooltip(tool: &Value) -> String {
 /// `uninstallDetail`.
 fn uninstall_detail(tool: &Value) -> String {
     match id(tool).as_str() {
-        "node" => "Agent CLIs installed with Ghostex's Node.js stop working until it's installed again.".into(),
+        "node" => {
+            "Agent CLIs installed with Ghostex's Node.js stop working until it's installed again."
+                .into()
+        }
         "uv" => "Tools uv installed, such as Claude Swap, keep working.".into(),
         _ => format!("Removes Ghostex's copy of {}.", label(tool)),
     }
