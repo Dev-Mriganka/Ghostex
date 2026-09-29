@@ -531,7 +531,7 @@ export const GHOSTEX_HOTKEY_DEFINITIONS: readonly ghostexHotkeyDefinition[] = [
     action: { id: 'openModelPicker', kind: 'terminalToolbarAction', terminalToolbarAction: 'openModelPicker' },
     defaultKey: 'alt+p',
     description:
-      'Open the model picker: arrows choose a model and its reasoning, Enter uses it here, Shift+Enter saves it as the default.',
+      'Open the model picker: arrows choose a model and its reasoning, Enter saves it as the default, Option+Enter uses it in this session only.',
     id: 'openModelPicker',
     title: 'Model & Effort Picker',
   },

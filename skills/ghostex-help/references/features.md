@@ -923,9 +923,9 @@ picker from the keyboard, and pressing it again closes it. Up and Down move thro
 at the top and bottom; Left and
 Right change the highlighted model's reasoning level, which the reasoning button
 shows; the letter on each bottom button's icon uses it (R Reasoning, C Context,
-F Fast mode, A Account); Tab and Shift+Tab move through the Favorites and agent tabs. Enter uses the highlighted model and level in
-this session and closes the picker, Shift+Enter saves them as the agent's default,
-and Option+1 to Option+9
+F Fast mode, A Account); Tab and Shift+Tab move through the Favorites and agent tabs. Enter applies the highlighted model and level and
+saves them as the agent's default, Option+Enter uses them in this session only and
+leaves the default alone (either one closes the picker), and Option+1 to Option+9
 jump the highlight to one of the first nine rows without applying it. Escape closes it
 without changing anything. The key reminder along the bottom lists these.
 

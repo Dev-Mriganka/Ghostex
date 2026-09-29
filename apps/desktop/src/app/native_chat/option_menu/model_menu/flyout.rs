@@ -203,7 +203,7 @@ impl ChatOptionMenuPanel {
                 self.selected = Some(next);
                 self.scroll.scroll_to_item(next);
             }
-            "enter" | "space" => self.choose_model_flyout(cursor, key.modifiers.shift, cx),
+            "enter" | "space" => self.choose_model_flyout(cursor, key.modifiers.alt, cx),
             _ => {}
         }
         true

@@ -7530,7 +7530,7 @@
         {
           "id": "openModelPicker",
           "title": "Model & Effort Picker",
-          "description": "Open the model picker: arrows choose a model and its reasoning, Enter uses it here, Shift+Enter saves it as the default.",
+          "description": "Open the model picker: arrows choose a model and its reasoning, Enter saves it as the default, Option+Enter uses it in this session only.",
           "defaultKey": "alt+p",
           "defaultKeyLabel": "⌥P"
         },
@@ -9986,7 +9986,7 @@
               "terminalToolbarAction": "openModelPicker"
             },
             "defaultKey": "alt+p",
-            "description": "Open the model picker: arrows choose a model and its reasoning, Enter uses it here, Shift+Enter saves it as the default.",
+            "description": "Open the model picker: arrows choose a model and its reasoning, Enter saves it as the default, Option+Enter uses it in this session only.",
             "id": "openModelPicker",
             "title": "Model & Effort Picker"
           },

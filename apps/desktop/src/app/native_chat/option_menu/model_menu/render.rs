@@ -593,18 +593,29 @@ impl ChatOptionMenuPanel {
                 &palette,
                 cx,
             ))
-            .child(render_key_hints(&appearance, &palette))
+            .child(render_key_hints(
+                view["sessionScope"] == true,
+                &appearance,
+                &palette,
+            ))
             .into_any_element()
     }
 }
 
-/// The compact key reminder along the card's bottom edge.
-fn render_key_hints(appearance: &ChatAppearance, palette: &Palette) -> AnyElement {
-    const HINTS: [(&str, &str); 5] = [
+/// The compact key reminder along the card's bottom edge. Option+Enter is listed only where the
+/// agent can apply a pick to this session alone (elsewhere it saves the default like Enter), and
+/// takes the place of Escape, since six hints do not fit the card's width.
+fn render_key_hints(
+    session_scope: bool,
+    appearance: &ChatAppearance,
+    palette: &Palette,
+) -> AnyElement {
+    const HINTS: [(&str, &str); 6] = [
         ("↑↓", "model"),
         ("←→", "effort"),
         ("⇥", "agent"),
-        ("⏎", "save"),
+        ("⏎", "default"),
+        ("⌥⏎", "session"),
         ("esc", "close"),
     ];
     let scale = appearance.scale;
@@ -619,14 +630,19 @@ fn render_key_hints(appearance: &ChatAppearance, palette: &Palette) -> AnyElemen
         .justify_between()
         .text_size(px(10.5 * scale))
         .text_color(palette.muted)
-        .children(HINTS.map(|(keys, label)| {
-            div()
-                .flex()
-                .items_center()
-                .gap(px(4.0 * scale))
-                .child(div().text_color(palette.text).child(keys))
-                .child(label)
-        }))
+        .children(
+            HINTS
+                .into_iter()
+                .filter(|(keys, _)| *keys != if session_scope { "esc" } else { "⌥⏎" })
+                .map(|(keys, label)| {
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0 * scale))
+                        .child(div().text_color(palette.text).child(keys))
+                        .child(label)
+                }),
+        )
         .into_any_element()
 }
 
