@@ -108,9 +108,11 @@ impl GhostexGpuiApp {
         self.native_kanban_notify(cx);
     }
 
-    /// The lanes, each given its tickets from the cached indices.
+    /// The lanes, each given its tickets from the cached indices. Lanes outside `in_view` draw
+    /// only their headers.
     pub(crate) fn native_kanban_lane_elements(
         &mut self,
+        in_view: std::ops::Range<usize>,
         p: &super::palette::KanbanPalette,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
@@ -118,10 +120,25 @@ impl GhostexGpuiApp {
             && self.native_kanban.load_state == Some(super::state::KanbanLoadState::Ready)
             && self.native_kanban.tickets.is_empty();
         let lanes = self.native_kanban.derived().lanes.clone();
-        let state = &self.native_kanban;
+        let state = &mut self.native_kanban;
         let loading = state.loading_first();
+        let measure_key = {
+            use std::hash::{Hash as _, Hasher as _};
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            state.revision.hash(&mut hasher);
+            state.card_view.hash(&mut hasher);
+            p.font.hash(&mut hasher);
+            for link in &state.conversation.links {
+                link.bead_id.hash(&mut hasher);
+                (link.openable || link.resumable).hash(&mut hasher);
+            }
+            hasher.finish()
+        };
+        let columns = state.columns.clone();
         state
-            .columns
+            .lane_lists
+            .retain(|key, _| columns.iter().any(|column| column.key == *key));
+        columns
             .iter()
             .zip(lanes)
             .enumerate()
@@ -132,17 +149,24 @@ impl GhostexGpuiApp {
                         &[],
                         None,
                         Some(position),
+                        true,
+                        measure_key,
                         p,
                         cx,
                     );
                 }
-                let tickets = indices
-                    .iter()
-                    .filter_map(|index| state.tickets.get(*index))
-                    .collect::<Vec<_>>();
                 let hint = (board_empty && column.key == "todo")
                     .then_some("No tickets yet. Use + Ticket to add one.");
-                self.render_native_kanban_lane(column, &tickets, hint, None, p, cx)
+                self.render_native_kanban_lane(
+                    column,
+                    &indices,
+                    hint,
+                    None,
+                    in_view.contains(&position),
+                    measure_key,
+                    p,
+                    cx,
+                )
             })
             .collect()
     }

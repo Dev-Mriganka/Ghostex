@@ -5,7 +5,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use gpui::{Bounds, Entity, FocusHandle, Pixels, Subscription, Task};
+use gpui::{Bounds, Entity, FocusHandle, ListState, Pixels, ScrollHandle, Subscription, Task};
 use gpui_component::input::{InputState, TextareaState};
 
 use super::filters::{KanbanCardView, KanbanViewPreferences};
@@ -130,6 +130,12 @@ pub(crate) struct KanbanBeadsInstall {
     pub(crate) error: Option<String>,
 }
 
+/// A lane's virtual card list and the key its measured card heights were taken under.
+pub(crate) struct KanbanLaneList {
+    pub(crate) list: ListState,
+    pub(crate) measure_key: u64,
+}
+
 #[derive(Default)]
 pub(crate) struct NativeKanbanState {
     pub(crate) project: Option<KanbanProjectKey>,
@@ -176,6 +182,10 @@ pub(crate) struct NativeKanbanState {
     /// Window glass and light chrome as last drawn; a change redraws the board.
     pub(crate) appearance_signature: Option<(bool, bool)>,
     pub(crate) beads_install: KanbanBeadsInstall,
+    /// Per lane key: the lane's card list, which builds only the cards in view.
+    pub(crate) lane_lists: HashMap<String, KanbanLaneList>,
+    /// The lanes' sideways scroll; lanes scrolled out of view skip their cards.
+    pub(crate) lanes_scroll: ScrollHandle,
 }
 
 impl NativeKanbanState {
