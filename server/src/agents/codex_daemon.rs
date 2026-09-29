@@ -29,19 +29,21 @@ pub(crate) fn with_codex_no_daemon(agent_id: &str, icon: Option<&str>, command: 
     format!("{command} {NO_DAEMON_FLAG}")
 }
 
-/// Probed once a minute, so upgrading Codex from 0.155 picks up the flag within a minute without spawning `codex` per launch.
+/// Successful probes are cached for a minute; failed probes can retry on the next launch.
 fn installed_codex_supports_no_daemon() -> bool {
     // Unit tests assert exact commands, which must not depend on the Codex installed on the machine.
     if cfg!(test) {
         return false;
     }
     static CACHE: Mutex<Option<(Instant, bool)>> = Mutex::new(None);
-    let mut cached = CACHE
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some((checked_at, supported)) = *cached {
-        if checked_at.elapsed() < VERSION_CACHE_TTL {
-            return supported;
+    {
+        let cached = CACHE
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some((checked_at, supported)) = *cached {
+            if checked_at.elapsed() < VERSION_CACHE_TTL {
+                return supported;
+            }
         }
     }
     #[cfg(windows)]
@@ -64,6 +66,9 @@ fn installed_codex_supports_no_daemon() -> bool {
         return false;
     };
     let supported = version >= FIRST_VERSION_WITH_NO_DAEMON;
+    let mut cached = CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     *cached = Some((Instant::now(), supported));
     supported
 }
