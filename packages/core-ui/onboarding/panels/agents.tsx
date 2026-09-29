@@ -1,5 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentCliConnection } from '@/packages/shared/agent-cli-maintenance';
+import {
+  agentCliMethodLabel,
+  agentCliMethodTooltip,
+  type AgentCliConnection,
+} from '@/packages/shared/agent-cli-maintenance';
 import { useAgentCliConnections } from '../../agent-cli/transport';
 import { useAgentInstallRow, type AgentInstallEvent } from '../agent-install';
 import { InstallGuidePopup } from '../install-guide-popup';
@@ -504,7 +508,7 @@ function MissingAgentRow({
           : row.installed
             ? 'Installed, press Rescan'
             : row.method
-              ? `Not installed · ${row.method.label}`
+              ? `Not installed · ${agentCliMethodLabel(row.method)}`
               : 'Not installed';
   const action = scanning ? (
     <span className='detpill wait'>Scanning…</span>
@@ -530,7 +534,7 @@ function MissingAgentRow({
       className='install-btn'
       onClick={row.install}
       disabled={Boolean(row.method.unavailableReason)}
-      title={row.method.unavailableReason ?? row.method.command}
+      title={agentCliMethodTooltip(row.method)}
     >
       <Icon n={row.error ? 'refresh' : 'plus'} size={15} sw={2} />
       {row.error ? 'Retry' : 'Install'}

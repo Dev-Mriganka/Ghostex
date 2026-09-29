@@ -854,7 +854,25 @@ impl AccountsTab {
         let installed = helper
             .as_ref()
             .is_some_and(|helper| helper["installed"].as_bool() == Some(true));
-        if !installed {
+        if !installed && helper.is_some() && self.helper_offers_install(provider) {
+            let button = self.render_helper_install_button(p, provider, "setup", cx);
+            rows.push(settings_list_item(
+                p,
+                None,
+                None,
+                format!("Install {}", helper_label(provider)),
+                Some(
+                    div()
+                        .whitespace_normal()
+                        .child(format!(
+                            "To connect your account for usage stats, Ghostex installs {} on this computer, then continues here. This setup is optional; you can keep using your current CLI login.",
+                            helper_label(provider)
+                        ))
+                        .into_any_element(),
+                ),
+                button,
+            ));
+        } else if !installed {
             if let Some(helper) = helper {
                 rows.push(settings_list_item(
                     p,

@@ -27,34 +27,50 @@ use crate::*;
 impl GhostexGpuiApp {
     pub(crate) fn handle_gpui_cua_driver_install_or_update(
         &mut self,
-        window: &Window,
+        _window: &Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        self.start_gpui_cua_driver_command_terminal(gpui_cua_driver_command_action(), window, cx);
+        let action = gpui_cua_driver_command_action();
+        if action.operation == "install" && !self.refuse_gpui_cua_driver_install(cx) {
+            return;
+        }
+        self.start_gpui_cua_driver_job(action, cx);
     }
 
     pub(crate) fn handle_gpui_cua_driver_reinstall(
         &mut self,
-        window: &Window,
+        _window: &Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        self.start_gpui_cua_driver_command_terminal(
-            gpui_cua_driver_reinstall_command_action(),
-            window,
-            cx,
-        );
+        if !self.refuse_gpui_cua_driver_install(cx) {
+            return;
+        }
+        self.start_gpui_cua_driver_job(gpui_cua_driver_reinstall_command_action(), cx);
     }
 
     pub(crate) fn handle_gpui_cua_driver_uninstall(
         &mut self,
-        window: &Window,
+        _window: &Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        self.start_gpui_cua_driver_command_terminal(
-            gpui_cua_driver_uninstall_command_action(),
-            window,
-            cx,
-        );
+        self.start_gpui_cua_driver_job(gpui_cua_driver_uninstall_command_action(), cx);
+    }
+
+    /// `false` (after a toast) when this Mac account cannot write /Applications, where Trycua's
+    /// installer puts CuaDriver.app.
+    fn refuse_gpui_cua_driver_install(&mut self, cx: &mut gpui::Context<Self>) -> bool {
+        match gpui_cua_driver_applications_blocked_reason() {
+            Some(reason) => {
+                self.dispatch_gpui_app_modal_toast(
+                    "warning",
+                    "Trycua can't be installed",
+                    &reason,
+                    cx,
+                );
+                false
+            }
+            None => true,
+        }
     }
 
     pub(crate) fn check_gpui_cua_driver_update(&mut self, cx: &mut gpui::Context<Self>) {
@@ -76,70 +92,73 @@ impl GhostexGpuiApp {
         .detach();
     }
 
-    pub(crate) fn start_gpui_cua_driver_command_terminal(
+    /// Runs Trycua's official installer, updater or uninstaller as a background job (see the
+    /// CDXC:ManagedTools decision on `GPUI_TRYCUA_INSTALL_COMMAND`). Settings gets the job's
+    /// progress about once a second, and its exit is the completion signal: installs and updates
+    /// finish Desktop Control setup, uninstalls report their result, both refresh the status.
+    pub(crate) fn start_gpui_cua_driver_job(
         &mut self,
         action: GpuiCuaDriverCommandAction,
-        window: &Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        /*
-        CDXC:Extensions 2026-08-09:
-        Installing or updating Trycua can take minutes and prints useful
-        progress. Run it in a real command-pane terminal tab so the user can
-        watch the official installer/updater instead of staring at a silent
-        Settings spinner. The tab opens without stealing typing focus like
-        every other command Action.
-
-        CDXC:Extensions 2026-08-24:
-        Windows and Linux run the same command-pane installer instead of opening
-        a downloads page, so the Settings button matches the command Settings
-        shows on every desktop platform.
-        */
         let GpuiCuaDriverCommandAction {
-            command,
-            command_id,
+            script,
+            operation,
             running_message,
-            tab_title,
             toast_title,
         } = action;
-        self.open_gpui_command_action_terminal(
-            command_id.to_string(),
-            tab_title.to_string(),
-            command,
-            false,
-            false,
-            window,
-            cx,
-        );
-        self.run_gpui_app_modal_and_titlebar_status_task(
-            move || gpui_ghostex_cli_status_message(Some(running_message)),
-            cx,
-        );
+        if let Err(message) = gpui_begin_cua_driver_job(operation) {
+            self.dispatch_gpui_app_modal_toast("warning", toast_title, &message, cx);
+            return;
+        }
+        self.dispatch_gpui_cua_driver_progress(cx);
         self.dispatch_gpui_app_modal_toast("info", toast_title, running_message, cx);
-    }
-
-    pub(crate) fn install_gpui_gte_from_homebrew(&mut self, cx: &mut gpui::Context<Self>) {
         let background = cx.background_executor().clone();
+        let pump = background.clone();
         cx.spawn(async move |this, cx| {
-            let result = background
-                .spawn(async move { gpui_install_gte_from_homebrew() })
+            loop {
+                pump.timer(std::time::Duration::from_secs(1)).await;
+                let running = gpui_cua_driver_job_running();
+                let updated =
+                    this.update(cx, |this, cx| this.dispatch_gpui_cua_driver_progress(cx));
+                if !running || updated.is_err() {
+                    break;
+                }
+            }
+        })
+        .detach();
+        cx.spawn(async move |this, cx| {
+            let succeeded = background
+                .spawn(async move {
+                    let result = gpui_run_cua_driver_job_script(&script);
+                    gpui_finish_cua_driver_job(&result);
+                    result.is_ok()
+                })
                 .await;
             let _ = this.update(cx, |this, cx| {
-                this.dispatch_gpui_settings_action_status(
-                    GPUI_GTE_INSTALL_ACTION_ID,
-                    result.available,
-                    result.message,
-                    cx,
-                );
-                this.dispatch_gpui_app_modal_toast(
-                    result.toast_level,
-                    result.toast_title,
-                    result.message,
-                    cx,
-                );
+                let finish = match operation {
+                    "uninstall" => {
+                        GpuiGhostexCliSettingsAction::FinishTrycuaUninstall { succeeded }
+                    }
+                    "update" => GpuiGhostexCliSettingsAction::FinishDesktopControlSetup {
+                        driver_installed: succeeded,
+                        was_update: true,
+                    },
+                    _ => GpuiGhostexCliSettingsAction::FinishDesktopControlSetup {
+                        driver_installed: succeeded,
+                        was_update: false,
+                    },
+                };
+                this.run_gpui_ghostex_cli_settings_action(finish, cx);
             });
         })
         .detach();
+    }
+
+    fn dispatch_gpui_cua_driver_progress(&mut self, cx: &mut gpui::Context<Self>) {
+        let payload = gpui_cua_driver_progress_status_payload();
+        self.dispatch_open_gpui_app_modal_sidebar_state_payload(payload.clone(), cx);
+        self.dispatch_gpui_titlebar_tips_sidebar_state_payload(&payload, cx);
     }
 
     pub(crate) fn refresh_gpui_daemon_sessions_state_in_background(

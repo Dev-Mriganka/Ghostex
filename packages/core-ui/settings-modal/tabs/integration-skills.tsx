@@ -6,6 +6,7 @@ import {
   IconCloudSearch,
   IconCopy,
   IconDownload,
+  IconLoader2,
   IconRefresh,
   IconSettings,
   IconTrash,
@@ -27,6 +28,7 @@ import {
 import { type SidebarGhostexCliStatusMessage } from '../../../shared/session-grid-contract';
 import { SettingButton, SettingDescriptionTooltip, SettingsListItem, SettingsSection } from '../fields';
 import { playCopySound } from '../../copy-sound';
+import { trycuaJobView } from '../../trycua-job';
 
 export type IntegrationStatusTone = 'success' | 'warning' | 'neutral';
 
@@ -109,7 +111,9 @@ export function DesktopControlSection({
   const cuaDriverInstalled = ghostexCliStatus?.cuaDriverInstalled === true;
   const cuaDriverVersion = ghostexCliStatus?.cuaDriverVersion;
   const installCommand = ghostexCliStatus?.cuaDriverInstallCommand;
-  const installDisabled = ghostexCliStatusLoading || cuaDriverInstalled || !onInstallCuaDriver;
+  const job = trycuaJobView(ghostexCliStatus);
+  const installDisabled =
+    ghostexCliStatusLoading || cuaDriverInstalled || !onInstallCuaDriver || job.running || Boolean(job.blockedReason);
   if (!showTrycua && !showPermissions) {
     return null;
   }
@@ -117,6 +121,7 @@ export function DesktopControlSection({
     <SettingsSection title='Desktop control'>
       {showTrycua ? (
         <SettingsListItem
+          detail={job.detail}
           icon={<BUNDLED_AGENT_SKILL_ICONS.computerUse aria-hidden='true' size={17} />}
           status={ghostexCliStatusLoading ? 'neutral' : cuaDriverInstalled ? 'success' : 'warning'}
           title={
@@ -136,20 +141,28 @@ export function DesktopControlSection({
               onUpdate={onInstallCuaDriver}
             />
           ) : (
-            <SettingButton
-              disabled={installDisabled}
-              disabledReason={
-                ghostexCliStatusLoading
-                  ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} status is being checked.`
-                  : `${GHOSTEX_TRYCUA_PRODUCT_NAME} installation isn’t available here.`
-              }
-              onClick={onInstallCuaDriver}
-              type='button'
-              variant='outline'
-            >
-              <IconDownload aria-hidden='true' data-icon='inline-start' />
-              Install {GHOSTEX_TRYCUA_PRODUCT_NAME}
-            </SettingButton>
+            <AppTooltip content={job.plan ?? `Install ${GHOSTEX_TRYCUA_PRODUCT_NAME} with its official installer.`}>
+              <SettingButton
+                disabled={installDisabled}
+                disabledReason={
+                  ghostexCliStatusLoading
+                    ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} status is being checked.`
+                    : (job.runningReason ??
+                      job.blockedReason ??
+                      `${GHOSTEX_TRYCUA_PRODUCT_NAME} installation isn’t available here.`)
+                }
+                onClick={onInstallCuaDriver}
+                type='button'
+                variant='outline'
+              >
+                {job.running ? (
+                  <IconLoader2 aria-hidden='true' className='animate-spin' data-icon='inline-start' />
+                ) : (
+                  <IconDownload aria-hidden='true' data-icon='inline-start' />
+                )}
+                {job.running ? `Installing ${GHOSTEX_TRYCUA_PRODUCT_NAME}…` : `Install ${GHOSTEX_TRYCUA_PRODUCT_NAME}`}
+              </SettingButton>
+            </AppTooltip>
           )}
         </SettingsListItem>
       ) : null}
@@ -157,7 +170,7 @@ export function DesktopControlSection({
         <SettingsListItem
           title={
             <IntegrationRowTitle
-              description={`Install ${GHOSTEX_TRYCUA_PRODUCT_NAME} runs this command in a command pane terminal so you can watch it finish. You can also run it yourself.`}
+              description={`Install ${GHOSTEX_TRYCUA_PRODUCT_NAME} runs this command in the background and shows its progress here. You can also run it yourself.`}
               label='Install command'
             />
           }
@@ -224,7 +237,10 @@ function TrycuaInstalledActions({
   const current = ghostexCliStatus?.cuaDriverVersion;
   const latest = ghostexCliStatus?.cuaDriverLatestVersion;
   const updateAvailable = ghostexCliStatus?.cuaDriverUpdateAvailable;
-  const checkingReason = `${name} status is being checked.`;
+  const job = trycuaJobView(ghostexCliStatus);
+  const checkingReason = job.runningReason ?? `${name} status is being checked.`;
+  const busy = ghostexCliStatusLoading || job.running;
+  const spinner = <IconLoader2 aria-hidden='true' className='animate-spin' />;
   const installedSuffix = current ? ` (installed v${current})` : '';
   const upToDateVersion = current ?? latest;
   const update =
@@ -258,41 +274,41 @@ function TrycuaInstalledActions({
           <SettingButton
             aria-label={update.label}
             className={update.className}
-            disabled={ghostexCliStatusLoading || !update.onClick}
-            disabledReason={ghostexCliStatusLoading ? checkingReason : `${name} updates aren’t available here.`}
+            disabled={busy || !update.onClick}
+            disabledReason={busy ? checkingReason : `${name} updates aren’t available here.`}
             onClick={update.onClick}
             size='icon'
             type='button'
             variant='ghost'
           >
-            <update.Icon aria-hidden='true' />
+            {job.operation === 'update' ? spinner : <update.Icon aria-hidden='true' />}
           </SettingButton>
         </AppTooltip>
       ) : null}
-      <AppTooltip content={`Reinstall the latest ${name} with the official installer${installedSuffix}`}>
+      <AppTooltip content={`Reinstall the latest ${name}${installedSuffix}. ${job.plan ?? ''}`.trim()}>
         <SettingButton
           aria-label={`Reinstall ${name}`}
-          disabled={ghostexCliStatusLoading || !onReinstall}
-          disabledReason={ghostexCliStatusLoading ? checkingReason : `${name} reinstall isn’t available here.`}
+          disabled={busy || !onReinstall || Boolean(job.blockedReason)}
+          disabledReason={busy ? checkingReason : (job.blockedReason ?? `${name} reinstall isn’t available here.`)}
           onClick={onReinstall}
           size='icon'
           type='button'
           variant='ghost'
         >
-          <IconRefresh aria-hidden='true' />
+          {job.operation === 'reinstall' || job.operation === 'install' ? spinner : <IconRefresh aria-hidden='true' />}
         </SettingButton>
       </AppTooltip>
       <AppTooltip content={`Uninstall ${name} (keeps Accessibility and Screen Recording permissions)`}>
         <SettingButton
           aria-label={`Uninstall ${name}`}
-          disabled={ghostexCliStatusLoading || !onUninstall}
-          disabledReason={ghostexCliStatusLoading ? checkingReason : `${name} removal isn’t available here.`}
+          disabled={busy || !onUninstall}
+          disabledReason={busy ? checkingReason : `${name} removal isn’t available here.`}
           onClick={onUninstall}
           size='icon'
           type='button'
           variant='ghost'
         >
-          <IconTrash aria-hidden='true' />
+          {job.operation === 'uninstall' ? spinner : <IconTrash aria-hidden='true' />}
         </SettingButton>
       </AppTooltip>
     </>

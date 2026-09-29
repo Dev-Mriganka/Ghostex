@@ -16,8 +16,20 @@ function Preview() {
         agentId: 'zcode',
         platform: 'macos',
         methods: [
-          { id: 'mise', label: 'mise', command: "mise use --global --yes 'npm:zcode-app-cli[prerelease=true]@latest'" },
-          { id: 'npm', label: 'npm', command: 'npm install -g zcode-app-cli@latest' },
+          {
+            id: 'mise',
+            label: 'mise',
+            command: "mise use --global --yes 'npm:zcode-app-cli[prerelease=true]@latest'",
+            unavailableReason: 'Install mise on this computer first.',
+            plan: "Runs mise use --global --yes 'npm:zcode-app-cli[prerelease=true]@latest' with your mise.",
+          },
+          {
+            id: 'npm',
+            label: 'npm',
+            command: 'npm install -g zcode-app-cli@latest',
+            prerequisite: 'node',
+            plan: 'Ghostex first downloads Node.js (LTS) from nodejs.org into its tools folder and adds it to the end of your PATH, then runs npm install -g zcode-app-cli@latest. No password needed.',
+          },
         ],
       },
       claude: {
@@ -26,7 +38,14 @@ function Preview() {
         executablePath: '/home/you/.local/share/mise/installs/claude/2.1.267/claude',
         version: 'Claude Code 2.1.267',
         detectedMethodId: 'mise',
-        methods: [{ id: 'mise', label: 'mise', command: "mise upgrade --bump --no-prune --yes 'claude'" }],
+        methods: [
+          {
+            id: 'mise',
+            label: 'mise',
+            command: "mise upgrade --bump --no-prune --yes 'claude'",
+            plan: "Runs mise upgrade --bump --no-prune --yes 'claude' with your mise.",
+          },
+        ],
       },
       pi: {
         agentId: 'pi',
@@ -38,8 +57,14 @@ function Preview() {
             id: 'npm',
             label: 'npm',
             command: 'npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest',
+            plan: 'Runs npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest.',
           },
-          { id: 'bun', label: 'bun', command: 'bun install -g @earendil-works/pi-coding-agent@latest' },
+          {
+            id: 'bun',
+            label: 'bun',
+            command: 'bun install -g @earendil-works/pi-coding-agent@latest',
+            plan: 'Runs bun install -g @earendil-works/pi-coding-agent@latest.',
+          },
         ],
       },
       grok: {
@@ -48,7 +73,14 @@ function Preview() {
         executablePath: '/Users/you/.local/bin/grok',
         version: 'grok 0.2.93',
         detectedMethodId: 'native',
-        methods: [{ id: 'native', label: 'Official installer', command: 'grok update' }],
+        methods: [
+          {
+            id: 'native',
+            label: 'Official installer',
+            command: 'grok update',
+            plan: 'Runs the official installer: grok update. No password needed. Grok and Cursor both install a command named agent; the one installed last is the one that runs.',
+          },
+        ],
         job: {
           id: 'failed',
           status: 'failed',
@@ -67,6 +99,7 @@ function Preview() {
             label: 'bun',
             command: 'bun install -g @oh-my-pi/pi-coding-agent@latest',
             unavailableReason: 'Install bun on this computer first.',
+            plan: 'Runs bun install -g @oh-my-pi/pi-coding-agent@latest.',
           },
         ],
       },

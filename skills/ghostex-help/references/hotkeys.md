@@ -50,7 +50,7 @@ Default bindings are listed for macOS (`cmd`) with the Windows/Linux default whe
 | Merge All Tabs | `ctrl+shift+m` | `cmd+alt+m` | Merge the focused group's panes into one tabbed pane. | `mergeAllTabs` |
 | Delayed Actions | `ctrl+shift+s` | `cmd+alt+s` | Open delayed actions for the focused terminal session. | `delayedSend` |
 | Close After Done | unassigned |  | Toggle Close After Done for the focused terminal session. | `closeAfterDone` |
-| Model & Effort Picker | `alt+p` |  | Open the model picker: arrows choose a model and its reasoning, Enter uses it here, Shift+Enter saves it as the default. | `openModelPicker` |
+| Model & Effort Picker | `alt+p` |  | Open the model picker: arrows choose a model and its reasoning, Enter saves it as the default, Option+Enter uses it in this session only. | `openModelPicker` |
 | Prompt Editor | `ctrl+g` | `cmd+shift+g` | Open the prompt editor for the focused terminal. | `promptEditor` |
 | Attach File or Folder | `cmd+alt+p` |  | Attach a file or folder to the focused terminal. | `attachFileOrFolder` |
 | Session Note | `cmd+alt+n` |  | Open the note attached to the focused agent conversation. | `sessionNote` |

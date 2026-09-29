@@ -213,6 +213,8 @@ pub(crate) enum AddProjectProviderAuthStatus {
 pub(crate) struct AddProjectProviderDiscovery {
     pub(crate) auth: Option<(AddProjectProviderAuthStatus, Option<String>)>,
     pub(crate) install_hint: Option<String>,
+    /// The `/api/managedTools` tool that installs this provider's missing CLI (`gh`, `glab`).
+    pub(crate) install_tool: Option<String>,
     pub(crate) provider: Option<AddProjectSourceId>,
     pub(crate) available: bool,
 }
@@ -249,6 +251,8 @@ pub(crate) fn read_add_project_discovery(
                         (status, text(auth, "detail"))
                     }),
                 install_hint: text(provider, "installHint"),
+                install_tool: text(provider, "installTool")
+                    .filter(|tool| matches!(tool.as_str(), "gh" | "glab")),
                 provider: provider
                     .get("provider")
                     .and_then(Value::as_str)

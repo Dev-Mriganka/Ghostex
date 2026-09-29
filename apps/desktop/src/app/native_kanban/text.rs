@@ -284,6 +284,8 @@ pub(crate) struct KanbanNotice {
     pub(crate) lines: Vec<String>,
     pub(crate) fix_prompt: String,
     pub(crate) link: Option<(String, String)>,
+    /// The Beads CLI is missing, so the notice offers Install Beads.
+    pub(crate) offers_install: bool,
 }
 
 pub(crate) fn board_notice(message: &str, project_path: &str) -> KanbanNotice {
@@ -326,8 +328,8 @@ pub(crate) fn board_notice(message: &str, project_path: &str) -> KanbanNotice {
     };
     let lines = if is_missing_beads {
         vec![
-            "Ghostex uses the Beads CLI installed in the environment running this project: macOS, Linux, or the selected WSL distribution.".to_string(),
-            "Install the latest Beads release in that environment and ensure bd is available on its PATH, then refresh the board.".to_string(),
+            "The Project board runs the Beads CLI (bd) in the environment running this project: macOS, Linux, or the selected WSL distribution.".to_string(),
+            "Ghostex can install it there for you: click Install Beads.".to_string(),
         ]
     } else if is_missing_project {
         vec!["This project does not have a Beads workspace yet. Copy a fix prompt for an agent to inspect and initialize it safely.".to_string()]
@@ -350,6 +352,7 @@ pub(crate) fn board_notice(message: &str, project_path: &str) -> KanbanNotice {
                 BEADS_INSTALL_GUIDE_URL.to_string(),
             )
         }),
+        offers_install: is_missing_beads,
     }
 }
 
@@ -493,5 +496,6 @@ fn remote_migrate_gate_notice(message: &str, project_path: &str) -> Option<Kanba
                 url,
             )
         }),
+        offers_install: false,
     })
 }

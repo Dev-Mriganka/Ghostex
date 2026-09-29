@@ -165,8 +165,9 @@ pub(super) struct AddProjectRow {
     pub(super) title: String,
     pub(super) description: Option<String>,
     pub(super) disabled: bool,
-    /// A not-ready provider: its hint, shown in the `Setup Required` tooltip.
-    pub(super) setup_required: Option<(AddProjectSourceId, String)>,
+    /// A not-ready provider: its hint, shown in the `Setup Required` (or Install) tooltip, and the
+    /// managed tool that installs its missing CLI, when one does.
+    pub(super) setup_required: Option<(AddProjectSourceId, String, Option<String>)>,
     pub(super) action: RowAction,
 }
 
@@ -257,6 +258,10 @@ pub(super) enum Pending {
         after_clone: bool,
     },
     CreateFolder,
+    /// `installSourceControlTool` / `readSourceControlTool` (tool_install.rs).
+    ToolInstall {
+        machine_id: String,
+    },
 }
 
 /// Keyboard focus outside the path input: the chrome buttons Tab reaches.
@@ -295,6 +300,8 @@ pub(crate) struct GpuiAddProjectModalWindow {
     pub(super) is_slow: bool,
     pub(super) discovery: HashMap<String, Option<AddProjectSourceControlDiscovery>>,
     pub(super) pending_discovery_machine_id: Option<String>,
+    /// The provider CLI being installed from its row (tool_install.rs).
+    pub(super) tool_install: Option<super::tool_install::ToolInstall>,
     /// `None` means "not naming a folder"; the query keeps the listing's directory meanwhile.
     pub(super) new_folder_name: Option<String>,
     pub(super) clone_job_id: Option<String>,
@@ -304,7 +311,7 @@ pub(crate) struct GpuiAddProjectModalWindow {
     pub(super) review_scroll: ScrollHandle,
     pub(super) focus_handle: FocusHandle,
     pub(super) chrome_focus: HashMap<FocusSlot, FocusHandle>,
-    clone_job_poll_interval: Duration,
+    pub(super) clone_job_poll_interval: Duration,
     slow_operation_notice: Duration,
     next_request_id: u64,
     pending: HashMap<u64, Pending>,
@@ -410,6 +417,7 @@ impl GpuiAddProjectModalWindow {
             is_slow: false,
             discovery: HashMap::new(),
             pending_discovery_machine_id: None,
+            tool_install: None,
             new_folder_name: None,
             clone_job_id: None,
             path_input,
@@ -827,6 +835,9 @@ impl GpuiAddProjectModalWindow {
                         self.set_busy(None, cx);
                     }
                 }
+            }
+            Pending::ToolInstall { machine_id } => {
+                self.receive_tool_install(machine_id, result, cx);
             }
             Pending::CreateFolder => {
                 self.set_busy(None, cx);

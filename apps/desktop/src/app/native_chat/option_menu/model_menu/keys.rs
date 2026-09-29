@@ -29,7 +29,7 @@ pub(super) fn register(cx: &mut gpui::App) {
         "left",
         "right",
         "enter",
-        "shift-enter",
+        "alt-enter",
         "escape",
         "tab",
         "shift-tab",
@@ -108,7 +108,7 @@ impl ChatOptionMenuPanel {
     /// True when the picker used the key.
     ///
     /// CDXC:SessionChat 2026-09-24 DECISION:
-    /// User: the model pop-up is the one model picker and is driven from the keyboard (docs/2026-09-24/model-popup-keyboard/): Up and Down move through the models and then the footer buttons and stop at the top and bottom instead of wrapping round ("make it not loop to the top when I press down while I'm at the bottom", 2026-09-24, superseding the wrap); Left and Right move the highlighted model's reasoning a level (a shake at either end or on a model without levels) and move along the footer; Enter uses the highlighted model and level in this session and Shift+Enter saves them as the agent's default, and either one closes the pop-up (2026-09-24); Option+1 to Option+9 only highlight that row and never apply it ("I should press enter to apply the model change", 2026-09-24; the modifier is Option, not Cmd, "since we use option + p for showing this modal", 2026-09-26); the footer buttons answer to their letters (see `BUTTON_LETTERS`); Tab and Shift+Tab switch agent tabs; Escape or the picker hotkey close without saving. The mouse keeps its old meaning: a click saves the default, a right-click this session only.
+    /// User: the model pop-up is the one model picker and is driven from the keyboard (docs/2026-09-24/model-popup-keyboard/): Up and Down move through the models and then the footer buttons and stop at the top and bottom instead of wrapping round ("make it not loop to the top when I press down while I'm at the bottom", 2026-09-24, superseding the wrap); Left and Right move the highlighted model's reasoning a level (a shake at either end or on a model without levels) and move along the footer; Enter saves the highlighted model and level as the agent's default and Option+Enter uses them in this session only, and either one closes the pop-up ("I want holding option and hitting enter to do 'this session only' but otherwise we always don't do 'this session only'", 2026-09-29, superseding the 2026-09-24 Enter for this session and Shift+Enter for the default); Option+Enter on a footer button or a side-list choice likewise applies it to this session only; Option+1 to Option+9 only highlight that row and never apply it ("I should press enter to apply the model change", 2026-09-24; the modifier is Option, not Cmd, "since we use option + p for showing this modal", 2026-09-26); the footer buttons answer to their letters (see `BUTTON_LETTERS`); Tab and Shift+Tab switch agent tabs; Escape or the picker hotkey close without saving. The mouse keeps its old meaning: a click saves the default, a right-click this session only.
     fn model_menu_key(&mut self, key: &str, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let Some(state) = self.model_menu.as_mut() else {
             return false;
@@ -160,14 +160,15 @@ impl ChatOptionMenuPanel {
                         .scroll_to_item(state.active, ScrollStrategy::Nearest);
                 }
             }
-            "enter" | "shift-enter" => {
+            "enter" | "alt-enter" => {
                 let active = state.active;
+                let session_only = key == "alt-enter";
                 if active < rows {
-                    if self.model_menu_pick_with_effort(active, key == "enter", cx) {
+                    if self.model_menu_pick_with_effort(active, session_only, cx) {
                         self.menu.update(cx, |menu, cx| menu.close(None, cx));
                     }
                 } else {
-                    self.activate_model_button(active - rows, key == "shift-enter", window, cx);
+                    self.activate_model_button(active - rows, session_only, window, cx);
                 }
             }
             "left" | "right" if state.active >= rows => {

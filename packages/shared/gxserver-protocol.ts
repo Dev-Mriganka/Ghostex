@@ -199,6 +199,7 @@ export type GxserverEndpointPath =
    */
   | "/api/switchSessionAgent"
   | "/api/agentCliMaintenance"
+  | "/api/managedTools"
   | "/api/agentAccounts"
   | "/api/readAgentLaunchPlan"
   | "/api/readAgentResumePlan"
@@ -1190,6 +1191,8 @@ export interface GxserverSourceControlProviderDiscovery {
   detail?: string;
   executable?: string;
   installHint: string;
+  /** Present when the CLI is missing: the `/api/managedTools` tool that installs it (`gh`, `glab`). */
+  installTool?: string;
   label: string;
   provider: GxserverSourceControlProviderKind;
   status: GxserverSourceControlDiscoveryStatus;

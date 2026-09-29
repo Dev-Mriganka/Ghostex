@@ -3,18 +3,20 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/packages/components/ui/dialog';
 import type { AccountHelper, AccountProvider } from '@/packages/shared/agent-accounts';
 import { AccountLogo } from './controls';
-import { CopyCommand } from './copy-command';
+import { AccountHelperInstallButton, type AccountHelperTools } from './helper-tools';
 
 /** CDXC:Settings 2026-09-07 DECISION: Each provider has a connection-guide button. Both open the same Settings dialog with a backdrop, shared Ghostex instructions once, and two bullets for the provider-specific steps, each with a short helper and author credit. */
 export function AccountConnectionGuide({
   provider,
   helpers,
+  helperTools,
   machineId,
   busy,
   onClose,
 }: {
   provider?: AccountProvider;
   helpers: AccountHelper[];
+  helperTools: AccountHelperTools;
   machineId: string;
   busy: boolean;
   onClose: () => void;
@@ -81,7 +83,13 @@ export function AccountConnectionGuide({
                         ? 'Enter the new account’s email below and choose it in the browser. Ghostex uses a separate login profile and verifies the account before saving it with cswap. To refresh an existing login, use that account’s Reconnect action.'
                         : 'Enter the new account’s email below and choose it in the browser. xswap verifies the login before saving a separate account home with shared session history. To refresh an existing login, use that account’s Reconnect action.'}
                     </p>
-                    {helper && !helper.installed && <CopyCommand command={helper.installCommand} />}
+                    {helper && !helper.installed && (
+                      <AccountHelperInstallButton
+                        fallbackCommand={helper.installCommand}
+                        helperTools={helperTools}
+                        provider={id}
+                      />
+                    )}
                   </li>
                 );
               })}

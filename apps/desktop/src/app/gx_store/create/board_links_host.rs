@@ -112,7 +112,11 @@ async fn mutate_link_stores(
 /// projectBoardConfig wholesale. Re-read the row so the link write extends the current links
 /// instead of persisting a snapshot taken before the session existed; otherwise a link that landed
 /// during the gap is dropped and its card reads as never worked.
-async fn reload_scope(board: &Value, store: &[Value], context: &BoardContext) -> (Value, Vec<Value>) {
+async fn reload_scope(
+    board: &Value,
+    store: &[Value],
+    context: &BoardContext,
+) -> (Value, Vec<Value>) {
     match list_projects().await {
         Ok(projects) => {
             let board_id = project_id(board);
@@ -121,7 +125,8 @@ async fn reload_scope(board: &Value, store: &[Value], context: &BoardContext) ->
                 .find(|project| project_id(project) == board_id)
                 .cloned()
                 .unwrap_or_else(|| board.clone());
-            let store = select_link_store_projects(&latest, &projects, &context.global_beads_directory);
+            let store =
+                select_link_store_projects(&latest, &projects, &context.global_beads_directory);
             (latest, store)
         }
         Err(_) => {
@@ -180,7 +185,8 @@ async fn upsert_link(
         .cloned()
         .unwrap_or_else(|| latest.clone());
     let link_project_id = project_id(&link_project);
-    let ghostex_session_id = board_session_id(&session.project_id, &session.session_id, &link_project_id);
+    let ghostex_session_id =
+        board_session_id(&session.project_id, &session.session_id, &link_project_id);
     let next = BeadConversationLink {
         agent_id: agent
             .map(|agent| agent.agent_id.clone())
@@ -326,7 +332,10 @@ pub(super) async fn start_work(
 fn focus_project(this: &App, cx: &mut AsyncApp, project_id: &str) {
     let group_id = ProjectKey::local(project_id).to_sidebar_group_id();
     let _ = this.update(cx, |this, cx| {
-        this.dispatch_native_sidebar_command(json!({ "type": "focusGroup", "groupId": group_id }), cx);
+        this.dispatch_native_sidebar_command(
+            json!({ "type": "focusGroup", "groupId": group_id }),
+            cx,
+        );
     });
 }
 
@@ -385,7 +394,15 @@ async fn start_worktree_work(
                     client.request_resubscribe();
                 }
             });
-            toast(this, cx, "success", "Worktree started", None, &toast_id, false);
+            toast(
+                this,
+                cx,
+                "success",
+                "Worktree started",
+                None,
+                &toast_id,
+                false,
+            );
             Ok(session)
         }
         Err(error) => {
@@ -408,7 +425,10 @@ async fn start_worktree_work(
 fn worktree_toast_id() -> String {
     static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let sequence = SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    format!("toast-gpui-worktree-{:x}-{sequence}", super::super::host::now_ms())
+    format!(
+        "toast-gpui-worktree-{:x}-{sequence}",
+        super::super::host::now_ms()
+    )
 }
 
 /// `postWorktreeToast`: a toast replaced in place by its id.
@@ -421,14 +441,17 @@ fn toast(
     toast_id: &str,
     persistent: bool,
 ) {
-    let mut request = json!({ "level": level, "title": title, "toastId": toast_id, "type": "toast" });
+    let mut request =
+        json!({ "level": level, "title": title, "toastId": toast_id, "type": "toast" });
     if let Some(description) = description {
         request["description"] = json!(description);
     }
     if persistent {
         request["persistent"] = json!(true);
     }
-    let _ = this.update(cx, |this, cx| this.receive_gpui_app_toast_bridge_message(&request, cx));
+    let _ = this.update(cx, |this, cx| {
+        this.receive_gpui_app_toast_bridge_message(&request, cx)
+    });
 }
 
 /// `createAgentSessionRecordForProject(project, agent, prompt, { errorMessage })`: create the
@@ -450,7 +473,12 @@ async fn create_agent_record(
         agent,
         project_id,
         prompt,
-        first_prompt_title_runtime_settings(&title_settings, context.hud.as_ref(), Some(prompt), None),
+        first_prompt_title_runtime_settings(
+            &title_settings,
+            context.hud.as_ref(),
+            Some(prompt),
+            None,
+        ),
         &AgentRecordOptions::default(),
         &agent_session_default_title(Some(&agent.name)),
     );
@@ -477,7 +505,13 @@ async fn create_agent_record(
     };
     let focused = SessionKey::local(project_id, &session_id);
     let _ = this.update(cx, |this, cx| {
-        this.gx_store_focus_created_session(&focused.project_id, &focused.session_id, false, None, cx);
+        this.gx_store_focus_created_session(
+            &focused.project_id,
+            &focused.session_id,
+            false,
+            None,
+            cx,
+        );
     });
     gx_rpc(
         None,
@@ -539,7 +573,8 @@ pub(super) async fn jump(
         return Err("The linked Ghostex session is no longer available.".to_string());
     };
     if outcome == "focus" {
-        let sidebar_session_id = SessionKey::local(&opened_project, &opened_session).to_sidebar_session_id();
+        let sidebar_session_id =
+            SessionKey::local(&opened_project, &opened_session).to_sidebar_session_id();
         let _ = this.update(cx, |this, cx| {
             this.dispatch_native_sidebar_ui(
                 json!({ "type": "selectSession", "mode": "focus", "sessionId": sidebar_session_id }),

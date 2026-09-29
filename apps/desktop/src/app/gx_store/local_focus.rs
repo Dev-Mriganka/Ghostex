@@ -448,7 +448,13 @@ impl GhostexGpuiApp {
         // Placed means the store HOLDS the row, not merely that the intent was not refused: the
         // core applies a focus on a machine whose first snapshot has not arrived without checking
         // it (startup restore), and such a row is one the store cannot draw either.
-        let placed = !refused && self.gx_store.core.presentation().session(&session).is_some();
+        let placed = !refused
+            && self
+                .gx_store
+                .core
+                .presentation()
+                .session(&session)
+                .is_some();
         self.gx_store.local_focus.drawn_focus = match placed {
             true => DrawnFocus::Store,
             false => DrawnFocus::Unplaced,

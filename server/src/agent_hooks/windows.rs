@@ -8,7 +8,7 @@ pub(crate) fn command(agent: &str, notify_path: &Path) -> String {
     let executable = std::env::current_exe().unwrap_or_default();
     let quote = |text: &str| format!("'{}'", text.replace('\'', "''"));
     format!(
-        "powershell.exe -NoLogo -NoProfile -Command \"& {} agent-hook-notify-native {} {}\"",
+        "powershell.exe -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& {} agent-hook-notify-native {} {}\"",
         quote(&executable.to_string_lossy()),
         quote(&notify_path.to_string_lossy()),
         quote(agent)

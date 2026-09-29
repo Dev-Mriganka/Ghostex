@@ -62,5 +62,7 @@ fn saved_at(raw: &str) -> Option<i64> {
         #[serde(rename = "savedAt")]
         saved_at: i64,
     }
-    serde_json::from_str::<Stamp>(raw).ok().map(|stamp| stamp.saved_at)
+    serde_json::from_str::<Stamp>(raw)
+        .ok()
+        .map(|stamp| stamp.saved_at)
 }

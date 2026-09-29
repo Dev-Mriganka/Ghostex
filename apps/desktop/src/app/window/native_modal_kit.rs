@@ -1553,7 +1553,8 @@ pub(crate) struct ModalSegmentedItem {
 }
 
 /// `SegmentedControl variant='raised' stretch` (packages/components/ui/segmented-control.tsx
-/// skinned by packages/components/ui/raised-tab-rail.css): a 32px inset track
+/// skinned by packages/components/ui/raised-tab-rail.css, ink washes under glass per
+/// [`raised_rail_colors`]): a 32px inset track
 /// (`light-dark(#ededed, #202020)`, 14% hairline, 8px radius, 3px padding and
 /// gap) whose segments split the width at 13px/400 in `light-dark(#525252, #b8b8b8)`,
 /// hover on `light-dark(#e3e3e3, #292929)`, and the pressed segment raised on
@@ -1568,27 +1569,15 @@ pub(crate) fn modal_segmented_control<V: 'static>(
     on_select: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
     cx: &mut Context<V>,
 ) -> AnyElement {
-    let (track, track_border, text, hover_bg, active_text, pressed_bg, ring) = if p.light {
-        (
-            rgb(0xededed),
-            modal_rgba(0x000000, 0.14),
-            rgb(0x525252),
-            rgb(0xe3e3e3),
-            rgb(0x262626),
-            rgb(0xffffff),
-            modal_rgba(0x000000, 0.08),
-        )
-    } else {
-        (
-            rgb(0x202020),
-            modal_rgba(0xffffff, 0.14),
-            rgb(0xb8b8b8),
-            rgb(0x292929),
-            rgb(0xf5f5f5),
-            rgb(0x363636),
-            modal_rgba(0xffffff, 0.08),
-        )
-    };
+    let RaisedRailColors {
+        track,
+        track_border,
+        text,
+        hover: hover_bg,
+        active_text,
+        pressed: pressed_bg,
+        ring,
+    } = raised_rail_colors(p.light, p.glass);
     let segments = items.iter().enumerate().map(|(index, item)| {
         let pressed = index == selected;
         let on_select = on_select.clone();
@@ -2207,29 +2196,56 @@ pub(crate) struct ModalRailItem {
     pub(crate) trailing: Option<SharedString>,
 }
 
-/// The `.raised-tab-rail` tokens (packages/components/ui/raised-tab-rail.css): track, track
-/// border, resting text, hover fill, pressed text, pressed fill and the pressed ring.
-fn raised_rail_tokens(p: &ModalPalette) -> (Rgba, Rgba, Rgba, Rgba, Rgba, Rgba, Rgba) {
-    if p.light {
-        (
-            rgb(0xededed),
-            modal_rgba(0x000000, 0.14),
-            rgb(0x525252),
-            rgb(0xe3e3e3),
-            rgb(0x262626),
-            rgb(0xffffff),
-            modal_rgba(0x000000, 0.08),
-        )
+/// The `.raised-tab-rail` tokens (packages/components/ui/raised-tab-rail.css) shared by every
+/// raised rail and segmented control: the modal kit's, Settings' Remote page and the chat's
+/// account menu.
+#[derive(Clone, Copy)]
+pub(crate) struct RaisedRailColors {
+    pub(crate) track: Rgba,
+    pub(crate) track_border: Rgba,
+    pub(crate) text: Rgba,
+    pub(crate) hover: Rgba,
+    pub(crate) active_text: Rgba,
+    pub(crate) pressed: Rgba,
+    pub(crate) ring: Rgba,
+}
+
+/// CDXC:Theming 2026-09-29 WHY:
+/// The rail's fixed `#202020` track and `#363636` pressed tab painted an opaque slab across the top of the frosted Agents Hub. Under window glass the track, hover and pressed fills are ink washes like the rest of the frosted palette ([`ModalPalette::frosted`]); the hover and pressed washes sit on top of the track's.
+pub(crate) fn raised_rail_colors(light: bool, glass: bool) -> RaisedRailColors {
+    let (ink, ring) = if light {
+        (0x000000, modal_rgba(0x000000, 0.08))
     } else {
-        (
-            rgb(0x202020),
-            modal_rgba(0xffffff, 0.14),
-            rgb(0xb8b8b8),
-            rgb(0x292929),
-            rgb(0xf5f5f5),
-            rgb(0x363636),
-            modal_rgba(0xffffff, 0.08),
-        )
+        (0xffffff, modal_rgba(0xffffff, 0.08))
+    };
+    let track_border = modal_rgba(ink, 0.14);
+    let (text, active_text) = if light {
+        (rgb(0x525252), rgb(0x262626))
+    } else {
+        (rgb(0xb8b8b8), rgb(0xf5f5f5))
+    };
+    let (track, hover, pressed) = match (glass, light) {
+        (true, true) => (
+            modal_rgba(ink, 0.05),
+            modal_rgba(ink, 0.05),
+            modal_rgba(0xffffff, 0.85),
+        ),
+        (true, false) => (
+            modal_rgba(ink, 0.04),
+            modal_rgba(ink, 0.05),
+            modal_rgba(ink, 0.12),
+        ),
+        (false, true) => (rgb(0xededed), rgb(0xe3e3e3), rgb(0xffffff)),
+        (false, false) => (rgb(0x202020), rgb(0x292929), rgb(0x363636)),
+    };
+    RaisedRailColors {
+        track,
+        track_border,
+        text,
+        hover,
+        active_text,
+        pressed,
+        ring,
     }
 }
 
@@ -2249,8 +2265,15 @@ pub(crate) fn modal_raised_tab_rail<V: 'static>(
     on_select: impl Fn(&mut V, usize, &mut Window, &mut Context<V>) + Clone + 'static,
     cx: &mut Context<V>,
 ) -> AnyElement {
-    let (track, track_border, text, hover_bg, active_text, pressed_bg, ring) =
-        raised_rail_tokens(p);
+    let RaisedRailColors {
+        track,
+        track_border,
+        text,
+        hover: hover_bg,
+        active_text,
+        pressed: pressed_bg,
+        ring,
+    } = raised_rail_colors(p.light, p.glass);
     let tabs = items.iter().enumerate().map(|(index, item)| {
         let pressed = index == selected;
         let on_select = on_select.clone();

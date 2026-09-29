@@ -928,9 +928,9 @@ picker from the keyboard, and pressing it again closes it. Up and Down move thro
 at the top and bottom; Left and
 Right change the highlighted model's reasoning level, which the reasoning button
 shows; the letter on each bottom button's icon uses it (R Reasoning, C Context,
-F Fast mode, A Account); Tab and Shift+Tab move through the Favorites and agent tabs. Enter uses the highlighted model and level in
-this session and closes the picker, Shift+Enter saves them as the agent's default,
-and Option+1 to Option+9
+F Fast mode, A Account); Tab and Shift+Tab move through the Favorites and agent tabs. Enter applies the highlighted model and level and
+saves them as the agent's default, Option+Enter uses them in this session only and
+leaves the default alone (either one closes the picker), and Option+1 to Option+9
 jump the highlight to one of the first nine rows without applying it. Escape closes it
 without changing anything. The key reminder along the bottom lists these.
 
@@ -1631,6 +1631,19 @@ docs directory), `hideProjectHeaderDiffStats`,
   button that runs the official installer again, and an uninstall button
   that removes Trycua but keeps its Accessibility and Screen Recording
   permissions. Hover them to see the installed and latest versions.
+- Settings > Integrations > Tools lists the tools Ghostex can install for you
+  when something you set up needs them: Node.js and npm, uv, Homebrew (Mac),
+  System tools (curl, certificates, unzip and git on Linux), Beads, and the
+  GitHub and GitLab CLIs. Each Install button installs with one click and its
+  tooltip says exactly how. When you already have a tool (for example Node.js
+  from nvm or Homebrew), Ghostex uses yours and shows it as installed by you;
+  otherwise it downloads the official release, checks its checksum and keeps
+  it in its own tools folder, added to the end of your PATH. Homebrew asks for
+  your Mac password once; Linux system tools ask for your password once, or
+  open a terminal that asks for it where there is no password dialog (WSL).
+  Tools Ghostex installed get Update (or a check mark to check again),
+  Reinstall and Uninstall buttons, and installing an agent that needs npm
+  installs Node.js first on its own.
 - The header's ⋯ menu holds Ask Ghostex, Tips & Tricks, Resources, Dev
   servers, Extensions and Customize. Each of the first five opens a panel
   under the ⋯ button that closes when you click away. Ask Ghostex, Tips &

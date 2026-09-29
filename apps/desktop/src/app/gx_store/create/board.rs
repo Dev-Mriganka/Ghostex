@@ -52,7 +52,6 @@ const DEFAULT_PROMPT_AGENT_ID: &str = "codex";
 /// Link availability answers by `projectId:sessionId`.
 pub(super) type LinkChecks = HashMap<String, (Instant, LinkAvailability)>;
 
-
 /// One board request, bounded the way `normalizeGpuiProjectBoardConversationRequest` bounds it.
 #[derive(Clone, Debug, Default)]
 pub(super) struct BoardRequest {
@@ -222,7 +221,8 @@ impl GhostexGpuiApp {
                 "response": response,
                 "type": crate::GPUI_SIDEBAR_PROJECT_BOARD_CONVERSATION_RESPONSE_MESSAGE_TYPE,
                 "version": crate::GPUI_SIDEBAR_PROJECT_BOARD_CONVERSATION_RESPONSE_MESSAGE_VERSION,
-            }).to_string(),
+            })
+            .to_string(),
             cx,
         );
     }
@@ -268,7 +268,10 @@ impl GhostexGpuiApp {
                     project_id: session.project_id.clone(),
                     session_id: session.session_id.clone(),
                     title: session.title.clone(),
-                    agent_id: session.agent_name.clone().or_else(|| session.agent_id.clone()),
+                    agent_id: session
+                        .agent_name
+                        .clone()
+                        .or_else(|| session.agent_id.clone()),
                     agent_session_id: session.agent_session_id.clone(),
                     sleeping: session.lifecycle_state
                         == ghostex_gx_core::protocol::LifecycleState::Sleeping,
@@ -346,9 +349,16 @@ pub(super) fn select_board_project(
     projects: &[Value],
     context: &BoardContext,
 ) -> BoardResult<Value> {
-    let id_of = |project: &Value| project.get("projectId").and_then(Value::as_str).map(str::to_string);
+    let id_of = |project: &Value| {
+        project
+            .get("projectId")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    };
     if let Some(project_id) = &request.project_id
-        && let Some(project) = projects.iter().find(|project| id_of(project).as_ref() == Some(project_id))
+        && let Some(project) = projects
+            .iter()
+            .find(|project| id_of(project).as_ref() == Some(project_id))
     {
         return Ok(project.clone());
     }
@@ -368,7 +378,9 @@ pub(super) fn select_board_project(
         return Ok(project.clone());
     }
     if let Some(active) = &context.facts.active_project_id
-        && let Some(project) = projects.iter().find(|project| id_of(project).as_ref() == Some(active))
+        && let Some(project) = projects
+            .iter()
+            .find(|project| id_of(project).as_ref() == Some(active))
     {
         return Ok(project.clone());
     }
@@ -424,7 +436,11 @@ async fn board_state(
                 });
             let check = match session {
                 Some(_) => None,
-                None => Some(link_availability(&board_id, &link.ghostex_session_id, context)),
+                None => Some(link_availability(
+                    &board_id,
+                    &link.ghostex_session_id,
+                    context,
+                )),
             };
             pending.push((link, session, check));
         }
@@ -459,7 +475,10 @@ async fn board_state(
     state.insert("debuggingMode".into(), json!(context.debugging_mode));
     // The board page gates its debug breadcrumbs on the native.project.board scenario; Rust owns
     // the writer and also enforces the global Show debug UI controls gate.
-    state.insert("diagnosticLogging".into(), context.diagnostic_logging.clone());
+    state.insert(
+        "diagnosticLogging".into(),
+        context.diagnostic_logging.clone(),
+    );
     state.insert("defaultAgentId".into(), json!(context.default_agent_id));
     if let Some(focused) = focused_terminal {
         state.insert("focusedTerminalSessionId".into(), json!(focused));
@@ -518,7 +537,8 @@ async fn link_availability(
                 .and_then(|rows| {
                     rows.iter().find(|row| {
                         row.get("projectId").and_then(Value::as_str) == Some(project_id.as_str())
-                            && row.get("sessionId").and_then(Value::as_str) == Some(session_id.as_str())
+                            && row.get("sessionId").and_then(Value::as_str)
+                                == Some(session_id.as_str())
                             && row.get("lifecycleState").and_then(Value::as_str) != Some("running")
                     })
                 })

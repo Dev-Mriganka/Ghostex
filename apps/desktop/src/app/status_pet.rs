@@ -741,4 +741,3 @@ impl GhostexGpuiApp {
         true
     }
 }
-

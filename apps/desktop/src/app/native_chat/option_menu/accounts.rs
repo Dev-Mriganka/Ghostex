@@ -427,6 +427,12 @@ impl Colors {
         let light = appearance.light;
         let foreground: Hsla = rgb(if light { 0x292929 } else { 0xfcfcfc }).into();
         let background = appearance.menu_surface();
+        // The menu is frosted under window glass, so its segmented track and pressed segment
+        // take the modal kit's rail washes instead of solid fills.
+        let rail = crate::app::window::native_modal_kit::raised_rail_colors(
+            light,
+            crate::app::helpers::window_glass_active(),
+        );
         Self {
             foreground,
             muted: appearance.muted,
@@ -451,10 +457,10 @@ impl Colors {
                 gpui::Hsla::from(rgb(0xffffff)).opacity(0.135)
             },
             thumb: background,
-            segment_track: rgb(if light { 0xededed } else { 0x202020 }).into(),
-            segment_text: rgb(if light { 0x525252 } else { 0xb8b8b8 }).into(),
-            segment_pressed: rgb(if light { 0xffffff } else { 0x363636 }).into(),
-            segment_pressed_text: rgb(if light { 0x262626 } else { 0xf5f5f5 }).into(),
+            segment_track: rail.track.into(),
+            segment_text: rail.text.into(),
+            segment_pressed: rail.pressed.into(),
+            segment_pressed_text: rail.active_text.into(),
         }
     }
 }

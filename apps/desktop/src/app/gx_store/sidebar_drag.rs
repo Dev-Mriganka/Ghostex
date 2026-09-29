@@ -174,8 +174,9 @@ impl GhostexGpuiApp {
                     self.gx_store.sidebar_drag.activations += 1;
                     // A remote project's group is also the active group (the old runtime's `activeGroupId`), which its
                     // remote tab list is read from (gx-core order_write.rs, CDXC:Sessions 2026-09-25).
-                    let remote_group = (!project.machine.is_local())
-                        .then(|| ghostex_gx_core::encode_workspace_subgroup_id(&project, &group_id));
+                    let remote_group = (!project.machine.is_local()).then(|| {
+                        ghostex_gx_core::encode_workspace_subgroup_id(&project, &group_id)
+                    });
                     let output = self.gx_store.core.handle(
                         Event::Intent(Intent::FocusSubgroup { project, group_id }),
                         super::host::now_ms(),

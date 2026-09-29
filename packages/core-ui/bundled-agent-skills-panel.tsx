@@ -19,6 +19,7 @@ import { Button } from '@/packages/components/ui/button';
 import { Field, FieldContent, FieldDescription, FieldTitle } from '@/packages/components/ui/field';
 import { cn } from '@/packages/components/utils';
 import { AppTooltip } from './app-tooltip';
+import { trycuaJobView } from './trycua-job';
 import { DisabledSettingControlTooltip } from './disabled-setting-control-tooltip';
 import {
   BUNDLED_GHOSTEX_AGENT_SKILLS,
@@ -335,7 +336,8 @@ function BundledAgentSkillRow({
  * CDXC:Extensions 2026-08-24:
  * One card for the one Trycua install, shown above the skills that depend on
  * it. It shows the exact command the host will run so the install is never a
- * black box, and the button runs that same command in a command-pane terminal.
+ * black box, and the button runs that same command (in the background since
+ * CDXC:ManagedTools 2026-09-29, with its progress on this card).
  */
 function TrycuaPrerequisiteCard({
   cuaDriverInstalled,
@@ -351,7 +353,16 @@ function TrycuaPrerequisiteCard({
   onInstallCuaDriver?: () => void;
 }) {
   const installCommand = ghostexCliStatus?.cuaDriverInstallCommand;
-  const status = ghostexCliStatusLoading ? 'Checking' : cuaDriverInstalled ? 'Installed' : 'Not installed';
+  const job = trycuaJobView(ghostexCliStatus);
+  const status = ghostexCliStatusLoading
+    ? 'Checking'
+    : job.running
+      ? 'Installing'
+      : cuaDriverInstalled
+        ? 'Installed'
+        : 'Not installed';
+  const installDisabled =
+    ghostexCliStatusLoading || cuaDriverInstalled || !onInstallCuaDriver || job.running || Boolean(job.blockedReason);
 
   return (
     <Field className='rounded-none border border-border bg-muted/20 px-4 py-3'>
@@ -387,42 +398,48 @@ function TrycuaPrerequisiteCard({
           </div>
           <div className='flex shrink-0 flex-wrap gap-2 sm:justify-end'>
             <DisabledSettingControlTooltip
-              disabled={ghostexCliStatusLoading || cuaDriverInstalled || !onInstallCuaDriver}
+              disabled={installDisabled}
               reason={
                 ghostexCliStatusLoading
                   ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} status is being checked.`
                   : cuaDriverInstalled
                     ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} is already installed.`
-                    : `${GHOSTEX_TRYCUA_PRODUCT_NAME} installation isn’t available here.`
+                    : (job.runningReason ??
+                      job.blockedReason ??
+                      `${GHOSTEX_TRYCUA_PRODUCT_NAME} installation isn’t available here.`)
               }
             >
-              <Button
-                disabled={ghostexCliStatusLoading || cuaDriverInstalled || !onInstallCuaDriver}
-                onClick={onInstallCuaDriver}
-                type='button'
-                variant='outline'
-              >
-                {ghostexCliStatusLoading ? (
-                  <IconLoader2 aria-hidden='true' className='animate-spin' data-icon='inline-start' />
-                ) : cuaDriverInstalled ? (
-                  <IconCircleCheckFilled aria-hidden='true' data-icon='inline-start' />
-                ) : (
-                  <IconDownload aria-hidden='true' data-icon='inline-start' />
-                )}
-                {ghostexCliStatusLoading
-                  ? 'Checking'
-                  : cuaDriverInstalled
-                    ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} Installed`
-                    : `Install ${GHOSTEX_TRYCUA_PRODUCT_NAME}`}
-              </Button>
+              <AppTooltip content={installDisabled ? undefined : job.plan}>
+                <Button disabled={installDisabled} onClick={onInstallCuaDriver} type='button' variant='outline'>
+                  {ghostexCliStatusLoading || job.running ? (
+                    <IconLoader2 aria-hidden='true' className='animate-spin' data-icon='inline-start' />
+                  ) : cuaDriverInstalled ? (
+                    <IconCircleCheckFilled aria-hidden='true' data-icon='inline-start' />
+                  ) : (
+                    <IconDownload aria-hidden='true' data-icon='inline-start' />
+                  )}
+                  {ghostexCliStatusLoading
+                    ? 'Checking'
+                    : job.running
+                      ? `Installing ${GHOSTEX_TRYCUA_PRODUCT_NAME}…`
+                      : cuaDriverInstalled
+                        ? `${GHOSTEX_TRYCUA_PRODUCT_NAME} Installed`
+                        : `Install ${GHOSTEX_TRYCUA_PRODUCT_NAME}`}
+                </Button>
+              </AppTooltip>
             </DisabledSettingControlTooltip>
           </div>
         </div>
+        {job.detail ? (
+          <p className='text-[13px] text-muted-foreground' role='status'>
+            {job.detail}
+          </p>
+        ) : null}
         {!cuaDriverInstalled && installCommand ? (
           <div className='flex flex-col gap-1.5'>
             <p className='text-[13px] text-muted-foreground'>
-              Install {GHOSTEX_TRYCUA_PRODUCT_NAME} runs this command in a command pane terminal so you can watch it
-              finish. You can also run it yourself:
+              Install {GHOSTEX_TRYCUA_PRODUCT_NAME} runs this command in the background and shows its progress here. You
+              can also run it yourself:
             </p>
             <div className='flex items-start gap-1.5'>
               <code className='block min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-none border border-border bg-muted/40 px-2.5 py-1.5 text-[13px] text-muted-foreground'>

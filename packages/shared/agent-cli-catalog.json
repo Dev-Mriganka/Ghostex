@@ -35,7 +35,10 @@
     "native": {
       "install": "curl -fsSL https://claude.ai/install.sh | bash",
       "update": "claude update",
-      "windowsInstall": "irm https://claude.ai/install.ps1 | iex"
+      "windowsInstall": "irm https://claude.ai/install.ps1 | iex",
+      "requires": {
+        "windows": ["git"]
+      }
     },
     "wingetId": "Anthropic.ClaudeCode",
     "miseTool": "claude",
@@ -61,7 +64,8 @@
     "installDirs": {
       "windows": ["%LOCALAPPDATA%/cursor-agent"],
       "unix": ["~/.local/bin"]
-    }
+    },
+    "installNote": "Grok and Cursor both install a command named agent; the one installed last is the one that runs."
   },
   {
     "agentId": "pi",
@@ -81,7 +85,10 @@
       "install": "curl -fsSL https://opencode.ai/install | bash",
       "update": "opencode upgrade"
     },
-    "miseTool": "opencode"
+    "miseTool": "opencode",
+    "installDirs": {
+      "unix": ["~/.opencode/bin"]
+    }
   },
   {
     "agentId": "gemini",
@@ -109,7 +116,11 @@
     "native": {
       "install": "curl -fsSL https://app.factory.ai/cli | sh",
       "update": "droid update"
-    }
+    },
+    "installDirs": {
+      "unix": ["~/.local/bin"]
+    },
+    "updateStopsSessions": true
   },
   {
     "agentId": "grok",
@@ -129,7 +140,8 @@
     },
     "latestVersion": {
       "url": "https://x.ai/cli/stable"
-    }
+    },
+    "installNote": "Grok and Cursor both install a command named agent; the one installed last is the one that runs."
   },
   {
     "agentId": "antigravity",
@@ -139,7 +151,11 @@
       "install": "curl -fsSL https://antigravity.google/cli/install.sh | bash",
       "windowsInstall": "irm https://antigravity.google/cli/install.ps1 | iex"
     },
-    "miseTool": "agy"
+    "miseTool": "agy",
+    "installDirs": {
+      "windows": ["%LOCALAPPDATA%/agy/bin"],
+      "unix": ["~/.local/bin"]
+    }
   },
   {
     "agentId": "amp",
@@ -149,16 +165,22 @@
       "install": "curl -fsSL https://ampcode.com/install.sh | bash",
       "update": "amp update"
     },
-    "miseTool": "amp"
+    "miseTool": "amp",
+    "installDirs": {
+      "unix": ["~/.local/bin"]
+    }
   },
   {
     "agentId": "hermes-agent",
     "binary": "hermes",
     "docsUrl": "https://hermes-agent.nousresearch.com/docs/getting-started/installation/",
     "native": {
-      "install": "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash",
+      "install": "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --non-interactive",
       "update": "hermes update --yes",
-      "windowsInstall": "irm https://hermes-agent.nousresearch.com/install.ps1 | iex"
+      "windowsInstall": "& ([scriptblock]::Create((irm https://hermes-agent.nousresearch.com/install.ps1))) -NonInteractive",
+      "requires": {
+        "unix": ["git"]
+      }
     }
   },
   {
@@ -166,7 +188,20 @@
     "binary": "acli",
     "docsUrl": "https://developer.atlassian.com/cloud/acli/guides/install/",
     "brewFormula": "atlassian/acli/acli",
-    "miseTool": "acli"
+    "miseTool": "acli",
+    "native": {
+      "install": "os=$(uname -s | tr '[:upper:]' '[:lower:]'); case \"$(uname -m)\" in arm64|aarch64) arch=arm64 ;; *) arch=amd64 ;; esac; mkdir -p \"$HOME/.local/bin\" && curl -fsSL -o \"$HOME/.local/bin/acli.download\" \"https://acli.atlassian.com/$os/latest/acli_${os}_$arch/acli\" && chmod 755 \"$HOME/.local/bin/acli.download\" && mv -f \"$HOME/.local/bin/acli.download\" \"$HOME/.local/bin/acli\"",
+      "windowsInstall": "$dir = Join-Path $env:LOCALAPPDATA 'Programs\\acli'; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }; Invoke-WebRequest -UseBasicParsing -Uri \"https://acli.atlassian.com/windows/latest/acli_windows_$arch/acli.exe\" -OutFile (Join-Path $dir 'acli.exe')",
+      "plan": "Downloads Atlassian's acli from acli.atlassian.com into your user folder. No password needed.",
+      "requires": {
+        "unix": ["curl"]
+      },
+      "pathMarkers": ["/programs/acli/"]
+    },
+    "installDirs": {
+      "windows": ["%LOCALAPPDATA%/Programs/acli"],
+      "unix": ["~/.local/bin"]
+    }
   },
   {
     "agentId": "codebuddy",
@@ -185,7 +220,14 @@
     "binary": "kiro-cli",
     "docsUrl": "https://kiro.dev/downloads/",
     "native": {
-      "install": "curl -fsSL https://cli.kiro.dev/install | bash"
+      "install": "curl -fsSL https://cli.kiro.dev/install | bash",
+      "requires": {
+        "unix": ["unzip"]
+      },
+      "needsApplicationsFolder": true
+    },
+    "installDirs": {
+      "unix": ["~/.local/bin"]
     }
   },
   {
@@ -221,6 +263,10 @@
     "native": {
       "install": "curl -fsSL https://cli.devin.ai/install.sh | bash",
       "windowsInstall": "irm https://static.devin.ai/cli/setup.ps1 | iex"
+    },
+    "installDirs": {
+      "windows": ["%LOCALAPPDATA%/devin/cli"],
+      "unix": ["~/.local/bin"]
     }
   },
   {

@@ -267,6 +267,13 @@ pub(super) fn raised_segmented<V: 'static>(
             modal_rgba(0xffffff, 0.04),
         )
     };
+    // Under window glass the solid tray and pressed fills become the kit's rail washes.
+    let (tray, pressed_bg, hover_bg) = if p.glass {
+        let rail = raised_rail_colors(p.light, true);
+        (rail.track, rail.pressed, rail.hover)
+    } else {
+        (tray, pressed_bg, hover_bg)
+    };
     let ring = if p.light {
         modal_rgba(0x000000, 0.08)
     } else {

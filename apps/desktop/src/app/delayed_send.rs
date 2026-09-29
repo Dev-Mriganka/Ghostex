@@ -2649,6 +2649,11 @@ impl GhostexGpuiApp {
             "checkCuaDriverUpdate" => {
                 self.check_gpui_cua_driver_update(cx);
             }
+            "runManagedToolTerminalCommand" => {
+                if let Some(tool_id) = command.get("toolId").and_then(serde_json::Value::as_str) {
+                    self.run_managed_tool_terminal_command(tool_id.to_string(), window, cx);
+                }
+            }
             "uninstallBundledAgentSkills" => {
                 self.run_gpui_ghostex_cli_settings_action(
                     GpuiGhostexCliSettingsAction::UninstallBundledAgentSkills,
@@ -2859,9 +2864,6 @@ impl GhostexGpuiApp {
             }
             "openGhosttyConfigFile" => {
                 self.open_gpui_ghostty_config_file(cx);
-            }
-            "installGte" => {
-                self.install_gpui_gte_from_homebrew(cx);
             }
             "runPortlessSettingsAdminAction" | "runPortlessSetupPromptAdminAction" => {
                 self.handle_gpui_portless_admin_action_message(command, cx);

@@ -78,6 +78,76 @@ pub(super) struct CliMethod {
     pub(super) label: String,
     pub(super) command: String,
     pub(super) unavailable_reason: Option<String>,
+    /// What one click does, including anything Ghostex installs first (absent from older gxservers).
+    pub(super) plan: Option<String>,
+    /// "node", "homebrew" or "systemTools": a tool Ghostex installs before `command`.
+    pub(super) prerequisite: Option<String>,
+    pub(super) system_tools: Vec<String>,
+}
+
+impl CliMethod {
+    pub(super) fn parse(method: &Value) -> Option<Self> {
+        Some(Self {
+            id: nonempty(method, "id")?,
+            label: nonempty(method, "label").unwrap_or_default(),
+            command: nonempty(method, "command").unwrap_or_default(),
+            unavailable_reason: nonempty(method, "unavailableReason"),
+            plan: nonempty(method, "plan"),
+            prerequisite: nonempty(method, "prerequisite"),
+            system_tools: method
+                .get("systemTools")
+                .and_then(Value::as_array)
+                .map(|tools| {
+                    tools
+                        .iter()
+                        .filter_map(|tool| tool.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+    }
+
+    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts).
+    pub(super) fn tooltip(&self) -> String {
+        self.unavailable_reason
+            .clone()
+            .or_else(|| self.plan.clone())
+            .unwrap_or_else(|| self.command.clone())
+    }
+
+    /// `agentCliPrerequisiteSuffix`.
+    pub(super) fn prerequisite_suffix(&self) -> Option<String> {
+        match self.prerequisite.as_deref()? {
+            "node" => Some("installs Node.js first".into()),
+            "homebrew" => Some("installs Homebrew first".into()),
+            "systemTools" => {
+                let tools: Vec<&str> = if self.system_tools.is_empty() {
+                    vec!["curl"]
+                } else {
+                    self.system_tools
+                        .iter()
+                        .map(|tool| {
+                            if tool == "ca-certificates" {
+                                "certificates"
+                            } else {
+                                tool.as_str()
+                            }
+                        })
+                        .collect()
+                };
+                Some(format!("installs {} first", tools.join(", ")))
+            }
+            _ => None,
+        }
+    }
+
+    /// `agentCliMethodLabel`.
+    pub(super) fn display_label(&self) -> String {
+        match self.prerequisite_suffix() {
+            Some(suffix) => format!("{}, {suffix}", self.label),
+            None => self.label.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -136,19 +206,7 @@ impl CliState {
             methods: value
                 .get("methods")
                 .and_then(Value::as_array)
-                .map(|methods| {
-                    methods
-                        .iter()
-                        .filter_map(|method| {
-                            Some(CliMethod {
-                                id: nonempty(method, "id")?,
-                                label: nonempty(method, "label").unwrap_or_default(),
-                                command: nonempty(method, "command").unwrap_or_default(),
-                                unavailable_reason: nonempty(method, "unavailableReason"),
-                            })
-                        })
-                        .collect()
-                })
+                .map(|methods| methods.iter().filter_map(CliMethod::parse).collect())
                 .unwrap_or_default(),
             job: value.get("job").and_then(|job| {
                 Some(CliJobInfo {
@@ -658,7 +716,13 @@ impl AgentsTab {
         let agent = agent_id.to_string();
         if missing {
             let title = error.clone().unwrap_or_else(|| {
-                format!("Install {} with its official installer", definition.binary)
+                state
+                    .as_ref()
+                    .and_then(CliState::default_install_method)
+                    .map(CliMethod::tooltip)
+                    .unwrap_or_else(|| {
+                        format!("Install {} with its official installer", definition.binary)
+                    })
             });
             return Some(cli_titled_button(
                 p,
@@ -702,11 +766,20 @@ impl AgentsTab {
             return None;
         }
         let title = error.clone().unwrap_or_else(|| {
-            format!(
-                "Update {} to {}",
+            let update = format!(
+                "Update {} to {}.",
                 definition.binary,
                 state.latest_version.clone().unwrap_or_default()
-            )
+            );
+            match state
+                .methods
+                .iter()
+                .find(|method| method.id == detected)
+                .map(CliMethod::tooltip)
+            {
+                Some(plan) => format!("{update} {plan}"),
+                None => update,
+            }
         });
         Some(cli_titled_button(
             p,
@@ -1001,7 +1074,7 @@ impl AgentsTab {
         if !methods.is_empty() {
             let options: Vec<DropdownOption> = methods
                 .iter()
-                .map(|method| DropdownOption::plain(method.id.clone(), method.label.clone()))
+                .map(|method| DropdownOption::plain(method.id.clone(), method.display_label()))
                 .collect();
             let select_agent = agent_id.to_string();
             let select = self.dropdown(
@@ -1046,6 +1119,7 @@ impl AgentsTab {
                     .is_some_and(|method| method.unavailable_reason.is_some());
             let start_agent = agent_id.to_string();
             let start_method = method.as_ref().map(|method| method.id.clone());
+            let start_title = method.as_ref().map(CliMethod::tooltip);
             let button_icon: AnyElement = if running {
                 spinning_icon(
                     icons::REFRESH,
@@ -1072,32 +1146,40 @@ impl AgentsTab {
                     .items_center()
                     .gap(px(8.0))
                     .child(div().flex_1().min_w_0().flex().child(select))
-                    .child(cli_icon_button(
-                        p,
-                        SharedString::from(format!("agent-cli-start-{agent_id}")),
-                        button_label,
-                        button_icon,
-                        start_disabled,
-                        move |page: &mut Self, _window, cx| {
-                            let running = page
-                                .cli
-                                .jobs
-                                .get(&(CliSlot::Panel, start_agent.clone()))
-                                .is_some_and(CliJob::running);
-                            if let Some(method_id) = start_method.clone()
-                                && !running
-                            {
-                                page.cli_start(
-                                    CliSlot::Panel,
-                                    &start_agent,
-                                    operation,
-                                    &method_id,
-                                    cx,
-                                );
-                            }
-                        },
-                        cx,
-                    )),
+                    .child(
+                        div()
+                            .id(SharedString::from(format!(
+                                "agent-cli-start-{agent_id}-title"
+                            )))
+                            .flex_shrink_0()
+                            .when_some(start_title, |this, title| this.tooltip(tooltip_text(title)))
+                            .child(cli_icon_button(
+                                p,
+                                SharedString::from(format!("agent-cli-start-{agent_id}")),
+                                button_label,
+                                button_icon,
+                                start_disabled,
+                                move |page: &mut Self, _window, cx| {
+                                    let running = page
+                                        .cli
+                                        .jobs
+                                        .get(&(CliSlot::Panel, start_agent.clone()))
+                                        .is_some_and(CliJob::running);
+                                    if let Some(method_id) = start_method.clone()
+                                        && !running
+                                    {
+                                        page.cli_start(
+                                            CliSlot::Panel,
+                                            &start_agent,
+                                            operation,
+                                            &method_id,
+                                            cx,
+                                        );
+                                    }
+                                },
+                                cx,
+                            )),
+                    ),
             );
             if let Some(method) = &method {
                 body = body.child(
@@ -1115,6 +1197,8 @@ impl AgentsTab {
                 );
                 if let Some(reason) = &method.unavailable_reason {
                     body = body.child(small(reason.clone(), muted));
+                } else if let Some(plan) = &method.plan {
+                    body = body.child(small(plan.clone(), muted));
                 }
             }
         }

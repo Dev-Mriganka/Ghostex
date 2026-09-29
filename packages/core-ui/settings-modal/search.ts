@@ -443,6 +443,21 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             title: 'Ghostex CLI',
           },
           {
+            key: 'managedTools',
+            options: [
+              { label: 'Node.js and npm', value: 'node' },
+              { label: 'uv (Python)', value: 'uv' },
+              { label: 'Homebrew', value: 'homebrew' },
+              { label: 'System tools (curl, unzip, git)', value: 'systemTools' },
+              { label: 'Beads (bd)', value: 'beads' },
+              { label: 'GitHub CLI (gh)', value: 'gh' },
+              { label: 'GitLab CLI (glab)', value: 'glab' },
+            ],
+            subtitle:
+              'Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.',
+            title: 'Tools',
+          },
+          {
             key: 'bundledAgentSkills',
             options: BUNDLED_GHOSTEX_AGENT_SKILLS.map((skill) => ({
               label: skill.name,

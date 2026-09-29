@@ -97,7 +97,7 @@ impl KanbanViewPreferences {
 }
 
 /// `BoardCardViewOptions`: which card details are drawn.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct KanbanCardView {
     pub(crate) show_id: bool,
     pub(crate) show_priority: bool,

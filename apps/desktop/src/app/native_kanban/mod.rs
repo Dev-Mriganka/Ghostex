@@ -10,6 +10,7 @@ pub(crate) mod data;
 pub(crate) mod derived;
 pub(crate) mod filters;
 pub(crate) mod forms;
+pub(crate) mod install_beads;
 pub(crate) mod lane;
 pub(crate) mod model;
 pub(crate) mod mutations;

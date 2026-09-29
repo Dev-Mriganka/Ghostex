@@ -459,11 +459,38 @@ impl HelperTool {
     pub(crate) fn job(&self) -> Option<&Value> {
         self.raw.get("job").filter(|job| job.is_object())
     }
+
+    /// Tooltip for Install: how Ghostex installs the helper.
+    pub(crate) fn install_plan(&self) -> Option<String> {
+        self.raw
+            .get("installPlan")
+            .and_then(Value::as_str)
+            .filter(|plan| !plan.is_empty())
+            .map(str::to_string)
+    }
+
+    pub(crate) fn unavailable_reason(&self) -> Option<String> {
+        self.raw
+            .get("unavailableReason")
+            .and_then(Value::as_str)
+            .filter(|reason| !reason.is_empty())
+            .map(str::to_string)
+    }
+
+    /// `offersInstall`: gxserver can install the missing helper itself (a remote computer on an
+    /// older gxserver cannot).
+    pub(crate) fn offers_install(&self) -> bool {
+        !self.installed()
+            && (self.can("install")
+                || self.unavailable_reason().is_some()
+                || self.running_action().is_some())
+    }
 }
 
 /// `ACTION_WORDS`.
 pub(crate) fn action_words(action: &str) -> (&'static str, &'static str, &'static str) {
     match action {
+        "install" => ("Installing", "installed", "install failed"),
         "update" => ("Updating", "updated", "update failed"),
         "reinstall" => ("Reinstalling", "reinstalled", "reinstall failed"),
         _ => ("Uninstalling", "uninstalled", "uninstall failed"),

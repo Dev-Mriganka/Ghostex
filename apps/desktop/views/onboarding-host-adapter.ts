@@ -48,7 +48,7 @@ export function buildOnboardingDetectedAgents(
 
 /**
  * CDXC:Onboarding 2026-09-11 WHY:
- * The Trycua install runs as a command-pane Action that takes minutes, and every skill-install reply in
+ * The Trycua install runs as a background job of the desktop app that takes minutes, and every skill-install reply in
  * between refreshes `ghostexCliStatus` (clearing the loading marker). `installing` therefore hangs on the
  * host's `installRequested` flag alone, which the modal host resets when the driver reports installed or
  * the install fails, never on the loading marker. The permission probe is optional: both flags undefined

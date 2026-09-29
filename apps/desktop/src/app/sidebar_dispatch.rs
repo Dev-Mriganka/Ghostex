@@ -1437,35 +1437,6 @@ impl GhostexGpuiApp {
             if completion.should_play_completion_sound() {
                 let _ = gpui_play_completion_sound(gpui_action_completion_sound_from_settings());
             }
-            /*
-            CDXC:Extensions 2026-08-09:
-            Cua Driver install/update runs as a normal command Action, so its
-            exit is the only honest completion signal. Complete the bundled
-            Ghostex Computer Use skill step and refresh Settings from that exit
-            code instead of guessing while the command is still running.
-            */
-            let cua_driver_update = match completion.command_id.as_str() {
-                GPUI_CUA_DRIVER_INSTALL_COMMAND_ID => Some(false),
-                GPUI_CUA_DRIVER_UPDATE_COMMAND_ID => Some(true),
-                _ => None,
-            };
-            if let Some(was_update) = cua_driver_update {
-                self.run_gpui_ghostex_cli_settings_action(
-                    GpuiGhostexCliSettingsAction::FinishDesktopControlSetup {
-                        driver_installed: completion.exit_code == 0,
-                        was_update,
-                    },
-                    cx,
-                );
-            }
-            if completion.command_id == GPUI_CUA_DRIVER_UNINSTALL_COMMAND_ID {
-                self.run_gpui_ghostex_cli_settings_action(
-                    GpuiGhostexCliSettingsAction::FinishTrycuaUninstall {
-                        succeeded: completion.exit_code == 0,
-                    },
-                    cx,
-                );
-            }
             self.close_completed_gpui_command_action_tab_if_requested(&completion, cx);
         }
     }
