@@ -71,6 +71,14 @@ pub(crate) fn running_image_superseded() -> bool {
     std::fs::canonicalize(mapped).is_ok_and(|running| running != installed)
 }
 
+/// CDXC:ServerDaemon 2026-09-29 WHY:
+/// Linux marks the executable of a process whose file was replaced (a reinstall or update that kept gxserver running) as `<path> (deleted)`, and `current_exe` returns that path. gxserver writes its own path into session restore scripts and agent hooks, so a wake ran `…/gxserver (deleted) resume-lookup` and failed with "Unable to restore Codex session". Such a daemon reports a superseded identity, like Windows above, so the app restarts it on the installed binary.
+#[cfg(target_os = "linux")]
+pub(crate) fn running_image_superseded() -> bool {
+    std::fs::read_link("/proc/self/exe")
+        .is_ok_and(|path| path.to_string_lossy().ends_with(" (deleted)"))
+}
+
 /// CDXC:RemoteMachines 2026-09-14 WHY:
 /// A server started over Windows SSH must outlive the exec channel without keeping
 /// that channel's inheritable handles open. Otherwise the CLI exits but the phone

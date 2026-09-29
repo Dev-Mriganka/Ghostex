@@ -658,6 +658,11 @@ usage meters instead of terminal text.
 A new Claude Code install's first-run setup is answered in the chat too: the
 text style, the login method, and Sign in to Claude, where you paste the code the
 browser sign-in page shows and press Sign in (Retry appears if the code was wrong).
+`/login` in a running Claude chat opens the same Sign in to Claude card. Codex's
+Sign in with Device Code shows its link and the one-time code to enter in any
+browser, handy on a remote computer. When Codex quits to the terminal (after
+Update now on its update prompt, or `/logout`), the chat says so and offers
+Restart Codex, which starts it again on the same conversation.
 OpenCode v2 supports streamed replies, reasoning, tool results, image attachments,
 questions, permissions, queued prompts, and conversation rewind in Chat. Install
 its hooks in Settings > Agents, then open a new OpenCode session to connect it.

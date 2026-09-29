@@ -194,7 +194,7 @@ pub struct TerminalNoticeAction {
     pub id: String,
     #[serde(default)]
     pub label: String,
-    /// `switchToTerminal`, `sendKeys` or `recoverCodexConversation`.
+    /// `switchToTerminal`, `sendKeys`, `recoverCodexConversation`, `trustAndRemember` or `restartAgent`.
     #[serde(default)]
     pub kind: String,
     /// Raw bytes for `sendKeys`, written verbatim through `answerSessionChatPrompt`.

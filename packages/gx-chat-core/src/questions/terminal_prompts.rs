@@ -73,8 +73,15 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
         .map(side_question_presentation);
     let blocks = dialog.blocks.as_deref().unwrap_or_default();
     let tab_strip = blocks.iter().find(|block| block["type"] == "tabs");
+    let copy = terminal_dialog_copy(dialog);
+    let device_code = copy.as_ref().is_some_and(|copy| {
+        copy["title"] == crate::questions::terminal_dialog_copy::CODEX_DEVICE_CODE_TITLE
+    });
     let visible_actions = dialog.actions.iter().filter(|action| {
         let action = action.as_str();
+        if device_code && matches!(action, "up" | "down") {
+            return false;
+        }
         if dialog.input.as_deref() == Some("text") && action == "confirm" {
             return false;
         }
@@ -132,7 +139,7 @@ pub fn terminal_dialog_presentation(dialog: &TerminalDialog) -> Value {
         "multilineInput": multiline_input,
         "cancelLabel": cancel_label,
         "actions": actions,
-        "copy": terminal_dialog_copy(dialog),
+        "copy": copy,
         "sideQuestion": side_question,
         "blocks": (!blocks.is_empty()).then_some(blocks),
         "title": tab_strip.and_then(|strip| strip["title"].as_str()),
@@ -194,6 +201,9 @@ pub fn terminal_notice_action_answer(
     }
     if action.kind == "trustAndRemember" {
         return Some(json!({ "kind": "trustAndRemember" }));
+    }
+    if action.kind == "restartAgent" {
+        return Some(json!({ "kind": "restartAgent" }));
     }
     None
 }

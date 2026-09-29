@@ -1,6 +1,9 @@
-import type { AccountSwitchProgress } from './agent-accounts';
-import { normalizeContentThemeSetting, type ContentThemeSetting } from './appearance';
-import type { SessionChatDraftVersion } from './session-chat-queue';
+import type { AccountSwitchProgress } from "./agent-accounts";
+import {
+  normalizeContentThemeSetting,
+  type ContentThemeSetting,
+} from "./appearance";
+import type { SessionChatDraftVersion } from "./session-chat-queue";
 // Session Chat — normalized chat projection of an agent terminal session.
 // Canonical wire types shared by gxserver (Rust mirror in server/src/session_chat.rs)
 // and the client hosts; the chat itself reads them through the Rust chat core
@@ -29,13 +32,16 @@ export type {
   SessionChatDraft,
   SessionChatQueuedPrompt,
   SessionChatQueuedPromptState,
-} from './session-chat-queue';
+} from "./session-chat-queue";
 
-import type { SessionChatDraft, SessionChatQueuedPrompt } from './session-chat-queue';
+import type {
+  SessionChatDraft,
+  SessionChatQueuedPrompt,
+} from "./session-chat-queue";
 
 export interface SessionChatSelectionOptions {
   mode?: string;
-  fastMode?: 'on' | 'off';
+  fastMode?: "on" | "off";
 }
 
 export interface SessionChatPendingModelSelection {
@@ -43,7 +49,7 @@ export interface SessionChatPendingModelSelection {
   model: string;
   effort: string;
   /** `failed` is terminal: the row survives only to carry `errorMessage` to the chat. */
-  state: 'queued' | 'applying' | 'failed';
+  state: "queued" | "applying" | "failed";
   options?: SessionChatSelectionOptions;
   /** Omitted means `'default'`: an older client's choice still changes the agent's saved default. */
   scope?: SessionChatModelSelectionScope;
@@ -57,55 +63,72 @@ export interface SessionChatPendingModelSelection {
  * SEE-ALSO: server/src/session_chat_codex_picker.rs drives both scopes; server/src/session_chat_model_selection.rs
  * carries this through the durable queue.
  */
-export type SessionChatModelSelectionScope = 'session' | 'default';
+export type SessionChatModelSelectionScope = "session" | "default";
 
 export const SESSION_CHAT_SUPPORTED_AGENTS = new Set([
-  'antigravity',
-  'antigravity-cli',
-  'agy',
-  'claude',
-  'openclaude',
-  'codex',
-  'cursor',
-  'grok',
-  'grok-build',
-  'hermes',
-  'hermes-agent',
-  'pi',
-  'omp',
-  'zcode',
+  "antigravity",
+  "antigravity-cli",
+  "agy",
+  "claude",
+  "openclaude",
+  "codex",
+  "cursor",
+  "grok",
+  "grok-build",
+  "hermes",
+  "hermes-agent",
+  "pi",
+  "omp",
+  "zcode",
 ]);
 
 export type SessionChatTranscriptAgent =
-  'antigravity' | 'claude' | 'codex' | 'cursor' | 'grok' | 'hermes' | 'pi' | 'zcode';
+  | "antigravity"
+  | "claude"
+  | "codex"
+  | "cursor"
+  | "grok"
+  | "hermes"
+  | "pi"
+  | "zcode";
 
 export function resolveSessionChatTranscriptAgent(
   agentId: string | null | undefined,
-  agentIcon?: string | null
+  agentIcon?: string | null,
 ): SessionChatTranscriptAgent | null {
   const candidates = [agentId, agentIcon];
   for (const candidate of candidates) {
     const normalized = candidate?.trim().toLowerCase();
     if (
-      normalized === 'antigravity' ||
-      normalized === 'antigravity-cli' ||
-      normalized === 'antigravity cli' ||
-      normalized === 'agy'
+      normalized === "antigravity" ||
+      normalized === "antigravity-cli" ||
+      normalized === "antigravity cli" ||
+      normalized === "agy"
     ) {
-      return 'antigravity';
+      return "antigravity";
     }
-    if (normalized === 'claude' || normalized === 'openclaude') return 'claude';
-    if (normalized === 'codex') return 'codex';
-    if (normalized === 'cursor' || normalized === 'cursor-agent' || normalized === 'cursor cli') return 'cursor';
-    if (normalized === 'grok' || normalized === 'grok-build') return 'grok';
-    if (normalized === 'hermes' || normalized === 'hermes-agent' || normalized === 'hermes agent') return 'hermes';
-    if (normalized === 'pi' || normalized === 'omp') return 'pi';
-    if (normalized === 'zcode' || normalized === 'zcode-cli') return 'zcode';
+    if (normalized === "claude" || normalized === "openclaude") return "claude";
+    if (normalized === "codex") return "codex";
+    if (
+      normalized === "cursor" ||
+      normalized === "cursor-agent" ||
+      normalized === "cursor cli"
+    )
+      return "cursor";
+    if (normalized === "grok" || normalized === "grok-build") return "grok";
+    if (
+      normalized === "hermes" ||
+      normalized === "hermes-agent" ||
+      normalized === "hermes agent"
+    )
+      return "hermes";
+    if (normalized === "pi" || normalized === "omp") return "pi";
+    if (normalized === "zcode" || normalized === "zcode-cli") return "zcode";
   }
   return null;
 }
 
-export type SessionChatDisplayAgent = SessionChatTranscriptAgent | 'omp';
+export type SessionChatDisplayAgent = SessionChatTranscriptAgent | "omp";
 
 /**
  * Resolve the agent identity shown by chat UI without conflating it with the
@@ -114,12 +137,12 @@ export type SessionChatDisplayAgent = SessionChatTranscriptAgent | 'omp';
  */
 export function resolveSessionChatDisplayAgent(
   agentId: string | null | undefined,
-  agentIcon?: string | null
+  agentIcon?: string | null,
 ): SessionChatDisplayAgent | null {
   const candidates = [agentId, agentIcon];
   for (const candidate of candidates) {
-    if (candidate?.trim().toLowerCase() === 'omp') {
-      return 'omp';
+    if (candidate?.trim().toLowerCase() === "omp") {
+      return "omp";
     }
   }
   return resolveSessionChatTranscriptAgent(agentId, agentIcon);
@@ -131,22 +154,26 @@ export function resolveSessionChatDisplayAgent(
  * brand artwork (`hermes` → `hermes-agent`, `grok` → `grok-build`); the rest
  * match their sidebar id as-is.
  */
-export function sessionChatAgentIconId(agentLabel: string | null | undefined): string | null {
+export function sessionChatAgentIconId(
+  agentLabel: string | null | undefined,
+): string | null {
   const display = resolveSessionChatDisplayAgent(agentLabel);
-  if (display === 'antigravity') return 'antigravity-cli';
-  if (display === 'hermes') return 'hermes-agent';
-  if (display === 'grok') return 'grok-build';
+  if (display === "antigravity") return "antigravity-cli";
+  if (display === "hermes") return "hermes-agent";
+  if (display === "grok") return "grok-build";
   return display;
 }
 
-export type SessionChatSource = 'transcript' | 'hook' | 'client';
+export type SessionChatSource = "transcript" | "hook" | "client";
 
 /** Visual palette for the shared chat surface, independent of app chrome. */
-export type SessionChatTheme = 'light' | 'dark';
+export type SessionChatTheme = "light" | "dark";
 
 export type SessionChatThemeSetting = ContentThemeSetting;
 
-export function normalizeSessionChatTheme(value: unknown): SessionChatThemeSetting {
+export function normalizeSessionChatTheme(
+  value: unknown,
+): SessionChatThemeSetting {
   return normalizeContentThemeSetting(value);
 }
 
@@ -157,34 +184,38 @@ export const SESSION_CHAT_SOURCE_PRIORITY: Record<SessionChatSource, number> = {
   client: 1,
 };
 
-export type SessionChatRole = 'user' | 'assistant' | 'reasoning' | 'tool' | 'system';
+export type SessionChatRole =
+  "user" | "assistant" | "reasoning" | "tool" | "system";
 
 export interface SessionChatTextBlock {
-  type: 'text';
+  type: "text";
   text: string;
 }
 
 export interface SessionChatToolCallBlock {
-  type: 'tool-call';
+  type: "tool-call";
   name: string;
   input: unknown;
 }
 
 export interface SessionChatToolResultBlock {
-  type: 'tool-result';
+  type: "tool-result";
   output: string;
   isError?: boolean;
 }
 
 export interface SessionChatImageRefBlock {
-  type: 'image-ref';
+  type: "image-ref";
   path?: string;
   url?: string;
   alt?: string;
 }
 
 export type SessionChatBlock =
-  SessionChatTextBlock | SessionChatToolCallBlock | SessionChatToolResultBlock | SessionChatImageRefBlock;
+  | SessionChatTextBlock
+  | SessionChatToolCallBlock
+  | SessionChatToolResultBlock
+  | SessionChatImageRefBlock;
 
 export interface SessionChatAsyncQuestion {
   title: string;
@@ -234,7 +265,7 @@ export interface SessionChatMessage {
   /** Client presentation of an accepted send waiting for the terminal, separate from the agent CLI queue. */
   startupDelivery?: {
     promptId: string;
-    state: 'queued' | 'sending' | 'failed';
+    state: "queued" | "sending" | "failed";
     errorMessage?: string;
   };
 }
@@ -257,7 +288,8 @@ export interface SessionChatHistoryReadParams {
   preserveNewest?: boolean;
 }
 
-export type SessionChatTurnLifecycleState = 'working' | 'completed' | 'interrupted';
+export type SessionChatTurnLifecycleState =
+  "working" | "completed" | "interrupted";
 
 export interface SessionChatTurnLifecycle {
   state: SessionChatTurnLifecycleState;
@@ -265,7 +297,14 @@ export interface SessionChatTurnLifecycle {
   timestamp: number | null;
 }
 
-export type SessionChatStatus = 'loading' | 'ready' | 'working' | 'empty' | 'starting' | 'error' | 'unsupported';
+export type SessionChatStatus =
+  | "loading"
+  | "ready"
+  | "working"
+  | "empty"
+  | "starting"
+  | "error"
+  | "unsupported";
 
 export interface SessionChatQuestionOption {
   label: string;
@@ -298,7 +337,7 @@ export interface SessionChatQuestion {
 
 export type SessionChatInteractivePrompt =
   | {
-      kind: 'question';
+      kind: "question";
       questions: SessionChatQuestion[];
       /**
        * The hook's tool_use_id of the asking call, when the hook payload
@@ -308,7 +347,7 @@ export type SessionChatInteractivePrompt =
        */
       toolUseId?: string;
     }
-  | { kind: 'approval'; tool: string; summary?: string; toolUseId?: string };
+  | { kind: "approval"; tool: string; summary?: string; toolUseId?: string };
 
 /** One answer per question, by 0-based option indices plus optional free text. */
 export interface SessionChatQuestionSelection {
@@ -336,7 +375,7 @@ export interface SessionChatDetectedChoice {
    * `statusline` is the JSON Claude Code pipes to its statusLine command,
    * stored by the Ghostex-installed script (CDXC:AgentScreenDetection 2026-09-03).
    */
-  source?: 'terminal' | 'transcript' | 'statusline';
+  source?: "terminal" | "transcript" | "statusline";
 }
 
 /**
@@ -520,9 +559,15 @@ export interface SessionChatTerminalNoticeAction {
   /**
    * `trustAndRemember` is the folder-trust card's second button: gxserver
    * remembers the session's folders and answers this and every later trust
-   * prompt on them itself, whichever agent asks.
+   * prompt on them itself, whichever agent asks. `restartAgent` sleeps and
+   * wakes a session whose agent exited to the shell.
    */
-  kind: 'switchToTerminal' | 'sendKeys' | 'recoverCodexConversation' | 'trustAndRemember';
+  kind:
+    | "switchToTerminal"
+    | "sendKeys"
+    | "recoverCodexConversation"
+    | "trustAndRemember"
+    | "restartAgent";
   /** Raw bytes for `sendKeys`, written verbatim through answerSessionChatPrompt. */
   send?: string;
 }
@@ -571,14 +616,14 @@ export interface SessionChatTerminalNotice {
    * render an unknown kind generically; title/detail/severity are self-sufficient.
    */
   kind: string;
-  severity: 'error' | 'warning' | 'info';
+  severity: "error" | "warning" | "info";
   /** Short human line, e.g. "Codex login expired". */
   title: string;
   /** One or two sentences of guidance, including quoted terminal evidence. */
   detail?: string;
   /** SGR-stripped last visible lines (trimmed, capped ~2000 chars). */
   screenTail?: string;
-  source: 'screen' | 'watchdog';
+  source: "screen" | "watchdog";
   /**
    * ISO-8601 millis; also the key a client's local dismissal remembers.
    * gxserver keeps it stable while the same notice is re-detected, including
@@ -722,7 +767,7 @@ export interface SessionChatSubAgent {
   /** Exact provider child identity; names need not be unique. */
   id?: string;
   /** Idle Claude children may remain in the terminal roster between turns. */
-  status?: 'working' | 'idle';
+  status?: "working" | "idle";
   /** Current turn start, in Unix milliseconds; changes when a child resumes. */
   startedAt?: number;
   /** Agent type as the CLI names it (`general-purpose`). */
@@ -770,7 +815,8 @@ shows. Carried by read results and by snapshot/replaced/state frames with
 finished turn leaves its list behind, and that is exactly when the user reads
 it to see what is left.
 */
-export type SessionChatAgentTaskStatus = 'pending' | 'in_progress' | 'completed';
+export type SessionChatAgentTaskStatus =
+  "pending" | "in_progress" | "completed";
 
 export interface SessionChatAgentTask {
   /** The CLI's own task number, also its file name. */
@@ -817,7 +863,7 @@ export interface GxserverReadSessionChatParams {
  * scroll-back crosses from one fork ancestor into the next. Mirrors
  * `FORK_BOUNDARY_MESSAGE_ID_PREFIX` in server/src/session_chat_fork_stitch.rs.
  */
-export const SESSION_CHAT_FORK_BOUNDARY_ID_PREFIX = 'fork-boundary:';
+export const SESSION_CHAT_FORK_BOUNDARY_ID_PREFIX = "fork-boundary:";
 
 /** Latest model and effort reported by this child's own transcript. */
 export interface SessionChatSubagentInfo {
@@ -961,7 +1007,8 @@ export interface SessionChatAvailableAgent {
   baseAgentId: string;
 }
 
-export type SessionChatSkillSourceKind = 'global' | 'pluginCache' | 'repository';
+export type SessionChatSkillSourceKind =
+  "global" | "pluginCache" | "repository";
 
 export interface SessionChatSkill {
   /** Display/mention name, matching the skill folder shown by Agents Hub. */
@@ -1006,7 +1053,8 @@ export interface GxserverReadSessionChatFilesResult {
  * expressible as text. `shift-tab` is Claude Code's permission-mode cycle;
  * shifted arrows adjust Codex reasoning effort.
  */
-export type SessionChatSendKey = 'enter' | 'shift-tab' | 'shift-up' | 'shift-down';
+export type SessionChatSendKey =
+  "enter" | "shift-tab" | "shift-up" | "shift-down";
 
 export interface GxserverSendSessionChatMessageParams {
   draftVersion?: SessionChatDraftVersion;
@@ -1102,14 +1150,15 @@ export interface GxserverAnswerSessionChatPromptParams {
   projectId: string;
   sessionId: string;
   kind:
-    | 'question'
-    | 'approval'
-    | 'terminalChoice'
-    | 'terminalDialog'
-    | 'asyncQuestion'
-    | 'dismissAsyncQuestion'
-    | 'recoverCodexConversation'
-    | 'trustAndRemember';
+    | "question"
+    | "approval"
+    | "terminalChoice"
+    | "terminalDialog"
+    | "asyncQuestion"
+    | "dismissAsyncQuestion"
+    | "recoverCodexConversation"
+    | "trustAndRemember"
+    | "restartAgent";
   conversationLock?: SessionChatConversationLock;
   questionId?: string;
   dialogId?: string;
@@ -1173,7 +1222,7 @@ export interface GxserverHandoffSessionChatDraftResult {
 // ---------------------------------------------------------------------------
 
 export interface GxserverSubscribeSessionChatMessage {
-  type: 'subscribeSessionChat';
+  type: "subscribeSessionChat";
   projectId: string;
   sessionId: string;
   /**
@@ -1187,7 +1236,7 @@ export interface GxserverSubscribeSessionChatMessage {
 }
 
 export interface GxserverUnsubscribeSessionChatMessage {
-  type: 'unsubscribeSessionChat';
+  type: "unsubscribeSessionChat";
   projectId: string;
   sessionId: string;
 }
@@ -1216,7 +1265,7 @@ export interface GxserverSessionChatSnapshotEvent extends SessionChatFrameBase {
   asyncQuestionsSince?: number | null;
   /** Server-confirmed answers/skips, including answers still queued inside Codex. Omitted means unchanged. */
   retiredAsyncQuestionIds?: string[];
-  type: 'sessionChatSnapshot';
+  type: "sessionChatSnapshot";
   messages: SessionChatMessage[];
   lifecycle?: SessionChatTurnLifecycle;
   hasMore: boolean;
@@ -1284,7 +1333,7 @@ export interface GxserverSessionChatSnapshotEvent extends SessionChatFrameBase {
 }
 
 export interface GxserverSessionChatAppendedEvent extends SessionChatFrameBase {
-  type: 'sessionChatAppended';
+  type: "sessionChatAppended";
   messages: SessionChatMessage[];
   lifecycle?: SessionChatTurnLifecycle;
   /**
@@ -1302,7 +1351,7 @@ export interface GxserverSessionChatReplacedEvent extends SessionChatFrameBase {
   asyncQuestionsSince?: number | null;
   /** Server-confirmed answers/skips, including answers still queued inside Codex. Omitted means unchanged. */
   retiredAsyncQuestionIds?: string[];
-  type: 'sessionChatReplaced';
+  type: "sessionChatReplaced";
   messages: SessionChatMessage[];
   lifecycle?: SessionChatTurnLifecycle;
   hasMore: boolean;
@@ -1366,7 +1415,7 @@ export interface GxserverSessionChatStateEvent extends SessionChatFrameBase {
   asyncQuestionsSince?: number | null;
   /** Server-confirmed answers/skips, including answers still queued inside Codex. Omitted means unchanged. */
   retiredAsyncQuestionIds?: string[];
-  type: 'sessionChatState';
+  type: "sessionChatState";
   status: SessionChatStatus;
   lifecycle?: SessionChatTurnLifecycle;
   prompt?: SessionChatInteractivePrompt;
@@ -1426,12 +1475,14 @@ export type GxserverSessionChatEvent =
   | GxserverSessionChatReplacedEvent
   | GxserverSessionChatStateEvent;
 
-export function isSessionChatEventType(type: string): type is GxserverSessionChatEvent['type'] {
+export function isSessionChatEventType(
+  type: string,
+): type is GxserverSessionChatEvent["type"] {
   return (
-    type === 'sessionChatSnapshot' ||
-    type === 'sessionChatAppended' ||
-    type === 'sessionChatReplaced' ||
-    type === 'sessionChatState'
+    type === "sessionChatSnapshot" ||
+    type === "sessionChatAppended" ||
+    type === "sessionChatReplaced" ||
+    type === "sessionChatState"
   );
 }
 
@@ -1445,15 +1496,20 @@ CDXC:PromptSearch 2026-08-20:
 body on exactly the same terms as chat: the terminal parks rather than closing,
 and only one surface can own the pane at a time.
 */
-export type SessionSurfaceMode = 'terminal' | 'chat';
+export type SessionSurfaceMode = "terminal" | "chat";
 
 export interface SessionChatTerminalDialog {
   id: string;
   title: string;
   body: string;
   footer: string;
-  rows: { number: number; label: string; description: string | null; selected: boolean }[];
-  input: 'search' | 'text' | 'key' | null;
+  rows: {
+    number: number;
+    label: string;
+    description: string | null;
+    selected: boolean;
+  }[];
+  input: "search" | "text" | "key" | null;
   inputValue: string;
   actions: string[];
 }

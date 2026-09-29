@@ -3902,6 +3902,16 @@ pub(crate) async fn handle_answer_session_chat_prompt_http(
             ),
         };
     }
+    if kind == "restartAgent" {
+        return match crate::session_chat_agent_restart::restart(state, &params).await {
+            Ok(()) => routed_json(
+                Some(endpoint_path),
+                StatusCode::OK,
+                rpc_success(request_id, json!({ "queued": false })),
+            ),
+            Err(error) => domain_error_response(endpoint_path, request_id, error),
+        };
+    }
     if kind == "recoverCodexConversation" {
         let result = crate::session_chat_codex_lock::recover(state, &params).await;
         schedule_session_chat_option_redetect(

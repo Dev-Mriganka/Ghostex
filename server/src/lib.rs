@@ -49,6 +49,7 @@ pub mod server;
 pub mod session_auto_sleep;
 pub mod session_chat;
 pub mod session_chat_agent_fleet;
+pub(crate) mod session_chat_agent_restart;
 pub mod session_chat_agent_tasks;
 pub mod session_chat_antigravity_mirror;
 pub mod session_chat_app_command;
