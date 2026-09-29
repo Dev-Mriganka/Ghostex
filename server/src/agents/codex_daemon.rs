@@ -36,19 +36,34 @@ fn installed_codex_supports_no_daemon() -> bool {
         return false;
     }
     static CACHE: Mutex<Option<(Instant, bool)>> = Mutex::new(None);
-    let mut cached = CACHE.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut cached = CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     if let Some((checked_at, supported)) = *cached {
         if checked_at.elapsed() < VERSION_CACHE_TTL {
             return supported;
         }
     }
-    let supported = crate::agent_hooks::probing::cli_script_stdout(
+    #[cfg(windows)]
+    let output = crate::platform::live_path::find("codex", &[]).and_then(|executable| {
+        // Probe the native launcher that new sessions resolve, without PowerShell's stale PATH or .ps1 precedence.
+        let mut command = crate::platform::process::background_command(executable);
+        command.arg("--version");
+        crate::agent_hooks::probing::run_command_stdout_with_timeout(
+            command,
+            Duration::from_secs(3),
+        )
+    });
+    #[cfg(not(windows))]
+    let output = crate::agent_hooks::probing::cli_script_stdout(
         "codex --version",
         &crate::resume_lookup::home_dir(),
         Duration::from_secs(3),
-    )
-    .and_then(|output| parse_codex_version(&output))
-    .is_some_and(|version| version >= FIRST_VERSION_WITH_NO_DAEMON);
+    );
+    let Some(version) = output.and_then(|output| parse_codex_version(&output)) else {
+        return false;
+    };
+    let supported = version >= FIRST_VERSION_WITH_NO_DAEMON;
     *cached = Some((Instant::now(), supported));
     supported
 }
@@ -61,5 +76,9 @@ fn parse_codex_version(output: &str) -> Option<(u64, u64, u64)> {
     let mut parts = version
         .split(|ch: char| !ch.is_ascii_digit())
         .map(str::parse::<u64>);
-    Some((parts.next()?.ok()?, parts.next()?.ok()?, parts.next()?.ok()?))
+    Some((
+        parts.next()?.ok()?,
+        parts.next()?.ok()?,
+        parts.next()?.ok()?,
+    ))
 }
