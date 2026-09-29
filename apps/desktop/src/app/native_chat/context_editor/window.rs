@@ -65,6 +65,7 @@ impl NativeChatView {
                 (bounds,crate::app::window::popup_frame::display_at(bounds.center(),cx).or_else(||window.display(cx).map(|display|display.id())))
             }).and_then(|(bounds,display_id)| cx.open_window(WindowOptions {
                 kind: crate::app::window::popup_frame::child_window_kind(),
+                window_decorations: crate::app::window::popup_frame::child_window_decorations(),
                 #[cfg(target_os = "linux")]
                 x11_parent: Some(main),
                 window_bounds:Some(WindowBounds::Windowed(bounds)),display_id,
@@ -96,7 +97,7 @@ impl NativeChatView {
                         filter.focus_handle(cx).focus(window,cx);
                         ContextEditorWindow {chat,filter,scroll:Default::default(),_subscription:subscription,_input_subscription:input_subscription}
                     });
-                    cx.new(|cx|Root::new(view,window,cx).bg(gpui::transparent_black()))
+                    cx.new(|cx|Root::new(view,window,cx).bordered(false).bg(gpui::transparent_black()))
                 }
             }));
             chat.update(cx,|chat,cx| {

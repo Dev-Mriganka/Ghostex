@@ -147,7 +147,7 @@ impl GhostexGpuiApp {
             (Some(DocsSendStatus::Error(error)), _) => error.clone().into(),
             (_, _) if total == 0 => "No annotations to send".into(),
             (_, Some(target)) => format!(
-                "Send {send_count} {}annotations{} to the {} of {} in {} (⌘↩)",
+                "Send {send_count} {}annotations{} to the {} of {} in {} ({})",
                 if resending { "" } else { "new " },
                 if resending { " again" } else { "" },
                 match target.surface {
@@ -156,6 +156,11 @@ impl GhostexGpuiApp {
                 },
                 target.agent_label,
                 target.session_title,
+                if cfg!(target_os = "macos") {
+                    "⌘↩"
+                } else {
+                    "Ctrl+↩"
+                },
             )
             .into(),
             (_, None) => format!(

@@ -176,6 +176,7 @@ impl NativeAutomateView {
         let options = WindowOptions {
             #[cfg(target_os = "linux")]
             kind: crate::app::window::popup_frame::child_window_kind(),
+            window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
             x11_parent: Some(host.window),
             window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(
@@ -207,7 +208,11 @@ impl NativeAutomateView {
                 window.activate_window();
                 let dialog = cx.new(|cx| AutomationDialog::new(config, view, window, cx));
                 *dialog_out.borrow_mut() = Some(dialog.clone());
-                cx.new(|cx| Root::new(dialog, window, cx).bg(gpui::transparent_black()))
+                cx.new(|cx| {
+                    Root::new(dialog, window, cx)
+                        .bordered(false)
+                        .bg(gpui::transparent_black())
+                })
             })
             .ok();
         let dialog = dialog_slot.borrow_mut().take();

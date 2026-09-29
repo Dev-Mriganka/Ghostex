@@ -80,6 +80,7 @@ impl GhostexGpuiApp {
         let center = self.main_window_bounds.center();
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),
+            window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
             x11_parent: self.main_window_handle,
             window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(

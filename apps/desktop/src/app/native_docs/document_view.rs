@@ -159,7 +159,12 @@ impl GhostexGpuiApp {
         let tooltip: SharedString = if copied {
             "Copied!".into()
         } else if dirty {
-            "Unsaved changes. Press ⌘S to save. Click to copy file name".into()
+            if cfg!(target_os = "macos") {
+                "Unsaved changes. Press ⌘S to save. Click to copy file name"
+            } else {
+                "Unsaved changes. Press Ctrl+S to save. Click to copy file name"
+            }
+            .into()
         } else {
             "Copy file name".into()
         };

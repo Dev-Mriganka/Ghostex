@@ -135,8 +135,10 @@ impl FindPalette {
         rgba_of(self.foreground, alpha)
     }
 
+    /// `accent/N`: scales the accent's own alpha. Under glass the accent is already a faint ink wash,
+    /// and replacing its alpha turned the selected row into a 70% white slab behind white text.
     pub(crate) fn accent_at(&self, alpha: f32) -> Rgba {
-        rgba_of(self.accent, alpha)
+        rgba_of(self.accent, self.accent.a * alpha)
     }
 }
 

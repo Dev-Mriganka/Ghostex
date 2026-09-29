@@ -1969,9 +1969,11 @@ impl TerminalView {
 
         /*
         CDXC:Terminal 2026-09-28 WHY:
-        Cmd+click opens the link under the pointer (ghostty behavior) instead of starting a selection, and it is checked before mouse reporting the way ghostty's `mouseButtonCallback` handles a link before reporting, because a link click swallows the event. Codex's fullscreen view (its default since 0.157) captures the mouse for its whole session, so with the check after reporting every Cmd+click went to Codex, which opened the URL with the host's own opener and skipped Ghostex's link routing (browser pane, editor, remote sessions). A plain click still goes to the app.
+        Cmd+click opens the link under the pointer (ghostty behavior) instead of starting a selection, and it is checked before mouse reporting the way ghostty's `mouseButtonCallback` handles a link before reporting, because a link click swallows the event. Codex's fullscreen view (its default since 0.157) captures the mouse for its whole session, so with the check after reporting every Cmd+click went to Codex, which opened the URL with the host's own opener and skipped Ghostex's link routing (browser pane, editor, remote sessions). A plain click still goes to the app. On Windows and Linux the modifier is Ctrl (`secondary()`), because `platform` there is the Windows/Super key; Cmd stays accepted so the web build still opens links from a Mac browser, where wasm reports Ctrl as secondary.
         */
-        if event.button == MouseButton::Left && event.modifiers.platform {
+        if event.button == MouseButton::Left
+            && (event.modifiers.secondary() || event.modifiers.platform)
+        {
             let viewport_cell = self.grid_cell(event.position, origin);
             if let Some(link) = self
                 .hovered_link
@@ -4476,17 +4478,28 @@ fn scan_row_url(text: &str, columns: &[u16], hover_col: u16) -> Option<(String, 
 /// Characters that may appear inside a scanned file path. Approximates
 /// ghostty's path character class minus prose punctuation (commas,
 /// quotes, brackets) that usually delimits paths in terminal output.
+/// Backslash is the Windows separator (`C:\Users\...`).
 fn is_row_scan_path_char(c: char) -> bool {
     c.is_alphanumeric()
         || matches!(
             c,
-            '_' | '-' | '.' | '/' | '~' | ':' | '@' | '#' | '$' | '%' | '+' | '='
+            '_' | '-' | '.' | '/' | '\\' | '~' | ':' | '@' | '#' | '$' | '%' | '+' | '='
         )
 }
 
+/// `C:\...` or `C:/...` with something after the separator.
+fn is_row_scan_windows_drive_path(token: &str) -> bool {
+    let bytes = token.as_bytes();
+    bytes.len() > 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && matches!(bytes[2], b'\\' | b'/')
+}
+
 /// Find a file path covering `hover_col` in the row text, approximating
-/// ghostty's path regex for the common cases: absolute (`/`), dot-relative
-/// (`./`, `../`), home (`~/`), `$VAR/`, and bare relative paths containing
+/// ghostty's path regex for the common cases: absolute (`/`), Windows drive
+/// (`C:\`, `C:/`), dot-relative (`./`, `../`, `.\`, `..\`), home (`~/`),
+/// `$VAR/`, and bare relative paths containing
 /// a dot (`src/config/url.zig`). Returns the path text and the grid column
 /// range it occupies.
 fn scan_row_file_path(text: &str, columns: &[u16], hover_col: u16) -> Option<(String, Range<u16>)> {
@@ -4523,13 +4536,17 @@ fn scan_row_file_path(text: &str, columns: &[u16], hover_col: u16) -> Option<(St
         return None;
     }
     let token = &text[start..end];
-    let looks_like_path = if let Some(rest) = token.strip_prefix('/') {
+    let looks_like_path = if is_row_scan_windows_drive_path(token) {
+        true
+    } else if let Some(rest) = token.strip_prefix('/') {
         // Absolute path; a second leading slash reads as a comment.
         !rest.is_empty() && !rest.starts_with('/')
     } else if let Some(rest) = token
         .strip_prefix("./")
         .or_else(|| token.strip_prefix("../"))
         .or_else(|| token.strip_prefix("~/"))
+        .or_else(|| token.strip_prefix(".\\"))
+        .or_else(|| token.strip_prefix("..\\"))
     {
         !rest.is_empty()
     } else {
@@ -4553,7 +4570,11 @@ fn scan_row_file_path(text: &str, columns: &[u16], hover_col: u16) -> Option<(St
 /// and `~` paths pass through, and the raw text is kept when the
 /// resolved file does not exist.
 fn resolve_relative_link_target(url: &str, pwd: Option<&str>) -> String {
-    if url.contains("://") || url.starts_with('/') || url.starts_with('~') {
+    if url.contains("://")
+        || url.starts_with('/')
+        || url.starts_with('~')
+        || is_row_scan_windows_drive_path(url)
+    {
         return url.to_string();
     }
     if let Some(pwd) = pwd {
