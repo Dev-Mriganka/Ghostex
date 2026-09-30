@@ -840,6 +840,9 @@ pub(crate) const APP_MODAL_HOST_READY_RETRY_TIMEOUT: Duration = Duration::from_s
 
 pub(crate) const APP_MODAL_HOST_LOADING_LIMIT: Duration = Duration::from_secs(120);
 
+/// How long the retry waits after removing the modal window that never became ready before it opens the replacement, so the old window is destroyed first (see `handle_gpui_app_modal_ready_timeout`).
+pub(crate) const APP_MODAL_HOST_RETRY_REOPEN_DELAY: Duration = Duration::from_millis(100);
+
 pub(crate) const BROWSER_ICON_CHEVRON_RIGHT: &str = "titlebar/chevron-right.svg";
 
 pub(crate) const TITLEBAR_POPUP_COMPACT_WIDTH: f32 = 240.0;

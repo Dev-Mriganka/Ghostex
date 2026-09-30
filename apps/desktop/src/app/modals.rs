@@ -1021,14 +1021,32 @@ impl GhostexGpuiApp {
         if !self.app_modal_ready_retry_used {
             self.app_modal_ready_retry_used = true;
             self.remove_gpui_app_modal_window_without_focus_restore(cx);
-            self.open_gpui_app_modal_window_inner(
-                modal,
-                open_message,
-                sidebar_state_message,
-                None,
-                false,
-                cx,
-            );
+            /*
+            CDXC:AppModal 2026-09-30 WHY:
+            On Windows GPUI gives a PopUp window the thread's active window as its owner, and Windows destroys an owned window with its owner. The window being replaced is the active one and is only destroyed after this update returns, so a replacement opened here was owned by it and died with it: on a first run, when the modal page loads slowly enough to reach this retry, Settings showed for a few seconds and then closed for good. The replacement is opened once the old window is gone and the main window is active again.
+            */
+            cx.spawn(async move |this, cx| {
+                cx.background_executor()
+                    .timer(APP_MODAL_HOST_RETRY_REOPEN_DELAY)
+                    .await;
+                let _ = this.update(cx, |this, cx| {
+                    // Anything that opened or closed an app modal in the meantime owns the slot now.
+                    if attempt_id != this.app_modal_open_attempt_id
+                        || this.app_modal_window.is_some()
+                    {
+                        return;
+                    }
+                    this.open_gpui_app_modal_window_inner(
+                        modal,
+                        open_message,
+                        sidebar_state_message,
+                        None,
+                        false,
+                        cx,
+                    );
+                });
+            })
+            .detach();
             return;
         }
 
