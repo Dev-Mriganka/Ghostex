@@ -288,12 +288,12 @@ pub(crate) fn file_url(path: &std::path::Path) -> anyhow::Result<String> {
 /// CDXC:Docs 2026-09-10 WHY:
 /// The 1,200-entry budget was exhausted by older screenshots in maestro_swift, leaving newer date folders empty in the sidebar.
 /// Project scans use the same entry budget as mounted Docs trees and report exhausted limits instead of returning partial listings.
-/// SEE-ALSO: server/src/project_docs.rs.
+/// SEE-ALSO: server/src/project_docs/limits.rs.
 pub(crate) const MANAGE_FILE_LIST_MAX_ENTRIES: usize = 20_000;
 pub(crate) const MANAGE_FILE_LIST_MAX_DEPTH: usize = 8;
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `server/src/project_docs.rs`: a mounted Docs directory is a notes
+Mirrors `server/src/project_docs/limits.rs`: a mounted Docs directory is a notes
 tree with a bounded walk. Hitting a limit labels that mount with the cap instead of returning a tree that
 silently stopped.
 */
@@ -301,7 +301,7 @@ pub(crate) const MANAGE_DOCS_TREE_MAX_ENTRIES: usize = 20_000;
 pub(crate) const MANAGE_DOCS_TREE_MAX_DEPTH: usize = 12;
 /// CDXC:Docs 2026-09-28 DECISION:
 /// User: only files that open in the Markdown editor keep the 2 MB preview and save limit, and a Markdown file over it gets an "Open in Code view" button; HTML and every other file Docs shows open at any size. The limit was an agent default nobody asked for, and it hid a 3 MB HTML guide whose screenshots were inlined as base64.
-/// SEE-ALSO: `FILE_PREVIEW_MAX_BYTES` in server/src/project_docs.rs.
+/// SEE-ALSO: `FILE_PREVIEW_MAX_BYTES` in server/src/project_docs/limits.rs.
 pub(crate) const MANAGE_FILE_PREVIEW_MAX_BYTES: u64 = 2_000_000;
 pub(crate) const MANAGE_FILE_SAVE_MAX_BYTES: usize = 2_000_000;
 pub(crate) const MANAGE_GIT_BASELINE_MAX_BYTES: usize = 1024 * 1024;
@@ -325,7 +325,7 @@ pub(crate) const MANAGE_BUILT_IN_DOCS_RELATIVE_PATHS: &[&str] =
     &[MANAGE_DOCS_RELATIVE_PATH, "artifacts", "ai", "tmp"];
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `EXTRA_ROOT_MOUNT_SEGMENT` in `server/src/project_docs.rs`: the
+Mirrors `EXTRA_ROOT_MOUNT_SEGMENT` in `server/src/project_docs/limits.rs`: the
 reserved first path segment that addresses the mounted Docs directory. Every
 other Docs path is project-relative, so one relative path can only ever mean one
 root and no read, save, rename, delete, move, or reveal can resolve out of the
