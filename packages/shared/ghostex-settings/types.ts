@@ -510,8 +510,8 @@ export type ghostexSettings = {
    */
   sessionCardHoverButtons: readonly SessionCardHoverButtonItem[];
   /**
-   * CDXC:Sessions 2026-09-15 DECISION:
-   * User: the enabled hover buttons also appear in the session context menu by default, leading the everyday rows in the card's right-to-left order. Close is the exception and never appears in the menu while it is on the card. Turning this off restores the 2026-09-12 rule where every enabled hover button leaves the context menu.
+   * CDXC:Sessions 2026-10-01 DECISION:
+   * User: the enabled hover buttons also appear in the session context menu by default, in the menu's own ChatGPT-style order (Rename, Pin, Snooze, Park, Sleep, Note, Tag As); this supersedes the 2026-09-15 rule that they led the menu in the card's right-to-left order. Close is the exception and never appears in the menu while it is on the card. Turning this off restores the 2026-09-12 rule where every enabled hover button leaves the context menu.
    */
   showSessionCardHoverButtonsInContextMenu: boolean;
   hideLastActiveTimeOnSessionCards: boolean;

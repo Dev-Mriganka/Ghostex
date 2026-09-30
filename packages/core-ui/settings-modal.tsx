@@ -1460,7 +1460,7 @@ export function SettingsModal({
                             ) ? (
                               <ToggleField
                                 checked={draft.showSessionCardHoverButtonsInContextMenu}
-                                description='Keep the enabled hover buttons at the top of the session right-click menu too, in their right-to-left order on the card. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.'
+                                description='Also list the enabled hover buttons in the session right-click menu, in their usual place in the menu. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.'
                                 label='Hover buttons also in context menu'
                                 {...getSettingModificationProps('showSessionCardHoverButtonsInContextMenu')}
                                 onChange={(checked) => updateDraft('showSessionCardHoverButtonsInContextMenu', checked)}

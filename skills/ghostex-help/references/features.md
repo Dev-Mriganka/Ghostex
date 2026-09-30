@@ -402,10 +402,10 @@ where they are while you open, change and close views.
   chevron, Close, so a hovered card shows a chevron and Close until you open
   it. Hover an icon on a card to see its name; buttons flip
   to the reverse action on an active row (Unpin, Wake, Unsnooze, Unpark,
-  Cancel Close After Done). The enabled buttons also lead the session's
-  right-click menu, top to bottom in the card's right-to-left order (Sleep,
-  Park, Tag As by default), with the other actions after them; Note is under
-  the menu's Advanced submenu unless its hover button is on. Close is the
+  Cancel Close After Done). The enabled buttons also stay in the
+  session's right-click menu, which always runs Rename, Pin, Snooze, Park,
+  Sleep, then Tag As after a line, like ChatGPT's menu; Note is under the
+  menu's Advanced submenu unless its hover button is on. Close is the
   exception: while it is on the card it is never in the menu, and turning it
   off puts Close back as the menu's last row. Hover buttons also in context
   menu (on by default) controls the rest; turn it off and every enabled

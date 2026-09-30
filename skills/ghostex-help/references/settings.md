@@ -49,7 +49,7 @@ How to use this file:
 #### Session Cards
 
 - **Session hover buttons (click to toggle, drag to reorder)** `sessionCardHoverButtons` (structured value; change it in Settings, not with `ghostex settings set`) [advanced]: Buttons a session card shows when you hover it. Click an icon to turn it on or off; drag icons to reorder them. Buttons to the right of the chevron always show, buttons to its left hide until the chevron is clicked. By default the strip is Tag, Park, Sleep, chevron, Close.
-- **Hover buttons also in context menu** `showSessionCardHoverButtonsInContextMenu` (boolean, default true) [advanced]: Keep the enabled hover buttons at the top of the session right-click menu too, in their right-to-left order on the card. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.
+- **Hover buttons also in context menu** `showSessionCardHoverButtonsInContextMenu` (boolean, default true) [advanced]: Also list the enabled hover buttons in the session right-click menu, in their usual place in the menu. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.
 #### Sidebar Tags
 
 - **Tag Filter List** `sidebarSessionTagListItems` (structured value; change it in Settings, not with `ghostex settings set`): Add your own tags, then reorder, hide, disable, or delete tags and their separators for the sidebar and the Tag as menu.

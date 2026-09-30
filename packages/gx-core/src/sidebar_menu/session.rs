@@ -413,15 +413,14 @@ fn full_menu(
     let group = input.group;
     let id = row.sidebar_session_id.as_str();
     let enabled = strip.enabled();
-    // An action the hover strip offers is repeated at the top of the menu, newest first, with the
-    // two that would be duplicated by their own rows left out.
+    // An action the hover strip offers is repeated in the menu too, with the two that would be
+    // duplicated by their own rows left out.
     let mirror: Vec<HoverAction> = if settings.show_session_card_hover_buttons_in_context_menu {
         if caps.is_browser_session {
             vec![HoverAction::Sleep]
         } else {
             enabled
                 .iter()
-                .rev()
                 .copied()
                 .filter(|action| {
                     *action != HoverAction::Close && *action != HoverAction::CloseAfterDone
@@ -433,31 +432,39 @@ fn full_menu(
     };
     /*
     CDXC:ContextMenus 2026-10-01 DECISION:
-    The user wants the session menu to match ChatGPT's conversation menu (Rename, Pin, Mark as unread, Archive, then Section), so below the mirrored hover buttons the rows run Rename, Pin, Snooze, Park, Sleep, Tag As. The user then moved Note into Advanced (first under Session), superseding its 2026-09-30 place before Tag As; a Note hover button that is on still mirrors at the top instead. The phone's menu (`apps/mobile/app/src/screens/sessions-screen/sidebar-menus.ts`) must match. The mirrored hover buttons stay on top, Close keeps its hover-strip rule, and Fork and Copy Details stay in Advanced.
+    The user wants the session menu in ChatGPT's conversation-menu order (Rename, Pin, Mark as unread, Archive, then Section after a line), mirrored hover buttons included: "why is rename below those other buttons? match the order of ChatGPT". The rows run Rename, Pin, Snooze, Park, Sleep, Note, then Tag As after a separator, whether a row is there as a mirrored hover button or on its own; this supersedes the mirrored buttons leading the menu in the card's right-to-left order. Note shows here only as a mirrored hover button and otherwise sits first in Advanced. Close keeps its hover-strip rule, and Fork and Copy Details stay in Advanced. The phone's menu (`apps/mobile/app/src/screens/sessions-screen/sidebar-menus.ts`) must match.
     */
-    const PRIMARY_ORDER: [HoverAction; 6] = [
+    const PRIMARY_ORDER: [HoverAction; 7] = [
         HoverAction::Rename,
         HoverAction::Pin,
         HoverAction::Snooze,
         HoverAction::Park,
         HoverAction::Sleep,
+        HoverAction::Note,
         HoverAction::Tag,
     ];
-    let mut menu: Vec<MenuItem> = mirror
-        .into_iter()
-        .chain(
-            PRIMARY_ORDER
-                .into_iter()
-                .filter(|action| !enabled.contains(action)),
-        )
-        .filter_map(|action| match (action, rows.get(action)) {
-            (HoverAction::Pin, Some(item)) if !row.is_pinned => Some(MenuItem {
+    let mut menu: Vec<MenuItem> = Vec::new();
+    for action in PRIMARY_ORDER {
+        let shown = if mirror.contains(&action) {
+            true
+        } else {
+            action != HoverAction::Note && !enabled.contains(&action)
+        };
+        let Some(item) = rows.get(action).filter(|_| shown) else {
+            continue;
+        };
+        if action == HoverAction::Tag && !menu.is_empty() {
+            menu.push(MenuItem::separator());
+        }
+        menu.push(if action == HoverAction::Pin && !row.is_pinned {
+            MenuItem {
                 icon: Some("pinned".to_string()),
                 ..item.clone()
-            }),
-            (_, item) => item.cloned(),
-        })
-        .collect();
+            }
+        } else {
+            item.clone()
+        });
+    }
 
     let mut advanced: Vec<MenuItem> = vec![MenuItem::heading("Session")];
     if !enabled.contains(&HoverAction::Note) {
