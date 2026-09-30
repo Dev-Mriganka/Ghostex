@@ -31,6 +31,7 @@ pub(crate) struct GpuiMarkdownTableModalWindow {
     scroll: ScrollHandle,
     was_active: bool,
     _activation: Subscription,
+    _press: Subscription,
 }
 
 impl GpuiMarkdownTableModalWindow {
@@ -47,9 +48,16 @@ impl GpuiMarkdownTableModalWindow {
             if window.is_window_active() {
                 this.was_active = true;
             } else if this.was_active {
-                (this.host)(MarkdownTableModalCommand::Close, cx);
+                super::popup_dismissal::dismiss_on_focus_loss(this, window, cx, |this, _, cx| {
+                    (this.host)(MarkdownTableModalCommand::Close, cx)
+                });
             }
         });
+        let press = super::popup_dismissal::observe_main_window_press(
+            window,
+            cx,
+            |this: &mut Self, _, cx| (this.host)(MarkdownTableModalCommand::Close, cx),
+        );
         Self {
             host,
             palette,
@@ -58,6 +66,7 @@ impl GpuiMarkdownTableModalWindow {
             scroll: ScrollHandle::new(),
             was_active: window.is_window_active(),
             _activation: activation,
+            _press: press,
         }
     }
 

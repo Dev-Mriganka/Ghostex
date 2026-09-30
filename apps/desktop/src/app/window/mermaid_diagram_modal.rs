@@ -123,6 +123,7 @@ pub(crate) struct GpuiMermaidDiagramModalWindow {
     focus_handle: FocusHandle,
     was_active: bool,
     _activation: Subscription,
+    _press: Subscription,
 }
 
 impl GpuiMermaidDiagramModalWindow {
@@ -139,9 +140,16 @@ impl GpuiMermaidDiagramModalWindow {
             if window.is_window_active() {
                 this.was_active = true;
             } else if this.was_active {
-                (this.host)(MermaidDiagramModalCommand::Close, cx);
+                super::popup_dismissal::dismiss_on_focus_loss(this, window, cx, |this, _, cx| {
+                    (this.host)(MermaidDiagramModalCommand::Close, cx)
+                });
             }
         });
+        let press = super::popup_dismissal::observe_main_window_press(
+            window,
+            cx,
+            |this: &mut Self, _, cx| (this.host)(MermaidDiagramModalCommand::Close, cx),
+        );
         let light = palette.light;
         let (mode, diagram) = match unsupported_note(&source, light) {
             Some(note) => (Mode::Source, Diagram::Unavailable(note.to_string())),
@@ -199,6 +207,7 @@ impl GpuiMermaidDiagramModalWindow {
             focus_handle,
             was_active: window.is_window_active(),
             _activation: activation,
+            _press: press,
         }
     }
 

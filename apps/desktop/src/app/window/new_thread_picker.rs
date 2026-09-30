@@ -343,9 +343,24 @@ impl GpuiNewThreadPickerWindow {
             if window.is_window_active() {
                 this.was_active = true;
             } else if this.was_active && this.close_when_inactive {
-                this.close(window, cx);
+                super::popup_dismissal::dismiss_on_focus_loss(
+                    this,
+                    window,
+                    cx,
+                    |this, window, cx| this.close(window, cx),
+                );
             }
         });
+        let press_subscription = super::popup_dismissal::observe_main_window_press(
+            window,
+            cx,
+            |this: &mut Self, window, cx| {
+                // A hidden preload is not on screen for a press to click away from.
+                if this.was_active && this.close_when_inactive {
+                    this.close(window, cx);
+                }
+            },
+        );
         input.update(cx, |input, cx| input.focus(window, cx));
         Self {
             glass: false,
@@ -363,7 +378,11 @@ impl GpuiNewThreadPickerWindow {
             scroll: ScrollHandle::new(),
             was_active: window.is_window_active(),
             close_when_inactive: config.close_when_inactive,
-            _subscriptions: vec![change_subscription, activation_subscription],
+            _subscriptions: vec![
+                change_subscription,
+                activation_subscription,
+                press_subscription,
+            ],
         }
     }
 
@@ -1308,8 +1327,8 @@ impl Render for GpuiNewThreadPickerWindow {
             .border_1()
             .border_color(hsla(c.frame_border))
             // Under window glass the picker's window blurs what is behind it, so its fill thins.
-            // Under glass it takes the app's frosted menu fill, passed in by the app because this
-            // file also builds into the demo binary (`frosted_menu_fill` in helpers/window_glass.rs).
+            // Under glass it takes the app's frosted dialog fill, passed in by the app because this
+            // file also builds into the demo binary (`frosted_modal_fill` in helpers/window_glass.rs).
             .bg(self.frosted_fill.unwrap_or_else(|| hsla(c.surface)))
             .font_family(PICKER_FONT)
             .text_size(px(ROW_TEXT_SIZE))

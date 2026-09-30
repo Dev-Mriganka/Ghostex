@@ -102,9 +102,19 @@ impl GpuiQuickAccessWindow {
             if window.is_window_active() {
                 this.was_active = true;
             } else if this.was_active {
-                this.close(cx);
+                crate::app::window::popup_dismissal::dismiss_on_focus_loss(
+                    this,
+                    window,
+                    cx,
+                    |this, _, cx| this.close(cx),
+                );
             }
         });
+        let press = crate::app::window::popup_dismissal::observe_main_window_press(
+            window,
+            cx,
+            |this: &mut Self, _, cx| this.close(cx),
+        );
         let release = cx.on_release(|_, cx| {
             use crate::app::window::frosted_host::{FrostedHostKind, hide_frosted_host};
             hide_frosted_host(FrostedHostKind::QuickAccessPicker, cx);
@@ -137,7 +147,7 @@ impl GpuiQuickAccessWindow {
             glass: crate::app::helpers::window_glass_active(),
             menu_frames: QuickAccessMenuFrames::default(),
             focus_handle: cx.focus_handle(),
-            subscriptions: vec![change, activation, release],
+            subscriptions: vec![change, activation, press, release],
         }
     }
 

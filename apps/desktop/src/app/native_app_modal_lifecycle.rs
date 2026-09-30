@@ -53,7 +53,7 @@ impl GhostexGpuiApp {
         if !window_glass_active() {
             return palette;
         }
-        palette.frosted(frosted_menu_fill(palette.surface.into()).into())
+        palette.frosted(frosted_modal_fill(palette.surface.into()).into())
     }
 
     /// Opens `kind` as a native window whose content is built by `build`.
@@ -130,7 +130,23 @@ impl GhostexGpuiApp {
     }
 
     /// The main window became key again: a click landed back in it while a native dialog was open.
+    /// On Linux the main window also turns key when the pointer merely crosses onto it, so there
+    /// the press itself is the click-away (`close_native_app_modal_pressed_away`, popup_dismissal.rs).
     pub(crate) fn close_native_app_modal_clicked_away(&mut self, cx: &mut gpui::Context<Self>) {
+        if cfg!(target_os = "linux") {
+            return;
+        }
+        self.close_native_app_modal_on_click_away(cx);
+    }
+
+    /// A pointer press landed in the main window while a native dialog was open (Linux).
+    pub(crate) fn close_native_app_modal_pressed_away(&mut self, cx: &mut gpui::Context<Self>) {
+        if cfg!(target_os = "linux") {
+            self.close_native_app_modal_on_click_away(cx);
+        }
+    }
+
+    fn close_native_app_modal_on_click_away(&mut self, cx: &mut gpui::Context<Self>) {
         if self
             .native_app_modal_kind()
             .is_some_and(native_app_modal_closes_when_clicked_away)

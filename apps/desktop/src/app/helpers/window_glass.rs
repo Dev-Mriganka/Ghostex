@@ -264,8 +264,11 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
     // backends (gpui_macos window_wallpaper.rs / window_live.rs, gpui_windows directx_backdrop.rs,
     // gpui_linux); Settings offers them only there.
     WINDOW_GLASS_WALLPAPER.store(
-        cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
-            && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
+        cfg!(any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "linux"
+        )) && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
         Ordering::Relaxed,
     );
     WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN.store(
@@ -307,8 +310,11 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
             != Some(false);
     }
     window_glass_live::refresh_window_glass_live(object);
-    let active = cfg!(any(target_os = "macos", target_os = "windows", target_os = "linux"))
-        && wanted
+    let active = cfg!(any(
+        target_os = "macos",
+        target_os = "windows",
+        target_os = "linux"
+    )) && wanted
         && !system_reduces_transparency();
     WINDOW_GLASS_SYSTEM_BLOCKED.store(
         cfg!(any(target_os = "macos", target_os = "windows")) && system_reduces_transparency(),
@@ -546,12 +552,16 @@ const WINDOW_GLASS_MENU_LIFT_DARK: f32 = 0.08;
 /// CDXC:Theming 2026-09-25 DECISION:
 /// User: a single frosted menu was "not looking glassy at all", then "for the context menus and menus, we need them to be more transparent by default. Right now, the settings you have, they don't look transparent still." Every frosted menu and tooltip window uses one recipe: a 20px blur that keeps the backdrop's colour saturation (`FROSTED_MENU_BLUR_RADIUS`, `FROSTED_MENU_KEEP_SATURATION`, applied by `apply_frosted_menu_blur`; the main window's glass keeps its 60px, desaturated blur), and a fill of the theme's menu colour lifted a little toward white in dark mode covering 32% in dark mode and 60% in light mode (`frosted_menu_alpha`), so shapes and colours behind a menu read through it. Supersedes the same day's 50% fill over the main window's blur.
 pub(crate) fn frosted_menu_fill(color: Hsla) -> Hsla {
-    let lifted = if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+    frosted_lift(color).opacity(frosted_menu_alpha())
+}
+
+/// The frosted menu colour before its coverage: lifted a little toward white in dark mode.
+fn frosted_lift(color: Hsla) -> Hsla {
+    if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
         color
     } else {
         color.blend(gpui::white().opacity(WINDOW_GLASS_MENU_LIFT_DARK))
-    };
-    lifted.opacity(frosted_menu_alpha())
+    }
 }
 
 /// How much of a frosted menu or tooltip its fill covers: little in dark mode, where the menu's
@@ -586,6 +596,48 @@ pub(crate) fn apply_frosted_menu_blur(window: &gpui::Window) {
 pub(crate) fn popup_window_surface(color: Hsla) -> Hsla {
     if window_glass_active() {
         frosted_menu_fill(color)
+    } else {
+        color
+    }
+}
+
+/// Fill coverage of a frosted dialog on Linux in dark mode; see `frosted_modal_alpha`.
+#[cfg(target_os = "linux")]
+const WINDOW_GLASS_MODAL_ALPHA_LINUX: f32 = 0.94;
+
+/// `WINDOW_GLASS_MODAL_ALPHA_LINUX` in light mode.
+#[cfg(target_os = "linux")]
+const WINDOW_GLASS_MODAL_ALPHA_LINUX_LIGHT: f32 = 0.96;
+
+/// CDXC:AppModal 2026-09-30 DECISION:
+/// User, on Linux: "the open a project modal is too transparent by default. please fix. same for the cmd + n modal and probably others. please fix all those to be less transparent (more like the settings modal). same for the notification modal, it's way too light by default on linux right now." Every dialog that is frosted under window glass (the native app modals such as Add Project, the New Thread picker, Quick Access and Browser History, Search by Prompt, and the titlebar's Notifications, Tips, Resources and Dev servers panels) takes this fill. On Linux it covers 94% in dark mode and 96% in light mode; macOS and Windows keep the menus' coverage (`frosted_menu_alpha`). Menus and tooltips keep the thinner menu fill everywhere.
+///
+/// CDXC:AppModal 2026-09-30 WHY:
+/// A Linux window only asks the compositor for blur (`_KDE_NET_WM_BLUR_BEHIND_REGION` on X11, the blur protocol on Wayland); many compositors ignore the request or ship with blur off (Hyprland on Omarchy does both), so the 32% menu fill showed the desktop and the windows behind a dialog unblurred and its text could not be read.
+pub(crate) fn frosted_modal_alpha() -> f32 {
+    #[cfg(target_os = "linux")]
+    {
+        if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+            WINDOW_GLASS_MODAL_ALPHA_LINUX_LIGHT
+        } else {
+            WINDOW_GLASS_MODAL_ALPHA_LINUX
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        frosted_menu_alpha()
+    }
+}
+
+/// The fill of a frosted dialog under glass: the frosted menu colour at `frosted_modal_alpha`.
+pub(crate) fn frosted_modal_fill(color: Hsla) -> Hsla {
+    frosted_lift(color).opacity(frosted_modal_alpha())
+}
+
+/// `popup_window_surface` for a dialog or panel rather than a menu (`frosted_modal_fill`).
+pub(crate) fn popup_window_modal_surface(color: Hsla) -> Hsla {
+    if window_glass_active() {
+        frosted_modal_fill(color)
     } else {
         color
     }

@@ -86,7 +86,11 @@ impl Transport {
     /// `Effect::Reconnect`: asks gxserver for a fresh authoritative snapshot of the conversation.
     pub(super) fn refresh(&mut self, identity: &ChatIdentity) {
         if let Some(streams) = self.streams.as_mut() {
-            streams.refresh(machine(identity), &identity.project_id, &identity.session_id);
+            streams.refresh(
+                machine(identity),
+                &identity.project_id,
+                &identity.session_id,
+            );
         }
     }
 
@@ -96,7 +100,11 @@ impl Transport {
             return;
         }
         if let Some(streams) = self.streams.as_mut() {
-            streams.unfollow(machine(identity), &identity.project_id, &identity.session_id);
+            streams.unfollow(
+                machine(identity),
+                &identity.project_id,
+                &identity.session_id,
+            );
         }
     }
 

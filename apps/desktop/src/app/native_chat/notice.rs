@@ -103,7 +103,9 @@ impl NativeChatView {
             } else {
                 choices.len()
             };
-            let secondary = notice["secondaryChoice"].as_u64().map(|index| index as usize);
+            let secondary = notice["secondaryChoice"]
+                .as_u64()
+                .map(|index| index as usize);
             let shortcuts: Vec<Option<String>> = (0..count.min(choices.len()))
                 .map(|index| {
                     if self.snapshot["showShortcutLabels"] == false {

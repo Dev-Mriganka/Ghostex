@@ -10,7 +10,7 @@ fn app_modal_host_background() -> Hsla {
         rgb(0xffffff).into()
     } else if window_glass_active() {
         // The page's lighter window colour over glass (packages/core-ui/styles/modals-glass.css).
-        titlebar_background().blend(gpui::white().opacity(0.12))
+        titlebar_background().blend(gpui::white().opacity(0.06))
     } else {
         titlebar_background()
     }

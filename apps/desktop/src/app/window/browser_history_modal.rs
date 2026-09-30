@@ -103,9 +103,16 @@ impl GpuiBrowserHistoryModalWindow {
             if window.is_window_active() {
                 this.was_active = true;
             } else if this.was_active {
-                this.close(cx);
+                super::popup_dismissal::dismiss_on_focus_loss(this, window, cx, |this, _, cx| {
+                    this.close(cx)
+                });
             }
         });
+        let press = super::popup_dismissal::observe_main_window_press(
+            window,
+            cx,
+            |this: &mut Self, _, cx| this.close(cx),
+        );
         search.update(cx, |input, cx| input.focus(window, cx));
         // Relative times ("5m ago") keep moving while the window stays open.
         cx.spawn(async move |this, cx| {
@@ -136,7 +143,7 @@ impl GpuiBrowserHistoryModalWindow {
             glass: crate::app::helpers::window_glass_active(),
             was_active: window.is_window_active(),
             focus_handle: cx.focus_handle(),
-            _subscriptions: vec![change, activation],
+            _subscriptions: vec![change, activation, press],
         };
         this.request(false, cx);
         this
