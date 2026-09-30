@@ -265,7 +265,6 @@ impl GhostexGpuiApp {
         self.update_active_mode_cef_child_visibility(cx);
         self.retry_titlebar_extension_popup_after_cef_ready(cx);
         self.open_gpui_app_modal_deferred_for_cef(cx);
-        self.schedule_gpui_app_modal_spare_preload(cx);
         self.refresh_web_runtime_views(cx);
         cx.notify();
     }

@@ -1,8 +1,8 @@
 //! The native Settings modal (Settings, Hotkeys, Configure Agents, Configure Actions and Open
 //! Targets all open it on their own page).
 //!
-//! CDXC:Settings 2026-09-28 DECISION:
-//! User: migrate every React modal to GPUI with GPUI-Kit components, looking and working exactly as now, so the app runs without CEF. Settings is the largest of them and is ported page by page on this shell; until every page is native it opens only with `GHOSTEX_NATIVE_SETTINGS=1` and the React modal stays the default.
+//! CDXC:Settings 2026-09-30 DECISION:
+//! User: migrate every React modal to GPUI with GPUI-Kit components, looking and working exactly as now, so the app runs without CEF; now that every page is native, "i want to show the gpui one for everything please no more react settings" (supersedes the 2026-09-28 `GHOSTEX_NATIVE_SETTINGS=1` opt-in). Settings, Hotkeys, Configure Agents, Configure Actions and Open Targets always open this modal.
 //! SEE-ALSO: docs/2026-09-28/gpui-modals-migration/SETTINGS-ARCH.md (how a page plugs in), packages/core-ui/settings-modal.tsx and packages/core-ui/settings-modal/ (the React twin), apps/desktop/src/app/settings_modal_lifecycle.rs (open, save, bridge).
 //!
 //! Like every native modal view, this module depends only on gpui, gpui-component, gpui-base,

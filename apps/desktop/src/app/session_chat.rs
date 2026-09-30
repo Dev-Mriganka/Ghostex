@@ -5,7 +5,7 @@
 // Cluster: sidebar/app-modal/session-chat CEF bridge handlers and chat host actions
 
 use crate::app::helpers::web_bridge_types::{
-    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
+    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler,
 };
 use std::fs;
 use std::path::Path;
@@ -158,51 +158,6 @@ impl GhostexGpuiApp {
         }
         self.reconcile_agents_chat_surfaces(cx);
         cx.notify();
-    }
-
-    /*
-    CDXC:Onboarding 2026-08-18:
-    The tutorial video should play fullscreen inside its own modal window. The
-    page is a third-party document, so the app cannot call `requestFullscreen()`
-    for it (Chromium requires a transient user activation that app-owned
-    JavaScript never has); the host sends the player's own "f" shortcut as real
-    input instead. The press waits a beat after main-frame load-end because the
-    YouTube player installs its keyboard shortcuts after the page loads, and it
-    is sent once because "f" toggles.
-    */
-    pub(crate) fn tutorial_video_page_load_end_handler(
-        &self,
-        cx: &mut gpui::Context<Self>,
-    ) -> PageLoadEndHandler {
-        let app = cx.entity().downgrade();
-        let async_cx = cx.to_async();
-        let background = cx.background_executor().clone();
-        let foreground = cx.foreground_executor().clone();
-
-        Rc::new(move || {
-            let app = app.clone();
-            let mut async_cx = async_cx.clone();
-            let background = background.clone();
-            foreground
-                .spawn(async move {
-                    background
-                        .timer(GPUI_TUTORIAL_VIDEO_FULLSCREEN_KEY_DELAY)
-                        .await;
-                    let _ = app.update(&mut async_cx, |this, cx| {
-                        this.send_gpui_tutorial_video_fullscreen_key(cx);
-                    });
-                })
-                .detach();
-        })
-    }
-
-    pub(crate) fn send_gpui_tutorial_video_fullscreen_key(&mut self, cx: &mut gpui::Context<Self>) {
-        let Some(handle) = self.app_modal_window else {
-            return;
-        };
-        let _ = handle.update(cx, |host, _modal_window, cx| {
-            host.send_tutorial_video_fullscreen_key(cx);
-        });
     }
 
     pub(crate) fn app_modal_host_bridge_event_handler(
@@ -637,6 +592,14 @@ impl GhostexGpuiApp {
         }
         if action == "terminalView" {
             self.handoff_agents_session_chat_mode(session_id, cx);
+            return;
+        }
+        // The core's own switch (a Codex side chat, a model pick the CLI must finish) carries no
+        // chat draft, so it is a plain view switch like the agent picker's, never a handoff.
+        if action == "switchToTerminal" {
+            if self.agents_chat_mode_sessions.contains(&session_id) {
+                self.toggle_agents_session_chat_mode(session_id, cx);
+            }
             return;
         }
         if action == "agentPickerTerminalView" {

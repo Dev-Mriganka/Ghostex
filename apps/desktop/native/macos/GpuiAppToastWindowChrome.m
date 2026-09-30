@@ -327,6 +327,14 @@ void GhostexGpuiSetFrostedChildWindowVisible(void *childNativeView,
   }
 }
 
+// Whether Ghostex is the frontmost app, so a closing modal can hand key status back to the main
+// window without pulling Ghostex in front of the app the user switched to.
+bool GhostexGpuiApplicationIsActive(void) {
+  @autoreleasepool {
+    return NSApp.active;
+  }
+}
+
 void GhostexGpuiSetWindowIgnoresMouse(void *nativeView, bool ignores) {
   @autoreleasepool {
     if (nativeView == NULL) {

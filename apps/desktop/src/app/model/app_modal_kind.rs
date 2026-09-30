@@ -30,7 +30,6 @@ pub(crate) enum GpuiAppModalKind {
     /// `onboarding` is the five-panel modal that the automatic first run, Tips > Setup and Quick Access > Setup open (user decision, see modals.rs `open_gpui_first_launch_setup_with_sidebar_state`). The older first-launch setup modal was deleted on 2026-09-27 (user: "delete old setup one not new one that's active").
     /// The guards that treat Onboarding as "setup in progress" (no-projects close guard, completion on close, `completeFirstLaunchSetup`) have a React twin, `isFirstLaunchSetupModalKind` in apps/desktop/views/modal-host.tsx, and the component contract is packages/core-ui/onboarding/contract.ts.
     Onboarding,
-    WatchGhostexVideo,
     RemoteGxserverInstall,
     RemoteSetup,
     Worktree,
@@ -69,7 +68,6 @@ impl GpuiAppModalKind {
             "configureActions" => Some(Self::ConfigureActions),
             "openTargets" => Some(Self::OpenTargets),
             "onboarding" => Some(Self::Onboarding),
-            "watchGhostexVideo" => Some(Self::WatchGhostexVideo),
             "remoteGxserverInstall" => Some(Self::RemoteGxserverInstall),
             "remoteSetup" => Some(Self::RemoteSetup),
             "worktree" => Some(Self::Worktree),
@@ -111,7 +109,6 @@ impl GpuiAppModalKind {
             Self::ConfigureActions => "configureActions",
             Self::OpenTargets => "openTargets",
             Self::Onboarding => "onboarding",
-            Self::WatchGhostexVideo => "watchGhostexVideo",
             Self::RemoteGxserverInstall => "remoteGxserverInstall",
             Self::RemoteSetup => "remoteSetup",
             Self::Worktree => "worktree",
@@ -150,7 +147,6 @@ impl GpuiAppModalKind {
             Self::ConfigureActions => "Ghostex Actions",
             Self::OpenTargets => "Ghostex Open Targets",
             Self::Onboarding => "Welcome to Ghostex",
-            Self::WatchGhostexVideo => "Ghostex Tutorial Video",
             Self::RemoteGxserverInstall => "Ghostex Remote Setup",
             Self::RemoteSetup => "Ghostex Mobile & Remote",
             Self::Worktree => "Ghostex Add Worktree",
@@ -283,7 +279,6 @@ impl GpuiAppModalKind {
             // CDXC:Onboarding 2026-09-11 WHY:
             // The new onboarding renders a 1672x941 stage scaled to fit its window, so the frame keeps that aspect ratio at a size that still fits a 1440x900 screen with the menu bar and Dock.
             Self::Onboarding => size(px(1400.0), px(788.0)),
-            Self::WatchGhostexVideo => size(px(1120.0), px(750.0)),
             // CDXC:SessionChat 2026-09-06 DECISION:
             // User: start only the diagram dialog 20% wider and taller (1248x912, previously 1040x760).
             // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size; packages/core-ui/mermaid/mermaid.css keeps it for the React viewer's in-page dialog.
@@ -323,7 +318,7 @@ impl GpuiAppModalKind {
     }
 
     pub(crate) fn uses_react_modal_host(self) -> bool {
-        !matches!(self, Self::WatchGhostexVideo | Self::Extension(_))
+        !matches!(self, Self::Extension(_))
     }
 
     pub(crate) fn is_settings_modal_entry(self) -> bool {
@@ -397,7 +392,6 @@ impl GpuiAppModalKind {
             | Self::DelayedSend
             | Self::RenameSession
             | Self::SessionNote
-            | Self::WatchGhostexVideo
             | Self::RemoteSetup
             | Self::Onboarding => serde_json::json!({
                 "modal": self.modal_id(),

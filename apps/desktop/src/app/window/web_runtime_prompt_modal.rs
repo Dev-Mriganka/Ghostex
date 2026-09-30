@@ -10,7 +10,7 @@ use gpui::{
 };
 use std::rc::Rc;
 
-pub(crate) const WEB_RUNTIME_PROMPT_MODAL_WIDTH: f32 = 460.0;
+pub(crate) const WEB_RUNTIME_PROMPT_MODAL_WIDTH: f32 = 520.0;
 /// First-frame height only; the window is resized to the measured layout on the first prepaint.
 pub(crate) const WEB_RUNTIME_PROMPT_MODAL_INITIAL_HEIGHT: f32 = 220.0;
 

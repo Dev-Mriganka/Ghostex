@@ -464,7 +464,6 @@ type AppModalHostMessage =
       type: "open";
     }
   | { type: "close" }
-  | { modals: string[]; type: "preloadModals" }
   | { type: "completeFirstLaunchSetup" }
   | AppToastRequest
   | { keepOpen?: boolean; type: "toastDismissed" }
@@ -3488,14 +3487,6 @@ function useModalStateFromNative() {
       try {
         const message = (event as CustomEvent<AppModalHostMessage>).detail;
         if (!message || typeof message !== "object") {
-          return;
-        }
-
-        if (message.type === "preloadModals") {
-          // Sent only to the hidden warm spare window (app_modal_spare.rs), so its first Settings open renders without fetching code.
-          if (message.modals.includes("settings")) {
-            SettingsModal.preload();
-          }
           return;
         }
 

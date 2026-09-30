@@ -215,18 +215,12 @@ impl GhostexGpuiApp {
             GpuiAppModalKind::Onboarding => {
                 self.open_gpui_onboarding_modal(open_message, cx);
             }
-            // Settings goes native page by page; until every page is ported only behind
-            // GHOSTEX_NATIVE_SETTINGS=1 (settings_modal_lifecycle.rs), else the React modal opens.
-            // Without the web runtime the React modal cannot run, so the native one opens then
-            // (CDXC:CefRuntime 2026-09-28 in app/helpers/web_runtime.rs).
+            // Every Settings page is native (window/settings_modal/mod.rs).
             GpuiAppModalKind::Settings
             | GpuiAppModalKind::Hotkeys
             | GpuiAppModalKind::ConfigureAgents
             | GpuiAppModalKind::ConfigureActions
-            | GpuiAppModalKind::OpenTargets
-                if crate::app::settings_modal_lifecycle::native_settings_modal_enabled()
-                    || !crate::app::helpers::web_runtime::web_runtime_available() =>
-            {
+            | GpuiAppModalKind::OpenTargets => {
                 self.open_gpui_settings_modal(kind, open_message, cx);
             }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.

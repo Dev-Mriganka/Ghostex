@@ -505,6 +505,32 @@ impl GhostexGpuiApp {
         }
     }
 
+    /// Makes the main window key again once an app modal's window is gone.
+    ///
+    /// CDXC:FocusRouting 2026-09-30 DECISION:
+    /// User: after Cmd+P then Escape, or closing a modal with its X, typing did not reach the chat and Cmd+P did nothing until they clicked the window; "we need to focus the main window of the app automatically in all these cases".
+    /// The modal is its own key window, and AppKit does not hand key status back to the main window when it closes, so the in-window handoff focused the composer of a window that received no keys.
+    /// Skipped while another modal is up (a Quick Access action that opens one) and when Ghostex is no longer the active app (the modal closed because the user switched apps), so it never pulls Ghostex forward.
+    pub(crate) fn activate_main_window_after_app_modal(&mut self, cx: &mut gpui::Context<Self>) {
+        let Some(main) = self.main_window_handle else {
+            return;
+        };
+        let app = cx.weak_entity();
+        cx.defer(move |cx| {
+            let another_modal_open = app.read_with(cx, |app, _| {
+                app.native_app_modal.is_some() || app.app_modal_window.is_some()
+            });
+            if another_modal_open.unwrap_or(true) || !ghostex_application_is_active() {
+                return;
+            }
+            let _ = main.update(cx, |_, window, _| {
+                if !window.is_window_active() {
+                    window.activate_window();
+                }
+            });
+        });
+    }
+
     /// Physical half of a chat handoff: the chat view's composer, then any draft waiting for that composer.
     pub(crate) fn focus_session_chat_composer(
         &mut self,
@@ -609,4 +635,19 @@ impl GhostexGpuiApp {
             }),
         );
     }
+}
+
+/// Whether Ghostex is the frontmost app. Only macOS leaves the main window un-keyed after a modal
+/// closes, so other platforms never re-activate it.
+#[cfg(target_os = "macos")]
+fn ghostex_application_is_active() -> bool {
+    unsafe extern "C" {
+        fn GhostexGpuiApplicationIsActive() -> bool;
+    }
+    unsafe { GhostexGpuiApplicationIsActive() }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn ghostex_application_is_active() -> bool {
+    false
 }

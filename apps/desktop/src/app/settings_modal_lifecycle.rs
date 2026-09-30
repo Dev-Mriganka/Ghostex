@@ -100,13 +100,6 @@ fn settings_modal_http_get(url: &str) -> Result<Vec<u8>, String> {
     Ok(body)
 }
 
-/// Settings, Hotkeys, Configure Agents, Configure Actions and Open Targets open the native modal
-/// only while `GHOSTEX_NATIVE_SETTINGS=1`; until every page is native the React modal (and its
-/// preloaded spare window) stays the default.
-pub(crate) fn native_settings_modal_enabled() -> bool {
-    std::env::var("GHOSTEX_NATIVE_SETTINGS").is_ok_and(|value| value.trim() == "1")
-}
-
 impl GhostexGpuiApp {
     /// Opens the native Settings modal on the page `kind` (or the `open` message) names. The
     /// message carries the same deep links the React host read (`initialTab`, `initialSection`,

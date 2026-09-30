@@ -80,7 +80,6 @@ impl GhostexGpuiApp {
                 }
             });
         }
-        self.ensure_gpui_app_modal_spare_preloaded(cx);
     }
 
     fn gpui_app_modal_hydrate_active_project_id(&self) -> Option<String> {

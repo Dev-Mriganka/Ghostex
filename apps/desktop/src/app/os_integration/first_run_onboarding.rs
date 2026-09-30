@@ -44,7 +44,7 @@ impl GhostexGpuiApp {
     /// native-sidebar.tsx): current shipped macOS consumes the legacy tips and
     /// Highlighted Features markers WITHOUT opening those surfaces (the
     /// Discover→firstLaunchSetup auto chain was superseded 2026-06-18), opens
-    /// the tutorial video modal once per first-launch-setup revision, and shows
+    /// the onboarding modal once per first-launch-setup revision, and shows
     /// a once-forever OS Integration toast.
     /// CDXC:Onboarding 2026-08-18: writes one first-run marker
     /// off the foreground thread, re-reading the file first so a concurrent

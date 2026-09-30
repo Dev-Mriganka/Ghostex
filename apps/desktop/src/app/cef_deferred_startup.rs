@@ -56,20 +56,6 @@ impl GhostexGpuiApp {
         reset_ready_retry: bool,
         cx: &mut gpui::Context<Self>,
     ) {
-        if !web_runtime_available() {
-            match modal {
-                // The tutorial is a YouTube page: the system browser plays it just as well.
-                GpuiAppModalKind::WatchGhostexVideo => {
-                    let _ = gpui_open_external_http_url(GHOSTEX_TUTORIAL_VIDEO_URL);
-                    return;
-                }
-                kind if kind.is_settings_modal_entry() => {
-                    self.open_gpui_settings_modal(kind, &open_message, cx);
-                    return;
-                }
-                _ => {}
-            }
-        }
         self.app_modal_open_deferred_for_cef = Some(GpuiAppModalOpenDeferredForCef {
             modal,
             open_message,

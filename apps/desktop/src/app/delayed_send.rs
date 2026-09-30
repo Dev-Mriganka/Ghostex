@@ -2172,13 +2172,6 @@ impl GhostexGpuiApp {
             "openWorkspaceWelcome" => {
                 self.open_gpui_app_modal_from_titlebar(GpuiAppModalKind::Onboarding, window, cx);
             }
-            "openGhostexTutorialVideo" => {
-                self.open_gpui_app_modal_from_titlebar(
-                    GpuiAppModalKind::WatchGhostexVideo,
-                    window,
-                    cx,
-                );
-            }
             "runGhostexHotkeyAction" => {
                 let Some(action_id) = command.get("actionId").and_then(serde_json::Value::as_str)
                 else {

@@ -2166,18 +2166,6 @@ export type SidebarToExtensionMessage =
       type: 'openHighlightedFeatures';
     }
   | {
-      /*
-       * CDXC:Onboarding 2026-06-18-04:49:
-       * Help surfaces need a dedicated request for the one-page Ghostex tutorial
-       * video modal.
-       *
-       * CDXC:Onboarding 2026-06-18-05:31:
-       * Current Features/help entry points should open this video modal while
-       * leaving the old Highlighted Features modal unused.
-       */
-      type: 'openGhostexTutorialVideo';
-    }
-  | {
       /**
        * CDXC:AddProject 2026-05-08-18:45
        * The reference Projects header add button should open the trusted native

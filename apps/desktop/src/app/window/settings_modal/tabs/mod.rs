@@ -11,7 +11,6 @@ pub(crate) mod hotkeys;
 pub(crate) mod integrations;
 pub(crate) mod open_targets;
 pub(crate) mod os_integration;
-mod placeholder;
 pub(crate) mod projects;
 pub(crate) mod remote;
 pub(crate) mod theme;
@@ -44,6 +43,6 @@ pub(crate) fn settings_tab_view(
         SettingsTabId::OsIntegration => os_integration::os_integration_tab_view(store, cx),
         SettingsTabId::Extensions => extensions::extensions_tab_view(store, window, cx),
         SettingsTabId::Accounts => accounts::accounts_tab_view(store, window, cx),
-        // TAB-ARMS: one arm per page (every page is native now; placeholder.rs is unused).
+        // TAB-ARMS: one arm per page.
     }
 }

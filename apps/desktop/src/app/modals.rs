@@ -744,13 +744,6 @@ impl GhostexGpuiApp {
         {
             self.complete_first_launch_setup();
         }
-        let promoted_spare = self.promote_gpui_app_modal_spare(
-            modal,
-            window_size,
-            &open_message,
-            &sidebar_state_message,
-            cx,
-        );
         if let Some(handle) = self.app_modal_window.clone() {
             let window_configuration_matches = handle
                 .update(cx, |host, _modal_window, _cx| {
@@ -793,9 +786,7 @@ impl GhostexGpuiApp {
                             ""
                         },
                     );
-                    if !promoted_spare {
-                        modal_window.activate_window();
-                    }
+                    modal_window.activate_window();
                     modal_window.refresh();
                 });
                 if update_result.is_ok() {
@@ -812,18 +803,7 @@ impl GhostexGpuiApp {
         }
 
         let mut extension_bridge_surface = None;
-        let url = if modal.uses_react_modal_host() {
-            let Some(url) = app_modal_host_url().ok() else {
-                if let Some(window) = source_window {
-                    window.push_notification(
-                        Notification::warning("The GPUI app-modal host bundle is missing."),
-                        cx,
-                    );
-                }
-                return;
-            };
-            url
-        } else if let GpuiAppModalKind::Extension(id) = modal {
+        let url = if let GpuiAppModalKind::Extension(id) = modal {
             let Some((url, bridge_surface)) = self.extension_modal_runtime(id) else {
                 if let Some(window) = source_window {
                     window.push_notification(
@@ -836,7 +816,16 @@ impl GhostexGpuiApp {
             extension_bridge_surface = Some(bridge_surface);
             url
         } else {
-            GHOSTEX_TUTORIAL_VIDEO_URL.to_string()
+            let Some(url) = app_modal_host_url().ok() else {
+                if let Some(window) = source_window {
+                    window.push_notification(
+                        Notification::warning("The GPUI app-modal host bundle is missing."),
+                        cx,
+                    );
+                }
+                return;
+            };
+            url
         };
         let window_bounds = WindowBounds::Windowed(gpui::Bounds::centered_at(
             self.main_window_bounds.center(),
@@ -869,15 +858,6 @@ impl GhostexGpuiApp {
             ..Default::default()
         };
         let event_handler = self.app_modal_host_bridge_event_handler(cx);
-        /*
-        CDXC:Onboarding 2026-08-18:
-        Only the tutorial video window loads a third-party page as its own
-        document, and it is the only modal that needs a host-side action once
-        that page is up. Every bridged modal keeps its React ready handshake
-        and receives no load-end callback.
-        */
-        let page_load_end_handler = (modal == GpuiAppModalKind::WatchGhostexVideo)
-            .then(|| self.tutorial_video_page_load_end_handler(cx));
         self.app_modal_open_attempt_id = self.app_modal_open_attempt_id.wrapping_add(1);
         let ready_timeout_attempt_id = self.app_modal_open_attempt_id;
         let extension_bridge = match modal {
@@ -946,7 +926,6 @@ impl GhostexGpuiApp {
                     self.sidebar_gxserver_bootstrap.clone(),
                     event_handler,
                     extension_bridge,
-                    page_load_end_handler,
                     cx,
                 )
             })
@@ -1139,7 +1118,6 @@ impl GhostexGpuiApp {
         if closed_modal == Some(GpuiAppModalKind::ExportTranscriptResult) {
             self.pending_export_transcript_reveal_path = None;
         }
-        self.schedule_gpui_app_modal_spare_preload(cx);
     }
 
     pub(crate) fn complete_first_launch_setup(&self) {
@@ -1199,7 +1177,6 @@ impl GhostexGpuiApp {
         be resumed from this ownership boundary as well.
         */
         self.resume_deferred_gpui_portless_setup_prompt(cx);
-        self.schedule_gpui_app_modal_spare_preload(cx);
     }
 
     /// Gives the keyboard back to the pane that had it once a modal window goes away. Every modal close path ends here: the React modal host, the native modals, Quick Access and the new-thread picker.
@@ -1209,6 +1186,7 @@ impl GhostexGpuiApp {
     /// A modal never changes shell focus, so shell focus still names that pane; the keyboard handoff re-focuses whatever it holds (terminal, chat composer, browser page, docs page), because the click that opened the modal (the sidebar, a header button) can have moved the physical focus elsewhere.
     /// A command terminal captured at open time wins, and a handoff the modal's own action already requested (Quick Access opening a session, a picker launching an agent) is left to run instead of being replaced.
     pub(crate) fn restore_keyboard_focus_after_app_modal(&mut self, cx: &mut gpui::Context<Self>) {
+        self.activate_main_window_after_app_modal(cx);
         if let Some(target) = self.app_modal_command_return_focus_target.take()
             && restore_command_pane_app_modal_return_focus(&mut self.command_pane, target)
         {

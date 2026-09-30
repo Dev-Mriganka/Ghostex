@@ -557,7 +557,6 @@ describe('command palette source contracts', () => {
     expect(commandPaletteSource).toContain('function getBuiltInCommandKey');
     expect(modalHostSource).toContain('openTargetSettings={settings}');
     expect(sessionGridContractSource).toContain("type: 'openCurrentProjectInFinder'");
-    expect(sessionGridContractSource).toContain("type: 'openGhostexTutorialVideo'");
     expect(sessionGridContractSource).toContain("type: 'openCurrentProjectInTarget'");
   });
 

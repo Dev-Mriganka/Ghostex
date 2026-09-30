@@ -25,13 +25,6 @@ pub(crate) struct GpuiAppModalHostWindow {
     latest_sidebar_state_message: serde_json::Value,
     pending_messages: Vec<serde_json::Value>,
     presented_modal: Option<GpuiAppModalKind>,
-    /*
-    CDXC:Onboarding 2026-08-18:
-    "f" toggles the YouTube player's fullscreen state, so the host-side key
-    press is sent at most once per window. Page-internal navigations can raise
-    several main-frame load-end edges, and the modal host outlives them.
-    */
-    tutorial_video_fullscreen_key_sent: bool,
     // None when CEF browser creation failed; the host window then never
     // reports ready and the existing app-modal ready-timeout retry/close
     // flow recovers (CDXC:CefRuntime 2026-07-11).
@@ -51,7 +44,6 @@ impl GpuiAppModalHostWindow {
             cef::ExtensionBridgeSurfaceSpec,
             cef::ExtensionBridgeEventHandler,
         )>,
-        page_load_end_handler: Option<cef::PageLoadEndHandler>,
         cx: &mut App,
     ) -> Entity<Self> {
         let parent_ns_view = cef_parent_native_view(window)
@@ -142,7 +134,7 @@ impl GpuiAppModalHostWindow {
                 None,
                 bridge_surface,
                 event_handler,
-                page_load_end_handler,
+                None,
                 cx,
             )
         }
@@ -185,41 +177,8 @@ impl GpuiAppModalHostWindow {
             latest_sidebar_state_message: sidebar_state_message,
             pending_messages,
             presented_modal: None,
-            tutorial_video_fullscreen_key_sent: false,
             surface,
         })
-    }
-
-    /// Turns a freshly created host into the warm spare (`app_modal_spare.rs`): it waits for no open request, and once React is up its page fetches Settings' code in the background.
-    pub(crate) fn prepare_as_spare(&mut self) {
-        self.pending_messages =
-            vec![serde_json::json!({ "modals": ["settings"], "type": "preloadModals" })];
-    }
-
-    pub(crate) fn has_presented(&self) -> bool {
-        self.presented_modal.is_some()
-    }
-
-    /// CDXC:Onboarding 2026-08-18: entering fullscreen needs a
-    /// trusted key press from the host (see `CefBrowser::send_fullscreen_toggle_key`),
-    /// and it must happen once, only while the tutorial video is the presented
-    /// modal.
-    pub(crate) fn send_tutorial_video_fullscreen_key(&mut self, cx: &mut gpui::Context<Self>) {
-        if self.current_modal != GpuiAppModalKind::WatchGhostexVideo
-            || self.tutorial_video_fullscreen_key_sent
-        {
-            return;
-        }
-        let Some(surface) = self.surface.clone() else {
-            return;
-        };
-        self.tutorial_video_fullscreen_key_sent = true;
-        surface.update(cx, |surface, _cx| {
-            // The player only reacts to its shortcut when the page owns
-            // Chromium keyboard focus inside this child window.
-            surface.focus();
-            surface.send_fullscreen_toggle_key();
-        });
     }
 
     pub(crate) fn is_ready(&self) -> bool {
@@ -469,14 +428,9 @@ impl Render for GpuiAppModalHostWindow {
 }
 
 impl GhostexGpuiApp {
-    /// Pushes the glass flag into the React app-modal pages: the open one and the warm spare.
+    /// Pushes the glass flag into the open React app-modal page.
     pub(crate) fn refresh_app_modal_pages_window_glass(&self, cx: &mut App) {
-        let hosts = self
-            .app_modal_window
-            .iter()
-            .cloned()
-            .chain(self.app_modal_spare.as_ref().map(|spare| spare.host()));
-        for handle in hosts {
+        for handle in self.app_modal_window.iter().cloned() {
             let _ = handle.update(cx, |host, _window, cx| host.refresh_window_glass(cx));
         }
     }

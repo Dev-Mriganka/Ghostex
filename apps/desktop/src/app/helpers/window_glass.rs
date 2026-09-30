@@ -659,20 +659,29 @@ pub(crate) fn popup_window_surface(color: Hsla) -> Hsla {
 ///
 /// CDXC:AppModal 2026-09-30 WHY:
 /// A Linux window only asks the compositor for blur (`_KDE_NET_WM_BLUR_BEHIND_REGION` on X11, the blur protocol on Wayland); many compositors ignore the request or ship with blur off (Hyprland on Omarchy does both), so any see-through dialog showed the desktop and the windows behind it unblurred and its text could not be read.
+///
+/// CDXC:AppModal 2026-09-30 DECISION:
+/// User: "Please make the settings modal and find with search and other modals that appear on the app in the middle less transparent (darker bg), they're too transparent now." On macOS and Windows the dialogs no longer share the menus' coverage: they cover most of what is behind them (`FROSTED_MODAL_ALPHA_DARK` / `_LIGHT`) and are not lifted toward white in dark mode (`frosted_modal_fill`). Supersedes "macOS and Windows keep the menus' coverage" above; menus and tooltips are unchanged.
 pub(crate) fn frosted_modal_alpha() -> f32 {
     if cfg!(target_os = "linux") {
         FROSTED_ALPHA_LINUX
+    } else if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+        FROSTED_MODAL_ALPHA_LIGHT
     } else {
-        frosted_menu_alpha()
+        FROSTED_MODAL_ALPHA_DARK
     }
 }
+
+/// Fill coverage of a frosted dialog on macOS and Windows; see `frosted_modal_alpha`.
+const FROSTED_MODAL_ALPHA_DARK: f32 = 0.86;
+const FROSTED_MODAL_ALPHA_LIGHT: f32 = 0.9;
 
 /// Fill coverage of every frosted dialog, menu and tooltip on Linux; see `frosted_modal_alpha`.
 const FROSTED_ALPHA_LINUX: f32 = 1.0;
 
 /// The fill of a frosted dialog under glass: the frosted menu colour at `frosted_modal_alpha`.
 pub(crate) fn frosted_modal_fill(color: Hsla) -> Hsla {
-    frosted_lift(color).opacity(frosted_modal_alpha())
+    color.opacity(frosted_modal_alpha())
 }
 
 /// `popup_window_surface` for a dialog or panel rather than a menu (`frosted_modal_fill`).
