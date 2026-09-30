@@ -25,7 +25,7 @@ rule and the drain rate:
   - An input-blocking notice or unresolved quota, authentication, or agent error is not a delivery opportunity: the head
     row is marked `failed` with the notice title and the drain stops until the
     user retries or deletes it. The text is never lost. Queue eligibility uses
-    `session_chat_notice.rs`'s own predicate, NOT `severity == error`: a trust
+    `session_chat_notice/rules.rs`'s own predicate, NOT `severity == error`: a trust
     dialog or a first-run setup screen is only catalogued `Warning`/`Info` and
     would still eat a prompt as the ANSWER to itself.
 

@@ -4,7 +4,7 @@ Chat sends are fire-and-forget: `write_session_chat_payload` succeeds the moment
 zmx accepts the bytes, so a message typed into a dead login screen, a trust
 dialog or a shell where the agent already exited disappears without a trace.
 
-This module is the other half of `session_chat_notice.rs`: instead of reading
+This module is the other half of `session_chat_notice/`: instead of reading
 what the screen SAYS, it checks what the agent RECORDED. Every text send samples
 the session transcript's byte length first, and after the send completes a
 watchdog task watches the bytes appended past that offset for the message it

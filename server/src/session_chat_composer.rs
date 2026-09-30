@@ -1,7 +1,7 @@
 /*
 CDXC:SessionChat 2026-08-26:
 POSITIVE evidence that an agent CLI's input box is on screen and accepting
-input, as opposed to the negative evidence session_chat_notice.rs collects.
+input, as opposed to the negative evidence session_chat_notice/ collects.
 
 The two are not the same question and cannot be answered by one detector. A
 notice rule says "this specific screen — a trust dialog, an expired login, a

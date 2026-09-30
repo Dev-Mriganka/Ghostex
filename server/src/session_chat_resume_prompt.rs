@@ -24,7 +24,7 @@ Which row the user wants is NOT ours to decide (summary vs full session is a
 usage-limit trade-off only they can make), so this module no longer answers the
 picker. It DESCRIBES it: the prose above the rows, every row in screen order,
 its printed number, and which row the TUI highlights right now.
-`session_chat_notice.rs` turns that into the input-blocking `resumePrompt`
+`session_chat_notice/` turns that into the input-blocking `resumePrompt`
 terminal notice the chat surfaces render as an answer picker, and
 `answerSessionChatPrompt`'s `terminalChoice` lane types the chosen row's NUMBER.
 

@@ -256,7 +256,7 @@ impl SessionChatDetectedOptions {
 /*
 CDXC:AgentScreenDetection 2026-08-19:
 One `zmx history` capture, two readings. The model/effort grammar and the
-terminal-state classifier (session_chat_notice.rs) both want the same screen, so
+terminal-state classifier (session_chat_notice/) both want the same screen, so
 they are produced together and cached together — a notice must never cost a
 second process spawn.
 */

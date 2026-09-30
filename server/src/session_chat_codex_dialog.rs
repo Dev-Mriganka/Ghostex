@@ -110,7 +110,7 @@ const UPDATE_PROMPT_ID_PREFIX: &str = "codex-update-prompt:";
 /// CDXC:AgentScreenDetection 2026-09-11 DECISION:
 /// User: the Codex update prompt card must read nicely, and its option must not show the raw install command.
 /// The card names both versions and says in words how Codex installs the update; the exact command stays readable under the card's terminal output, since the notice keeps the real screen for this dialog.
-/// SEE-ALSO: Codex tui/src/update_prompt.rs (the modal) and tui/src/update_action.rs (the commands it prints); server/src/session_chat_notice.rs keeps the screen tail.
+/// SEE-ALSO: Codex tui/src/update_prompt.rs (the modal) and tui/src/update_action.rs (the commands it prints); server/src/session_chat_notice/classify.rs keeps the screen tail.
 fn update_prompt_dialog(mut dialog: TerminalDialog) -> TerminalDialog {
     // "✨ Update available! 0.1.0 -> 0.2.0" before Codex 0.156, "Update available · 0.156.0 → 0.156.1" since.
     let Some((_, versions)) = dialog

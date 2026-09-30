@@ -31,7 +31,7 @@ this store still holds only the live half, including the live half of those
 (`local_command`), and still expires.
 
 The store is keyed by (project, session) and swept lazily on read, the same
-shape as the terminal-notice watchdog map in session_chat_notice.rs.
+shape as the terminal-notice watchdog map in session_chat_notice/watchdog_store.rs.
 */
 
 use std::collections::HashMap;
