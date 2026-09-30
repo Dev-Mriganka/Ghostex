@@ -79,11 +79,20 @@ pub(crate) struct GpuiContextMenu {
     /// Where the menu opened and for which app, so a submenu row can reopen it in the same place.
     app: Option<WeakEntity<GhostexGpuiApp>>,
     trigger_bounds: Option<Bounds<Pixels>>,
+    /// Keeps the windows the menu was opened from free of tooltips while it is up.
+    tooltips: Vec<gpui::TooltipSuppression>,
 }
 
 impl GpuiContextMenu {
     pub(crate) fn new() -> Self {
         Self::default()
+    }
+
+    /// Also hide `window`'s tooltips while the menu is up, for a trigger drawn in a child window
+    /// (Docs' files list) whose menu is hosted over the main window.
+    pub(crate) fn suppress_tooltips_in(mut self, window: &mut Window, cx: &mut App) -> Self {
+        self.tooltips.push(Root::suppress_tooltips(window, cx));
+        self
     }
 
     pub(crate) fn menu(
@@ -314,6 +323,7 @@ impl GpuiContextMenu {
                     if already_open {
                         return;
                     }
+                    self.tooltips.push(Root::suppress_tooltips(window, cx));
                     app.context_menu = Some(self);
                     app.set_gpui_titlebar_popup_open(
                         GpuiTitlebarPopupKind::ContextMenu,

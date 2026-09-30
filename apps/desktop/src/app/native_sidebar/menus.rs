@@ -155,6 +155,7 @@ impl GhostexGpuiApp {
                         focus,
                         previous_focus,
                         scale,
+                        _tooltips: Root::suppress_tooltips(window, cx),
                     });
                     if let Some(command) = on_open {
                         app.dispatch_native_sidebar_ui(command, cx);

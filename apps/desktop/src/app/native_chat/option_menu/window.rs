@@ -66,6 +66,8 @@ pub(in crate::app::native_chat) struct ChatOptionMenu {
     /// The model pop-up's reasoning levels Left and Right (or the Reasoning list) moved to this visit, by row key.
     /// Kept on the menu so the Reasoning side list, a panel of its own, can set them too.
     pub(super) model_efforts: std::collections::HashMap<String, String>,
+    /// Keeps the source window's tooltips hidden while the menu is up (`Root::suppress_tooltips`).
+    tooltips: Option<gpui::TooltipSuppression>,
 }
 
 pub(super) struct ChatOptionMenuPanel {
@@ -126,6 +128,7 @@ impl ChatOptionMenu {
             return;
         }
         self.closed = true;
+        self.tooltips = None;
         let windows = std::mem::take(&mut self.windows);
         let source = self.source;
         let focus = self.source_focus.clone();
@@ -718,6 +721,7 @@ impl NativeChatView {
         let parent = super::super::child_window::window_native_view(window)
             .unwrap_or(self.config.parent_native_view);
         let outside_pane = std::mem::take(&mut self.menu_outside_pane);
+        let tooltips = Some(Root::suppress_tooltips(window, cx));
         let menu = cx.new(|_| ChatOptionMenu {
             chat,
             source,
@@ -733,6 +737,7 @@ impl NativeChatView {
             rekeys: 0,
             outside_pane,
             model_efforts: Default::default(),
+            tooltips,
         });
         let anchor = Bounds::new(content_bounds.origin + trigger.origin, trigger.size);
         menu.update(cx, |menu, cx| {

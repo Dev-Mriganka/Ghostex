@@ -34,6 +34,8 @@ pub(crate) struct SidebarMenuState {
     pub(crate) focus: FocusHandle,
     pub(crate) previous_focus: Option<FocusHandle>,
     pub(crate) scale: f32,
+    /// Keeps `window`'s tooltips hidden while the menu is up (`Root::suppress_tooltips`).
+    pub(crate) _tooltips: gpui::TooltipSuppression,
 }
 
 impl SidebarMenuPanel {
