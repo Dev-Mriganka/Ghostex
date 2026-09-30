@@ -260,7 +260,7 @@ pub(crate) fn project_agent_session_default_title(project: &Value, session: &Val
 /// User: an agent spawning another agent sets that worker's model and effort for the session only, for Claude and Codex only, and a resumed worker keeps them.
 /// Typing `/model` or `/effort` into Claude Code saves the choice as the default for every new session, so the choice travels as launch flags instead.
 /// The flags live in the session's saved base command, which resume, fork and account wrapping all rebuild from.
-/// SEE-ALSO: server/src/ghostex_cli/actions.rs (create-agent), server/src/ghostex_cli/board.rs and server/src/board_start_work.rs (board start-work).
+/// SEE-ALSO: server/src/ghostex_cli/actions/create.rs (create-agent), server/src/ghostex_cli/board.rs and server/src/board_start_work.rs (board start-work).
 fn apply_requested_agent_model(
     agent_id: &str,
     agent_config: &Map<String, Value>,

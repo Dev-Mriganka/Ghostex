@@ -4,7 +4,7 @@
 //! `resolveEmbeddedBrowserRendererCommandProjectId` (in the deleted
 //! `gxserver-runtime/app-shot-and-misc.ts`).
 //!
-//! SEE-ALSO: server/src/ghostex_cli/actions.rs (`with_renderer_session_target`).
+//! SEE-ALSO: server/src/ghostex_cli/actions/dispatch.rs (`with_renderer_session_target`).
 
 use serde_json::Value;
 
