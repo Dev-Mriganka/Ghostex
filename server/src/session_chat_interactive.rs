@@ -54,7 +54,7 @@ pub struct SessionChatQuestion {
     pub options: Vec<SessionChatQuestionOption>,
 }
 
-/// Rust mirror of packages/shared/session-chat.ts `SessionChatInteractivePrompt`.
+/// Rust mirror of packages/shared/session-chat-transcript.ts `SessionChatInteractivePrompt`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum SessionChatInteractivePrompt {
@@ -96,7 +96,7 @@ impl SessionChatInteractivePrompt {
     }
 }
 
-/// Rust mirror of packages/shared/session-chat.ts `SessionChatQuestionSelection`.
+/// Rust mirror of packages/shared/session-chat-transcript.ts `SessionChatQuestionSelection`.
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct SessionChatQuestionSelection {
     #[serde(default)]

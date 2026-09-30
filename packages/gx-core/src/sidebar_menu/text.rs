@@ -6,7 +6,7 @@ pub(crate) use crate::sidebar_view::text::js_trim;
 /// belongs to, or `None` when it has none. Both candidates are tried in order, trimmed and
 /// lowercased.
 ///
-/// SEE-ALSO: packages/shared/session-chat.ts.
+/// SEE-ALSO: packages/shared/session-chat-agents.ts.
 pub(crate) fn transcript_agent(
     agent_id: Option<&str>,
     agent_icon: Option<&str>,

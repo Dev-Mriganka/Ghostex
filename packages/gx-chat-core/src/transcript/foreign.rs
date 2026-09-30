@@ -18,7 +18,7 @@ pub const PENDING_ID_PREFIX: &str = "pending:";
 /// Family a, `packages/core-ui/chat/session-chat-pending.ts`.
 pub const CODEX_GOAL_ID_PREFIX: &str = "app-command-goal:";
 
-/// Shared contract, `packages/shared/session-chat.ts`.
+/// Shared contract, `packages/shared/session-chat-rpc.ts`.
 pub const FORK_BOUNDARY_ID_PREFIX: &str = "fork-boundary:";
 
 /// Family a, `packages/core-ui/chat/session-chat-terminal-status.ts`.

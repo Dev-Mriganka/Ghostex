@@ -25,7 +25,7 @@ export GHOSTEX_RELEASE_VERSION="$VERSION"
 export GHOSTEX_RELEASE_BUILD_NUMBER="$BUILD_NUMBER"
 
 # The React Native app's list of chat-capable agents is generated from
-# packages/shared/session-chat.ts. Regenerate it from the release checkout so a
+# packages/shared/session-chat-agents.ts. Regenerate it from the release checkout so a
 # committed list from an earlier revision can never reach the TestFlight archive.
 cd "$REPO_ROOT"
 bun run generate:mobile-chat-agents

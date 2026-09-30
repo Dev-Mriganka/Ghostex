@@ -112,7 +112,7 @@ user-configured and may legitimately be absent.
 pub const SESSION_CHAT_OPTION_MODEL_SETTLE_GRACE: Duration = Duration::from_secs(6);
 
 // ---------------------------------------------------------------------------
-// Result types (mirror of packages/shared/session-chat.ts SessionChatDetectedOptions)
+// Result types (mirror of packages/shared/session-chat-agent-state.ts SessionChatDetectedOptions)
 // ---------------------------------------------------------------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]

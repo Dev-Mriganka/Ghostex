@@ -30,7 +30,7 @@ export ORG_GRADLE_PROJECT_ghostexReleaseKeyAlias="$GHOSTEX_ANDROID_SIGNING_KEY_A
 export ORG_GRADLE_PROJECT_ghostexReleaseKeyPassword="$GHOSTEX_ANDROID_SIGNING_KEY_PASSWORD"
 
 # The React Native app's list of chat-capable agents is generated from
-# packages/shared/session-chat.ts. Regenerate it from the release checkout so a
+# packages/shared/session-chat-agents.ts. Regenerate it from the release checkout so a
 # committed list from an earlier revision can never reach the APK.
 cd "$REPO_ROOT"
 bun run generate:mobile-chat-agents

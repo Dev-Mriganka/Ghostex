@@ -190,7 +190,7 @@ impl NewThreadPickerAgent {
         }
     }
 
-    /// Port of `resolveSessionChatTranscriptAgent` in packages/shared/session-chat.ts.
+    /// Port of `resolveSessionChatTranscriptAgent` in packages/shared/session-chat-agents.ts.
     fn supports_chat(&self) -> bool {
         [self.agent_id.as_str(), self.family()]
             .into_iter()
