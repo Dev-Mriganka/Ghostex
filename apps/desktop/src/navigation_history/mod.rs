@@ -37,6 +37,7 @@ use gpui::{
 use gpui_component::h_flex;
 use gpui_component::tooltip::{ManagedTooltipExt as _, ManagedTooltipPlacement};
 
+use crate::app::model::{ShellFocusTarget, TitlebarMode};
 use crate::{
     GhostexGpuiApp, TITLEBAR_BUTTON_HORIZONTAL_PADDING, TITLEBAR_BUTTON_RADIUS,
     TITLEBAR_CONTROL_HEIGHT, TITLEBAR_LEADING_TALL_BUTTON_HEIGHT, titlebar_button_hover_color,
@@ -75,6 +76,49 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) {
         self.navigate_history(direction, cx);
+    }
+
+    /// CDXC:Navigation 2026-10-01 DECISION:
+    /// User: when the browser is focused, mouse 4/5 and the Back/Forward hotkeys go back and forward in the browser, not in the rest of the app.
+    /// A focused Browser pane keeps the press even when its page has nowhere to go; the titlebar arrows always walk the app trail.
+    /// Supersedes the browser-tab part of the 2026-09-08 decision in GpuiNavigationGestures.m.
+    pub(crate) fn navigate_focused_browser_history(
+        &mut self,
+        back: bool,
+        cx: &mut gpui::Context<Self>,
+    ) -> bool {
+        let ShellFocusTarget::BrowserPane(pane_id) = self.shell_focus else {
+            return false;
+        };
+        if self.active_mode != TitlebarMode::Browser {
+            return false;
+        }
+        let Some(surface) = self.browser_surface_for_pane(pane_id) else {
+            return false;
+        };
+        surface.update(cx, |surface, _| {
+            if back {
+                surface.go_back();
+            } else {
+                surface.go_forward();
+            }
+        });
+        true
+    }
+
+    /// Mouse 4/5, swipes and the Back/Forward hotkeys: the focused browser first, then the trail.
+    pub(crate) fn navigate_history_from_input(&mut self, back: bool, cx: &mut gpui::Context<Self>) {
+        if self.navigate_focused_browser_history(back, cx) {
+            return;
+        }
+        let enabled = if back {
+            self.navigation_history_state.can_go_back
+        } else {
+            self.navigation_history_state.can_go_forward
+        };
+        if enabled {
+            self.request_navigation_history_navigation(if back { "back" } else { "forward" }, cx);
+        }
     }
 
     pub(crate) fn render_titlebar_navigation_history_buttons(

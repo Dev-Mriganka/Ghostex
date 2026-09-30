@@ -147,13 +147,8 @@ fn navigate(target: NavigationTarget, back: bool) {
             match view {
                 NavigationView::Main(app) => {
                     let _ = app.update_in(&mut async_app, |this, _, cx| {
-                        let enabled = if back {
-                            this.navigation_history_state.can_go_back
-                        } else {
-                            this.navigation_history_state.can_go_forward
-                        };
-                        if enabled && this.app_modal_window.is_none() {
-                            this.request_navigation_history_navigation(direction, cx);
+                        if this.app_modal_window.is_none() {
+                            this.navigate_history_from_input(back, cx);
                         }
                     });
                 }
