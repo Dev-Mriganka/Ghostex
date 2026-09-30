@@ -9,7 +9,7 @@ This module turns that screen state into one nullable wire field
 (`terminalNotice`) carried exactly like `prompt`/`selectedOptions`. It is a PURE
 classifier plus a tiny in-memory store: it never spawns a process and never
 touches the filesystem. The screen text it classifies is the SAME `zmx history`
-capture the model/effort detector already pays for (session_chat_options.rs), so
+capture the model/effort detector already pays for (session_chat_options/), so
 notices cost zero extra process spawns.
 
 Matching is phrase-based rather than regex-based, for the same reason the option
@@ -2434,7 +2434,7 @@ pub fn merge_session_chat_terminal_notices(
 /// The suppression therefore carries the switch time; `session_chat_notice_progress::refresh` lifts it when the transcript records a usage limit after that time, which is a new event, not a repaint.
 /// Superseding the identity match of the same day: the resumed CLI repaints the old limit from its transcript with different glyphs and wording ("⏺ … esc or type to cancel" for the "⚠ … esc to cancel" spinner line), so an identity captured before the switch never matched the replay.
 /// The card came back after the switch, blocked the composer with "Clear it in the terminal before sending", and held the continuation dot. The suppression is now by kind: every usage-limit notice stays hidden until the transcript proves a new limit.
-/// SEE-ALSO: server/src/accounts/endpoint.rs (select), server/src/accounts/recovery.rs (restore_session), server/src/session_chat_options.rs (detect_blocking, composer readiness).
+/// SEE-ALSO: server/src/accounts/endpoint.rs (select), server/src/accounts/recovery.rs (restore_session), server/src/session_chat_options/detector.rs (detect_blocking, composer readiness).
 fn suppressed_account_usage_notices(
 ) -> &'static Mutex<HashMap<String, chrono::DateTime<chrono::Utc>>> {
     static NOTICES: OnceLock<Mutex<HashMap<String, chrono::DateTime<chrono::Utc>>>> =

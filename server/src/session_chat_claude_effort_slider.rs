@@ -117,7 +117,7 @@ fn rail_words(line: &str) -> Vec<(String, usize)> {
 }
 
 /// CDXC:SessionChat 2026-09-26 WHY:
-/// A custom status line prints "Opus 5.5" for both context sizes, so a session on `opus[1m]` never read as already on its model and every effort change walked the model list for a row Claude 2.1.283 does not have. The terminal still wins (the 2026-09-08 decision in session_chat_options.rs); the status line JSON Claude pipes to Ghostex only adds the context size the footer cannot print, when both name the same model (`claude_long_context_twin`, which chat's detection shares), and answers for a value the footer shows none of.
+/// A custom status line prints "Opus 5.5" for both context sizes, so a session on `opus[1m]` never read as already on its model and every effort change walked the model list for a row Claude 2.1.283 does not have. The terminal still wins (the 2026-09-08 decision in session_chat_options/selection_sources.rs); the status line JSON Claude pipes to Ghostex only adds the context size the footer cannot print, when both name the same model (`claude_long_context_twin`, which chat's detection shares), and answers for a value the footer shows none of.
 pub(super) fn claude_live_selection(
     plan: &CodexPickerPlan,
     screen: &str,

@@ -252,7 +252,7 @@ pub struct SessionChatFollowerConfig {
     pub protocol_version: u64,
     pub server_id: String,
     pub state_reader: Option<SessionChatStateReader>,
-    /// Detected model/effort source (see session_chat_options.rs). Snapshot and
+    /// Detected model/effort source (see session_chat_options/). Snapshot and
     /// replaced frames carry the cached value; a periodic probe re-detects and
     /// emits a state frame only when it CHANGED.
     pub options_reader: Option<crate::session_chat_options::SessionChatOptionsReader>,

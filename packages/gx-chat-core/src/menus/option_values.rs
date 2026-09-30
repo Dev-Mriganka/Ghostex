@@ -468,7 +468,7 @@ impl DetectedOptions {
 /// `sessionChatOptionEvidencePriority`.
 ///
 /// CDXC:AgentScreenDetection 2026-09-08 SEE-ALSO:
-/// server/src/session_chat_options.rs owns the evidence precedence; the read path must also admit
+/// server/src/session_chat_options/selection_sources.rs owns the evidence precedence; the read path must also admit
 /// stronger evidence before filtering older replies.
 pub fn evidence_priority(source: Option<&str>) -> i32 {
     match source {

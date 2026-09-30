@@ -22,7 +22,7 @@ export interface SessionChatContextUsage {
  * rows become a text status line under the chat box. This is the slice of
  * Claude's statusLine payload the chat can show, camelCase, every field
  * absent when Claude did not report it (see `claude_statusline_status_value`
- * in server/src/session_chat_options.rs).
+ * in server/src/session_chat_options/selection_sources.rs).
  */
 export interface SessionChatClaudeStatus {
   cost?: {

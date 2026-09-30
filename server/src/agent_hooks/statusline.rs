@@ -716,7 +716,7 @@ fn payload_f64(payload: &Map<String, Value>, keys: &[&str]) -> Option<f64> {
 /*
 CDXC:AgentHooks 2026-09-03 DECISION:
 User: the default Claude statusline uses their own two-row layout (model, effort, context, cost, rate limits; then session id, project, branch), without the second context percentage and without the account email.
-Both rows are `|` delimited so the screen grammar in session_chat_options.rs
+Both rows are `|` delimited so the screen grammar in session_chat_options/agent_matchers.rs
 reads the model and effort segments exactly as it reads a user's custom line:
 
     Fable 5.1 | medium | Ctx 25% | $11.14 | 5h 23% · 7d 41%

@@ -281,7 +281,7 @@ fn any_picker_open(screen: &str) -> bool {
 /// Codex 0.156 lists display names (`GPT-6-Sol`) in its model picker and effort title while the
 /// catalog, the footer reader and the "Model changed to" line use ids (`gpt-6-sol`), so the label
 /// is compared without case. An exact match failed every Codex model change from chat.
-/// SEE-ALSO: server/src/session_chat_options.rs codex_model_value.
+/// SEE-ALSO: server/src/session_chat_options/agent_matchers.rs codex_model_value.
 fn row_names(row: &PickerRow, wanted: &str) -> bool {
     row.text
         .get(..wanted.len())
