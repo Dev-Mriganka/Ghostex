@@ -770,7 +770,11 @@ the same command accepts `--mode <mode>` and `--fast-mode on|off`.
 Claude's default-effort pricing notice also appears in chat with its original
 explanation and choices, so you can keep the current effort or switch to the
 recommended effort there without opening Terminal.
-Escape interrupts the agent. If a Claude message is cancelled before it is
+Escape interrupts the agent. While the agent is working, the first Escape shows
+"Press Escape again to interrupt" at the bottom of the chat, and a second Escape
+within 2 seconds interrupts; Settings > Chat > Press Escape twice to interrupt
+turns this off so the first Escape interrupts (`sessionChatConfirmEscapeInterrupt`,
+on by default). If a Claude message is cancelled before it is
 accepted, its text returns to the chat composer for editing. Rewind to here
 also returns the selected text when the message was never accepted, keeping
 anything already in the composer (`ghostex interrupt-session-chat <session>`).
@@ -1113,7 +1117,7 @@ Related settings: `hideAccountEmails`, `preferredAgentInterface`, `sessionChatTh
 `sessionChatFontFamily`, `sessionChatCustomTranscriptWidthEnabled`,
 `sessionChatTranscriptWidthPercent`, `sessionChatVerboseMode`,
 `sessionChatFileEditPreviews`,
-`sessionChatKeepComposerExpanded`,
+`sessionChatKeepComposerExpanded`, `sessionChatConfirmEscapeInterrupt`,
 `terminalViewWidthMode` (`match-chat` makes the terminal body the same width
 as the chat transcript), `terminalWidthApplyToCommandPaneTerminals`.
 

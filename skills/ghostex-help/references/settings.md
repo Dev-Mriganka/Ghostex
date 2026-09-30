@@ -64,6 +64,7 @@ How to use this file:
 - **Transcript width** `sessionChatTranscriptWidthPercent` (number 50 to 100 step 5 default 75): Set the centered transcript width without changing the prompt composer.
 - **Show file edit previews** `sessionChatFileEditPreviews` (boolean, default false): Show the first seven code lines in each file edit. Turn off to show only the path and change counts.
 - **Keep chat box expanded while scrolling** `sessionChatKeepComposerExpanded` (boolean, default false): Keep the desktop chat box at full size while you scroll the transcript instead of shrinking it as you scroll up and growing it back at the end.
+- **Press Escape twice to interrupt** `sessionChatConfirmEscapeInterrupt` (boolean, default true): While the agent is working, the first Escape asks you to press Escape again within 2 seconds before it interrupts. Turn off to interrupt on the first Escape.
 - **Simple mode** `sessionChatSimpleMode` (boolean, default true): Simplify all chats: hide tool command previews and group file edits behind an expandable file count.
 - **Verbose mode** `sessionChatVerboseMode` (boolean, default false): Expand thinking blocks to show their tool calls by default. Each chat can override it from its composer.
 ### Tools

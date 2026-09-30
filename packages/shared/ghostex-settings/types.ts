@@ -696,6 +696,10 @@ export type ghostexSettings = {
    * User: add a setting that stops the GPUI chat box from animating up and down. While on, scrolling the transcript never collapses the desktop chat box. It shipped on by default while the collapse bounced near the end of the transcript; once that bounce was fixed the user asked for auto collapse to be enabled by default, so the setting now defaults to off.
    */
   sessionChatKeepComposerExpanded: boolean;
+  /** CDXC:SessionChat 2026-09-30 DECISION:
+   * User: the first Escape that would interrupt a working agent shows "Press Escape again to interrupt" at the bottom of the chat, and a second Escape within 2 seconds interrupts. On by default; turning it off interrupts on the first Escape.
+   */
+  sessionChatConfirmEscapeInterrupt: boolean;
   /**
    * CDXC:Theming 2026-06-15-11:24:
    * Custom chrome colors are scoped to the sidebar and native titlebar only.

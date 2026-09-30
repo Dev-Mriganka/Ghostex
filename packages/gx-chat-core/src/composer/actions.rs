@@ -181,7 +181,11 @@ pub fn handle(state: &mut ChatState, action: &UserAction, context: &ChatContext)
             )
             .1
         }
-        ActionKind::Interrupt => crate::composer::send::interrupt(state, context),
+        ActionKind::Interrupt => crate::composer::send::interrupt(
+            state,
+            context,
+            action.param("confirm").and_then(Value::as_bool) == Some(true),
+        ),
         ActionKind::Send | ActionKind::Queue | ActionKind::Compact => crate::composer::send::begin(
             state,
             context,

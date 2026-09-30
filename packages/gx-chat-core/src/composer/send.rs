@@ -820,8 +820,34 @@ pub fn settle_handoff_acknowledgement(
     }])
 }
 
+/// The timer that ends a first Escape's wait for its confirmation.
+pub const INTERRUPT_CONFIRM_TIMER: &str = "composer.interruptConfirm";
+
 /// Escape: cancel a send that has not left, then ask the agent to stop.
-pub fn interrupt(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
+///
+/// `confirm` is the renderer's "Press Escape twice to interrupt" setting.
+///
+/// CDXC:SessionChat 2026-09-30 DECISION:
+/// User: "hitting Escape once, if it's going to interrupt, [should] show a toast at the bottom of the chat view ... saying, 'Press Escape again to interrupt.'" A second Escape within 2 seconds interrupts; a Settings toggle (`sessionChatConfirmEscapeInterrupt`, on by default) turns it off so the first Escape interrupts. Only an Escape that would stop a working agent waits: closing a terminal dialog, or an idle agent, stays one press.
+pub fn interrupt(state: &mut ChatState, context: &ChatContext, confirm: bool) -> Vec<Effect> {
+    if confirm
+        && !state.composer.interrupt_confirm_armed
+        && cancellable_dialog(state).is_none()
+        && crate::session::working::is_working(state)
+    {
+        state.composer.interrupt_confirm_armed = true;
+        state.core.timers.arm(
+            INTERRUPT_CONFIRM_TIMER,
+            context.now_ms,
+            crate::composer::policy::INTERRUPT_CONFIRM_WINDOW_MS as f64,
+        );
+        state.core.request_publish();
+        return Vec::new();
+    }
+    if std::mem::take(&mut state.composer.interrupt_confirm_armed) {
+        state.core.timers.cancel(INTERRUPT_CONFIRM_TIMER);
+        state.core.request_publish();
+    }
     let mut parked = false;
     if let Some(submission) = state.composer.submitting.as_mut() {
         submission.cancelled = true;

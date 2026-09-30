@@ -5198,6 +5198,11 @@
               "subtitle": "Keep the desktop chat box at full size while you scroll the transcript instead of shrinking it as you scroll up and growing it back at the end."
             },
             {
+              "key": "sessionChatConfirmEscapeInterrupt",
+              "title": "Press Escape twice to interrupt",
+              "subtitle": "While the agent is working, the first Escape asks you to press Escape again within 2 seconds before it interrupts. Turn off to interrupt on the first Escape."
+            },
+            {
               "key": "sessionChatSimpleMode",
               "title": "Simple mode",
               "subtitle": "Simplify all chats: hide tool command previews and group file edits behind an expandable file count."
@@ -8464,7 +8469,8 @@
             "sessionChatVerboseMode",
             "sessionChatSimpleMode",
             "sessionChatFileEditPreviews",
-            "sessionChatKeepComposerExpanded"
+            "sessionChatKeepComposerExpanded",
+            "sessionChatConfirmEscapeInterrupt"
           ],
           "sidebar": [
             "sidebarSettingsPreset",
@@ -8745,7 +8751,8 @@
             "sessionChatVerboseMode",
             "sessionChatSimpleMode",
             "sessionChatFileEditPreviews",
-            "sessionChatKeepComposerExpanded"
+            "sessionChatKeepComposerExpanded",
+            "sessionChatConfirmEscapeInterrupt"
           ],
           "sidebar": [
             "sidebarSettingsPreset",
@@ -11556,6 +11563,7 @@
           "sessionChatSimpleMode": true,
           "sessionChatFileEditPreviews": false,
           "sessionChatKeepComposerExpanded": false,
+          "sessionChatConfirmEscapeInterrupt": true,
           "customSidebarTitlebarForegroundColor": "#d8d8d8",
           "customSidebarTitlebarBackgroundTintColor": "#808080",
           "customSidebarTitlebarBackgroundDarknessPercent": 96,

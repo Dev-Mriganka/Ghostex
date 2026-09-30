@@ -723,6 +723,11 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'sessionChatKeepComposerExpanded',
       DEFAULT_ghostex_SETTINGS.sessionChatKeepComposerExpanded
     ),
+    sessionChatConfirmEscapeInterrupt: readBoolean(
+      source,
+      'sessionChatConfirmEscapeInterrupt',
+      DEFAULT_ghostex_SETTINGS.sessionChatConfirmEscapeInterrupt
+    ),
     sessionChatVerboseMode: readBoolean(
       source,
       'sessionChatVerboseMode',

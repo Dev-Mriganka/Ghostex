@@ -71,6 +71,9 @@ pub struct ComposerState {
     /// The keystroke `sendKey` is waiting on: the request id, the key, and the marker to record
     /// only once the write is accepted.
     pub key_send: Option<(u64, String, String)>,
+    /// A first Escape is waiting for the second that confirms the interrupt
+    /// (`crate::composer::send::interrupt`); cleared when its timer runs out.
+    pub interrupt_confirm_armed: bool,
     /// Draft transfers being received right now, so a repeated `receiveHandoff` is a no-op.
     pub receiving_handoffs: Vec<String>,
     /// Draft transfers this composer has already taken, kept for the same reason across retries.

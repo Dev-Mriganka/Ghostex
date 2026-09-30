@@ -11,6 +11,12 @@ use crate::composer::json::OrderedMap;
 /// The 2 s hold on the Stop button after an interrupt, shipped so neither renderer hard-codes it.
 pub const STOP_BUTTON_COOLDOWN_MS: u64 = 2_000;
 
+/// How long a first Escape waits for the second one that confirms the interrupt.
+pub const INTERRUPT_CONFIRM_WINDOW_MS: u64 = 2_000;
+
+/// The toast a first Escape raises while it waits for the confirming one.
+pub const INTERRUPT_CONFIRM_TEXT: &str = "Press Escape again to interrupt";
+
 /// What the desktop composer says when nothing is blocking it.
 pub const DESKTOP_COMPOSER_PLACEHOLDER: &str =
     "Press Enter to send a message and Tab to Queue.\nUse @ to mention a file and $ for using skills.";

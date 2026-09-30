@@ -965,6 +965,20 @@
       "agentWritable": true
     },
     {
+      "key": "sessionChatConfirmEscapeInterrupt",
+      "title": "Press Escape twice to interrupt",
+      "subtitle": "While the agent is working, the first Escape asks you to press Escape again within 2 seconds before it interrupts. Turn off to interrupt on the first Escape.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "chat",
+      "groupTitle": "Chat",
+      "section": "chat",
+      "sectionTitle": "Chat",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true
+    },
+    {
       "key": "sessionChatSimpleMode",
       "title": "Simple mode",
       "subtitle": "Simplify all chats: hide tool command previews and group file edits behind an expandable file count.",

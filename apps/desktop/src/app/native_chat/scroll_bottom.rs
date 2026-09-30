@@ -139,12 +139,22 @@ impl NativeChatView {
         window.prevent_default();
     }
 
-    pub(super) fn scroll_bottom_button(&self, cx: &Context<Self>) -> AnyElement {
+    /// Whether the pill is up, with its unscaled height and bottom offset, for what stacks above it.
+    pub(super) fn scroll_bottom_pill_extent(&self) -> (bool, f32, f32) {
+        let scale = ChatAppearance::current(&self.snapshot).scale;
+        (self.scroll_bottom_shown(scale), SPEC.height, SPEC.bottom)
+    }
+
+    fn scroll_bottom_shown(&self, scale: f32) -> bool {
         let remaining =
             self.list.max_offset_for_scrollbar().y + self.list.scroll_px_offset_for_scrollbar().y;
+        !self.list.is_following_tail() && remaining > px(SPEC.edge_threshold * scale)
+    }
+
+    pub(super) fn scroll_bottom_button(&self, cx: &Context<Self>) -> AnyElement {
         let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let p = ChatAppearance::current(&self.snapshot).on_window_glass(glass);
-        let shown = !self.list.is_following_tail() && remaining > px(SPEC.edge_threshold * p.scale);
+        let shown = self.scroll_bottom_shown(p.scale);
         if glass {
             return self.scroll_bottom_window_placeholder(shown, &p, cx);
         }

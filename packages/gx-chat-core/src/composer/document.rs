@@ -12,7 +12,8 @@ use crate::composer::host_actions::composer_host_actions;
 use crate::composer::layout::{can_collapse_composer, CollapseGate};
 use crate::composer::policy::{
     composer_placeholder, send_blocked_reason, send_refused_reason, SendGate,
-    DESKTOP_COMPOSER_PLACEHOLDER, STOP_BUTTON_COOLDOWN_MS, TOUCH_COMPOSER_PLACEHOLDER,
+    DESKTOP_COMPOSER_PLACEHOLDER, INTERRUPT_CONFIRM_TEXT, STOP_BUTTON_COOLDOWN_MS,
+    TOUCH_COMPOSER_PLACEHOLDER,
 };
 use crate::composer::queue::{
     is_queue_row_busy, queue_capabilities, queue_row_preview, QUEUE_LONG_PRESS_MS,
@@ -121,6 +122,9 @@ pub fn document(state: &ChatState, _context: &ChatContext, into: &mut Document) 
         queue_long_press_ms: QUEUE_LONG_PRESS_MS,
         stop_button_cooldown_ms: STOP_BUTTON_COOLDOWN_MS,
     };
+    into.interrupt_confirm = composer
+        .interrupt_confirm_armed
+        .then(|| INTERRUPT_CONFIRM_TEXT.to_string());
     into.host_actions = composer_host_actions();
     into.side_chat = crate::composer::side_chat::side_chat_prefix(state);
     into.skills_loading = composer.sources.skills_loading;

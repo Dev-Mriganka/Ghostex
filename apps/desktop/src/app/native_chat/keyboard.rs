@@ -405,7 +405,10 @@ impl NativeChatView {
             if this.maximized_window.is_some() {
                 this.close_maximized(cx);
             } else {
-                this.invoke(json!({"type":"interrupt"}), cx);
+                this.invoke(
+                    json!({"type":"interrupt","confirm":confirm_escape_interrupt()}),
+                    cx,
+                );
             }
             cx.stop_propagation();
             window.prevent_default();
@@ -427,4 +430,15 @@ impl NativeChatView {
             window.prevent_default();
         }
     }
+}
+
+/// `sessionChatConfirmEscapeInterrupt`; a missing key reads as its default, on. The core decides
+/// whether this Escape would stop the agent and so has to wait for a second one (send.rs,
+/// `interrupt`).
+fn confirm_escape_interrupt() -> bool {
+    crate::shared_settings::shared_sidebar_settings_snapshot()
+        .object()
+        .get("sessionChatConfirmEscapeInterrupt")
+        .and_then(serde_json::Value::as_bool)
+        != Some(false)
 }

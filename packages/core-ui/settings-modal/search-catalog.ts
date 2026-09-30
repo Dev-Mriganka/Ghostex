@@ -789,6 +789,12 @@ export function getSettingsSearchSectionDefinitions() {
           title: 'Keep chat box expanded while scrolling',
         },
         {
+          key: 'sessionChatConfirmEscapeInterrupt',
+          subtitle:
+            'While the agent is working, the first Escape asks you to press Escape again within 2 seconds before it interrupts. Turn off to interrupt on the first Escape.',
+          title: 'Press Escape twice to interrupt',
+        },
+        {
           key: 'sessionChatSimpleMode',
           subtitle:
             'Simplify all chats: hide tool command previews and group file edits behind an expandable file count.',

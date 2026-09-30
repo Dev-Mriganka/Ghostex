@@ -443,6 +443,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   sessionChatSimpleMode: true,
   sessionChatFileEditPreviews: false,
   sessionChatKeepComposerExpanded: false,
+  sessionChatConfirmEscapeInterrupt: true,
   /**
    * CDXC:Theming 2026-06-15-11:24:
    * Custom sidebar/titlebar colors are scoped to the sidebar and titlebar.

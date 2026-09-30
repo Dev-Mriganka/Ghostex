@@ -219,6 +219,7 @@ export const MAIN_SETTINGS_SECTION_SETTING_KEYS: Record<MainSettingsSectionId, r
     'sessionChatSimpleMode',
     'sessionChatFileEditPreviews',
     'sessionChatKeepComposerExpanded',
+    'sessionChatConfirmEscapeInterrupt',
   ],
   sidebar: [
     'sidebarSettingsPreset',

@@ -1589,6 +1589,15 @@ export function SettingsModal({
                                 onChange={(checked) => updateDraft('sessionChatKeepComposerExpanded', checked)}
                               />
                             ) : null}
+                            {mainSettingVisible(settingsSearch.chat, 'sessionChatConfirmEscapeInterrupt') ? (
+                              <ToggleField
+                                checked={draft.sessionChatConfirmEscapeInterrupt}
+                                description='While the agent is working, the first Escape asks you to press Escape again within 2 seconds before it interrupts. Turn off to interrupt on the first Escape.'
+                                label='Press Escape twice to interrupt'
+                                {...getSettingModificationProps('sessionChatConfirmEscapeInterrupt')}
+                                onChange={(checked) => updateDraft('sessionChatConfirmEscapeInterrupt', checked)}
+                              />
+                            ) : null}
                             {mainSettingVisible(settingsSearch.chat, 'sessionChatVerboseMode') ? (
                               <ToggleField
                                 checked={draft.sessionChatVerboseMode}

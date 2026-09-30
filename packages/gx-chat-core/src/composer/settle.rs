@@ -213,6 +213,14 @@ fn settle_history_read(
 /// Settles family d's carried state for this event.
 pub fn settle(state: &mut ChatState, event: &Event, context: &ChatContext) -> Vec<Effect> {
     let mut effects = Vec::new();
+    // A first Escape's wait ran out: the toast goes and the next Escape starts over.
+    if state
+        .core
+        .timer_fired(crate::composer::send::INTERRUPT_CONFIRM_TIMER)
+        && std::mem::take(&mut state.composer.interrupt_confirm_armed)
+    {
+        state.core.request_publish();
+    }
     match event {
         Event::ComposerBootRead(read) => adopt_boot_read(state, read),
         Event::RpcSettled {
