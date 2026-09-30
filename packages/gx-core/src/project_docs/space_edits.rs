@@ -9,7 +9,7 @@
 //! Ported from the sidebar page's `moveSpace` and `moveToSpace` arms (frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/reorder.ts` and `project-drag.ts`; see git history).
 //!
-//! SEE-ALSO: packages/core-ui/spaces.ts, packages/core-ui/sidebar-space-order.ts.
+//! SEE-ALSO: packages/core-ui/spaces.ts.
 
 use crate::sidebar_view::text::js_trim;
 use crate::sidebar_view::SpacesState;
