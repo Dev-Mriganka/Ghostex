@@ -1350,8 +1350,8 @@ version of the Projects features in Cursor and Claude Code.
 
 - **Start one**: hover a project in the sidebar, open the Select Agent menu (the
   arrow beside its agent button) and choose **New Coordinator…**. Name it, pick
-  Claude or Codex and its model and effort (medium by default, which is plenty
-  for routing work), and optionally give it a one-line goal and a first request;
+  Claude or Codex and its model and effort (Opus 5.5 on Claude, medium effort
+  by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
   it opens in chat. A project can have several coordinators, one per stream of
   work.
 - **Threads in the sidebar**: a coordinator's row shows a crew icon with the
@@ -1369,16 +1369,24 @@ version of the Projects features in Cursor and Claude Code.
   sends its final message to the coordinator (a "Message from" card in its
   chat); when a thread waits on a question, an approval, or a screen such as
   folder trust or an expired login, the coordinator is told what it is asking.
-  The coordinator then checks the work, starts the next step, and tells you
+  The coordinator then checks the work, commits it (only that thread's files,
+  and it never pushes unless you ask), starts the next step, and tells you
   what needs you. Nobody has to poll.
-- **Worktrees**: the coordinator can give a thread its own git worktree and
-  branch, so parallel threads never edit the same checkout. A coordinator's
+- **Thread models**: the coordinator picks each Claude thread's model when it
+  starts it: Opus 5.5 at high effort for substantial work, Opus 5.5 at medium
+  for hard but small changes, Sonnet 5.5 at high for small contained fixes. It
+  never switches a running thread's model (that throws away its prompt cache);
+  a follow-up that needs a stronger model gets a new thread.
+- **Worktrees**: threads that need the same files run one after another; when
+  running them in parallel matters, the coordinator gives a thread its own git
+  worktree and branch, so parallel threads never edit the same checkout. A coordinator's
   threads trust the project's own folder and the worktrees Ghostex makes for
   them, so they start without stopping at the agent's folder-trust question.
 - **Goal, standing instructions and memory**: every thread's brief carries the
   coordinator's goal, its standing instructions (rules such as which branch to
-  target or how to verify work) and its memory notes. Tell the coordinator
-  "remember that…" and it saves a note that every later thread receives; ask it
+  target or how to verify work) and its memory notes. When you state a lasting
+  preference, the coordinator proposes the exact wording and saves it as a
+  note every later thread receives once you confirm; ask it
   to change the goal or the instructions the same way.
 - **Just ask**: "run these three as separate threads", "use worktrees", "give me
   a status of every thread", "use a cheaper model for threads", "don't merge

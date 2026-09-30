@@ -34,9 +34,10 @@ CREATE
   create starts a coordinator in your project (--project-id picks another).
   --agent takes an id from `ghostex agents types`; it must be a Claude or Codex
   agent, and defaults to the first Claude agent listed. --model picks its model
-  (a value from the agent's model list, such as sonnet or opus[1m]); --effort
-  defaults to medium, which is plenty for routing work. --goal is one line the
-  coordinator works toward. --task sends it a first message.
+  (a value from the agent's model list, such as sonnet or opus[1m]); a Claude
+  coordinator defaults to Opus 5.5 (opus[1m]), a Codex one to its configured
+  model. --effort defaults to medium, which is plenty for routing work. --goal
+  is one line the coordinator works toward. --task sends it a first message.
 
 STATUS
   status prints the goal, the standing instructions, the memory notes, and every
