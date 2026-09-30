@@ -3,7 +3,6 @@ import { DebuggingSettingsTab } from './settings-modal/tabs/debugging';
 import { WindowsTerminalFields } from './settings-modal/tabs/windows-terminal-fields';
 import { useSystemColorScheme } from './use-system-color-scheme';
 import {
-  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -13,36 +12,21 @@ import {
   type UIEvent as ReactUIEvent,
 } from 'react';
 import { cn } from '@/packages/components/utils';
-import type { SettingsAgentsSection, SettingsRemoteSection } from './app-modal-host-bridge';
 import { Button } from '@/packages/components/ui/button';
-import { Command } from '@/packages/components/ui/command';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/packages/components/ui/dialog';
-import { Select, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/packages/components/ui/select';
 import { Separator } from '@/packages/components/ui/separator';
-import { Switch } from '@/packages/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/packages/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/packages/components/ui/tooltip';
+import { Tabs, TabsContent } from '@/packages/components/ui/tabs';
+import { TooltipProvider } from '@/packages/components/ui/tooltip';
 import { SidebarSessionSearchField } from './sidebar-session-search-overlay';
 import {
   resolveSettingsModalTabForVisibility,
   shouldShowOSIntegrationSettingsTab,
   type SettingsModalTab,
-  type SettingsModalTabVisibilityOptions,
 } from './settings-modal-tabs';
-import { IconChevronDown, IconChevronRight, IconInfoCircle, IconX } from '@tabler/icons-react';
-import { type CompletionSoundSetting } from '../shared/completion-sound';
-import { GHOSTEX_RECOMMENDED_GHOSTTY_CONFIG_LINES } from '../shared/ghostty-config-actions';
+import { IconInfoCircle, IconX } from '@tabler/icons-react';
 import {
   resolveSidebarTheme,
   type SidebarAppIconStateMessage,
-  type SidebarAgentHookStatusMessage,
-  type SidebarGhostexCliStatusMessage,
-  type SidebarGhostexFolderStatsMessage,
-  type SidebarOSIntegrationStatusMessage,
-  type SidebarPluginSettingsItem,
-  type SidebarPluginSettingsStatusMessage,
-  type SidebarPortlessState,
-  type SidebarProjectSettingsItem,
   type SidebarTheme,
   type SidebarThemeVariant,
 } from '../shared/session-grid-contract';
@@ -63,8 +47,6 @@ import {
   MIN_PROJECT_SWITCH_KEEP_ALIVE_MINUTES,
   MIN_SESSION_CHAT_TRANSCRIPT_WIDTH_PERCENT,
   MIN_SESSION_CHAT_ZOOM_PERCENT,
-  PROMPT_EDITOR_BACKEND_OPTIONS,
-  type PromptEditorBackend,
   SIDEBAR_SPACE_SWITCH_BEHAVIOR_OPTIONS,
   SIDEBAR_VISIBILITY_MEMORY_OPTIONS,
   WEB_LINK_OPEN_TARGET_OPTIONS,
@@ -90,7 +72,6 @@ import {
   type GhosttyCopyOnSelect,
   type GhosttyScrollbar,
   type KeepAwakeDurationMinutes,
-  type SettingsModalNavigationState,
   type CommandsPanelSide,
   type SidebarSpaceSwitchBehavior,
   type SidebarVisibilityMemory,
@@ -99,11 +80,8 @@ import {
   type WebLinkOpenTarget,
   type TerminalCursorStyle,
   type ghostexSettingsPatch,
-  type ghostexSettingsUpdateSource,
   type ghostexSettings,
 } from '../shared/ghostex-settings';
-import { type BundledGhostexAgentSkillId } from '../shared/ghostex-agent-skills';
-import { type FirstLaunchSetupMainSettingKey } from '../shared/first-launch-setup-settings';
 import { PET_CONTROLS_VISIBLE } from '../shared/pets';
 import {
   areSidebarSessionTagListItemsEqual,
@@ -114,7 +92,6 @@ import {
   type CustomSessionTagsState,
 } from '../shared/session-tags';
 import { useSidebarStore } from './sidebar-store';
-import { type WebviewApi } from './webview-api';
 import {
   ActionButtonPairField,
   ColorField,
@@ -122,19 +99,13 @@ import {
   PanelAnimationSpeedField,
   PreferredAgentInterfaceField,
   SelectField,
-  SettingButton,
-  SettingRow,
-  SettingsListItem,
   SettingsNativeScrollArea,
   SettingsSection,
-  SettingsSelect,
-  SettingsSelectContent,
   SidebarPresetField,
   SidebarSpacesField,
   SidebarTagListSettingsField,
   SliderNumberField,
   SoundField,
-  StaticNoteField,
   TerminalDevServerIgnoredPortsField,
   TerminalViewWidthModeField,
   TextField,
@@ -142,7 +113,6 @@ import {
 } from './settings-modal/fields';
 import {
   getRememberedSettingsModalScrollTop,
-  getRememberedSettingsModalTab,
   rememberSettingsModalScrollTop,
   rememberSettingsModalTab,
 } from './settings-modal/navigation-memory';
@@ -162,14 +132,12 @@ import { OSIntegrationSettingsTab } from './settings-modal/tabs/os-integration';
 import { ProjectsSettingsPanel } from './settings-modal/tabs/projects';
 import { RemoteSettingsTab } from './settings-modal/tabs/remote';
 import { ThemeSettingsTab } from './settings-modal/tabs/theme';
-import { type RemoteSetupRpc } from './remote-setup-modal/gxserver-rpc';
 import {
   HotkeySettingsSectionId,
   MainSettingsScrollTargetId,
   MainSettingsSectionRefs,
   RENAME_SESSION_ON_DOUBLE_CLICK_SETTING_LABEL,
   RENAME_SESSION_ON_DOUBLE_CLICK_SETTING_SUBTITLE,
-  SettingsSidebarPage,
 } from './settings-modal/types';
 import {
   COPY_ON_SELECT_DESCRIPTION,
@@ -191,6 +159,21 @@ import { createSettingsPersistence } from './settings-modal/settings-persistence
 import { useAppIconSettings } from './settings-modal/use-app-icon-settings';
 import { createSettingsActions, type GhosttySettingsAction } from './settings-modal/settings-actions';
 import { getActiveSettingsModalScrollViewport } from './settings-modal/scroll-targets';
+import type { SettingsModalProps } from './settings-modal/modal-props';
+export type {
+  MainSettingsInitialSectionId,
+  SettingsSidebarTagsAction,
+  SettingsModalPresentation,
+  SettingsModalProps,
+} from './settings-modal/modal-props';
+import {
+  getInitialSettingsModalTab,
+  hasActiveHotkeyRecorder,
+  isEditableSettingsModalEventTarget,
+  isEditableSettingsModalElement,
+} from './settings-modal/modal-helpers';
+import { SettingsSearchNoMatchesNotice, SettingsSidebarNavigation } from './settings-modal/sidebar-navigation';
+import { GhosttySettingsActions, PromptEditorBackendField } from './settings-modal/terminal-and-editor-fields';
 
 /** The colour Terminal background starts from when Follow theme is turned off. */
 const TERMINAL_BACKGROUND_STARTING_COLOR = '#111111';
@@ -207,167 +190,7 @@ export {
   type RemoteSetupRpc as TailcatSettingsRpc,
 } from './remote-setup-modal/gxserver-rpc';
 
-export type MainSettingsInitialSectionId = MainSettingsScrollTargetId;
-
-/**
- * CDXC:Sessions 2026-09-12 DECISION:
- * User: creating a session tag happens in one place only. The sidebar's New tag row deep-links into Settings > Sidebar Tags and asks for the create form to be open on arrival, instead of offering a second inline editor inside the Tag as menu.
- */
-export type SettingsSidebarTagsAction = 'createTag';
-
-function getInitialSettingsModalTab(
-  initialTab: SettingsModalTab,
-  visibility: SettingsModalTabVisibilityOptions,
-  storedNavigation: SettingsModalNavigationState,
-  showAdvancedSettings: boolean
-): SettingsModalTab {
-  /**
-   * CDXC:Settings 2026-05-11-09:06
-   * Settings remembers the last selected tab during the current app session. A
-   * non-default entry point such as Hotkeys still opens its requested tab, then
-   * that tab becomes the remembered choice for later ordinary Settings opens.
-   *
-   * CDXC:Settings 2026-06-29-17:54:
-   * Ordinary Settings opens should also restore the last closed Settings tab
-   * from durable macOS settings storage after an app relaunch. Explicit entry
-   * points still win so menu actions and deep links land on the requested page.
-   */
-  const rememberedTab = initialTab === 'settings' ? getRememberedSettingsModalTab(storedNavigation) : undefined;
-  // A remembered Debugging page stays closed while Show Advanced hides it from the rail; `ghostex settings open --tab debugging` still opens it.
-  const requestedTab =
-    initialTab !== 'settings'
-      ? initialTab
-      : rememberedTab === 'debugging' && !showAdvancedSettings
-        ? initialTab
-        : (rememberedTab ?? initialTab);
-  return resolveSettingsModalTabForVisibility(requestedTab, visibility);
-}
-
-function hasActiveHotkeyRecorder(): boolean {
-  return Boolean(document.querySelector("[data-hotkey-recorder='true'][data-recording='true']"));
-}
-
-function isEditableSettingsModalEventTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  if (target.isContentEditable) {
-    return true;
-  }
-  return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
-}
-
-function isEditableSettingsModalElement(element: Element | null): boolean {
-  if (!(element instanceof HTMLElement)) {
-    return false;
-  }
-  if (element.isContentEditable) {
-    return true;
-  }
-  return Boolean(element.closest("input, textarea, select, [contenteditable='true']"));
-}
-
 export type { GhosttySettingsAction };
-
-export type SettingsModalPresentation = 'default' | 'firstLaunchSetup';
-
-export type SettingsModalProps = {
-  agentHookStatus?: SidebarAgentHookStatusMessage;
-  agentHookStatusLoading?: boolean;
-  automateIsExperimental?: boolean;
-  firstLaunchSetupVisibleSettings?: ReadonlySet<FirstLaunchSetupMainSettingKey>;
-  initialSection?: MainSettingsInitialSectionId;
-  initialSidebarTagsAction?: SettingsSidebarTagsAction;
-  initialSearchQuery?: string;
-  initialRemoteMachineId?: string;
-  /** CDXC:RemotePairing 2026-09-03: Remote tab card to scroll to (consumed by the Remote tab). */
-  initialRemoteSection?: SettingsRemoteSection;
-  /** Agents tab card to scroll to (consumed by the Agents tab). */
-  initialAgentsSection?: SettingsAgentsSection;
-  initialCustomViewId?: string;
-  /** Open one view's scope editor straight away; see ExtensionsSettingsTab. */
-  initialViewScopeKey?: string;
-  initialTab?: SettingsModalTab;
-  isOpen: boolean;
-  presentation?: SettingsModalPresentation;
-  onChange: (settings: ghostexSettings, source?: ghostexSettingsUpdateSource) => void;
-  onPatch?: (patch: ghostexSettingsPatch, source: ghostexSettingsUpdateSource) => void;
-  onClose: () => void;
-  onOpenAccessibilityPreferences?: () => void;
-  onOpenMacOSNotificationSettings?: () => void;
-  onOpenScreenRecordingPreferences?: () => void;
-  onOpenGhostexFolder?: () => void;
-  onGhosttySettingsAction?: (action: GhosttySettingsAction) => void;
-  onInstallCliSkill?: () => void;
-  onInstallBrowserControl?: () => void;
-  onInstallBrowserUseSkill?: () => void;
-  onInstallComputerUseSkill?: () => void;
-  onInstallCuaDriver?: () => void;
-  onReinstallCuaDriver?: () => void;
-  onUninstallCuaDriver?: () => void;
-  onCheckCuaDriverUpdate?: () => void;
-  onInstallAgentsOrchestrationSkill?: () => void;
-  onInstallManageBeadsSkill?: () => void;
-  onInstallGenerateTitleSkill?: () => void;
-  onInstallGhostexCli?: () => void;
-  onInstallMoveCodexSessionSkill?: () => void;
-  onInstallHelpSkill?: () => void;
-  onPlayCompletionSound?: (sound: CompletionSoundSetting) => void;
-  onRequestMacOSNotificationPermission?: () => void;
-  /*
-   * CDXC:AgentHooks 2026-08-28:
-   * Settings installs hooks for one agent from its roster row and for the whole
-   * supported set from the toolbar, so install takes the same optional agentIds
-   * the uninstall side and the native message contract already carry.
-   */
-  onInstallAgentHooks?: (agentIds?: readonly string[]) => void;
-  onUninstallAgentHooks?: (agentIds?: readonly string[]) => void;
-  onUninstallBundledAgentSkill?: (skillId: BundledGhostexAgentSkillId) => void;
-  onUninstallBundledAgentSkills?: () => void;
-  onRequestAgentHookStatus?: () => void;
-  onRequestGhostexCliStatus?: () => void;
-  onRequestGhostexFolderStats?: () => void;
-  onRequestOSIntegrationStatus?: () => void;
-  onRequestPluginSettingsStatus?: () => void;
-  onReinstallPlugin?: (pluginId: SidebarPluginSettingsItem['id']) => void;
-  onSetOSIntegrationDefaults?: (target: 'editor' | 'terminalLinks' | 'scriptRunner' | 'all') => void;
-  onTestAgentTaskCompletion?: () => void;
-  projects?: SidebarProjectSettingsItem[];
-  projectViewSpaces?: import('@/packages/shared/ghostex-settings/project-views').ProjectViewSpace[];
-  projectViewProjects?: import('@/packages/shared/ghostex-settings/project-views').ProjectViewProject[];
-  settings?: ghostexSettings;
-  /**
-   * Talks to the gxserver that owns Easy Connect and SSH access. Absent where
-   * the host has no daemon connection, which leaves the Remote page's pairing
-   * cards and Advanced section out entirely.
-   */
-  tailcatRpc?: RemoteSetupRpc;
-  theme?: SidebarTheme;
-  /**
-   * Writes the local daemon's custom session tag catalog through the host. Absent on hosts with no daemon connection, which hides Add tag and the delete buttons in Sidebar Tags.
-   */
-  onUpdateCustomSessionTags?: (state: CustomSessionTagsState) => void;
-  vscode?: WebviewApi;
-  ghostexCliStatus?: SidebarGhostexCliStatusMessage;
-  ghostexCliStatusLoading?: boolean;
-  ghostexFolderStats?: SidebarGhostexFolderStatsMessage;
-  ghostexFolderStatsLoading?: boolean;
-  osIntegrationStatus?: SidebarOSIntegrationStatusMessage;
-  osIntegrationStatusLoading?: boolean;
-  pluginSettingsStatus?: SidebarPluginSettingsStatusMessage;
-  pluginSettingsStatusLoading?: boolean;
-  // CDXC:Icons 2026-06-25-21:50: Native App Icon state arrives prop-driven via the modal-state relay.
-  appIconState?: SidebarAppIconStateMessage;
-  /** Hosts without a native App Icon subsystem hide the section entirely. */
-  appIconPickerUnavailable?: boolean;
-  /** The system's own transparency switch is keeping the window opaque. */
-  windowGlassBlockedBySystem?: boolean;
-  /**
-   * Retained for the hosts that still pass sidebar Portless state; Settings no
-   * longer renders Portless controls (see docs/2026-09-03/mobile-setup plan §5.12).
-   */
-  portless?: SidebarPortlessState;
-};
 
 export function SettingsModal({
   agentHookStatus,
@@ -3182,277 +3005,6 @@ export function SettingsModal({
         ) : null}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SettingsSearchNoMatchesNotice({
-  activeTab,
-  matchingPages,
-  onSelectPage,
-}: {
-  activeTab: SettingsModalTab;
-  matchingPages: readonly SettingsSidebarPage[];
-  onSelectPage: (pageId: SettingsModalTab) => void;
-}) {
-  const otherPages = matchingPages.filter((page) => page.id !== activeTab);
-  return (
-    <div className='rounded-none border border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground'>
-      <p>{otherPages.length ? 'No settings on this page match your search.' : 'No settings match your search.'}</p>
-      {otherPages.length ? (
-        <div className='mt-3 flex flex-wrap items-center justify-center gap-2'>
-          <span>Matches on:</span>
-          {otherPages.map((page) => {
-            const PageIcon = page.icon;
-            return (
-              <Button key={page.id} onClick={() => onSelectPage(page.id)} type='button' variant='outline'>
-                <PageIcon aria-hidden='true' data-icon='inline-start' />
-                {page.title}
-              </Button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * CDXC:Settings 2026-09-12 DECISION:
- * User: Settings table-of-contents titles only navigate; only the small chevron on the right expands or collapses their entries.
- * This replaces the full-header toggle behavior.
- */
-function SettingsSidebarNavigation({
-  expandedPages,
-  onShowAdvancedSettingsChange,
-  onTogglePage,
-  pages,
-  showAdvancedSettings,
-  showAdvancedSettingsId,
-}: {
-  expandedPages: Partial<Record<SettingsModalTab, boolean>>;
-  onShowAdvancedSettingsChange: (checked: boolean) => void;
-  onTogglePage: (pageId: SettingsModalTab) => void;
-  pages: readonly SettingsSidebarPage[];
-  showAdvancedSettings: boolean;
-  showAdvancedSettingsId: string;
-}) {
-  const [expandedSections, setExpandedSections] = useState<ReadonlySet<string>>(() => new Set());
-  const sectionDisclosureIdPrefix = useId();
-  const toggleSection = (sectionKey: string) => {
-    setExpandedSections((currentSections) => {
-      const nextSections = new Set(currentSections);
-      if (nextSections.has(sectionKey)) {
-        nextSections.delete(sectionKey);
-      } else {
-        nextSections.add(sectionKey);
-      }
-      return nextSections;
-    });
-  };
-
-  return (
-    <aside aria-label='Settings pages and sections' className='settings-section-sidebar'>
-      <TabsList className='settings-sidebar-tabs-list vertical-scroll-fade-mask'>
-        {pages.map((page) => {
-          const hasSections = Boolean(page.sections?.length);
-          const expanded = Boolean(expandedPages[page.id]);
-          const PageIcon = page.icon;
-          return (
-            <div
-              className={cn('settings-sidebar-page-group', page.id === 'about' && 'settings-sidebar-page-group-about')}
-              key={page.id}
-            >
-              <div className='settings-sidebar-page-row' data-expanded={String(expanded)}>
-                <TabsTrigger className='settings-sidebar-tab-trigger' value={page.id}>
-                  <PageIcon aria-hidden='true' data-icon='inline-start' />
-                  <span className='settings-sidebar-page-title truncate'>{page.title}</span>
-                </TabsTrigger>
-                {hasSections ? (
-                  <Button
-                    aria-expanded={expanded}
-                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${page.title} sections`}
-                    className='settings-sidebar-page-disclosure'
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onTogglePage(page.id);
-                    }}
-                    size='icon-xs'
-                    type='button'
-                    variant='ghost'
-                  >
-                    {expanded ? <IconChevronDown aria-hidden='true' /> : <IconChevronRight aria-hidden='true' />}
-                  </Button>
-                ) : null}
-              </div>
-              {hasSections && expanded ? (
-                <div className='settings-sidebar-subsection-list'>
-                  {page.sections?.map((section) => {
-                    const hasSubsections = Boolean(section.subsections?.length);
-                    const sectionKey = `${page.id}:${section.id}`;
-                    const sectionExpanded = hasSubsections && expandedSections.has(sectionKey);
-                    const subsectionListId = `${sectionDisclosureIdPrefix}-${page.id}-${section.id}`;
-                    return (
-                      <Fragment key={section.id}>
-                        <div className='settings-sidebar-section-row'>
-                          <Button
-                            aria-current={section.active ? 'location' : undefined}
-                            className='settings-section-sidebar-button settings-sidebar-subsection-button'
-                            data-active={section.active ? 'true' : 'false'}
-                            onClick={section.onSelect}
-                            type='button'
-                            variant='ghost'
-                          >
-                            {section.title}
-                          </Button>
-                          {hasSubsections ? (
-                            <Button
-                              aria-controls={subsectionListId}
-                              aria-expanded={sectionExpanded}
-                              aria-label={`${sectionExpanded ? 'Collapse' : 'Expand'} ${section.title} subsections`}
-                              className='settings-sidebar-section-disclosure'
-                              onClick={() => toggleSection(sectionKey)}
-                              size='icon-xs'
-                              type='button'
-                              variant='ghost'
-                            >
-                              {sectionExpanded ? (
-                                <IconChevronDown aria-hidden='true' />
-                              ) : (
-                                <IconChevronRight aria-hidden='true' />
-                              )}
-                            </Button>
-                          ) : null}
-                        </div>
-                        {/*
-                         * CDXC:Settings 2026-08-24:
-                         * Expansion is explicit navigation state, independent
-                         * from the scroll-active section. This keeps an opened
-                         * third-level list stable while scroll tracking updates
-                         * both its parent and exact active subsection.
-                         */}
-                        {sectionExpanded ? (
-                          <div className='settings-sidebar-nested-subsection-list' id={subsectionListId}>
-                            {section.subsections?.map((subsection) => (
-                              <Button
-                                aria-current={subsection.active ? 'location' : undefined}
-                                className='settings-section-sidebar-button settings-sidebar-subsection-button settings-sidebar-nested-subsection-button'
-                                data-active={subsection.active ? 'true' : 'false'}
-                                key={subsection.id}
-                                onClick={subsection.onSelect}
-                                type='button'
-                                variant='ghost'
-                              >
-                                {subsection.title}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : null}
-                      </Fragment>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </TabsList>
-      {/*
-       * CDXC:Settings 2026-06-24-22:16:
-       * The sidebar owns both top-level Settings pages and expandable section
-       * links, while Show Advanced remains pinned to the bottom of that same
-       * rail instead of returning to header chrome.
-       */}
-      <div className='settings-section-sidebar-footer'>
-        <label className='settings-show-advanced-toggle' htmlFor={showAdvancedSettingsId}>
-          <span className='settings-show-advanced-copy'>Show Advanced</span>
-          <Switch
-            checked={showAdvancedSettings}
-            id={showAdvancedSettingsId}
-            onCheckedChange={onShowAdvancedSettingsChange}
-          />
-        </label>
-      </div>
-    </aside>
-  );
-}
-
-function GhosttySettingsActions({
-  onApplyRecommended,
-  onOpenConfigFile,
-  onOpenDocs,
-  onResetDefaults,
-}: {
-  onApplyRecommended: () => void;
-  onOpenConfigFile: () => void;
-  onOpenDocs: () => void;
-  onResetDefaults: () => void;
-}) {
-  return (
-    <div className='flex flex-wrap gap-2'>
-      <Button className='h-8 px-3' onClick={onResetDefaults} type='button' variant='outline'>
-        Reset Ghostty defaults
-      </Button>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button className='h-8 px-3' onClick={onApplyRecommended} type='button' variant='outline'>
-              Apply recommended
-            </Button>
-          }
-        />
-        <TooltipContent className='whitespace-pre-line text-left' sideOffset={6}>
-          {GHOSTEX_RECOMMENDED_GHOSTTY_CONFIG_LINES.join('\n')}
-        </TooltipContent>
-      </Tooltip>
-      <Button className='h-8 px-3' onClick={onOpenDocs} type='button' variant='outline'>
-        Open Ghostty docs
-      </Button>
-      <Button className='h-8 px-3' onClick={onOpenConfigFile} type='button' variant='outline'>
-        Open Ghostty config
-      </Button>
-    </div>
-  );
-}
-
-function PromptEditorBackendField({
-  advanced,
-  backend,
-  isModified,
-  onChange,
-  onResetToDefault,
-}: {
-  advanced?: boolean;
-  backend: PromptEditorBackend;
-  isModified?: boolean;
-  onChange: (backend: PromptEditorBackend) => void;
-  onResetToDefault?: () => void;
-}) {
-  const id = useId();
-  return (
-    <SettingRow
-      advanced={advanced}
-      description={`Choose which editor new terminals use when ${formatSidebarHotkeyLabel('ctrl+g')} asks the shell to edit prompt text.`}
-      htmlFor={id}
-      isModified={isModified}
-      label={`${formatSidebarHotkeyLabel('ctrl+g')} prompt editor`}
-      onResetToDefault={onResetToDefault}
-    >
-      <SettingsSelect onValueChange={(value) => onChange(value as PromptEditorBackend)} value={backend}>
-        <SelectTrigger className='h-8 w-full px-3' id={id}>
-          <SelectValue />
-        </SelectTrigger>
-        <SettingsSelectContent>
-          <SelectGroup>
-            {PROMPT_EDITOR_BACKEND_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SettingsSelectContent>
-      </SettingsSelect>
-    </SettingRow>
   );
 }
 

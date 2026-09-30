@@ -1,7 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-const settingsModalSource = readFileSync(new URL('./settings-modal.tsx', import.meta.url), 'utf8');
+// settings-modal.tsx keeps SettingsModal; its props, helpers, sidebar navigation and
+// Ghostty/prompt-editor fields live in sibling settings-modal/ modules.
+const settingsModalSource = [
+  'settings-modal.tsx',
+  'settings-modal/modal-props.ts',
+  'settings-modal/modal-helpers.ts',
+  'settings-modal/sidebar-navigation.tsx',
+  'settings-modal/terminal-and-editor-fields.tsx',
+]
+  .map((file) => readFileSync(new URL(`./${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 const themeTabSource = readFileSync(new URL('./settings-modal/tabs/theme.tsx', import.meta.url), 'utf8');
 const agentsHubModalSource = readFileSync(new URL('./agents-hub-modal.tsx', import.meta.url), 'utf8');
 const skillsPanelSource = readFileSync(new URL('./bundled-agent-skills-panel.tsx', import.meta.url), 'utf8');
