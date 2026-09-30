@@ -9,7 +9,7 @@
 //! the window at hand, in the order the daemon sent them, and every one gets an answer: a command
 //! the app cannot perform is answered with its error rather than left to time out.
 //! SEE-ALSO: packages/gx-client/src/worker.rs, packages/gx-core/src/renderer_commands/,
-//! server/src/server/mod.rs (`RENDERER_COMMAND_ACTIONS`).
+//! server/src/server/app_state.rs (`RENDERER_COMMAND_ACTIONS`).
 
 use ghostex_gx_core::RendererCommandError;
 use ghostex_gx_core::protocol::RendererCommand;

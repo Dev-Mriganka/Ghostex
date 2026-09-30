@@ -192,7 +192,7 @@ pub(crate) fn dispatch_agent_http_blocking(
                 }
             }
             // The terminal-typed half of "Unpark after sending a message"; the
-            // chat half is in session_chat_queue_runtime.rs. Runs before the
+            // chat half is in session_chat_queue_runtime/post_send.rs. Runs before the
             // delta below so the same publish carries the cleared flag.
             if endpoint_path == "/api/ingestAgentHookEvent"
                 && crate::session_parking::is_user_prompt_submit_hook_event(&params)

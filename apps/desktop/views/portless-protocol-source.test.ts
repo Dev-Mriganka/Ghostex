@@ -59,12 +59,13 @@ const presentationRustSource = [
 ].join('\n');
 const protocolRustSource = readFileSync(new URL('../../../server/src/protocol.rs', import.meta.url), 'utf8');
 // server/src/server.rs was split into server/src/server/{mod,http_endpoints,
-// http_infra,...}.rs. The assertions below cover the dispatch match and the
-// health payload (mod.rs, http_infra.rs) plus the Portless state handler
+// http_infra,...}.rs, and the dispatch match later moved from mod.rs into
+// route_http.rs. The assertions below cover the dispatch match and the health
+// payload (route_http.rs, http_infra.rs) plus the Portless state handler
 // (http_endpoints.rs), so concatenate just those three to keep checking the
 // same content.
 const serverRustSource = [
-  readFileSync(new URL('../../../server/src/server/mod.rs', import.meta.url), 'utf8'),
+  readFileSync(new URL('../../../server/src/server/route_http.rs', import.meta.url), 'utf8'),
   readFileSync(new URL('../../../server/src/server/http_endpoints.rs', import.meta.url), 'utf8'),
   readFileSync(new URL('../../../server/src/server/http_infra.rs', import.meta.url), 'utf8'),
 ].join('\n');

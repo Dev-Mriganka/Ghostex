@@ -12,7 +12,7 @@
 //! `/api/sendSessionMessage` directly), and `assertSidebarCard` / `waitFor` (card assertions of the
 //! React sidebar deleted on 2026-09-24). The CLI answers those verbs with a retired error; here they
 //! answer "Unsupported renderer command." if an older daemon still sends them.
-//! SEE-ALSO: server/src/server/mod.rs (`RENDERER_COMMAND_ACTIONS`),
+//! SEE-ALSO: server/src/server/app_state.rs (`RENDERER_COMMAND_ACTIONS`),
 //! apps/desktop/src/app/gx_store/renderer_commands/, packages/gx-client/src/worker.rs.
 
 use serde_json::{Map, Value};

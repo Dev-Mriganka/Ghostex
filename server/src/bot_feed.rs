@@ -1,5 +1,5 @@
 //! The Bot automations feed: one channel per Hermes cron job across every profile, and each run
-//! of that job as a message. Read-only; `/api/listBotFeed` (server/mod.rs) answers with
+//! of that job as a message. Read-only; `/api/listBotFeed` (server/route_http.rs) answers with
 //! [`read_bot_feed`].
 //!
 //! CDXC:Bots 2026-09-27 DECISION:
