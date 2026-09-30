@@ -86,7 +86,7 @@ pub(crate) fn gpui_remote_sidebar_request_path_allowed(path: &str) -> bool {
             so the sidebar's project-row quick actions for a remote project can
             only come from that machine's own HUD projection. This is an
             id-scoped read; its params are reduced and its answer is cut down to
-            the Action button lists in `sidebar_hud.rs`.
+            the Action button lists in `sidebar_hud/buttons.rs`.
             */
             | "/api/readSidebarHud"
             | "/api/updateSidebarProjectCollections"
