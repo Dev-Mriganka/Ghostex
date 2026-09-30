@@ -327,7 +327,9 @@ Leaving a project (by switching Spaces or projects) does not close what you had
 open there: the terminals, chats, and view page that were on screen stay running
 in the background for the "Keep the previous project live for" number of minutes
 (`projectSwitchKeepAliveMinutes`, default 10, 0 to 60), so switching back is
-instant. Set it to 0 to release them as soon as you leave.
+instant. Set it to 0 to release them as soon as you leave. The page each other
+Space opens on is the exception: it stays loaded for as long as that Space opens
+on it, so swiping to a Space always shows its web page instantly.
 Starting a new agent from the sidebar launcher or New Thread picker keeps your
 current view open, including Code, Browser, Kanban, Automate, and Files. Select
 Agents when you want to open the new agent there.
@@ -548,7 +550,11 @@ when you open it.
 - Sleeping frees RAM; Auto Sleep does it after idle minutes. Auto Sleep runs
   on the computer that hosts the sessions, so it keeps working while the app
   window is closed, and it never sleeps a session a Ghostex window or the phone
-  app is showing. Resources in the
+  app is showing. Web pages sleep the same way: a browser tab in
+  any project, or a Files, website or extension view, that has been off screen
+  for its Browser or Project Auto Sleep time closes to free its memory and
+  reloads when you select it again. Tabs playing sound, tabs where you typed
+  text you have not sent, and the page another Space opens on stay awake. Resources in the
   header's ⋯ menu sleeps many at once and shows CPU and RAM per session. Clean RAM
   copies a diagnosis prompt; paste it into an agent session to reduce RAM use.
   Sleeping sidebar sessions keep their normal title color and show a dimmer
@@ -649,10 +655,17 @@ In Claude Code, Codex, and OpenCode v2 chats, start a message with `!` to run a 
 in that agent's session, for example `! pwd`. The command and its output appear
 in the chat.
 In Claude Code chats, `/btw <question>` asks a side question without stopping
-the agent's work. The answer opens in a card above the chat box, with Copy, Fork
+the agent's work. Side chat in the chat box's More actions does the same: it puts
+a Side Chat pill in the chat box, and sending the message turns it off again.
+Typing `/btw` on its own and pressing Enter also turns Side chat on; nothing is sent.
+The answer opens in a card above the chat box, with Copy, Fork
 (continue the side question as a background agent) and Close; a long answer
-shows Show all. After Close the side question stays in the chat, folded where
+shows Show all. You can't reply to a side question: close its card to message
+the main agent again. After Close the side question stays in the chat, folded where
 you asked it, and opens again on click. It is not added to the conversation.
+Codex chats have Side chat and `/btw` too, but Codex answers in a side conversation
+in its terminal, so sending one switches to Terminal View. Your next chat message,
+or switching back to Chat View on the computer, closes the side conversation first.
 Claude panels such as `/status` and `/usage` show as clickable tabs, tables and
 usage meters instead of terminal text.
 A new Claude Code install's first-run setup is answered in the chat too: the
@@ -1534,51 +1547,69 @@ Related settings: `completionSound`, `actionCompletionSound`, `copySound`,
 `hideMenuBarSessionStatusIndicators`, `petOverlayEnabled`,
 `notificationsTitlebarButtonHidden`.
 
-### Ghostex Capture (floating button, screenshots, quick prompts)
+### Floating Capture (floating button, screenshots, quick prompts)
 
-Ghostex Capture puts a small Ghostex button over every app, so you can check
+Floating Capture puts a small Ghostex button over every app, so you can check
 on your agents and send them a prompt without switching to Ghostex. Turn it on
-under Settings > Integrations > Ghostex Capture (off by default). Beside the
-icon, a dark tray shows how many sessions are working (amber), waiting for you
-(blue) and asking a question (pink), across this computer and your remote
+at the top of Settings > Integrations > Floating Capture, or during setup
+(off by default). Beside the icon, a narrow dark column shows how many
+sessions are waiting for you (blue), asking a question (pink) and working
+(amber), stacked in that order, across this computer and your remote
 machines; only non-zero numbers are shown. Drag the button anywhere; drop it
 against the left or right screen edge and it tucks away as a thin tab with the
 numbers stacked, sliding out when you hover it. Its spot is remembered per
 screen.
 
 Click the button, or press Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and
-Linux), to open its panel: Screenshot an area (A), Screenshot current app
-(Space), Screenshot full screen (F) and Write a prompt (T), over the same
-Running Agents list as the menu bar dropdown (click a session to open it in
-Ghostex), with Open Ghostex, Hide button, Restart and Quit. Use the same
+Linux), to open its panel: Capture Area (A), Capture App (Space), Capture Screen (F)
+and Write Prompt (T), over the same
+Running Agents list as the menu bar dropdown, with Open Ghostex, Hide button,
+Restart and Quit. Projects in the list start collapsed: click one to see its
+sessions (click a session to open it in Ghostex), or type in the filter above
+the list to find a project or session by name. Drag the empty part of the
+Running Agents heading to move the panel; it opens there from then on. Use the same
 modifiers with A, Space, F or T instead of S to run an action straight away,
 from any app. "Hide button" keeps it hidden until you turn the setting on
 again or press the S hotkey.
 
-Screenshots hide the Ghostex Capture windows first. An area capture dims every
+Screenshots hide the Floating Capture windows first. An area capture dims every
 screen and starts with a resizable box where your last area capture was; press
 Enter or A to capture it, or drag outside it to select another area on any
-screen; the current app is the one you
+screen; the current app captures what is on screen inside the window of the app you
 were using; full screen takes the screen under the mouse. Every capture opens a
 small editor with Crop selected: drag a box to crop and Enter to apply (Enter
-with no box moves on to marking up), then add arrows (A), text (T) and
-rectangles (R), move and resize them with the pointer (V), undo with Cmd+Z, and
-copy the picture with Cmd+C (Ctrl+C). Enter adds the picture to the floating
+with no box moves on to marking up). With the pointer (V), a dot in the middle of
+each side of the picture crops it from that side when you drag it. Then add
+arrows (A), text (T) and rectangles (R), move and resize them with the pointer,
+undo with Cmd+Z, and copy the picture with Cmd+C (Ctrl+C). The toolbar's
+icons name their tool and key when you hover them; a text label edits like any
+text box, and the background button puts a dark box behind it. Scroll the
+mouse wheel or pinch the trackpad to zoom, pan with two fingers or by holding
+Space and dragging, and press Cmd+0 (Ctrl+0) to fit the picture again. Drag the empty
+part of the editor's toolbar or the prompt box's header to move them, and drag
+the editor's edges to resize it; each opens where and at the size you last left
+it. Enter adds the picture to the floating
 prompt box as `[Image #N]`. Each original and edited picture is saved to
 ~/Documents/Screenshots on macOS and the Screenshots folder in Pictures on
 Windows and Linux.
 
 The prompt box sends to a new session in the project you last sent to (or the
 most recently active one), or to any project or running session you pick from
-its list, which follows the sidebar's order. Add more screenshots with its
-buttons or the hotkeys, then press Enter. A note under the button says where
-the prompt went, with Open. Closing the prompt box without sending keeps it as
-a draft session in that project, visible in the sidebar; "Write a prompt"
+its list, which follows the sidebar's order. It opens where you last left it, or
+in the middle of the screen under the mouse, and stays there while you take
+screenshots. Add more screenshots with its Area, App and Screen icons or the
+hotkeys, and click a picture's thumbnail to edit it again, then press Enter.
+Its Send to list starts with every project collapsed: click a project to see
+its sessions, or type to filter, and Enter picks the first match. A note under the button says where
+the prompt went, with Open. The Ghostex window also switches to that session, without
+coming in front of the app you are in; turn this off with "Switch to the session
+after sending" under Floating Capture in Settings > Integrations. Closing the prompt box without sending keeps it as
+a draft session in that project, visible in the sidebar; "Write Prompt"
 starts a new prompt, and the small continue button on it brings the draft
 back. On macOS, screenshots need Screen Recording
 permission for Ghostex. Linux support is X11 only.
 
-Related settings: `ghostexCaptureEnabled`.
+Related settings: `ghostexCaptureEnabled`, `ghostexCaptureSwitchToSession`.
 
 ## Git and worktrees
 
