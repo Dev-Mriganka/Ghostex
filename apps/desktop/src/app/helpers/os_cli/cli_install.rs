@@ -159,10 +159,11 @@ pub(crate) fn gpui_auto_install_ghostex_cli_wrappers() {
             if !gpui_is_ghostex_owned_command_path(command, &candidate, &cli_dir) {
                 continue;
             }
-            let is_current = gpui_is_regular_file(&candidate)
-                && fs::read_to_string(&candidate)
-                    .map(|content| content == wrapper)
-                    .unwrap_or(false);
+            let is_current = gpui_is_homebrew_ghostex_command_path(command, &candidate)
+                || (gpui_is_regular_file(&candidate)
+                    && fs::read_to_string(&candidate)
+                        .map(|content| content == wrapper)
+                        .unwrap_or(false));
             if !is_current {
                 needs_install = true;
                 break 'commands;
@@ -277,6 +278,9 @@ pub(crate) fn gpui_install_ghostex_cli_command(
             // Non-executable foreign junk cannot shadow a wrapper; leave it
             // alone and keep looking for a directory Ghostex can use.
             continue;
+        }
+        if exists && gpui_is_homebrew_ghostex_command_path(command, &link_path) {
+            return GpuiCliCommandInstallResult::Current;
         }
         if !gpui_prepare_cli_install_directory(directory) {
             continue;
@@ -465,7 +469,9 @@ pub(crate) fn gpui_is_ghostex_owned_command_path(
     path: &Path,
     cli_dir: &Path,
 ) -> bool {
-    if gpui_file_contains_ghostex_cli_wrapper_marker(path) {
+    if gpui_file_contains_ghostex_cli_wrapper_marker(path)
+        || gpui_is_homebrew_ghostex_command_path(command, path)
+    {
         return true;
     }
     let realpath = gpui_realpath_or_self(path);
@@ -473,6 +479,22 @@ pub(crate) fn gpui_is_ghostex_owned_command_path(
         return true;
     }
     gpui_is_ghostex_app_owned_command_realpath(command, &realpath)
+}
+
+/// CDXC:Cli 2026-09-30 WHY:
+/// The Homebrew cask links HOMEBREW_PREFIX/bin/<command> to its marked wrapper at Caskroom/ghostex/<version>/.homebrew-command-wrappers/<command>. That link is Ghostex's own command, so repair counts it as installed and never rewrites it: replacing it would leave Homebrew's uninstall and upgrade pointing at a file Ghostex wrote. Before this, a Homebrew install made Link CLI report "does not belong to Ghostex" (GitHub PR #181).
+/// SEE-ALSO: the same Caskroom pattern in `gpui_is_probably_ghostex_command` (agents_hub/agent_hook_status.rs) and in tooling/release-ghostex.mjs.
+fn gpui_is_homebrew_ghostex_command_path(command: &str, path: &Path) -> bool {
+    let is_symlink = fs::symlink_metadata(path)
+        .map(|metadata| metadata.file_type().is_symlink())
+        .unwrap_or(false);
+    if !is_symlink {
+        return false;
+    }
+    let realpath = gpui_realpath_or_self(path);
+    gpui_path_string(&realpath).contains("/Caskroom/ghostex/")
+        && realpath.ends_with(Path::new(".homebrew-command-wrappers").join(command))
+        && gpui_is_marked_ghostex_wrapper_file(&realpath)
 }
 
 pub(crate) fn gpui_is_ghostex_app_owned_command_realpath(command: &str, realpath: &Path) -> bool {
