@@ -371,10 +371,13 @@ fn project_of_group(message: &Value) -> Option<ProjectKey> {
 /// NOT included, because sleeping it would promote it back into the active shelf.
 /// CDXC:SessionSleep 2026-09-24 DECISION:
 /// User: a session with a background shell or monitor still running (the grey dot) is not inactive; Sleep Inactive and Close Inactive leave it alone.
+/// CDXC:SessionSleep 2026-10-01 DECISION:
+/// User: "please don't sleep terminal sessions that have shell running or a question status", so a session with an unanswered question card (the pink question dot) is not inactive either.
 pub(super) fn is_inactive(row: &ghostex_gx_protocol::PresentationSession) -> bool {
     row.lifecycle_state == LifecycleState::Running
         && row.activity != SessionActivity::Working
         && row.activity != SessionActivity::Attention
+        && row.pending_question_count == 0
         && row.background_work_detected_at.is_none()
 }
 

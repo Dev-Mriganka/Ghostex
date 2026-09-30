@@ -301,11 +301,18 @@ export interface GxserverSleepSessionResult {
   Present ONLY when the daemon refused the request. `"keptAwake"` means an
   automatic sweep hit a session another client is attached to; `"neverActive"`
   means it hit a session nobody has prompted yet, which has no idle time to
-  measure and no conversation to resume; `"notRunning"` means a stale client
+  measure and no conversation to resume; `"backgroundWork"` and
+  `"pendingQuestion"` mean it hit a session whose agent still runs a background
+  shell or waits on an unanswered question; `"notRunning"` means a stale client
   targeted sleeping or stopped history. In every case the session was not
   touched, so a client must not optimistically mark the row sleeping.
   */
-  declined?: "backgroundWork" | "keptAwake" | "neverActive" | "notRunning";
+  declined?:
+    | "backgroundWork"
+    | "keptAwake"
+    | "neverActive"
+    | "notRunning"
+    | "pendingQuestion";
   kill?: Record<string, unknown>;
   session: GxserverSessionDomainState;
 }

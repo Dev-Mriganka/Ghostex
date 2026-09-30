@@ -598,6 +598,20 @@ pub fn dispatch_zmx_lifecycle_endpoint(
                         presentation_session: None,
                     });
                 }
+                /*
+                CDXC:SessionSleep 2026-10-01 DECISION:
+                User: "please don't sleep terminal sessions that have shell running or a question
+                status". A session with an unanswered question card (the pink question dot) is
+                waiting on the user, so every client's inactivity sweep is declined here too; an
+                explicit Sleep on the row still goes through.
+                */
+                if crate::session_chat_async_questions::pending_question_count(&session) > 0 {
+                    return Ok(ZmxEndpointOutput {
+                        created_workspace_terminal: None,
+                        result: json!({ "declined": "pendingQuestion", "session": session }),
+                        presentation_session: None,
+                    });
+                }
             }
             let target_lifecycle = if endpoint_path == "/api/sleepSession" {
                 "sleeping"

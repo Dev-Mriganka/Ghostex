@@ -147,6 +147,15 @@ pub fn should_sleep(session: &Value, settings: AutoSleepSettings, now_ms: i64) -
     if non_empty("backgroundWorkDetectedAt") {
         return false;
     }
+    // CDXC:SessionSleep 2026-10-01 DECISION: User: "please don't sleep terminal sessions that have shell running or a question status", so a session with an unanswered question card (the pink question dot) is not inactive either.
+    if session
+        .get("pendingQuestionCount")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        > 0
+    {
+        return false;
+    }
     // CDXC:DelayedSend 2026-08-20: an armed daemon-owned Delayed Send means a prompt is queued for this terminal.
     if non_empty("delayedSendDeadlineAt")
         || session
