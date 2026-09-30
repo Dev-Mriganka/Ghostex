@@ -44,23 +44,17 @@ impl GhostexGpuiApp {
         let host = self.native_app_modal_host(cx, |app, command, cx| {
             app.handle_gpui_update_available_modal_command(command, cx);
         });
-        let mut height = UPDATE_AVAILABLE_MODAL_INITIAL_HEIGHT;
-        if let Some(display) = cx
-            .displays()
-            .into_iter()
-            .find(|display| Some(display.id()) == self.main_window_display_id)
-        {
-            let visible = display.visible_bounds();
-            let center = self.main_window_bounds.center().y;
-            let room = f32::from((center - visible.top()).min(visible.bottom() - center))
-                - MODAL_SCROLL_FIT_SCREEN_MARGIN;
-            if room > 0.0 {
-                height = height.min(room * 2.0);
-            }
-        }
+        // The notes scroll inside whatever height is left, so the window can shrink on both axes to stay on screen.
+        let (width, height) = self.gpui_native_modal_size_on_screen(
+            gpui::size(
+                gpui::px(UPDATE_AVAILABLE_MODAL_WIDTH),
+                gpui::px(UPDATE_AVAILABLE_MODAL_INITIAL_HEIGHT),
+            ),
+            cx,
+        );
         self.open_native_app_modal(
             GpuiAppModalKind::UpdateAvailable,
-            UPDATE_AVAILABLE_MODAL_WIDTH,
+            width,
             height,
             move |window, cx| {
                 cx.new(|cx| GpuiUpdateAvailableModalWindow::new(config, host, window, cx))

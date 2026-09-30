@@ -71,15 +71,18 @@ impl GhostexGpuiApp {
         cx: &gpui::App,
     ) -> (f32, f32) {
         let (width, height) = (f32::from(size.width), f32::from(size.height));
+        let center = self.main_window_bounds.center();
+        // The display `open_native_app_modal` opens the window on.
+        let display_id =
+            crate::app::window::popup_frame::display_at(center, cx).or(self.main_window_display_id);
         let Some(display) = cx
             .displays()
             .into_iter()
-            .find(|display| Some(display.id()) == self.main_window_display_id)
+            .find(|display| Some(display.id()) == display_id)
         else {
             return (width, height);
         };
         let visible = display.visible_bounds();
-        let center = self.main_window_bounds.center();
         let room = |near: f32, far: f32| (near.min(far) - MODAL_SCROLL_FIT_SCREEN_MARGIN) * 2.0;
         let room_x = room(
             f32::from(center.x - visible.left()),
