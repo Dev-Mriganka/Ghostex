@@ -317,7 +317,7 @@ fn is_post_compact_success(line: &str) -> bool {
 /*
 CDXC:SessionChat 2026-09-28 WHY:
 Carries the Hermes compress DECISION on `hermes_compacting_activity`
-(server/src/session_chat_terminal_activity.rs) into the transcript. The card shows the run and the
+(server/src/session_chat_terminal_activity/line_parsers.rs) into the transcript. The card shows the run and the
 transcript's "Context compacted" row is the one line, so a `/compress` output stays hidden while it
 runs and once it compacted, and one that found nothing to compact becomes the "Nothing to compress"
 pill. Any other ending (skipped for the lock, refused, aborted, fallback, failed) keeps its output:

@@ -79,7 +79,7 @@ fn is_bold_title(line: &str) -> bool {
 ///
 /// CDXC:SessionChat 2026-09-26 DECISION:
 /// User: a streamed section title must not land alone and sit above a block that is still streaming; it waits for the text under it and ships with its paragraph, its first list item, or its table or code block. Only the GPUI chat view on the Rust chat core does this, and a title is recognised from its Markdown only: gxserver writes the rows Claude paints fully bold as `**Title**` so the stream carries it. A run of titles (`# Plan` then `## Setup`) is held together, and a title inside an open code fence is code. This supersedes the 2026-09-25 version that also guessed titles from short unpunctuated lines.
-/// SEE-ALSO: `render_agent_stream` in server/src/session_chat_terminal_activity.rs.
+/// SEE-ALSO: `render_agent_stream` in server/src/session_chat_terminal_activity/agent_stream.rs.
 pub fn without_trailing_section_titles(text: &str) -> &str {
     let lines: Vec<&str> = text.split('\n').collect();
     let mut titles = vec![false; lines.len()];
