@@ -37,7 +37,7 @@ pub(crate) async fn write_session_chat_payload(
 
 /// Current terminal text for the session, or `None` when it could not be read
 /// whole — a capture whose tail was dropped cannot prove what is on screen.
-/// Shared with the send-delivery watchdog (session_chat_watchdog.rs), which
+/// Shared with the send-delivery watchdog (session_chat_watchdog/), which
 /// takes exactly one of these per timeout event.
 /// Whether an agent CLI (claude, codex, …) is still running inside the session's daemon, read from the process snapshot the identity poller uses. An unreadable snapshot counts as running: a restart must never type into a CLI it could not prove gone.
 pub(crate) async fn session_agent_process_running(zmx_name: &str, home_dir: &Path) -> bool {
