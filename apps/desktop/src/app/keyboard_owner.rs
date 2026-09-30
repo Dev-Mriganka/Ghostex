@@ -5,7 +5,7 @@
 //! Only clicks fed the physical truths back into the model; every programmatic focus change had to remember to arm its own per-surface handoff slot, and the ones that forgot (hiding the command pane, closing its last tab, closing the floating companion) left the keyboard on the previous owner.
 //! Now `focus_shell_target` is the only way to move focus programmatically, `shell_keyboard_owner` is the only place that decides which surface occupies the focused target, and `drain_pending_keyboard_handoff` is the only code that performs the physical handoff.
 //! Physical focus changes the model in one place only: `reconcile_shell_focus_with_first_responder_target`, fed by the AppKit first-responder observer after a user click.
-//! SEE-ALSO: model/focus_and_keyboard.rs (`PendingKeyboardHandoff`, `ShellKeyboardOwner`), focus/shell_focus.rs (`set_shell_focus_with_terminal_handoff` staleness), terminal_input.rs (`focus_gpui_engine_terminal_view`), helpers/os_cli/keyboard_router.rs.
+//! SEE-ALSO: model/focus_and_keyboard.rs (`PendingKeyboardHandoff`, `ShellKeyboardOwner`), focus/shell_focus.rs (`set_shell_focus_with_terminal_handoff` staleness), terminal_input/text_input_handoff.rs (`focus_gpui_engine_terminal_view`), helpers/os_cli/keyboard_router.rs.
 
 use gpui::Focusable as _;
 use gpui::Window;
