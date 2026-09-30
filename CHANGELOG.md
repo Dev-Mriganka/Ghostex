@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+## 10.8.1 - 2026-10-01
+
+**Ghostex 10.8.1 is out.** Coordinators start, brief and supervise a crew of agent sessions for you, Pi and OMP get the model picker, Escape asks twice before it interrupts a working agent, the phone can search every computer's sessions, and Linux gets 10.7.0's features together with its own fixes.
+
+### 🧭 Coordinators
+- **A coordinator is one agent you talk to about a stream of work that hands every real task to a thread,** an ordinary agent session it starts and briefs, so it stays free to talk while the threads work in parallel. Start one from a project's Select Agent menu with New Coordinator, then pick Claude or Codex, a model, and an optional goal and first request.
+- **Threads sit under their coordinator in the sidebar and in a Threads panel above its chat box,** grouped under Waiting on you, Working and Finished, on the computer, the phone and in the browser. Click a thread to watch it or answer its questions directly.
+- **Reports come back by themselves.** When a thread finishes or waits on a question, the coordinator is told, checks the work and tells you what needs you. It can give each thread its own worktree, and it remembers standing instructions and notes you ask it to keep.
+
+### 💬 Chat
+- **Pi and OMP get the model picker,** listing every model they can use from the providers you are logged in to, each with only the reasoning levels it supports. Picks apply to that session only.
+- **Escape asks for a second press within 2 seconds before it interrupts a working agent,** and a red Agent was interrupted notice shows for 2 seconds afterwards. Turn it off in Settings > Chat > Press Escape twice to interrupt.
+- **The model menu keeps the reasoning level you picked** when the highlight moves to another model that offers it, and a model change followed by an effort change shows as one pill.
+- **Every session Ghostex opens follows its agent's Default Agent View,** including created, forked, restored and resumed ones, and a name you typed shows as renamed by you.
+- **A message from the session's own background agent shows as a Message from card** naming that agent.
+
+### 📱 On the phone
+- **Search every computer's sessions from the Sessions header,** with the same rules as the desktop.
+- **The phone shows a coordinator's Threads panel,** and its chat and session menu match the desktop's latest changes.
+
+### 🗃 Sidebar, sessions and windows
+- **Check for Updates, Restart and Quit are in the sidebar menu and Quick Access.**
+- **The session menu lists Rename, Pin, Snooze, Park, Sleep and Note, then Tag As,** on the computer and the phone, and a session waiting on an unanswered question is never put to sleep.
+- **A click anywhere in a view focuses it,** so Cmd+W closes the view you clicked in, and with a Browser pane focused the mouse's back and forward buttons, swipes and the Back and Forward hotkeys walk the browser's own history.
+- **A file outside the project opens by its real path in Files,** with its images, links and notes working.
+- **Tooltips are darker in dark mode,** the update notice fits small screens, and the notification list keeps the 40 newest.
+
+### 🐧 Linux and Windows
+- **Linux gets everything from 10.7.0 in this release,** including Floating Capture, one-click installs and Side chat for Codex, since 10.7.0 shipped without a Linux build.
+- **Linux: the interface keeps its normal size under Hyprland** even when the launcher drops its environment, and dropdowns have the same solid background as the sidebar's top menu.
+- **Windows: Claude Code's status line works,** Fast Computer Use no longer shows the macOS permission rows on Windows and Linux, and the model menu shows Alt instead of the Option symbol.
+
+### 🩹 Fixes
+- **Committing a change that deletes an already staged file no longer fails** with pathspec did not match.
+- **Native Settings and dialog controls are named for VoiceOver,** and the Sleeping Sessions and Highlight unanswered questions rows are back in Settings.
+
 ## 10.8.0 - 2026-10-01
 
 **Ghostex 10.8.0 is out.** Coordinators start, brief and supervise a crew of agent sessions for you, Pi and OMP get the model picker, Escape asks twice before it interrupts a working agent, the phone can search every computer's sessions, and Linux gets 10.7.0's features together with its own fixes.
