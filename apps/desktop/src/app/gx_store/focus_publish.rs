@@ -19,7 +19,7 @@
 //!
 //! SEE-ALSO: packages/gx-core/src/active_project_context.rs, packages/gx-core/src/focus.rs,
 //! apps/desktop/src/app/gx_store/local_focus.rs, apps/desktop/src/app/gx_store/burst.rs,
-//! apps/desktop/src/app/workspace_terminals.rs (`set_sidebar_gxserver_presentation_focus_state`).
+//! apps/desktop/src/app/workspace_terminals/sidebar_deliveries.rs (`set_sidebar_gxserver_presentation_focus_state`).
 
 use std::time::{Duration, Instant};
 

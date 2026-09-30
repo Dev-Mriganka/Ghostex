@@ -8,7 +8,7 @@
 //! CDXC:Workarea 2026-07-10 WHY:
 //! Close is local-first and hides the sidebar row even when gxserver is disconnected. The provider transition is best-effort cleanup; unlike Sleep and Wake it is not a prerequisite for acknowledging the user's tab close. A close the daemon never confirms puts the sidebar row back, as a sidebar Close does (CDXC:Sessions 2026-09-20 DECISION in gx-core `sidebar_actions/close.rs`).
 //!
-//! SEE-ALSO: apps/desktop/src/app/workspace_terminals.rs (`request_local_workspace_terminal_lifecycle`,
+//! SEE-ALSO: apps/desktop/src/app/workspace_terminals/lifecycle.rs (`request_local_workspace_terminal_lifecycle`,
 //! `request_remote_workspace_terminal_lifecycle`), packages/gx-core/src/sidebar_actions/terminal_lifecycle.rs.
 
 use std::time::Duration;
