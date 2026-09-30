@@ -2939,6 +2939,8 @@ export function SettingsModal({
                       onAppShotsEnabledChange={(checked) => updateDraft('appShotsEnabled', checked)}
                       onAppShotsHotkeyChange={(hotkey) => updateDraft('appShotsHotkey', hotkey)}
                       onAppShotsMetadataEnabledChange={(checked) => updateDraft('appShotsMetadataEnabled', checked)}
+                      ghostexCaptureEnabled={draft.ghostexCaptureEnabled}
+                      onGhostexCaptureEnabledChange={(checked) => updateDraft('ghostexCaptureEnabled', checked)}
                       onInstallCliSkill={onInstallCliSkill}
                       onInstallBrowserControl={onInstallBrowserControl}
                       onInstallBrowserUseSkill={onInstallBrowserUseSkill}

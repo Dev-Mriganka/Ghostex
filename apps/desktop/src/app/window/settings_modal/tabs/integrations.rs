@@ -216,7 +216,7 @@ fn trycua_job(status: Option<&Value>) -> TrycuaJob {
 fn trycua_name() -> String {
     let name = settings_catalog().text(SKILLS_MODULE, "GHOSTEX_TRYCUA_PRODUCT_NAME");
     if name.is_empty() {
-        "Trycua".to_string()
+        "Fast Computer Use".to_string()
     } else {
         name
     }
@@ -228,7 +228,7 @@ fn cua_permission_status(status: Option<&Value>, loading: bool) -> (&'static str
         return ("Checking", ListItemStatus::Neutral);
     }
     if flag(status, "cuaDriverInstalled") != Some(true) {
-        return ("Trycua Not Installed", ListItemStatus::Warning);
+        return ("Fast Computer Use Not Installed", ListItemStatus::Warning);
     }
     let accessibility = flag(status, "cuaDriverAccessibilityPermissionGranted");
     let screen = flag(status, "cuaDriverScreenRecordingPermissionGranted");
@@ -1295,12 +1295,6 @@ impl Render for IntegrationsTab {
                         .map(|element| PageBlock::section("ghostexCli", element)),
                 );
             }
-            if search.row_visible(section, "managedTools") {
-                blocks.extend(
-                    self.managed_tools_section(&p, cx)
-                        .map(|element| PageBlock::section("managedTools", element)),
-                );
-            }
             let show_trycua = search.row_visible(section, "bundledAgentSkills");
             let show_permissions = search.row_visible(section, "cuaPermissions");
             blocks.extend(
@@ -1330,6 +1324,13 @@ impl Render for IntegrationsTab {
                 blocks.extend(
                     self.ghostex_capture_section(&p, cx)
                         .map(|element| PageBlock::section("ghostexCapture", element)),
+                );
+            }
+            // CDXC:Settings 2026-09-30 DECISION: User: "please move the tools list to the bottom of the integrations".
+            if search.row_visible(section, "managedTools") {
+                blocks.extend(
+                    self.managed_tools_section(&p, cx)
+                        .map(|element| PageBlock::section("managedTools", element)),
                 );
             }
         }

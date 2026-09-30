@@ -6519,44 +6519,9 @@
                 "subtitle": "Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup."
               },
               {
-                "key": "managedTools",
-                "title": "Tools",
-                "subtitle": "Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.",
-                "options": [
-                  {
-                    "label": "Node.js and npm",
-                    "value": "node"
-                  },
-                  {
-                    "label": "uv (Python)",
-                    "value": "uv"
-                  },
-                  {
-                    "label": "Homebrew",
-                    "value": "homebrew"
-                  },
-                  {
-                    "label": "System tools (curl, unzip, git)",
-                    "value": "systemTools"
-                  },
-                  {
-                    "label": "Beads (bd)",
-                    "value": "beads"
-                  },
-                  {
-                    "label": "GitHub CLI (gh)",
-                    "value": "gh"
-                  },
-                  {
-                    "label": "GitLab CLI (glab)",
-                    "value": "glab"
-                  }
-                ]
-              },
-              {
                 "key": "bundledAgentSkills",
                 "title": "Bundled Agent Skills",
-                "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
+                "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
                 "options": [
                   {
                     "label": "Ghostex CLI",
@@ -6630,8 +6595,43 @@
               },
               {
                 "key": "cuaPermissions",
-                "title": "Trycua Permissions",
-                "subtitle": "Trycua needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop."
+                "title": "Fast Computer Use Permissions",
+                "subtitle": "Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop."
+              },
+              {
+                "key": "managedTools",
+                "title": "Tools",
+                "subtitle": "Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.",
+                "options": [
+                  {
+                    "label": "Node.js and npm",
+                    "value": "node"
+                  },
+                  {
+                    "label": "uv (Python)",
+                    "value": "uv"
+                  },
+                  {
+                    "label": "Homebrew",
+                    "value": "homebrew"
+                  },
+                  {
+                    "label": "System tools (curl, unzip, git)",
+                    "value": "systemTools"
+                  },
+                  {
+                    "label": "Beads (bd)",
+                    "value": "beads"
+                  },
+                  {
+                    "label": "GitHub CLI (gh)",
+                    "value": "gh"
+                  },
+                  {
+                    "label": "GitLab CLI (glab)",
+                    "value": "glab"
+                  }
+                ]
               }
             ]
           }
@@ -9256,7 +9256,7 @@
           },
           {
             "command": "ghostex computer-use install-skill",
-            "description": "Let agents control your machine: click, type, and see the screen in native apps. Runs through Trycua, and your operating system may ask for accessibility and screen recording permissions.",
+            "description": "Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer Use, and your operating system may ask for accessibility and screen recording permissions.",
             "id": "computerUse",
             "name": "Ghostex Computer Use",
             "requiresCuaDriver": true,
@@ -9315,7 +9315,7 @@
             "tier": "optional"
           }
         ],
-        "GHOSTEX_TRYCUA_PRODUCT_NAME": "Trycua",
+        "GHOSTEX_TRYCUA_PRODUCT_NAME": "Fast Computer Use",
         "VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS": [
           {
             "command": "ghostex cli install-skill",
@@ -9335,7 +9335,7 @@
           },
           {
             "command": "ghostex computer-use install-skill",
-            "description": "Let agents control your machine: click, type, and see the screen in native apps. Runs through Trycua, and your operating system may ask for accessibility and screen recording permissions.",
+            "description": "Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer Use, and your operating system may ask for accessibility and screen recording permissions.",
             "id": "computerUse",
             "name": "Ghostex Computer Use",
             "requiresCuaDriver": true,
@@ -15998,7 +15998,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           0,
           "label"
@@ -16012,7 +16012,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           1,
           "label"
@@ -16026,7 +16026,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           2,
           "label"
@@ -16040,7 +16040,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           3,
           "label"
@@ -16054,7 +16054,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           4,
           "label"
@@ -17034,7 +17034,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           0,
           "label"
@@ -17048,7 +17048,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           1,
           "label"
@@ -17062,7 +17062,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           2,
           "label"
@@ -17076,7 +17076,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           3,
           "label"
@@ -17090,7 +17090,7 @@
           "sections",
           0,
           "settings",
-          3,
+          2,
           "options",
           4,
           "label"

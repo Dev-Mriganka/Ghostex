@@ -57,9 +57,9 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallHelpSkill => "Ghostex Help installed",
             Self::FinishDesktopControlSetup {
                 was_update: true, ..
-            } => "Trycua updated",
+            } => "Fast Computer Use updated",
             Self::FinishDesktopControlSetup { .. } => "Desktop Control installed",
-            Self::FinishTrycuaUninstall { .. } => "Trycua uninstalled",
+            Self::FinishTrycuaUninstall { .. } => "Fast Computer Use uninstalled",
             Self::UninstallBundledAgentSkill(_) => "Agent skill uninstalled",
             Self::UninstallBundledAgentSkills => "Bundled agent skills uninstalled",
         }
@@ -79,9 +79,9 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallHelpSkill => "Ghostex Help install failed",
             Self::FinishDesktopControlSetup {
                 was_update: true, ..
-            } => "Trycua update failed",
+            } => "Fast Computer Use update failed",
             Self::FinishDesktopControlSetup { .. } => "Desktop Control setup incomplete",
-            Self::FinishTrycuaUninstall { .. } => "Trycua uninstall failed",
+            Self::FinishTrycuaUninstall { .. } => "Fast Computer Use uninstall failed",
             Self::UninstallBundledAgentSkill(_) => "Bundled agent skill uninstall failed",
             Self::UninstallBundledAgentSkills => "Bundled agent skill uninstall failed",
         }
@@ -205,9 +205,9 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
             GpuiGhostexCliActionResult::success(
                 action,
                 if cfg!(target_os = "macos") {
-                    "Trycua was removed. Its Accessibility and Screen Recording permissions were kept for a later reinstall."
+                    "Fast Computer Use was removed. Its Accessibility and Screen Recording permissions were kept for a later reinstall."
                 } else {
-                    "Trycua was removed. You can reinstall it from Settings."
+                    "Fast Computer Use was removed. You can reinstall it from Settings."
                 }
                 .to_string(),
             )
@@ -215,7 +215,7 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
         GpuiGhostexCliSettingsAction::FinishTrycuaUninstall { succeeded: false } => {
             GpuiGhostexCliActionResult::failure(
                 action,
-                "The Trycua uninstaller did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                "The Fast Computer Use uninstaller did not finish successfully. Settings shows its last output; plugin status was refreshed."
                     .to_string(),
             )
         }
@@ -243,13 +243,11 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
     }
 }
 
-pub(crate) const GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE: &str =
-    "The official Trycua installer is running in the background. Settings shows its progress.";
-pub(crate) const GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE: &str = "The official Trycua installer is reinstalling the latest release in the background. Settings shows its progress.";
-pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE: &str =
-    "The official Trycua uninstaller is running in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE: &str = "The official Fast Computer Use installer is running in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE: &str = "The official Fast Computer Use installer is reinstalling the latest release in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE: &str = "The official Fast Computer Use uninstaller is running in the background. Settings shows its progress.";
 #[cfg(target_os = "macos")]
-pub(crate) const GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE: &str = "Trycua is checking for and applying the latest official update in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE: &str = "Fast Computer Use is checking for and applying the latest official update in the background. Settings shows its progress.";
 
 /*
 CDXC:Extensions 2026-08-09:
@@ -298,7 +296,7 @@ pub(crate) fn gpui_cua_driver_command_action() -> GpuiCuaDriverCommandAction {
             ),
             operation: "update",
             running_message: GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE,
-            toast_title: "Updating Trycua",
+            toast_title: "Updating Fast Computer Use",
         };
     }
 
@@ -311,7 +309,7 @@ pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiCuaDriverCommand
     GpuiCuaDriverCommandAction {
         operation: "reinstall",
         running_message: GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE,
-        toast_title: "Reinstalling Trycua",
+        toast_title: "Reinstalling Fast Computer Use",
         ..gpui_cua_driver_installer_command_action()
     }
 }
@@ -321,7 +319,7 @@ pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiCuaDriverCommand
         script: GPUI_TRYCUA_UNINSTALL_COMMAND.to_string(),
         operation: "uninstall",
         running_message: GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE,
-        toast_title: "Uninstalling Trycua",
+        toast_title: "Uninstalling Fast Computer Use",
     }
 }
 
@@ -335,6 +333,6 @@ fn gpui_cua_driver_installer_command_action() -> GpuiCuaDriverCommandAction {
         script,
         operation: "install",
         running_message: GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE,
-        toast_title: "Installing Trycua",
+        toast_title: "Installing Fast Computer Use",
     }
 }

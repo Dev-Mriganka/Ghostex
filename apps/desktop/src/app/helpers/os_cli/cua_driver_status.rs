@@ -113,25 +113,25 @@ pub(crate) fn gpui_cua_driver_update_check_toast(
     {
         Some(true) => (
             "info",
-            "Trycua update available",
+            "Fast Computer Use update available",
             match (installed, latest) {
                 (Some(installed), Some(latest)) => {
                     format!("Version {latest} is available; {installed} is installed.")
                 }
-                _ => "A newer Trycua release is available.".to_string(),
+                _ => "A newer Fast Computer Use release is available.".to_string(),
             },
         ),
         Some(false) => (
             "success",
-            "Trycua is up to date",
+            "Fast Computer Use is up to date",
             match installed.or(latest) {
                 Some(version) => format!("Version {version} is the latest release."),
-                None => "You have the latest Trycua release.".to_string(),
+                None => "You have the latest Fast Computer Use release.".to_string(),
             },
         ),
         None => (
             "warning",
-            "Couldn't check for Trycua updates",
+            "Couldn't check for Fast Computer Use updates",
             "The update check did not answer. Check your connection and try again.".to_string(),
         ),
     }
@@ -184,10 +184,10 @@ pub(crate) fn gpui_cua_driver_permission_status(
         return GpuiCuaDriverPermissionStatus {
             accessibility_granted: None,
             detail: if cua_app_installed {
-                "Trycua is installed, but the cua-driver CLI was not found on PATH, so GPUI cannot run the read-only permission check."
+                "Fast Computer Use is installed, but the cua-driver CLI was not found on PATH, so GPUI cannot run the read-only permission check."
                     .to_string()
             } else {
-                "Trycua is not installed.".to_string()
+                "Fast Computer Use is not installed.".to_string()
             },
             screen_recording_granted: None,
         };
@@ -209,7 +209,7 @@ pub(crate) fn gpui_cua_driver_permission_status(
         }
         Err(_) => GpuiCuaDriverPermissionStatus {
             accessibility_granted: None,
-            detail: "Unable to check Trycua permissions without prompting.".to_string(),
+            detail: "Unable to check Fast Computer Use permissions without prompting.".to_string(),
             screen_recording_granted: None,
         },
     }
@@ -266,15 +266,15 @@ pub(crate) fn gpui_cua_driver_permission_detail(
 ) -> String {
     match (accessibility_granted, screen_recording_granted) {
         (Some(true), Some(true)) => {
-            "Trycua reports Accessibility and Screen Recording permissions are granted.".to_string()
+            "Fast Computer Use reports Accessibility and Screen Recording permissions are granted.".to_string()
         }
-        (Some(false), Some(false)) => "Trycua permissions need attention.".to_string(),
-        (Some(false), _) => "Trycua Accessibility permission needs attention.".to_string(),
-        (_, Some(false)) => "Trycua Screen Recording permission needs attention.".to_string(),
+        (Some(false), Some(false)) => "Fast Computer Use permissions need attention.".to_string(),
+        (Some(false), _) => "Fast Computer Use Accessibility permission needs attention.".to_string(),
+        (_, Some(false)) => "Fast Computer Use Screen Recording permission needs attention.".to_string(),
         _ if command_success => {
-            "Trycua permission check completed, but GPUI could not recognize the permission state."
+            "Fast Computer Use permission check completed, but GPUI could not recognize the permission state."
                 .to_string()
         }
-        _ => "Unable to check Trycua permissions without prompting.".to_string(),
+        _ => "Unable to check Fast Computer Use permissions without prompting.".to_string(),
     }
 }

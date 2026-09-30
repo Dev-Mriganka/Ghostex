@@ -31,7 +31,7 @@ Route browser work by surface:
 ## Requirements
 
 - Trycua must be installed. Ghostex installs it from first-launch setup or
-  Settings > Integrations, where the Trycua card runs the official installer in
+  Settings > Integrations, where the Fast Computer Use (Trycua) card runs the official installer in
   a command pane.
 - Trycua must be available as `cua-driver` (see Windows and WSL below).
 - macOS Accessibility and Screen Recording permissions must be granted for

@@ -63,7 +63,7 @@ impl GhostexGpuiApp {
             Some(reason) => {
                 self.dispatch_gpui_app_modal_toast(
                     "warning",
-                    "Trycua can't be installed",
+                    "Fast Computer Use can't be installed",
                     &reason,
                     cx,
                 );

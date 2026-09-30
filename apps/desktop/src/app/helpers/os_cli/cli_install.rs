@@ -45,9 +45,9 @@ pub(crate) fn gpui_finish_desktop_control_setup(
     if !driver_installed {
         return Err(
             if was_update {
-                "The Trycua update did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                "The Fast Computer Use update did not finish successfully. Settings shows its last output; plugin status was refreshed."
             } else {
-                "The Trycua installer did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                "The Fast Computer Use installer did not finish successfully. Settings shows its last output; plugin status was refreshed."
             }
             .to_string(),
         );
@@ -58,13 +58,13 @@ pub(crate) fn gpui_finish_desktop_control_setup(
         "Ghostex Computer Use",
     ) {
         Ok(_) => Ok(if was_update {
-            "Trycua is up to date. Ghostex Computer Use is ready.".to_string()
+            "Fast Computer Use is up to date. Ghostex Computer Use is ready.".to_string()
         } else {
-            "Trycua installed. Grant accessibility and screen recording permissions if needed."
+            "Fast Computer Use installed. Grant accessibility and screen recording permissions if needed."
                 .to_string()
         }),
         Err(message) => Err(format!(
-            "Trycua {}, but Ghostex Computer Use skill could not be installed. {message}",
+            "Fast Computer Use {}, but Ghostex Computer Use skill could not be installed. {message}",
             if was_update { "updated" } else { "installed" }
         )),
     }

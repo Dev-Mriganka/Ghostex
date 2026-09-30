@@ -25,6 +25,7 @@ import {
   shouldShowSetting,
   shouldShowSettingsSection,
 } from '../search';
+import { IS_MAC_HOST } from '../search-catalog';
 import { playCopySound } from '../../copy-sound';
 
 export function getCuaPermissionStatus(
@@ -35,7 +36,7 @@ export function getCuaPermissionStatus(
     return { status: 'Checking', tone: 'neutral' };
   }
   if (ghostexCliStatus?.cuaDriverInstalled !== true) {
-    return { status: 'Trycua Not Installed', tone: 'warning' };
+    return { status: 'Fast Computer Use Not Installed', tone: 'warning' };
   }
 
   const accessibilityGranted = ghostexCliStatus.cuaDriverAccessibilityPermissionGranted;
@@ -87,15 +88,20 @@ export function VersionInfoButton({ label, version }: { label: string; version: 
   );
 }
 
+/** The hotkey that opens Ghostex Capture, in this platform's modifier names. */
+const GHOSTEX_CAPTURE_HOTKEY = IS_MAC_HOST ? 'Cmd+Ctrl+Shift+S' : 'Alt+Ctrl+Shift+S';
+
 export function IntegrationsSettingsTab({
   appShotsEnabled,
   appShotsHotkey,
   appShotsMetadataEnabled,
+  ghostexCaptureEnabled,
   ghostexCliStatus,
   ghostexCliStatusLoading,
   onAppShotsEnabledChange,
   onAppShotsHotkeyChange,
   onAppShotsMetadataEnabledChange,
+  onGhostexCaptureEnabledChange,
   onInstallCliSkill,
   onInstallBrowserControl,
   onInstallBrowserUseSkill,
@@ -122,11 +128,13 @@ export function IntegrationsSettingsTab({
   appShotsEnabled: boolean;
   appShotsHotkey: AppShotsHotkey;
   appShotsMetadataEnabled: boolean;
+  ghostexCaptureEnabled: boolean;
   ghostexCliStatus?: SidebarGhostexCliStatusMessage;
   ghostexCliStatusLoading: boolean;
   onAppShotsEnabledChange: (checked: boolean) => void;
   onAppShotsHotkeyChange: (hotkey: AppShotsHotkey) => void;
   onAppShotsMetadataEnabledChange: (checked: boolean) => void;
+  onGhostexCaptureEnabledChange: (checked: boolean) => void;
   onInstallCliSkill?: () => void;
   onInstallBrowserControl?: () => void;
   onInstallBrowserUseSkill?: () => void;
@@ -237,9 +245,6 @@ export function IntegrationsSettingsTab({
           */}
           </SettingsSection>
         ) : null}
-        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('managedTools') ? (
-          <ManagedToolsSection onRunTerminalCommand={onRunManagedToolTerminalCommand} />
-        ) : null}
         {shouldShowSettingsSection(search.sections.integrations) ? (
           <DesktopControlSection
             ghostexCliStatus={ghostexCliStatus}
@@ -345,6 +350,28 @@ export function IntegrationsSettingsTab({
               </>
             ) : null}
           </SettingsSection>
+        ) : null}
+        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('ghostexCapture') ? (
+          <SettingsSection title='Ghostex Capture'>
+            <IntegrationSettingsRow
+              badge='Beta'
+              description={`A floating button over every app with your working, waiting and question counts. Screenshot an area, the current app or the full screen, mark it up, and send a prompt without switching to Ghostex. ${GHOSTEX_CAPTURE_HOTKEY} opens it; A, Space, F or T instead of S run an action straight away.`}
+              icon={IconDeviceDesktop}
+              status={ghostexCaptureEnabled ? 'Enabled' : 'Disabled'}
+              tone={ghostexCaptureEnabled ? 'success' : 'neutral'}
+              title='Ghostex Capture'
+            >
+              <Switch
+                aria-label='Enable Ghostex Capture'
+                checked={ghostexCaptureEnabled}
+                onCheckedChange={onGhostexCaptureEnabledChange}
+              />
+            </IntegrationSettingsRow>
+          </SettingsSection>
+        ) : null}
+        {/* CDXC:Settings 2026-09-30 DECISION: User: "please move the tools list to the bottom of the integrations". */}
+        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('managedTools') ? (
+          <ManagedToolsSection onRunTerminalCommand={onRunManagedToolTerminalCommand} />
         ) : null}
       </div>
     </SettingsNativeScrollArea>

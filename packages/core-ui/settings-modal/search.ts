@@ -443,28 +443,13 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             title: 'Ghostex CLI',
           },
           {
-            key: 'managedTools',
-            options: [
-              { label: 'Node.js and npm', value: 'node' },
-              { label: 'uv (Python)', value: 'uv' },
-              { label: 'Homebrew', value: 'homebrew' },
-              { label: 'System tools (curl, unzip, git)', value: 'systemTools' },
-              { label: 'Beads (bd)', value: 'beads' },
-              { label: 'GitHub CLI (gh)', value: 'gh' },
-              { label: 'GitLab CLI (glab)', value: 'glab' },
-            ],
-            subtitle:
-              'Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.',
-            title: 'Tools',
-          },
-          {
             key: 'bundledAgentSkills',
             options: BUNDLED_GHOSTEX_AGENT_SKILLS.map((skill) => ({
               label: skill.name,
               value: skill.skillName,
             })),
             subtitle:
-              'Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.',
+              'Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.',
             title: 'Bundled Agent Skills',
           },
           {
@@ -483,8 +468,23 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
           {
             key: 'cuaPermissions',
             subtitle:
-              'Trycua needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.',
-            title: 'Trycua Permissions',
+              'Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.',
+            title: 'Fast Computer Use Permissions',
+          },
+          {
+            key: 'managedTools',
+            options: [
+              { label: 'Node.js and npm', value: 'node' },
+              { label: 'uv (Python)', value: 'uv' },
+              { label: 'Homebrew', value: 'homebrew' },
+              { label: 'System tools (curl, unzip, git)', value: 'systemTools' },
+              { label: 'Beads (bd)', value: 'beads' },
+              { label: 'GitHub CLI (gh)', value: 'gh' },
+              { label: 'GitLab CLI (glab)', value: 'glab' },
+            ],
+            subtitle:
+              'Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.',
+            title: 'Tools',
           },
         ],
         title: 'Integrations',

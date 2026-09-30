@@ -72,11 +72,11 @@ pub(crate) fn gpui_cua_driver_progress_status_payload() -> serde_json::Value {
 /// Tooltip for Install and Reinstall: exactly what one click runs.
 pub(crate) fn gpui_cua_driver_install_plan() -> String {
     if cfg!(target_os = "windows") {
-        "Runs Trycua's official installer from cua.ai (irm https://cua.ai/driver/install.ps1 | iex) in the background. Windows shows one administrator prompt to let Trycua start with Windows; you can decline it.".to_string()
+        "Runs Fast Computer Use's official installer from cua.ai (irm https://cua.ai/driver/install.ps1 | iex) in the background. Windows shows one administrator prompt to let Fast Computer Use start with Windows; you can decline it.".to_string()
     } else if cfg!(target_os = "macos") {
-        "Runs Trycua's official installer from cua.ai (curl -fsSL https://cua.ai/driver/install.sh | bash) in the background; it puts CuaDriver.app in /Applications and starts it. No password needed; macOS then asks you to allow Accessibility and Screen Recording.".to_string()
+        "Runs Fast Computer Use's official installer from cua.ai (curl -fsSL https://cua.ai/driver/install.sh | bash) in the background; it puts CuaDriver.app in /Applications and starts it. No password needed; macOS then asks you to allow Accessibility and Screen Recording.".to_string()
     } else {
-        "Runs Trycua's official installer from cua.ai (curl -fsSL https://cua.ai/driver/install.sh | bash) in the background. No password needed.".to_string()
+        "Runs Fast Computer Use's official installer from cua.ai (curl -fsSL https://cua.ai/driver/install.sh | bash) in the background. No password needed.".to_string()
     }
 }
 
@@ -88,7 +88,7 @@ pub(crate) fn gpui_cua_driver_applications_blocked_reason() -> Option<String> {
         // SAFETY: `path` is a valid NUL-terminated C string for the duration of the call.
         let writable = unsafe { libc::access(path.as_ptr(), libc::W_OK) } == 0;
         if !writable {
-            return Some("Trycua's installer copies CuaDriver.app into /Applications, which this account can't change. Sign in as an administrator, or ask one to install Trycua.".to_string());
+            return Some("Fast Computer Use's installer copies CuaDriver.app into /Applications, which this account can't change. Sign in as an administrator, or ask one to install Fast Computer Use.".to_string());
         }
     }
     None
@@ -98,7 +98,10 @@ pub(crate) fn gpui_cua_driver_applications_blocked_reason() -> Option<String> {
 pub(crate) fn gpui_begin_cua_driver_job(operation: &'static str) -> Result<(), String> {
     let mut job = JOB.lock().map_err(|error| error.to_string())?;
     if job.as_ref().is_some_and(|job| job.status == "running") {
-        return Err("Trycua is already being installed or changed. Wait for it to finish.".into());
+        return Err(
+            "Fast Computer Use is already being installed or changed. Wait for it to finish."
+                .into(),
+        );
     }
     *job = Some(CuaDriverJob {
         operation,
@@ -178,7 +181,7 @@ pub(crate) fn gpui_run_cua_driver_job_script(script: &str) -> Result<(), String>
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|error| format!("Could not start the Trycua installer: {error}"))?;
+        .map_err(|error| format!("Could not start the Fast Computer Use installer: {error}"))?;
     let readers = [
         child.stdout.take().map(drain),
         child.stderr.take().map(drain),
@@ -195,7 +198,9 @@ pub(crate) fn gpui_run_cua_driver_job_script(script: &str) -> Result<(), String>
                 }
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err("The Trycua installer did not finish within 20 minutes.".into());
+                return Err(
+                    "The Fast Computer Use installer did not finish within 20 minutes.".into(),
+                );
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(250)),
             Err(error) => return Err(error.to_string()),

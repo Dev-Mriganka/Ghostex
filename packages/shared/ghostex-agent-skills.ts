@@ -35,12 +35,13 @@ export type BundledGhostexAgentSkill = {
 };
 
 /**
- * CDXC:Extensions 2026-08-24:
- * User-facing surfaces say "Trycua", never the `trycua/cua` repository slug or
- * an internal component name, so the prerequisite reads as one product the user
- * installs once.
+ * CDXC:Extensions 2026-09-30 DECISION:
+ * User: "please rename Trycua to Fast Computer Use". User-facing surfaces say
+ * "Fast Computer Use" (supersedes the 2026-08-24 "Trycua" name), never the
+ * `trycua/cua` repository slug or an internal component name, so the
+ * prerequisite reads as one product the user installs once.
  */
-export const GHOSTEX_TRYCUA_PRODUCT_NAME = 'Trycua';
+export const GHOSTEX_TRYCUA_PRODUCT_NAME = 'Fast Computer Use';
 
 /**
  * CDXC:AgentSkills 2026-05-31-09:18:
@@ -84,7 +85,7 @@ export const BUNDLED_GHOSTEX_AGENT_SKILLS: readonly BundledGhostexAgentSkill[] =
   {
     command: 'ghostex computer-use install-skill',
     description:
-      'Let agents control your machine: click, type, and see the screen in native apps. Runs through Trycua, and your operating system may ask for accessibility and screen recording permissions.',
+      'Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer Use, and your operating system may ask for accessibility and screen recording permissions.',
     id: 'computerUse',
     name: 'Ghostex Computer Use',
     requiresCuaDriver: true,

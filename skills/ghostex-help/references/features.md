@@ -1672,17 +1672,17 @@ docs directory), `hideProjectHeaderDiffStats`,
 - Settings > Open In chooses which apps appear on session and project Open In
   menus and adds custom open targets.
 - Settings > Integrations installs the bundled agent skills (Ghostex CLI,
-  Ghostex Help, Computer Use and Browser Use through Trycua, Embedded Browser
+  Ghostex Help, Computer Use and Browser Use through Fast Computer Use, Embedded Browser
   Use, Project Board Beads) and shows their install status. Skills are copied
   into the global skill folders every agent CLI reads. When the computer is
   online they are downloaded from the Ghostex GitHub repository, so skill fixes
   arrive between releases, and installed skills are refreshed automatically
   each time Ghostex starts. Offline installs use the copy inside the app.
-  Its Desktop control section installs Trycua. Once Trycua is installed, its
+  Its Desktop control section installs Fast Computer Use (Trycua). Once it is installed, its
   row shows an update button when a newer release is out (on a Mac), or a
   check mark when it is up to date (click it to check again), a reinstall
   button that runs the official installer again, and an uninstall button
-  that removes Trycua but keeps its Accessibility and Screen Recording
+  that removes Fast Computer Use but keeps its Accessibility and Screen Recording
   permissions. Hover them to see the installed and latest versions.
 - Settings > Integrations > Tools lists the tools Ghostex can install for you
   when something you set up needs them: Node.js and npm, uv, Homebrew (Mac),
