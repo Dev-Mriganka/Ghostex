@@ -10,7 +10,7 @@
 //! `gpuiRemoteGxserverSidebarRequest` bridge message shared this function: the runtime is gone.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/sidebar_remote.rs (the store),
-//! apps/desktop/src/app/helpers/remote/sidebar_bridge.rs (the allowlist and the shaping).
+//! apps/desktop/src/app/helpers/remote/sidebar_bridge/ (the allowlist and the shaping).
 
 use std::time::Duration;
 

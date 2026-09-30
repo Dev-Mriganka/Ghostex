@@ -27,7 +27,7 @@
 //! reaches that daemon's own authenticated LOCAL listener, exactly as
 //! `/api/generateCommitMessage` and `/api/createPullRequest` do.
 //!
-//! SEE-ALSO: apps/desktop/src/app/helpers/remote/sidebar_bridge.rs (the allowlist, the shaping
+//! SEE-ALSO: apps/desktop/src/app/helpers/remote/sidebar_bridge/ (the allowlist, the shaping
 //! dispatch and the response dispatch), apps/desktop/src/app/remote_conn/sidebar_rpc.rs (the one
 //! function both callers go through).
 
