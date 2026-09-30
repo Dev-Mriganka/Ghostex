@@ -39,6 +39,9 @@ ghostex coordinator start-thread --title "<3 to 6 words>" --task "<brief>" [--wo
 - Threads that need the same files run one after another. Use `--worktree` only when running them
   in parallel really matters; the thread then works on its own branch in its own folder. Without it
   the thread works in the project folder.
+- When the work lives in another folder or repository, still start the thread in your own project
+  (no `--project-id`) and put that folder's absolute path in the brief, so the thread shows under
+  you in the sidebar.
 - Pass `--agent` (an id from `ghostex agents types`) only when the user or the task calls for it.
   Pass `--model` and `--effort` as the list below says, unless the user asked for others.
 - Choosing a Claude thread's model:
