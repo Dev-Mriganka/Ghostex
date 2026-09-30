@@ -604,6 +604,8 @@ fn to_mobile_session_summary(session: &Value) -> Value {
      */
     insert_js(&mut map, "sessionNote", &[s("sessionNote")]);
     insert_js(&mut map, "agentSessionId", &[s("agentSessionId")]);
+    // CDXC:Coordinators 2026-10-01 WHY: the same second-whitelist trap: the phone draws the coordinator crown in place of the agent logo from this field.
+    insert_js(&mut map, "coordinatorRole", &[s("coordinatorRole")]);
     /*
      * CDXC:DelayedSend 2026-09-03:
      * Same SECOND-whitelist trap once more: `to_cli_session` forwarded the

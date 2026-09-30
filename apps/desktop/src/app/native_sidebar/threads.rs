@@ -1,5 +1,5 @@
-//! A coordinator's tree in the sidebar: indented thread rows with a tree line, and the badge on the
-//! coordinator row. Visual only; the row itself stays the click, drag and menu target.
+//! A coordinator's tree in the sidebar: indented thread rows with a tree line, and the icon and badge on
+//! the coordinator row. Visual only; the row itself stays the click, drag and menu target.
 //!
 //! SEE-ALSO: packages/gx-core/src/sidebar_view/threads.rs (the order and depth),
 //! apps/desktop/src/app/gx_store/sidebar_snapshot.rs (`threadDepth`, `threadLast`, `coordinatorThreads`).
@@ -17,6 +17,9 @@ pub(crate) const THREAD_INDENT: f32 = 16.0;
 /// The coordinator marker and the open-thread count.
 const COORDINATOR_ICON: &str = "titlebar/users-group.svg";
 const WAITING_COLOR: u32 = 0x95d7f6;
+const COORDINATOR_ROW_ICON: &str = "titlebar/coordinator-crown.svg";
+const COORDINATOR_COLOR_DARK: u32 = 0xb197fc;
+const COORDINATOR_COLOR_LIGHT: u32 = 0x7048e8;
 
 pub(crate) fn thread_depth(session: &NativeSidebarSession) -> f32 {
     session
@@ -78,6 +81,32 @@ pub(crate) fn thread_connector(
     )
 }
 
+pub(crate) fn is_coordinator(session: &NativeSidebarSession) -> bool {
+    session
+        .details
+        .get("isCoordinator")
+        .and_then(Value::as_bool)
+        == Some(true)
+}
+
+/// The icon a coordinator row draws in place of its agent's logo.
+///
+/// CDXC:Coordinators 2026-10-01 DECISION:
+/// User: "please give coordinator agents a different logo in the sidebar of the app (not the agent's app logo)", a cool SVG instead of the Claude icon. A crown in its own violet (the agent logos beside it are brand coloured), bold enough to read at the row's 13px; its threads keep their agent logos. Picked from three drawn variants (hub, crown, commander chevrons).
+pub(crate) fn coordinator_icon(appearance: &SidebarAppearance) -> AnyElement {
+    titlebar_svg_icon(
+        COORDINATOR_ROW_ICON,
+        13.0 * appearance.scale,
+        rgb(if appearance.light {
+            COORDINATOR_COLOR_LIGHT
+        } else {
+            COORDINATOR_COLOR_DARK
+        })
+        .into(),
+    )
+    .into_any_element()
+}
+
 /// The coordinator row's marker: the crew icon, plus how many open threads sit under it, tinted
 /// when one waits on someone (light blue) or works (orange).
 ///
@@ -87,12 +116,7 @@ pub(crate) fn coordinator_badge(
     session: &NativeSidebarSession,
     appearance: &SidebarAppearance,
 ) -> Option<AnyElement> {
-    if session
-        .details
-        .get("isCoordinator")
-        .and_then(Value::as_bool)
-        != Some(true)
-    {
+    if !is_coordinator(session) {
         return None;
     }
     let scale = appearance.scale;
