@@ -1,4 +1,4 @@
-//! `normalizeGhosttyFontFamily` (packages/shared/ghostex-settings/normalize.ts) over the generated
+//! `normalizeGhosttyFontFamily` (packages/shared/ghostex-settings/normalize-fields.ts) over the generated
 //! `TERMINAL_FONT_PRESETS` table (packages/shared/terminal-font-preset.ts): a legacy preset name
 //! saves as the Ghostty family it stood for, anything else is saved trimmed.
 use super::super::super::catalog::{module, settings_catalog};

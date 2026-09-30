@@ -214,7 +214,7 @@ fn store_sidebar_glass_percent(
 
 /// Stores the work area's percentage. Settings that still hold the retired extra layer
 /// (`legacy_extra_key`) get the coverage it and the sidebar tint added up to, the same migration
-/// `normalizeWindowGlassWorkAreaTint` in packages/shared/ghostex-settings/normalize.ts applies.
+/// `normalizeWindowGlassWorkAreaTint` in packages/shared/ghostex-settings/normalize-fields.ts applies.
 fn store_work_area_glass_percent(
     object: &serde_json::Map<String, serde_json::Value>,
     key: &str,

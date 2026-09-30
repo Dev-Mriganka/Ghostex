@@ -112,7 +112,7 @@ impl GhostexGpuiApp {
 
 /// The completion sound the settings ask for, or `None` when it is off: `completionBellEnabled`
 /// false, or `completionSound` set to `off` (`normalizeCompletionSoundPreference` in
-/// packages/shared/ghostex-settings/normalize.ts).
+/// packages/shared/ghostex-settings/normalize-fields.ts).
 fn completion_sound() -> Option<&'static str> {
     let settings = crate::shared_settings::shared_sidebar_settings_snapshot();
     let settings = settings.object();

@@ -2221,7 +2221,7 @@ fn normalize_ghostty_theme(value: &str) -> String {
     }
 }
 
-/// SEE-ALSO: `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize.ts, whose
+/// SEE-ALSO: `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize-fields.ts, whose
 /// migration this mirrors: a file without a mode keeps its custom colour, otherwise it gets the
 /// Black / white default.
 fn terminal_background(
