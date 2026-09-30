@@ -1,7 +1,7 @@
 // Directory split of server/src/presentation.rs (~3.8k lines), pure move, no
 // logic changes. Each submodule is glob-re-exported here so every existing
 // crate::presentation::* call site (repository_clone.rs, project_git_remote.rs,
-// session_lifecycle.rs, delayed_sends.rs, board_start_work.rs,
+// session_lifecycle/, delayed_sends.rs, board_start_work.rs,
 // session_chat_queue_runtime/, project_icon.rs, agents::*, server::mod, ...)
 // keeps resolving without per-call-site qualification. If two submodules ever
 // define the same name, drop the glob for one of them here and qualify its
