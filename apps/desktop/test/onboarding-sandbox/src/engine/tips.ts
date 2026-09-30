@@ -8,7 +8,7 @@
  * debugging notice exists before the panel is opened;
  * the CLI and missing-hook notices need `agentHookStatus`/`ghostexCliStatus`,
  * which are requested ONLY when the panel opens
- * (apps/desktop/src/app/modals.rs:939 request_gpui_titlebar_tips_runtime_status).
+ * (apps/desktop/src/app/modals/modal_window.rs:280 request_gpui_titlebar_tips_runtime_status).
  */
 import type { SimEnvState, SimTipsNotice } from '../state/types';
 import { SIM_AGENT_IDS } from '../state/types';

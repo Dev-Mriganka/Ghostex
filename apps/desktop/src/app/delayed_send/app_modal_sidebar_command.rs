@@ -243,7 +243,7 @@ impl GhostexGpuiApp {
             }
             // CDXC:Onboarding 2026-09-15 DECISION:
             // The Tips dropdown's "Setup" button opens the Onboarding modal, the same one the automatic
-            // first run opens (modals.rs); the older setup modal was deleted on 2026-09-27. Quick Access's
+            // first run opens (modals/modal_window.rs); the older setup modal was deleted on 2026-09-27. Quick Access's
             // Setup Ghostex row reaches this arm, so it must open the same modal as the native Tips header
             // action in titlebar/settings_and_action_state.rs.
             "openWorkspaceWelcome" => {

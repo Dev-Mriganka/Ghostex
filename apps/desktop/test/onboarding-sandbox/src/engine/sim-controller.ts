@@ -1013,7 +1013,7 @@ export function createEngineActions(
           'state',
           'Flag burned: firstLaunchSetupComplete = true',
           'First-launch setup counts as complete when the dialog closes, however far the user got.',
-          'apps/desktop/src/app/modals.rs:1353 complete_first_launch_setup'
+          'apps/desktop/src/app/modals/modal_window.rs:843 complete_first_launch_setup'
         );
       }
     }
@@ -1097,7 +1097,7 @@ export function createEngineActions(
       'flow',
       'Quit — every window closed',
       'The state file survives; in-memory suppressions (portless suppressed-until-restart, the modal slot, the Windows followup) reset.',
-      'apps/desktop/src/app/modals.rs:2028 flush_gpui_quit_persistence'
+      'apps/desktop/src/app/modals/modal_messages_and_toasts.rs:287 flush_gpui_quit_persistence'
     );
     refreshTipsNotices();
   }

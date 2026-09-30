@@ -8,7 +8,7 @@
 //! `/api/agentCliMaintenance` over HTTP. The native window sends `OnboardingCommand`s that call the
 //! same Rust functions directly, and the same status payloads are handed to it as they are
 //! produced, so first run no longer needs CEF at all.
-//! SEE-ALSO: apps/desktop/src/app/window/onboarding/ (the window), apps/desktop/src/app/modals.rs (`open_gpui_first_launch_setup_with_sidebar_state`, `complete_first_launch_setup`), apps/desktop/src/app/os_integration/first_run_onboarding.rs (the first-run pass), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path).
+//! SEE-ALSO: apps/desktop/src/app/window/onboarding/ (the window), apps/desktop/src/app/modals/modal_window.rs (`open_gpui_first_launch_setup_with_sidebar_state`, `complete_first_launch_setup`), apps/desktop/src/app/os_integration/first_run_onboarding.rs (the first-run pass), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path).
 use crate::app::helpers::*;
 use crate::app::window::onboarding::model::js_number;
 use crate::app::window::onboarding::{

@@ -16,7 +16,7 @@ export function isSettingsModalKind(modal: AppModalKind | undefined): boolean {
  * CDXC:Onboarding 2026-09-27 SEE-ALSO:
  * The first-launch host rules (sidebar hydration before render, CLI/agent status requests, completion on close) apply
  * to `onboarding`; the older setup modal that shared them was deleted on 2026-09-27.
- * The native twin of this predicate is the `Onboarding` matching in apps/desktop/src/app/modals.rs.
+ * The native twin of this predicate is the `Onboarding` matching in apps/desktop/src/app/modals/modal_window.rs.
  */
 export function isFirstLaunchSetupModalKind(modal: AppModalKind | undefined): boolean {
   return modal === "onboarding";

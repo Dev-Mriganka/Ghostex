@@ -15,8 +15,8 @@ export const CODE_REFS = {
   firstRun: 'apps/desktop/src/app/os_integration/first_run_onboarding.rs:82 start_gpui_first_run_onboarding',
   healthProbe:
     'apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs gpui_probe_local_gxserver_health',
-  modalSlot: 'apps/desktop/src/app/modals.rs:1040 open_gpui_app_modal_window_inner (app_modal_window)',
-  modalOpen: 'apps/desktop/src/app/modals.rs:966 open_gpui_app_modal_window',
+  modalSlot: 'apps/desktop/src/app/modals/modal_window.rs:400 open_gpui_app_modal_window_inner (app_modal_window)',
+  modalOpen: 'apps/desktop/src/app/modals/modal_window.rs:316 open_gpui_app_modal_window',
   modalReady: 'apps/desktop/src/app/window/modal_host.rs:159 GpuiAppModalHost::receive_bridge_message',
   nonReactHost: 'apps/desktop/src/app/model/app_modal_kind.rs GpuiAppModalKind::uses_react_modal_host',
   tutorialVideoUrl: 'apps/desktop/src/app/consts.rs:665 GHOSTEX_TUTORIAL_VIDEO_URL (CDXC:Onboarding)',
@@ -29,9 +29,9 @@ export const CODE_REFS = {
   cliSettingsAction:
     'apps/desktop/src/app/os_integration/toast_and_status_dispatch.rs:323 run_gpui_ghostex_cli_settings_action',
   sidebarCommand: 'apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs:13 handle_gpui_app_modal_sidebar_command',
-  tipsRuntimeStatus: 'apps/desktop/src/app/modals.rs:939 request_gpui_titlebar_tips_runtime_status',
-  toast: 'apps/desktop/src/app/modals.rs:1987 show_gpui_gxserver_bootstrap_toast',
-  firstLaunchSetup: 'apps/desktop/src/app/modals.rs:1361 open_gpui_first_launch_setup_with_sidebar_state',
+  tipsRuntimeStatus: 'apps/desktop/src/app/modals/modal_window.rs:280 request_gpui_titlebar_tips_runtime_status',
+  toast: 'apps/desktop/src/app/modals/modal_messages_and_toasts.rs:245 show_gpui_gxserver_bootstrap_toast',
+  firstLaunchSetup: 'apps/desktop/src/app/modals/modal_window.rs:851 open_gpui_first_launch_setup_with_sidebar_state',
   addProject:
     'apps/desktop/src/app/remote_conn/project_browse_and_add.rs:249 handle_gpui_add_project_dialog_request_message',
 } as const;
