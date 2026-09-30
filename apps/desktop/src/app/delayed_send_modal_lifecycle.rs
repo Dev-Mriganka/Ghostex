@@ -1,5 +1,5 @@
 //! Open, bridge-command, and awake-agent plumbing for the native Session Automations dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/delayed_send_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/delayed_send.rs (the bridge command handlers this forwards to), apps/desktop/src/app/delayed_send_sessions.rs (the awake-agent read).
+//! SEE-ALSO: apps/desktop/src/app/window/delayed_send_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/delayed_send/ (the bridge command handlers this forwards to), apps/desktop/src/app/delayed_send_sessions.rs (the awake-agent read).
 use crate::app::helpers::*;
 use crate::app::window::*;
 use crate::*;

@@ -64,7 +64,7 @@ const gpuiModalCommandsSource = readFileSync(
   'utf8'
 );
 const gpuiDelayedSendSource = readFileSync(
-  new URL('../../apps/desktop/src/app/delayed_send.rs', import.meta.url),
+  new URL('../../apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs', import.meta.url),
   'utf8'
 );
 const gpuiModalKindSource = readFileSync(

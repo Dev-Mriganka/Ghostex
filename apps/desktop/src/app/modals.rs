@@ -1139,7 +1139,7 @@ impl GhostexGpuiApp {
         // User: "i want to switch to using the new modal when a new user starts the app instead of the
         // old one", so the automatic first run opens the five-panel Onboarding modal
         // (packages/core-ui/onboarding), the same one the Tips dropdown's "Setup" button and the Quick
-        // Access "Setup" command open (titlebar/settings_and_action_state.rs, delayed_send.rs). Only this
+        // Access "Setup" command open (titlebar/settings_and_action_state.rs, delayed_send/app_modal_sidebar_command.rs). Only this
         // path adds `"firstRun": true` to the open message: the user decided only the first run ever
         // applies Browser + Docs as the enabled views, never a reopen from Tips > Setup. The older
         // first-launch setup modal was deleted on 2026-09-27 (user: "delete old setup one not new one

@@ -1,5 +1,5 @@
 //! Open, close, and sidebar bridge plumbing for the native Missing Project Folder dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/missing_project_folder_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), the `pickReplacementProjectFolder` and `removeProject` arms in apps/desktop/src/app/delayed_send.rs (the React host's routes, mirrored here).
+//! SEE-ALSO: apps/desktop/src/app/window/missing_project_folder_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), the `pickReplacementProjectFolder` and `removeProject` arms in apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (the React host's routes, mirrored here).
 use crate::app::helpers::*;
 use crate::app::window::*;
 use crate::*;
