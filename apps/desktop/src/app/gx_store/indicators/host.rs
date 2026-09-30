@@ -8,7 +8,7 @@
 //! over the same groups in the same order, and given to the same receivers, which keep their
 //! validation and their transition-based attention notifications.
 //!
-//! SEE-ALSO: packages/gx-core/src/indicators.rs, apps/desktop/src/app/workspace_reconcile.rs.
+//! SEE-ALSO: packages/gx-core/src/indicators.rs, apps/desktop/src/app/workspace_reconcile/sidebar_payloads.rs.
 
 use std::collections::BTreeMap;
 
