@@ -125,7 +125,7 @@ sync() {
 Synced to $sha. Now verify (see .dependencies/ghostty-patches/README.md):
   1. cd .dependencies/ghostty && zig build test-lib-vt
   2. cd apps/desktop && cargo check
-  3. Re-audit apps/desktop/src/ghostty_vt.rs + ghostty_kit.rs against .dependencies/ghostty/include/
+  3. Re-audit apps/desktop/src/ghostty_vt/ffi.rs + ghostty_kit.rs against .dependencies/ghostty/include/
      (implicit C enums renumber when upstream inserts entries!)
   4. cd .dependencies/ghostty && zig build -Demit-xcframework -Dxcframework-target=universal \\
        -Demit-macos-app=false -Doptimize=ReleaseSafe

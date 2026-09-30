@@ -23,7 +23,7 @@ built-in showcase.
 // this demo crate root so the real app binary keeps full dead-code coverage.
 #![allow(dead_code)]
 
-#[path = "../ghostty_vt.rs"]
+#[path = "../ghostty_vt/mod.rs"]
 mod ghostty_vt;
 #[path = "../hotkey_label.rs"]
 mod hotkey_label;

@@ -1,1 +1,0 @@
-../../desktop/src/ghostty_vt.rs

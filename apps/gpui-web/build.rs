@@ -27,7 +27,7 @@ fn main() {
             out.push('\n');
         }
     }
-    // libghostty-vt as a static wasm32 archive, built by build-wasm.sh with the same Zig and the same flags the desktop uses (apps/desktop/scripts/build-libghostty-vt.sh) plus `-Dtarget=wasm32-freestanding`. Linked whole so `src/ghostty_vt.rs`, the desktop's FFI wrapper, resolves.
+    // libghostty-vt as a static wasm32 archive, built by build-wasm.sh with the same Zig and the same flags the desktop uses (apps/desktop/scripts/build-libghostty-vt.sh) plus `-Dtarget=wasm32-freestanding`. Linked whole so `src/ghostty_vt/`, the desktop's FFI wrapper, resolves.
     let vt_archive = Path::new(&manifest).join("target/libghostty-vt-wasm/lib/libghostty-vt.a");
     println!("cargo:rerun-if-changed={}", vt_archive.display());
     if env::var("CARGO_CFG_TARGET_FAMILY").is_ok_and(|family| family.contains("wasm")) {
