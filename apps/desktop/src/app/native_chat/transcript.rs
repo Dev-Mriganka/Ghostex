@@ -71,6 +71,7 @@ impl NativeChatView {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         self.in_subagent = !main;
+        self.detail_rows.start_row(main, index, items.len());
         let item = &items[index];
         let mut p = ChatAppearance::current(&self.snapshot).on_window_glass(
             crate::app::helpers::window_glass_active_for(self.main_window),
@@ -151,6 +152,7 @@ impl NativeChatView {
             }
             self.message_row(&item["message"], &p, window, cx)
         };
+        self.detail_rows.end_row();
         if self.disclosure_motion.borrow().running() {
             window.request_animation_frame();
         }

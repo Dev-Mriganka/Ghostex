@@ -158,6 +158,8 @@ pub(crate) struct NativeChatView {
     /// The details this frame's rows asked for, and the set last sent to the host.
     pub(super) detail_demand: std::collections::BTreeMap<String, Value>,
     pub(super) detail_sent: std::collections::BTreeMap<String, Value>,
+    /// Which transcript row asked for each detail, and the rows drawn since the last sync (row_details.rs).
+    pub(super) detail_rows: super::row_details::DetailRows,
     pub(super) detail_sync_scheduled: bool,
     /// Armed Delayed Send / Close After Done labels drawn on the working row, set by the app (session_chat_armed_actions.rs).
     pub(crate) armed_actions: Value,
@@ -374,6 +376,7 @@ impl NativeChatView {
             row_details: Value::Null,
             detail_demand: Default::default(),
             detail_sent: Default::default(),
+            detail_rows: Default::default(),
             detail_sync_scheduled: false,
             armed_actions: Value::Array(Vec::new()),
             collapsed: HashSet::new(),
