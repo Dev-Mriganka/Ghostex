@@ -204,8 +204,12 @@ pub(crate) fn modal_action_button<V: 'static>(
             rgba_of(p.destructive, 0.12),
         ),
     };
+    let label: SharedString = label.into();
     h_flex()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(label.clone())
+        .accessibility_id(id)
         .flex_1()
         .flex_basis(px(0.0))
         .min_w_0()
@@ -226,12 +230,12 @@ pub(crate) fn modal_action_button<V: 'static>(
         .when(!disabled, |this| {
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(hover)))
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |this, window, cx| {
                     on_click(this, window, cx);
-                }))
+                })
         })
         .children(leading)
-        .child(label.into())
+        .child(label)
         .into_any_element()
 }
 
@@ -256,6 +260,9 @@ pub(crate) fn modal_icon_button<V: 'static>(
     let accent = p.accent;
     div()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(id)
+        .accessibility_id(id)
         .flex_shrink_0()
         .flex()
         .items_center()
@@ -264,11 +271,46 @@ pub(crate) fn modal_icon_button<V: 'static>(
         .rounded(px(MODAL_RADIUS_CONTROL))
         .cursor_pointer()
         .hover(move |this| this.bg(hsla(accent)))
-        .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+        .on_press(cx, move |this, window, cx| {
             on_click(this, window, cx);
-        }))
+        })
         .child(modal_icon(icon_path, icon_size, p.foreground))
 }
+
+/// The accessibility tree's on/off state for a switch, checkbox or pressed segment.
+///
+/// CDXC:Accessibility 2026-09-30 WHY: GPUI leaves an element without a role out of the accessibility tree, so every clickable native modal control carries a role and a label; without them VoiceOver cannot name it and a background accessibility press (cua-driver) lands on the window instead of the control. Tab strips and the Settings rail use `Role::Button` with `aria_selected`, not `Role::Tab`: a Tab node without a TabList parent left the whole window's macOS accessibility tree empty (verified live in Settings and Commands).
+pub(crate) fn a11y_toggled(on: bool) -> gpui::Toggled {
+    if on {
+        gpui::Toggled::True
+    } else {
+        gpui::Toggled::False
+    }
+}
+
+/// `on_click` for a native modal control that also answers an accessibility press (VoiceOver,
+/// cua-driver) by running the same handler.
+///
+/// CDXC:Accessibility 2026-10-01 WHY: GPUI answers a press on a node with no press listener by synthesising a mouse click at the node's last bounds, which lands on whatever is there now: nothing when the control is scrolled out of its list, the wrong row after a re-layout. The handler is called directly instead.
+pub(crate) trait PressExt: gpui::StatefulInteractiveElement + Sized {
+    fn on_press<V: 'static>(
+        self,
+        cx: &Context<V>,
+        handler: impl Fn(&mut V, &mut Window, &mut Context<V>) + 'static,
+    ) -> Self {
+        let handler = Rc::new(handler);
+        let click = Rc::clone(&handler);
+        let view = cx.entity().downgrade();
+        self.on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+            click(this, window, cx);
+        }))
+        .on_a11y_action(gpui::AccessibleAction::Click, move |_, window, app| {
+            let _ = view.update(app, |this, cx| handler(this, window, cx));
+        })
+    }
+}
+
+impl<E: gpui::StatefulInteractiveElement> PressExt for E {}
 
 /// Captures one child's bounds from a prepaint pass, for anchoring popovers.
 pub(crate) fn capture_child_bounds(

@@ -10,10 +10,9 @@ use super::row::{CONTROL_HEIGHT, PageAction, RowSpec, setting_row, settings_icon
 use super::{FieldStates, SettingsPage, icon};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnchoredPositionMode, AnyElement, App, ClickEvent, Context, FocusHandle,
-    InteractiveElement as _, IntoElement, KeyDownEvent, MouseDownEvent, ParentElement as _,
-    SharedString, StatefulInteractiveElement as _, Styled as _, Window, anchored, deferred, div,
-    point, px,
+    AnchoredPositionMode, AnyElement, App, Context, FocusHandle, InteractiveElement as _,
+    IntoElement, KeyDownEvent, MouseDownEvent, ParentElement as _, SharedString,
+    StatefulInteractiveElement as _, Styled as _, Window, anchored, deferred, div, point, px,
 };
 use gpui_component::v_flex;
 
@@ -104,6 +103,10 @@ pub(crate) fn settings_select<V: SettingsPage>(
     let key_change = on_change.clone();
     let trigger = div()
         .id(SharedString::from(format!("{id}-trigger")))
+        .role(gpui::Role::ComboBox)
+        .accessibility_id(format!("{id}-trigger"))
+        .aria_value(label.clone())
+        .aria_expanded(open)
         .track_focus(&focus)
         .flex_shrink_0()
         .when_some(width, |this, width| this.w(px(width)))
@@ -135,9 +138,9 @@ pub(crate) fn settings_select<V: SettingsPage>(
             let click_id = id.clone();
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(p.raised_hover)))
-                .on_click(cx.listener(move |page, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |page, window, cx| {
                     toggle_select(page, &click_id, selected, window, cx);
-                }))
+                })
                 .on_key_down(cx.listener(move |page, event: &KeyDownEvent, window, cx| {
                     let key = event.keystroke.key.as_str();
                     let count = key_options.len();
@@ -217,6 +220,9 @@ pub(crate) fn settings_select<V: SettingsPage>(
         let on_change = on_change.clone();
         div()
             .id((SharedString::from(format!("{id}-option")), index))
+            .role(gpui::Role::ListBoxOption)
+            .aria_label(option.label.clone())
+            .aria_selected(is_selected)
             .w_full()
             .flex_shrink_0()
             .min_h(px(POPUP_ROW_HEIGHT))
@@ -240,10 +246,10 @@ pub(crate) fn settings_select<V: SettingsPage>(
             .when(!is_selected, |this| {
                 this.hover(move |this| this.bg(hsla(p.popup_hover)))
             })
-            .on_click(cx.listener(move |page, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |page, window, cx| {
                 close_select(page, cx);
                 on_change(page, value.clone(), window, cx);
-            }))
+            })
             .child(
                 div()
                     .flex_1()

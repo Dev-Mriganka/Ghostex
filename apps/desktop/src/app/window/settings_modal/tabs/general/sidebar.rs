@@ -207,6 +207,15 @@ fn sidebar_section(
     rows.extend(page.toggle(
         g,
         s,
+        "highlightPendingQuestions",
+        "Highlight unanswered questions",
+        "Give sessions with a detected unanswered question a soft pink background, including while the agent keeps working. Currently supports Codex asynchronous questions.",
+        false,
+        cx,
+    ));
+    rows.extend(page.toggle(
+        g,
+        s,
         "hideProjectHeaderDiffStats",
         "Hide project git stats",
         "Hide +added/-removed line counts in sidebar project rows.",

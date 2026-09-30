@@ -531,13 +531,13 @@ pub(crate) fn general_navigation(
 
 /// The General anchor a scroll target lands on (`mainSettingsSectionRefs`): a group scrolls to
 /// its first section (Tools to Browser, System to Power, Notifications to Sounds, Advanced to
-/// Experimental), a section to itself.
+/// Sleeping Sessions), a section to itself.
 pub(crate) fn general_scroll_anchor(target: &str) -> &str {
     match target {
         "tools" => "browser",
         "system" => "power",
         "sounds" => "notifications",
-        "advanced" => "beta",
+        "advanced" => "sleepingSessions",
         other => other,
     }
 }

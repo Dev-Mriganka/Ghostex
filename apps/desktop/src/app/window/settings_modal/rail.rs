@@ -257,6 +257,10 @@ pub(crate) fn render_rail(
             .child(
                 h_flex()
                     .id(SharedString::from(format!("rail-page-{}", tab.id())))
+                    .role(gpui::Role::Button)
+                    .aria_label(tab.title())
+                    .aria_selected(active)
+                    .accessibility_id(format!("rail-page-{}", tab.id()))
                     .flex_1()
                     .min_w_0()
                     .min_h(px(32.0))
@@ -271,9 +275,9 @@ pub(crate) fn render_rail(
                     .text_color(hsla(if active { p.foreground } else { resting }))
                     .when(active, |this| this.font_weight(FontWeight::MEDIUM))
                     .hover(|this| this.text_color(hsla(p.foreground)))
-                    .on_click(cx.listener(move |shell, _: &ClickEvent, window, cx| {
+                    .on_press(cx, move |shell, window, cx| {
                         shell.select_page(tab, window, cx);
-                    }))
+                    })
                     .child(
                         settings_icon(
                             tab.icon(),
@@ -298,6 +302,9 @@ pub(crate) fn render_rail(
                             "rail-page-disclosure-{}",
                             tab.id()
                         )))
+                        .role(gpui::Role::Button)
+                        .aria_label(format!("{} sections", tab.title()))
+                        .aria_expanded(expanded)
                         .flex_shrink_0()
                         .size(px(32.0))
                         .flex()
@@ -305,11 +312,11 @@ pub(crate) fn render_rail(
                         .justify_center()
                         .rounded(px(MODAL_RADIUS_CONTROL))
                         .cursor_pointer()
-                        .on_click(cx.listener(move |shell, _: &ClickEvent, _window, cx| {
+                        .on_press(cx, move |shell, _window, cx| {
                             let entry = shell.rail.expanded_pages.entry(tab).or_insert(false);
                             *entry = !*entry;
                             cx.notify();
-                        }))
+                        })
                         .child(settings_icon(
                             chevron(expanded),
                             12.0,
@@ -337,6 +344,10 @@ pub(crate) fn render_rail(
                 let section_id = section.id.clone();
                 let button = div()
                     .id(SharedString::from(format!("rail-section-{section_key}")))
+                    .role(gpui::Role::Button)
+                    .aria_label(section.title.clone())
+                    .aria_selected(section.active)
+                    .accessibility_id(format!("rail-section-{section_key}"))
                     .flex_1()
                     .min_w_0()
                     .h(px(32.0))
@@ -353,9 +364,9 @@ pub(crate) fn render_rail(
                     .when(!section.active, |this| {
                         this.hover(|this| this.text_color(hsla(p.muted)))
                     })
-                    .on_click(cx.listener(move |shell, _: &ClickEvent, window, cx| {
+                    .on_press(cx, move |shell, window, cx| {
                         shell.select_section(tab, &section_id, window, cx);
-                    }))
+                    })
                     .child(
                         div()
                             .min_w_0()
@@ -373,6 +384,9 @@ pub(crate) fn render_rail(
                                 .id(SharedString::from(format!(
                                     "rail-section-disclosure-{section_key}"
                                 )))
+                                .role(gpui::Role::Button)
+                                .aria_label(format!("{} subsections", section.title))
+                                .aria_expanded(sub_expanded)
                                 .flex_shrink_0()
                                 .size(px(28.0))
                                 .flex()
@@ -380,7 +394,7 @@ pub(crate) fn render_rail(
                                 .justify_center()
                                 .rounded(px(MODAL_RADIUS_CONTROL))
                                 .cursor_pointer()
-                                .on_click(cx.listener(move |shell, _: &ClickEvent, _window, cx| {
+                                .on_press(cx, move |shell, _window, cx| {
                                     let entry = shell
                                         .rail
                                         .expanded_sections
@@ -388,7 +402,7 @@ pub(crate) fn render_rail(
                                         .or_insert(false);
                                     *entry = !*entry;
                                     cx.notify();
-                                }))
+                                })
                                 .child(settings_icon(
                                     chevron(sub_expanded),
                                     12.0,
@@ -410,6 +424,9 @@ pub(crate) fn render_rail(
                                     "rail-subsection-{}:{sub_id}",
                                     tab.id()
                                 )))
+                                .role(gpui::Role::Button)
+                                .aria_label(sub_title.clone())
+                                .aria_selected(sub_active)
                                 .w_full()
                                 .min_w_0()
                                 .h(px(32.0))
@@ -426,9 +443,9 @@ pub(crate) fn render_rail(
                                 .when(!sub_active, |this| {
                                     this.hover(|this| this.text_color(hsla(p.muted)))
                                 })
-                                .on_click(cx.listener(move |shell, _: &ClickEvent, window, cx| {
+                                .on_press(cx, move |shell, window, cx| {
                                     shell.select_section(tab, &sub_target, window, cx);
-                                }))
+                                })
                                 .child(
                                     div()
                                         .min_w_0()
@@ -454,6 +471,10 @@ pub(crate) fn render_rail(
         .child(
             h_flex()
                 .id("settings-show-advanced")
+                .role(gpui::Role::Switch)
+                .aria_label("Show Advanced")
+                .aria_toggled(a11y_toggled(show_advanced))
+                .accessibility_id("settings-show-advanced")
                 .w_full()
                 .min_h(px(36.0))
                 .px(px(10.0))
@@ -466,7 +487,7 @@ pub(crate) fn render_rail(
                 .border_color(transparent())
                 .cursor_pointer()
                 .hover(move |this| this.bg(hsla(accent)))
-                .on_click(cx.listener(move |shell, _: &ClickEvent, _window, cx| {
+                .on_press(cx, move |shell, _window, cx| {
                     let store = shell.store.clone();
                     store.update(cx, |store, cx| {
                         store.update_setting(
@@ -475,7 +496,7 @@ pub(crate) fn render_rail(
                             cx,
                         );
                     });
-                }))
+                })
                 .child(
                     div()
                         .min_w_0()
@@ -562,6 +583,8 @@ pub(crate) fn render_no_matches(
                         let on_select = on_select.clone();
                         h_flex()
                             .id(SharedString::from(format!("no-matches-{}", tab.id())))
+                            .role(gpui::Role::Button)
+                            .aria_label(tab.title())
                             .h(px(32.0))
                             .pl(px(10.0))
                             .pr(px(12.0))

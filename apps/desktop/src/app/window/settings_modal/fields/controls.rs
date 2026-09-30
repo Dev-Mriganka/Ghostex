@@ -7,9 +7,8 @@ use super::SettingsPage;
 use super::row::{PageAction, RowSpec, reset_key, setting_row, settings_icon, tooltip_text};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _, Window, div,
-    px,
+    AnyElement, Context, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
+    SharedString, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::h_flex;
 use serde_json::json;
@@ -71,14 +70,42 @@ pub(crate) fn switch_control<V: 'static>(
     on_change: impl Fn(&mut V, bool, &mut Window, &mut Context<V>) + 'static,
     cx: &mut Context<V>,
 ) -> AnyElement {
+    labeled_switch_control(
+        p,
+        id,
+        None,
+        checked,
+        disabled,
+        disabled_reason,
+        on_change,
+        cx,
+    )
+}
+
+/// [`switch_control`] named for the accessibility tree by its row's label.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn labeled_switch_control<V: 'static>(
+    p: &SettingsPalette,
+    id: impl Into<ElementId>,
+    label: Option<SharedString>,
+    checked: bool,
+    disabled: bool,
+    disabled_reason: Option<SharedString>,
+    on_change: impl Fn(&mut V, bool, &mut Window, &mut Context<V>) + 'static,
+    cx: &mut Context<V>,
+) -> AnyElement {
+    let id: ElementId = id.into();
     div()
-        .id(id)
+        .id(id.clone())
+        .role(gpui::Role::Switch)
+        .aria_toggled(a11y_toggled(checked))
+        .accessibility_id(id.to_string())
+        .when_some(label, |this, label| this.aria_label(label))
         .flex_shrink_0()
         .when(!disabled, |this| {
-            this.cursor_pointer()
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
-                    on_change(this, !checked, window, cx);
-                }))
+            this.cursor_pointer().on_press(cx, move |this, window, cx| {
+                on_change(this, !checked, window, cx);
+            })
         })
         .when_some(disabled_reason.filter(|_| disabled), |this, reason| {
             this.tooltip(tooltip_text(reason))
@@ -249,8 +276,11 @@ pub(crate) fn settings_button_sized<V: 'static>(
     let primary = variant == ButtonVariant::Primary;
     let text = button_text(p, variant);
     let (height, side, gap, line_height) = size.metrics();
+    let label: SharedString = label.into();
     h_flex()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(label.clone())
         .flex_shrink_0()
         .h(px(height))
         .px(px(side))
@@ -281,12 +311,12 @@ pub(crate) fn settings_button_sized<V: 'static>(
         .when(!disabled, |this| {
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(hover)))
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |this, window, cx| {
                     on_click(this, window, cx);
-                }))
+                })
         })
         .children(leading_icon.map(|icon| settings_icon(icon, 16.0, text)))
-        .child(label.into())
+        .child(label)
         .into_any_element()
 }
 
@@ -306,8 +336,11 @@ pub(crate) fn settings_icon_button<V: 'static>(
 ) -> AnyElement {
     let (background, border, hover) = button_colors(p, variant);
     let color = button_text(p, variant);
+    let id: ElementId = id.into();
     div()
-        .id(id)
+        .id(id.clone())
+        .role(gpui::Role::Button)
+        .aria_label(tooltip.clone().unwrap_or_else(|| id.to_string().into()))
         .flex_shrink_0()
         .size(px(size))
         .flex()
@@ -322,9 +355,9 @@ pub(crate) fn settings_icon_button<V: 'static>(
         .when(!disabled, |this| {
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(hover)))
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |this, window, cx| {
                     on_click(this, window, cx);
-                }))
+                })
         })
         .child(settings_icon(icon, icon_size, color))
         .into_any_element()
@@ -364,9 +397,10 @@ pub(crate) fn toggle_field_with<V: SettingsPage>(
     on_change: impl Fn(&mut V, bool, &mut Window, &mut Context<V>) + 'static,
     cx: &mut Context<V>,
 ) -> AnyElement {
-    let control = switch_control(
+    let control = labeled_switch_control(
         p,
         SharedString::from(format!("{id}-switch")),
+        Some(spec.label.clone()),
         checked,
         false,
         None,

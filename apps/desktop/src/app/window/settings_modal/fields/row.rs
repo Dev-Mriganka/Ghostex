@@ -7,9 +7,9 @@ use super::super::store::SettingsValues;
 use super::{SettingsPage, icon};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, Div, ElementId, FontWeight, InteractiveElement as _,
-    IntoElement, ParentElement as _, SharedString, Stateful, StatefulInteractiveElement as _,
-    Styled as _, Window, div, px,
+    AnyElement, Context, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
+    ParentElement as _, SharedString, Stateful, StatefulInteractiveElement as _, Styled as _,
+    Window, div, px,
 };
 use gpui_component::tooltip::{ManagedTooltipExt as _, ManagedTooltipPlacement, Tooltip};
 use gpui_component::{h_flex, v_flex};
@@ -244,6 +244,8 @@ fn modified_reset_button<V: SettingsPage>(
     // `right: calc(100% + 0.1875rem)`: 14px wide, 3px left of the label line.
     let button = div()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label("Reset to default")
         .size(px(14.0))
         .flex()
         .items_center()
@@ -252,9 +254,9 @@ fn modified_reset_button<V: SettingsPage>(
         .cursor_pointer()
         .text_color(hsla(color))
         .hover(move |this| this.text_color(hsla(hover)))
-        .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+        .on_press(cx, move |this, window, cx| {
             on_reset(this, window, cx);
-        }))
+        })
         .child(settings_icon(icon::ASTERISK, 10.0, color));
     // `<TooltipContent className='whitespace-pre-line text-center' sideOffset={6}>` (below).
     let button = placed_tooltip(

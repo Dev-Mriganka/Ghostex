@@ -8,8 +8,8 @@ use super::super::super::native_modal_kit::*;
 use super::super::palette::SettingsPalette;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, StatefulInteractiveElement as _, Styled as _, Window, px,
+    AnyElement, Context, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
+    StatefulInteractiveElement as _, Styled as _, Window, px,
 };
 use gpui_component::h_flex;
 
@@ -34,6 +34,9 @@ pub(crate) fn stock_segmented<V: 'static>(
         let on_select = on_select.clone();
         h_flex()
             .id((id.clone(), index))
+            .role(gpui::Role::RadioButton)
+            .aria_label(label.clone())
+            .aria_toggled(a11y_toggled(pressed))
             .when(stretch, |this| this.flex_1().flex_basis(px(0.0)).min_w_0())
             .when(!stretch, |this| this.flex_shrink_0())
             .h_full()
@@ -60,11 +63,11 @@ pub(crate) fn stock_segmented<V: 'static>(
                 })
             })
             .when(!disabled, |this| {
-                this.on_click(cx.listener(move |page, _: &ClickEvent, window, cx| {
+                this.on_press(cx, move |page, window, cx| {
                     if !pressed {
                         on_select(page, value.clone(), window, cx);
                     }
-                }))
+                })
             })
             .child(label.clone())
     });

@@ -7,9 +7,8 @@ use super::super::palette::SettingsPalette;
 use super::row::{settings_icon, tooltip_text};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _, Window, div,
-    px,
+    AnyElement, Context, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
+    SharedString, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::h_flex;
 
@@ -136,8 +135,11 @@ pub(crate) fn settings_sized_button<V: 'static>(
         SizedButtonSize::Xs | SizedButtonSize::Sm => 8.0,
         SizedButtonSize::Default => 10.0,
     };
+    let label: SharedString = label.into();
     h_flex()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(label.clone())
         .flex_shrink_0()
         .h(px(height))
         .px(px(side))
@@ -161,12 +163,12 @@ pub(crate) fn settings_sized_button<V: 'static>(
         .when(!disabled, |this| {
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(hover)))
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |this, window, cx| {
                     on_click(this, window, cx);
-                }))
+                })
         })
         .children(leading_icon.map(|icon| settings_icon(icon, icon_size, text)))
-        .child(label.into())
+        .child(label)
         .children(trailing_icon.map(|icon| settings_icon(icon, icon_size, text)))
         .into_any_element()
 }
@@ -194,8 +196,12 @@ pub(crate) fn settings_square_button<V: 'static>(
     } else {
         tooltip
     };
+    let id: ElementId = id.into();
+    let a11y_label: SharedString = tip.clone().unwrap_or_else(|| id.to_string().into());
     div()
         .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(a11y_label)
         .flex_shrink_0()
         .size(px(size))
         .flex()
@@ -210,9 +216,9 @@ pub(crate) fn settings_square_button<V: 'static>(
         .when(!disabled, |this| {
             this.cursor_pointer()
                 .hover(move |this| this.bg(hsla(hover)))
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+                .on_press(cx, move |this, window, cx| {
                     on_click(this, window, cx);
-                }))
+                })
         })
         .child(settings_icon(icon, icon_size, icon_color.unwrap_or(text)))
         .into_any_element()

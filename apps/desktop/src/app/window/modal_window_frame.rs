@@ -7,8 +7,8 @@
 use super::native_modal_kit::*;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyView, App, ClickEvent, Context, Entity, InteractiveElement as _, IntoElement,
-    ParentElement as _, Render, StatefulInteractiveElement as _, Styled as _, Window, div, px,
+    AnyView, App, Context, Entity, InteractiveElement as _, IntoElement, ParentElement as _,
+    Render, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use std::rc::Rc;
 
@@ -43,6 +43,8 @@ impl ModalWindowFrame {
         let hover = css_mix(p.foreground, 0.16, p.solid_surface);
         div()
             .id("app-modal-corner-close")
+            .role(gpui::Role::Button)
+            .aria_label("Close")
             .absolute()
             .top(px(MODAL_CORNER_CLOSE_INSET))
             .right(px(MODAL_CORNER_CLOSE_INSET))
@@ -60,10 +62,10 @@ impl ModalWindowFrame {
             .opacity(0.0)
             .group_hover(FRAME_GROUP, |style| style.opacity(1.0))
             .hover(move |style| style.opacity(1.0).bg(hsla(hover)))
-            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |this, window, cx| {
                 cx.stop_propagation();
                 (this.dismiss)(window, cx);
-            }))
+            })
             .child(modal_icon(ICON_CLOSE, 14.0, p.foreground))
     }
 }

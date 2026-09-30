@@ -9,8 +9,8 @@ use super::SettingsPage;
 use super::row::{PageAction, RowSpec, setting_row};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, StatefulInteractiveElement as _, Styled as _, Window, div, px,
+    AnyElement, Context, InteractiveElement as _, IntoElement, ParentElement as _, SharedString,
+    StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 use gpui_component::h_flex;
 
@@ -33,6 +33,9 @@ pub(crate) fn settings_segmented<V: 'static>(
         let on_select = on_select.clone();
         div()
             .id(SharedString::from(format!("{id}-segment-{index}")))
+            .role(gpui::Role::RadioButton)
+            .aria_label(option.label.clone())
+            .aria_toggled(a11y_toggled(pressed))
             .flex_shrink_0()
             .h_full()
             .px(px(12.0))
@@ -49,11 +52,11 @@ pub(crate) fn settings_segmented<V: 'static>(
             .when(!pressed, |this| {
                 this.hover(move |this| this.bg(hsla(hover_bg)).text_color(hsla(text)))
             })
-            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |this, window, cx| {
                 if !pressed {
                     on_select(this, value.clone(), window, cx);
                 }
-            }))
+            })
             .child(option.label.clone())
     });
     h_flex()

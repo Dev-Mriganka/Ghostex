@@ -1,7 +1,7 @@
 //! The General page (the `settings` tab of packages/core-ui/settings-modal.tsx): Sidebar,
 //! Session Cards, Sidebar Tags, Chat, Status Indicators, Browser, Dev Servers, Editor, File
-//! opening, Terminal, Terminal Behavior, Terminal Scrolling, Auto Sleep, Power, Sounds and
-//! Experimental, in that order (CDXC:Settings 2026-08-24: each rail group's sections stay
+//! opening, Terminal, Terminal Behavior, Terminal Scrolling, Auto Sleep, Power, Sounds, Sleeping
+//! Sessions and Experimental, in that order (CDXC:Settings 2026-08-24: each rail group's sections stay
 //! contiguous), then Reset to defaults.
 mod chat_tools;
 mod sidebar;

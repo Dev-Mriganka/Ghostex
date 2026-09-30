@@ -1,5 +1,5 @@
-//! The System, Notifications and Advanced groups of General: Auto Sleep, Power, Sounds and
-//! Experimental.
+//! The System, Notifications and Advanced groups of General: Auto Sleep, Power, Sounds, Sleeping
+//! Sessions and Experimental.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::catalog::{SettingOption, settings_catalog};
 use super::super::super::fields::{
@@ -304,6 +304,42 @@ fn sounds_section(
         .map(|section| PageBlock::section("notifications", section))
 }
 
+/// The two sleeping-session toggles (CDXC:SessionSleep 2026-09-29 DECISION in
+/// packages/shared/ghostex-settings/types.ts).
+fn sleeping_sessions_section(
+    page: &mut GeneralTab,
+    g: &GeneralCx,
+    cx: &mut Context<GeneralTab>,
+) -> Option<PageBlock> {
+    if !g
+        .search
+        .subsection_visible("sleepingSessions", g.power_visible)
+    {
+        return None;
+    }
+    let mut rows: Vec<AnyElement> = Vec::new();
+    rows.extend(page.toggle(
+        g,
+        "sleepingSessions",
+        "dimSleepingSessions",
+        "Dim sleeping sessions",
+        "Fade sleeping sessions in the sidebar so they stand apart from awake ones.",
+        false,
+        cx,
+    ));
+    rows.extend(page.toggle(
+        g,
+        "sleepingSessions",
+        "wakeSleepingSessionsOnSelect",
+        "Wake sleeping sessions when selected",
+        "Wake a sleeping session as soon as you select it. Turn off to open it with a Resume button instead, so switching sessions does not wake it by accident.",
+        false,
+        cx,
+    ));
+    settings_section(&g.p, "Sleeping Sessions", None, None, rows)
+        .map(|section| PageBlock::section("sleepingSessions", section))
+}
+
 fn experimental_section(
     page: &mut GeneralTab,
     g: &GeneralCx,
@@ -373,6 +409,7 @@ pub(super) fn sections(
         auto_sleep_section(page, g, window, cx),
         power_section(page, g, window, cx),
         sounds_section(page, g, window, cx),
+        sleeping_sessions_section(page, g, cx),
         experimental_section(page, g, cx),
     ]
     .into_iter()

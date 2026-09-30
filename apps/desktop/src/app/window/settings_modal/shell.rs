@@ -10,7 +10,7 @@ use super::rail::{RailState, rail_pages, render_rail};
 use super::store::{SettingsStore, new_settings_store};
 use super::tabs::settings_tab_view;
 use gpui::{
-    AnyElement, AnyView, App, AppContext as _, ClickEvent, Context, Entity, FocusHandle, Focusable,
+    AnyElement, AnyView, App, AppContext as _, Context, Entity, FocusHandle, Focusable,
     InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, Render, ScrollHandle,
     StatefulInteractiveElement as _, Styled as _, Subscription, Window, div, px,
 };
@@ -321,6 +321,8 @@ impl GpuiSettingsModalWindow {
                             .child(if has_query {
                                 div()
                                     .id("settings-search-clear")
+                                    .role(gpui::Role::Button)
+                                    .aria_label("Clear search")
                                     .absolute()
                                     .right(px(8.0))
                                     .top(px(3.0))
@@ -329,7 +331,7 @@ impl GpuiSettingsModalWindow {
                                     .items_center()
                                     .justify_center()
                                     .cursor_pointer()
-                                    .on_click(cx.listener(|shell, _: &ClickEvent, window, cx| {
+                                    .on_press(cx, move |shell, window, cx| {
                                         shell.search_input.update(cx, |input, cx| {
                                             input.set_value("", window, cx);
                                             input.focus(window, cx);
@@ -338,7 +340,7 @@ impl GpuiSettingsModalWindow {
                                         store.update(cx, |store, cx| {
                                             store.set_search_query(String::new(), cx)
                                         });
-                                    }))
+                                    })
                                     .child(settings_icon(icon::X, 16.0, p.muted))
                                     .into_any_element()
                             } else {

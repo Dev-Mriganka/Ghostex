@@ -7,9 +7,8 @@ use super::super::palette::SettingsPalette;
 use super::row::{settings_icon, tooltip_text};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, ElementId, InteractiveElement as _, IntoElement,
-    ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _, Window, div,
-    px,
+    AnyElement, Context, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
+    SharedString, StatefulInteractiveElement as _, Styled as _, Window, div, px,
 };
 
 /// `IconCheck`.
@@ -52,13 +51,15 @@ pub(crate) fn checkbox_control<V: 'static>(
 ) -> AnyElement {
     div()
         .id(id)
+        .role(gpui::Role::CheckBox)
+        .aria_toggled(a11y_toggled(checked))
         .flex()
         .items_center()
         .gap(px(gap))
         .cursor_pointer()
-        .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+        .on_press(cx, move |this, window, cx| {
             on_change(this, !checked, window, cx);
-        }))
+        })
         .child(settings_checkbox(p, checked, false))
         .children(label)
         .into_any_element()
@@ -122,14 +123,17 @@ pub(crate) fn small_switch_control<V: 'static>(
     on_change: impl Fn(&mut V, bool, &mut Window, &mut Context<V>) + 'static,
     cx: &mut Context<V>,
 ) -> AnyElement {
+    let id: ElementId = id.into();
     div()
-        .id(id)
+        .id(id.clone())
+        .role(gpui::Role::Switch)
+        .aria_toggled(a11y_toggled(checked))
+        .accessibility_id(id.to_string())
         .flex_shrink_0()
         .when(!disabled, |this| {
-            this.cursor_pointer()
-                .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
-                    on_change(this, !checked, window, cx);
-                }))
+            this.cursor_pointer().on_press(cx, move |this, window, cx| {
+                on_change(this, !checked, window, cx);
+            })
         })
         .when_some(disabled_reason.filter(|_| disabled), |this, reason| {
             this.tooltip(tooltip_text(reason))

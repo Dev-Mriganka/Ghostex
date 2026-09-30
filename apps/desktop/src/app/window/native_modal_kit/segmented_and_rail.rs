@@ -1,9 +1,9 @@
 use super::*;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, ClickEvent, Context, Div, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement as _, Rgba, SharedString, Stateful, StatefulInteractiveElement as _, Styled as _,
-    Window, div, point, px, rgb,
+    AnyElement, Context, Div, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _,
+    Rgba, SharedString, Stateful, StatefulInteractiveElement as _, Styled as _, Window, div, point,
+    px, rgb,
 };
 use gpui_component::h_flex;
 
@@ -44,6 +44,9 @@ pub(crate) fn modal_segmented_control<V: 'static>(
         let on_select = on_select.clone();
         h_flex()
             .id((id, index))
+            .role(gpui::Role::RadioButton)
+            .aria_label(item.label)
+            .aria_toggled(a11y_toggled(pressed))
             .flex_1()
             .flex_basis(px(0.0))
             .min_w_0()
@@ -79,9 +82,9 @@ pub(crate) fn modal_segmented_control<V: 'static>(
             .when(!pressed, |this| {
                 this.hover(move |this| this.bg(hsla(hover_bg)).text_color(hsla(active_text)))
             })
-            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |this, window, cx| {
                 on_select(this, index, window, cx);
-            }))
+            })
             .children(item.icon.map(|icon| {
                 modal_icon(icon, 16.0, if pressed { active_text } else { text }).flex_shrink_0()
             }))
@@ -193,6 +196,9 @@ pub(crate) fn modal_raised_tab_rail<V: 'static>(
         let on_select = on_select.clone();
         h_flex()
             .id((id, index))
+            .role(gpui::Role::Button)
+            .aria_label(item.label.clone())
+            .aria_selected(pressed)
             .flex_1()
             .flex_basis(px(0.0))
             .min_w_0()
@@ -228,9 +234,9 @@ pub(crate) fn modal_raised_tab_rail<V: 'static>(
             .when(!pressed, |this| {
                 this.hover(move |this| this.bg(hsla(hover_bg)).text_color(hsla(active_text)))
             })
-            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |this, window, cx| {
                 on_select(this, index, window, cx);
-            }))
+            })
             .child(
                 div()
                     .min_w_0()
@@ -285,6 +291,9 @@ pub(crate) fn modal_bordered_segmented_control<V: 'static>(
         let on_select = on_select.clone();
         h_flex()
             .id((id, index))
+            .role(gpui::Role::RadioButton)
+            .aria_label(item.label.clone())
+            .aria_toggled(a11y_toggled(pressed))
             .flex_1()
             .flex_basis(px(0.0))
             .min_w_0()
@@ -312,9 +321,9 @@ pub(crate) fn modal_bordered_segmented_control<V: 'static>(
                         .text_color(hsla(foreground))
                 })
             })
-            .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
+            .on_press(cx, move |this, window, cx| {
                 on_select(this, index, window, cx);
-            }))
+            })
             .child(item.label.clone())
             .children(
                 item.trailing
