@@ -8,7 +8,7 @@ use gpui_component::{
 use super::session_list::SESSION_INSET_X;
 use crate::app::helpers::{
     titlebar_popup_menu_background, titlebar_popup_menu_border_color,
-    titlebar_popup_menu_foreground, window_glass_active_in,
+    titlebar_popup_menu_foreground, tooltip_background, window_glass_active_in,
 };
 
 /**
@@ -80,12 +80,13 @@ fn sidebar_tooltip_sized(
     // and the host's bubble corners (see app/window/frosted_host.rs).
     let frosted = window_glass_active_in(window)
         && crate::app::window::frosted_host::frosted_hosting_active();
+    // Dark mode darkens it and fills more of the blur (`tooltip_background`, CDXC:Tooltips 2026-09-30).
     let background = if frosted {
-        crate::app::helpers::frosted_menu_fill(menu)
+        crate::app::helpers::frosted_tooltip_fill(menu)
     } else if window_glass_active_in(window) {
-        menu.opacity(0.9)
+        tooltip_background(menu).opacity(0.9)
     } else {
-        menu
+        tooltip_background(menu)
     };
     let radius = if frosted {
         px(gpui_component::tooltip::FROSTED_TOOLTIP_RADIUS)

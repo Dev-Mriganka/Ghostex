@@ -166,16 +166,17 @@ pub(crate) fn apply_gpui_component_theme(cx: &mut App) {
     // tinted menu colour as the app's menus.
     // Under glass tooltips draw in the frosted tooltip window, which paints this token at the
     // frosted alpha, so it takes the same lifted colour as the other frosted menus.
+    // Dark mode darkens it and fills more of the blur (`tooltip_background`, CDXC:Tooltips 2026-09-30).
     theme.tokens.popover = if window_glass_active() {
-        frosted_menu_fill(titlebar_popup_menu_background())
+        frosted_tooltip_fill(titlebar_popup_menu_background())
             .opacity(1.0)
             .into()
     } else {
-        titlebar_popup_menu_background().into()
+        tooltip_background(titlebar_popup_menu_background()).into()
     };
     theme.popover_foreground = titlebar_popup_menu_foreground();
     theme.border = titlebar_popup_menu_border_color();
-    gpui_component::tooltip::set_frosted_tooltip_alpha(frosted_menu_alpha());
+    gpui_component::tooltip::set_frosted_tooltip_alpha(frosted_tooltip_alpha());
     theme.radius = px(2.0);
     theme.scrollbar = gpui::transparent_black();
     theme.scrollbar_mode = gpui_component::scroll::ScrollbarMode::Hover;

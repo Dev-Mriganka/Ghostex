@@ -100,6 +100,20 @@ pub(crate) fn frosted_menu_fill(color: gpui::Hsla) -> gpui::Hsla {
     color
 }
 
+/// The desktop's tooltip colour: the menu colour darkened toward black in dark mode (CDXC:Tooltips 2026-09-30 in the desktop's `window_glass.rs`).
+pub(crate) fn tooltip_background(menu: gpui::Hsla) -> gpui::Hsla {
+    if crate::CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed) {
+        menu
+    } else {
+        menu.blend(gpui::black().opacity(0.55))
+    }
+}
+
+/// A page has no window glass, so a tooltip keeps its solid fill.
+pub(crate) fn frosted_tooltip_fill(menu: gpui::Hsla) -> gpui::Hsla {
+    tooltip_background(menu)
+}
+
 /// A page has no window glass, so a dialog keeps its solid fill.
 pub(crate) fn frosted_modal_fill(color: gpui::Hsla) -> gpui::Hsla {
     color

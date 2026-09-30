@@ -612,6 +612,42 @@ fn frosted_lift(color: Hsla) -> Hsla {
     }
 }
 
+/// CDXC:Tooltips 2026-09-30 DECISION:
+/// User: "make tooltips always have darker color in dark mode pls", "even if transparency enabled they should have dimmed bg". In dark mode a tooltip takes the menu colour darkened toward black (`TOOLTIP_DARKEN_DARK`), and under glass that colour covers most of the tooltip's blur (`FROSTED_TOOLTIP_ALPHA_DARK`) without the menus' lift toward white, so a tinted wallpaper no longer shows through as a coloured bubble. Light mode keeps the menus' colour and fill. Supersedes the 2026-09-25 frosted menu fill for dark-mode tooltips.
+pub(crate) fn tooltip_background(menu: Hsla) -> Hsla {
+    if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+        menu
+    } else {
+        menu.blend(gpui::black().opacity(TOOLTIP_DARKEN_DARK))
+    }
+}
+
+/// How far a dark-mode tooltip's colour moves from the menu colour toward black.
+const TOOLTIP_DARKEN_DARK: f32 = 0.55;
+
+/// Fill coverage of a dark-mode tooltip under glass on macOS and Windows.
+const FROSTED_TOOLTIP_ALPHA_DARK: f32 = 0.9;
+
+/// How much of a frosted tooltip its fill covers: the menus' coverage in light mode, most of the
+/// blur in dark mode (see `tooltip_background`).
+pub(crate) fn frosted_tooltip_alpha() -> f32 {
+    if cfg!(target_os = "linux") || CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+        frosted_menu_alpha()
+    } else {
+        FROSTED_TOOLTIP_ALPHA_DARK
+    }
+}
+
+/// The fill of a frosted tooltip under glass: `tooltip_background` at `frosted_tooltip_alpha`,
+/// lifted toward white only in light mode, like the menus.
+pub(crate) fn frosted_tooltip_fill(menu: Hsla) -> Hsla {
+    if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+        frosted_menu_fill(menu)
+    } else {
+        tooltip_background(menu).opacity(frosted_tooltip_alpha())
+    }
+}
+
 /// How much of a frosted menu or tooltip its fill covers: little in dark mode, where the menu's
 /// light text reads over anything behind it, more in light mode, where dark text needs a lighter
 /// backing. Opaque on Linux, like the dialogs (`frosted_modal_alpha`).
