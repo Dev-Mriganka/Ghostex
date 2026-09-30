@@ -77,6 +77,9 @@ pub struct MenuItem {
     pub agent_launcher: bool,
     /// The last-used agent, drawn highlighted.
     pub primary: bool,
+    /// The hotkey action id (`ghostex-hotkeys.ts`) that runs the same action; the renderer shows
+    /// its current binding in the button's tooltip.
+    pub hotkey: Option<String>,
 }
 
 impl MenuItem {
@@ -130,6 +133,11 @@ impl MenuItem {
         self
     }
 
+    pub(crate) fn with_hotkey(mut self, action_id: &str) -> Self {
+        self.hotkey = Some(action_id.to_string());
+        self
+    }
+
     pub(crate) fn with_page(mut self) -> Self {
         self.page = true;
         self
@@ -165,6 +173,7 @@ impl MenuItem {
         text("imageDataUrl", &self.image_data_url);
         text("agentIcon", &self.agent_icon);
         text("menuOwner", &self.menu_owner);
+        text("hotkey", &self.hotkey);
         let mut flag = |key: &str, value: bool| {
             if value {
                 object.insert(key.to_string(), Value::Bool(true));

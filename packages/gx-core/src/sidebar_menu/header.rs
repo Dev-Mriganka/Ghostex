@@ -117,17 +117,23 @@ pub fn project_header_actions(
         ),
     ];
     if !settings.browser_view_tab_hidden {
-        actions.push(MenuItem::row(
-            "New Browser Tab",
-            "world",
-            MenuCommand::command(message::open_browser_pane_in_group(group_id)),
-        ));
+        actions.push(
+            MenuItem::row(
+                "New Browser Tab",
+                "world",
+                MenuCommand::command(message::open_browser_pane_in_group(group_id)),
+            )
+            .with_hotkey("openBrowserPane"),
+        );
     }
-    actions.push(MenuItem::row(
-        "Create Terminal",
-        "terminal-2",
-        MenuCommand::command(message::create_project_terminal(group_id)),
-    ));
+    actions.push(
+        MenuItem::row(
+            "Create Terminal",
+            "terminal-2",
+            MenuCommand::command(message::create_project_terminal(group_id)),
+        )
+        .with_hotkey("createSession"),
+    );
     actions.append(&mut pinned);
     let primary = host.primary_agent();
     let primary_icon = primary.and_then(|agent| agent.icon.as_deref());
@@ -147,6 +153,7 @@ pub fn project_header_actions(
             primary.map(|agent| agent.agent_id.as_str()),
         )),
         split: Some(MenuSplit::Start),
+        hotkey: Some("createAgentSession".to_string()),
         ..MenuItem::default()
     });
     actions.push(MenuItem {

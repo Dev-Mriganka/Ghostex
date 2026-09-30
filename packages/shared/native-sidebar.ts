@@ -164,4 +164,6 @@ export type NativeSidebarMenuItem = {
   menuStyle?: 'agentLauncher';
   /** The last-used agent in the agent launcher, shown highlighted with a semibold label. */
   primary?: boolean;
+  /** Hotkey action id (`ghostex-hotkeys.ts`) running the same action; header buttons show its binding in their tooltip. */
+  hotkey?: string;
 };

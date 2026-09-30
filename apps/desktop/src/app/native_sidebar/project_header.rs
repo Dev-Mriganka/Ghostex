@@ -290,11 +290,19 @@ impl GhostexGpuiApp {
                                         && !cx.has_active_drag(),
                                     |row| {
                                         // CDXC:Sidebar 2026-09-23 DECISION: User: header button tooltips "appear below and aligned to the left not to the right (so they stay within the bounds of the sidebar)". The bubble's right edge lines up with the button and it grows leftward; the session card's buttons (hover_actions.rs) do the same.
+                                        // The binding is read here, not in gx-core, so it follows the user's Settings > Hotkeys.
+                                        let tooltip = match item["hotkey"]
+                                            .as_str()
+                                            .and_then(crate::app::hotkeys::gpui_configured_hotkey_label)
+                                        {
+                                            Some(shortcut) => format!("{label} ({shortcut})"),
+                                            None => label.clone(),
+                                        };
                                         row.managed_discrete_tooltip_with_placement(
                                             ManagedTooltipPlacement::BelowLeft,
                                             appearance.tooltip_delay,
                                             move |window, cx| {
-                                                titlebar_tooltip(label.clone(), window, cx)
+                                                titlebar_tooltip(tooltip.clone(), window, cx)
                                             },
                                         )
                                     },
