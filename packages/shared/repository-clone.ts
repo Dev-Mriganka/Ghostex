@@ -147,7 +147,7 @@ function isRepositoryLikeToken(token: string): boolean {
   );
 }
 
-/** CDXC:AddProject 2026-09-11 SEE-ALSO: server/src/repository_clone.rs preserves Azure clone paths without adding a .git suffix. */
+/** CDXC:AddProject 2026-09-11 SEE-ALSO: server/src/repository_clone/input_parse.rs preserves Azure clone paths without adding a .git suffix. */
 function normalizeRepositoryPathForHost(host: string, path: string): string {
   return /^(?:dev\.azure\.com|ssh\.dev\.azure\.com|.+\.visualstudio\.com)$/iu.test(host.split('@').at(-1) ?? host)
     ? (path.split(/[?#]/u)[0] ?? '').replace(/\/+$/u, '')

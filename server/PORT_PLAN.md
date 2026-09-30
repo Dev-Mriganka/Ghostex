@@ -106,7 +106,7 @@ Suggested modules:
 - `src/zmx.rs`: zmx command construction, probing, start/attach/send/history/kill.
 - `src/agents.rs`: agent settings, launch/resume/fork plans, activity status.
 - `src/typed_ops.rs`: typed Git/GitHub/worktree/Beads operations.
-- `src/repository_clone.rs`: clone preview/jobs/cancel/poll.
+- `src/repository_clone/`: clone preview/jobs/cancel/poll.
 - `src/logging/`: support-bundle-safe structured JSONL logging.
 - `src/runtime.rs`: runtime metadata and status helpers.
 - `tests/compat/`: black-box compatibility tests shared against TS and Rust daemons.
