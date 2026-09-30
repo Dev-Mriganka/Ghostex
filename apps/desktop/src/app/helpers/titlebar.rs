@@ -2145,15 +2145,18 @@ pub(crate) fn cef_parent_native_view(window: &Window) -> Result<*mut std::ffi::c
     */
     let handle = raw_window_handle::HasWindowHandle::window_handle(window)
         .map_err(|error| anyhow::anyhow!("failed to read GPUI raw window handle: {error:?}"))?;
-    match handle.as_raw() {
-        RawWindowHandle::AppKit(handle) => Ok(handle.ns_view.as_ptr()),
-        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get() as *mut std::ffi::c_void),
-        RawWindowHandle::Xcb(handle) => Ok(handle.window.get() as usize as *mut std::ffi::c_void),
-        RawWindowHandle::Xlib(handle) => Ok(handle.window as usize as *mut std::ffi::c_void),
+    let native_view = match handle.as_raw() {
+        RawWindowHandle::AppKit(handle) => handle.ns_view.as_ptr(),
+        RawWindowHandle::Win32(handle) => handle.hwnd.get() as *mut std::ffi::c_void,
+        RawWindowHandle::Xcb(handle) => handle.window.get() as usize as *mut std::ffi::c_void,
+        RawWindowHandle::Xlib(handle) => handle.window as usize as *mut std::ffi::c_void,
         other => {
             anyhow::bail!("windowed CEF requires an AppKit, Win32, or X11 parent, got {other:?}")
         }
-    }
+    };
+    #[cfg(target_os = "linux")]
+    crate::cef::note_gpui_window_native_parent(window.window_handle().window_id(), native_view);
+    Ok(native_view)
 }
 
 pub(crate) fn normalize_address(value: &str) -> Option<String> {

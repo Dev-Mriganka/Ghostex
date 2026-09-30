@@ -595,6 +595,43 @@ pub(super) fn release_native_view(native_view: *mut c_void) {
     }
 }
 
+/// Detaches every embed host still inside the GPUI window `parent`, the same way
+/// `release_native_view` detaches one, before GPUI destroys that window.
+pub(super) fn detach_native_views_from_parent(parent: *mut c_void) {
+    let Some(parent) = x11_window(parent) else {
+        return;
+    };
+    let hosts: Vec<X11Window> = EMBED_HOST_BY_CEF_WINDOW
+        .lock()
+        .expect("CEF embed-host registry mutex should not be poisoned")
+        .as_ref()
+        .map(|hosts| hosts.values().copied().collect())
+        .unwrap_or_default();
+    if hosts.is_empty() {
+        return;
+    }
+    let (connection, screen_index) = x11_connection();
+    let root = connection.setup().roots[*screen_index].root;
+    let mut detached = false;
+    for host in hosts {
+        let host_parent = connection
+            .query_tree(host)
+            .ok()
+            .and_then(|cookie| cookie.reply().ok())
+            .map(|tree| tree.parent);
+        if host_parent != Some(parent) {
+            continue;
+        }
+        let _ = connection.unmap_window(host);
+        let _ = connection.reparent_window(host, root, 0, 0);
+        detached = true;
+    }
+    // GPUI destroys the parent on its own connection as soon as the observers return.
+    if detached && let Ok(cookie) = connection.get_input_focus() {
+        let _ = cookie.reply();
+    }
+}
+
 pub(super) fn browser_native_close_finished(native_view: *mut c_void) {
     let Some(cef_window) = x11_window(native_view) else {
         return;

@@ -585,6 +585,8 @@ fn main() {
         defensive parity if a platform closes every child before this observer.
         */
         cx.on_window_closed(move |cx, window_id| {
+            #[cfg(target_os = "linux")]
+            cef::detach_native_views_of_closing_window(window_id);
             persist_gpui_window_frame_state();
             if window_id == main_window_id || cx.windows().is_empty() {
                 GPUI_APP_QUIT_IN_PROGRESS.store(true, Ordering::Release);
@@ -646,6 +648,71 @@ fn force_gpui_x11_backend_for_windowed_cef() {
     // SAFETY: called before GPUI starts background threads or framework-owned
     // environment readers, so no concurrent environment access is possible.
     unsafe { env::remove_var("WAYLAND_DISPLAY") };
+
+    if LINUX_INHERITED_WAYLAND_DISPLAY
+        .get()
+        .is_some_and(|inherited| inherited.is_some())
+    {
+        pin_gpui_x11_scale_factor_under_xwayland();
+    }
+}
+
+/// CDXC:PlatformSupport 2026-09-29 WHY:
+/// Without `Xft.dpi`, GPUI's X11 client derives its scale from the monitor's physical size (RandR millimetres), so a 1920x1080 14-inch panel on stock Omarchy/Hyprland came out at 1.5x and the sidebar and Settings were far too large. Under XWayland that size says nothing about the scale the user picked: the compositor either shows X clients at native pixels (Hyprland `xwayland:force_zero_scaling`, where `GDK_SCALE` is the XWayland scale Omarchy and similar setups declare) or scales them itself (where 1.0 is right). So under XWayland Ghostex uses `Xft.dpi` when the desktop publishes one (GNOME, KDE), otherwise `GDK_SCALE`, otherwise 1.0, and never the physical-size guess. An explicit `GPUI_X11_SCALE_FACTOR` still wins.
+#[cfg(target_os = "linux")]
+fn pin_gpui_x11_scale_factor_under_xwayland() {
+    const GPUI_X11_SCALE_FACTOR: &str = "GPUI_X11_SCALE_FACTOR";
+    if env::var(GPUI_X11_SCALE_FACTOR).is_ok_and(|value| !value.trim().is_empty()) {
+        return;
+    }
+    if x11_resource_manager_has_xft_dpi() {
+        return;
+    }
+    let scale = env::var("GDK_SCALE")
+        .ok()
+        .and_then(|value| value.trim().parse::<f32>().ok())
+        .filter(|scale| scale.is_finite() && *scale > 0.0)
+        .unwrap_or(1.0);
+    // SAFETY: same pre-framework window as the WAYLAND_DISPLAY removal above.
+    unsafe { env::set_var(GPUI_X11_SCALE_FACTOR, scale.to_string()) };
+}
+
+/// Whether the root window's `RESOURCE_MANAGER` string (what `xrdb` loads) sets `Xft.dpi`, the
+/// value GPUI's X11 client reads first.
+#[cfg(target_os = "linux")]
+fn x11_resource_manager_has_xft_dpi() -> bool {
+    use x11rb::connection::Connection as _;
+    use x11rb::protocol::xproto::{AtomEnum, ConnectionExt as _};
+
+    let Ok((connection, screen_index)) = x11rb::connect(None) else {
+        return false;
+    };
+    let Some(root) = connection
+        .setup()
+        .roots
+        .get(screen_index)
+        .map(|screen| screen.root)
+    else {
+        return false;
+    };
+    let Some(reply) = connection
+        .get_property(
+            false,
+            root,
+            AtomEnum::RESOURCE_MANAGER,
+            AtomEnum::STRING,
+            0,
+            u32::MAX / 4,
+        )
+        .ok()
+        .and_then(|cookie| cookie.reply().ok())
+    else {
+        return false;
+    };
+    String::from_utf8_lossy(&reply.value).lines().any(|line| {
+        line.split_once(':')
+            .is_some_and(|(key, value)| key.trim() == "Xft.dpi" && !value.trim().is_empty())
+    })
 }
 
 fn gpui_platform_window_app_id() -> Option<String> {
