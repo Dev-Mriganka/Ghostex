@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## 10.7.0 - 2026-09-30
+
+**Ghostex 10.7.0 is out.** Ghostex Capture puts a floating button over every app for screenshots and quick prompts, every install button now works with one click on a fresh computer, Mermaid diagrams are drawn in chat, window glass gets Blur sliders, GPT 6.1 Sol arrives for Codex, and Linux and Windows get a round of fixes.
+
+### 📸 Ghostex Capture
+- **A floating Ghostex button over every app shows how many sessions are working, waiting for you, or asking a question.** Turn it on in Settings > Integrations > Ghostex Capture (off by default), drag it anywhere, or drop it against a screen edge to tuck it away as a thin tab.
+- **Screenshot an area, the current app or the full screen from any app,** then crop it and add arrows, text and rectangles before it goes into your prompt. Click the button or press Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) to open the panel, or use the same keys with A, Space, F or T to run an action straight away.
+- **Write a prompt without switching to Ghostex.** The floating prompt box sends to a new session in the project you last used, or to any project or running session you pick, and a prompt you close without sending is kept as a draft in the sidebar. Screenshots need Screen Recording permission on macOS, and Linux support is X11 only.
+
+### 🧰 One-click installs
+- **Every install button works with one click on a fresh computer and installs what it needs first,** and its tooltip says exactly how Ghostex installs it. Installing an agent that needs npm installs Node.js on its own.
+- **Settings > Integrations > Tools lists the tools Ghostex can set up for you:** Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Your own copies are used when you have them; otherwise Ghostex downloads the official release, checks it, and gives you Update, Reinstall and Uninstall buttons.
+- **Claude Swap and Codex Swap install with one click,** Install Beads appears on the Kanban notice, and Add Project offers to install the GitHub or GitLab CLI.
+- **Trycua is now called Fast Computer Use** in Settings > Integrations, and it installs in the background instead of opening a terminal tab.
+
+### 💬 Chat and agents
+- **Mermaid diagrams an agent writes are drawn as diagrams in the desktop chat.** Source switches to the diagram's text, Copy copies it, and the expand button opens a larger view you can zoom and pan.
+- **GPT 6.1 Sol takes the Sol spot in the Codex model picker,** and GPT 6 Sol moves under Legacy.
+- **In the model picker, Enter now saves the highlighted model and level as the agent's default,** and Option+Enter uses them in this session only, on the computer and the phone.
+- **Codex's Sign in with Device Code shows a Sign in to Codex card** with a clickable link and the one-time code, handy on a remote computer, and when Codex quits to the terminal the chat offers Restart Codex on the same conversation.
+- **Messages between agents show as cards:** a message from another agent shows its first two lines, a message your session's agent sent stays closed, and a click opens either one, on the computer and the phone.
+
+### 🎨 Window glass, windows and the board
+- **Settings > Theme > Transparency has a Blur slider** that sets how soft what shows behind the window looks, plus a Menu blur slider on macOS for menus and tooltips.
+- **Settings and Search by Prompt open 30% larger,** app windows such as Settings close with a corner close button instead of a click outside, and tab rails and segmented controls no longer paint an opaque slab over frosted surfaces.
+- **Kanban lanes keep a minimum width and the board scrolls sideways,** and long lanes stay fast.
+
+### 🐧 Linux and Windows
+- **Linux: the sidebar and Settings keep a normal size under XWayland** (Hyprland and Omarchy among them), and closing Settings no longer crashes the built-in browser's graphics process.
+- **Linux: menus, popups and dialogs no longer get a title bar from the window manager,** they are opaque where the desktop cannot blur behind them, and a restored window keeps its saved size and position instead of drifting on each launch.
+- **Windows and Linux: Ctrl+click opens terminal links,** Windows drive and backslash paths are recognised as links, and Quick Access and the Files view show Ctrl instead of the Cmd symbol.
+- **Windows: Codex sessions in different projects no longer share one background server,** which could attach one project's conversation to another and leave a chat empty, agent hooks no longer flash PowerShell windows, and the mouse pointer comes back after leaving or deactivating Ghostex, thanks to @gvastethecreator. Restart Codex sessions that were already running.
+
 ## 10.6.0 - 2026-09-29
 
 **Ghostex 10.6.0 is out.** Settings, first-run setup, Add Project, the Agents hub and Git Commit are now native windows, Chromium becomes an optional one-time install, the Files editor gains tables, Mermaid and drag and drop, Claude Opus 5.5 and Sonnet 5.5 arrive, and Windows installs get through first launch on a clean computer.
