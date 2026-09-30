@@ -4,5 +4,9 @@
   "height": 24,
   "fontSize": 11,
   "paddingX": 10,
-  "bottom": 4
+  "bottom": 4,
+  "errorTone": {
+    "dark": { "background": "#3a1417", "border": "#f87171", "borderAlpha": 0.35, "text": "#fca5a5" },
+    "light": { "background": "#fef2f2", "border": "#dc2626", "borderAlpha": 0.3, "text": "#b91c1c" }
+  }
 }

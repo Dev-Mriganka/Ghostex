@@ -1,1 +1,0 @@
-../../../../desktop/src/app/native_chat/interrupt_confirm.rs

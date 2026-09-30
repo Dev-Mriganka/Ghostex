@@ -37,7 +37,6 @@ mod frosted_overlay_window;
 mod image_viewer;
 mod images;
 mod inter_agent_message;
-mod interrupt_confirm;
 mod launch;
 mod menu_toggle;
 mod minimap;

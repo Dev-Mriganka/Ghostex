@@ -128,11 +128,6 @@ impl Render for NativeChatView {
         and anchored to the transcript alone a forked session with no rows yet would have lost its
         switcher entirely.
         */
-        let interrupt_confirm = if covered {
-            None
-        } else {
-            self.render_interrupt_confirm()
-        };
         let body = if covered {
             None
         } else {
@@ -151,7 +146,6 @@ impl Render for NativeChatView {
                     .w_full()
                     .child(content)
                     .children(fork_branch_badge)
-                    .children(interrupt_confirm)
                     .into_any_element(),
             )
         };

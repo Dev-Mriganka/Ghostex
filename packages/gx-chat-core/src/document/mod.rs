@@ -12,7 +12,8 @@ mod view;
 
 pub use crate::document::assemble::{assemble, frame_parts, FrameParts};
 pub use crate::document::composer::{
-    ComposerActions, ComposerChrome, ComposerOverflow, Draft, IncomingDraft, Interaction, Note,
+    ComposerActions, ComposerChrome, ComposerOverflow, Draft, IncomingDraft, Interaction,
+    InterruptToast, Note,
 };
 pub use crate::document::frame::{Frame, ItemsSplice, MinimapMarker, RowDetails};
 pub use crate::document::panels::{

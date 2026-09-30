@@ -23,6 +23,22 @@ struct ScrollBottom {
     font_size: f32,
     padding_x: f32,
     bottom: f32,
+    error_tone: ErrorTone,
+}
+
+#[derive(Deserialize)]
+struct ErrorTone {
+    dark: ToneColors,
+    light: ToneColors,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ToneColors {
+    background: String,
+    border: String,
+    border_alpha: f32,
+    text: String,
 }
 
 static SPEC: LazyLock<ScrollBottom> = LazyLock::new(|| {
@@ -139,10 +155,18 @@ impl NativeChatView {
         window.prevent_default();
     }
 
-    /// Whether the pill is up, with its unscaled height and bottom offset, for what stacks above it.
-    pub(super) fn scroll_bottom_pill_extent(&self) -> (bool, f32, f32) {
-        let scale = ChatAppearance::current(&self.snapshot).scale;
-        (self.scroll_bottom_shown(scale), SPEC.height, SPEC.bottom)
+    /// The toast that takes the pill's place: "Press Escape again to interrupt" while a first Escape
+    /// waits, then the red "Agent was interrupted" (`interrupt` in
+    /// `packages/gx-chat-core/src/composer/send.rs`).
+    ///
+    /// CDXC:SessionChat 2026-10-01 DECISION:
+    /// User: the Escape toast and the scroll-to-bottom pill must be centred on each other, in "exact same style", with the Escape one hiding the scroll one while it shows; the red "Agent was interrupted" one takes the same spot and look. The toasts therefore take the pill's own slot and shape (in-window and in the frosted window), visual only: no click, hover, focus or tooltip.
+    pub(super) fn pill_toast(&self) -> Option<PillToast> {
+        let toast = &self.snapshot["interruptToast"];
+        Some(PillToast {
+            text: toast["text"].as_str()?.to_string(),
+            error: toast["tone"] == "error",
+        })
     }
 
     fn scroll_bottom_shown(&self, scale: f32) -> bool {
@@ -154,15 +178,21 @@ impl NativeChatView {
     pub(super) fn scroll_bottom_button(&self, cx: &Context<Self>) -> AnyElement {
         let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let p = ChatAppearance::current(&self.snapshot).on_window_glass(glass);
-        let shown = self.scroll_bottom_shown(p.scale);
+        let toast = self.pill_toast();
+        let shown = toast.is_some() || self.scroll_bottom_shown(p.scale);
         if glass {
-            return self.scroll_bottom_window_placeholder(shown, &p, cx);
+            let label = toast.map_or_else(|| SPEC.label.clone(), |toast| toast.text);
+            return self.scroll_bottom_window_placeholder(shown, label, &p, cx);
         }
         if !shown {
             return div().into_any_element();
         }
-        let label = SPEC.label.clone();
-        let shortcut = shortcut_label();
+        let row = div()
+            .absolute()
+            .bottom(px(SPEC.bottom * p.scale))
+            .w_full()
+            .flex()
+            .justify_center();
         // The pill wears the composer's own chrome: the same opaque card fill, the 1px outline and
         // the inset top highlight session-chat-composer-focus.css gives both of them.
         let outline = if p.light {
@@ -171,54 +201,100 @@ impl NativeChatView {
             gpui::white().opacity(0.05)
         };
         let highlight = gpui::white().opacity(if p.light { 0.0 } else { 0.03 });
-        div()
-            .absolute()
-            .bottom(px(SPEC.bottom * p.scale))
-            .w_full()
-            .flex()
-            .justify_center()
-            .child(
-                div()
-                    .id("chat-scroll-bottom")
-                    .tab_index(0)
-                    .role(gpui::Role::Button)
-                    .aria_label(label.clone())
-                    .chat_cursor_pointer()
-                    .when_some(shortcut, |pill, key| {
-                        pill.managed_tooltip_with_placement(TOOLTIP_PLACEMENT, move |window, cx| {
-                            shortcut_tooltip(key.clone(), window, cx)
-                        })
+        if let Some(toast) = toast {
+            let (fill, border, text) = match toast.error {
+                true => error_tone(p.light),
+                false => (p.composer_background, outline, p.primary),
+            };
+            return row
+                .child(
+                    pill_shape(div(), p.scale)
+                        .id("chat-interrupt-toast")
+                        .role(gpui::Role::Status)
+                        .aria_label(toast.text.clone())
+                        .border_color(border)
+                        .bg(fill)
+                        .text_color(text)
+                        .when(!toast.error, |pill| pill.child(pill_highlight(highlight)))
+                        .child(toast.text),
+                )
+                .into_any_element();
+        }
+        let label = SPEC.label.clone();
+        let shortcut = shortcut_label();
+        row.child(
+            pill_shape(div(), p.scale)
+                .id("chat-scroll-bottom")
+                .tab_index(0)
+                .role(gpui::Role::Button)
+                .aria_label(label.clone())
+                .chat_cursor_pointer()
+                .when_some(shortcut, |pill, key| {
+                    pill.managed_tooltip_with_placement(TOOLTIP_PLACEMENT, move |window, cx| {
+                        shortcut_tooltip(key.clone(), window, cx)
                     })
-                    .relative()
-                    .overflow_hidden()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .h(px(SPEC.height * p.scale))
-                    .px(px(SPEC.padding_x * p.scale))
-                    .rounded_full()
-                    .border_1()
-                    .border_color(outline)
-                    .bg(p.composer_background)
-                    .text_color(p.primary)
-                    .text_size(px(SPEC.font_size * p.scale))
-                    .font_weight(FontWeight::MEDIUM)
-                    .focus_visible(|style| style.border_color(p.ring))
-                    .child(
-                        // Visual only, and inside the pill's own frame: the `inset 0 1px` highlight.
-                        div()
-                            .absolute()
-                            .top_0()
-                            .left_0()
-                            .right_0()
-                            .h(px(1.0))
-                            .bg(highlight),
-                    )
-                    .child(label)
-                    .on_click(cx.listener(|chat, _, _, cx| chat.jump_to_bottom(cx))),
-            )
-            .into_any_element()
+                })
+                .border_color(outline)
+                .bg(p.composer_background)
+                .text_color(p.primary)
+                .focus_visible(|style| style.border_color(p.ring))
+                .child(pill_highlight(highlight))
+                .child(label)
+                .on_click(cx.listener(|chat, _, _, cx| chat.jump_to_bottom(cx))),
+        )
+        .into_any_element()
     }
+}
+
+/// What the pill's slot shows instead of "Scroll to bottom".
+pub(super) struct PillToast {
+    pub(super) text: String,
+    /// The red "Agent was interrupted" tone.
+    pub(super) error: bool,
+}
+
+/// The pill's shape, shared by "Scroll to bottom" and the toasts that take its place.
+fn pill_shape(pill: gpui::Div, scale: f32) -> gpui::Div {
+    pill.relative()
+        .overflow_hidden()
+        .flex()
+        .items_center()
+        .justify_center()
+        .h(px(SPEC.height * scale))
+        .px(px(SPEC.padding_x * scale))
+        .rounded_full()
+        .border_1()
+        .text_size(px(SPEC.font_size * scale))
+        .font_weight(FontWeight::MEDIUM)
+        .whitespace_nowrap()
+}
+
+/// Visual only, and inside the pill's own frame: the `inset 0 1px` highlight.
+fn pill_highlight(highlight: gpui::Hsla) -> gpui::Div {
+    div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
+        .h(px(1.0))
+        .bg(highlight)
+}
+
+/// The red tone's fill, border and text (`errorTone` in `scroll-bottom.json`).
+pub(super) fn error_tone(light: bool) -> (gpui::Hsla, gpui::Hsla, gpui::Hsla) {
+    let tone = if light {
+        &SPEC.error_tone.light
+    } else {
+        &SPEC.error_tone.dark
+    };
+    let hex = |value: &str| -> gpui::Hsla {
+        gpui::rgb(u32::from_str_radix(value.trim_start_matches('#'), 16).unwrap_or(0)).into()
+    };
+    (
+        hex(&tone.background),
+        hex(&tone.border).opacity(tone.border_alpha),
+        hex(&tone.text),
+    )
 }
 
 impl NativeChatView {
@@ -230,6 +306,7 @@ impl NativeChatView {
     fn scroll_bottom_window_placeholder(
         &self,
         shown: bool,
+        label: String,
         p: &ChatAppearance,
         cx: &Context<Self>,
     ) -> AnyElement {
@@ -239,7 +316,6 @@ impl NativeChatView {
         if !shown {
             return div().absolute().size_0().child(report).into_any_element();
         }
-        let label = SPEC.label.clone();
         div()
             .absolute()
             .bottom(px(SPEC.bottom * p.scale))

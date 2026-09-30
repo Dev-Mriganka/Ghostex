@@ -309,9 +309,12 @@ impl Render for FrostedOverlayView {
             gpui::white().opacity(0.11)
         };
         match self.overlay {
-            FrostedOverlay::ScrollBottom => {
-                scroll_bottom_pill(self.chat.clone(), &p, hover, self.tooltip_epoch.clone())
-            }
+            FrostedOverlay::ScrollBottom => match chat.read(cx).pill_toast() {
+                Some(toast) => pill_toast(toast, &p),
+                None => {
+                    scroll_bottom_pill(self.chat.clone(), &p, hover, self.tooltip_epoch.clone())
+                }
+            },
             FrostedOverlay::ForkBranches => {
                 let lifted = self.hovered.get()
                     || chat
@@ -337,6 +340,34 @@ impl Render for FrostedOverlayView {
             }
         }
     }
+}
+
+/// The Escape and "Agent was interrupted" toasts in the pill's window: its shape, no handlers.
+fn pill_toast(toast: super::scroll_bottom::PillToast, p: &ChatAppearance) -> AnyElement {
+    let (fill, border, text) = if toast.error {
+        super::scroll_bottom::error_tone(p.light)
+    } else {
+        (p.composer_background, p.composer_border, p.primary)
+    };
+    div()
+        .id("chat-interrupt-toast-window")
+        .role(gpui::Role::Status)
+        .aria_label(toast.text.clone())
+        .size_full()
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded_full()
+        .border_1()
+        .border_color(border)
+        .bg(fill)
+        .font_family(p.font.clone())
+        .text_color(text)
+        .text_size(px(super::scroll_bottom::font_size() * p.scale))
+        .font_weight(FontWeight::MEDIUM)
+        .whitespace_nowrap()
+        .child(toast.text)
+        .into_any_element()
 }
 
 /// CDXC:SessionChat 2026-09-24 WHY:

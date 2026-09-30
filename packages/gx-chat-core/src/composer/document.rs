@@ -12,15 +12,17 @@ use crate::composer::host_actions::composer_host_actions;
 use crate::composer::layout::{can_collapse_composer, CollapseGate};
 use crate::composer::policy::{
     composer_placeholder, send_blocked_reason, send_refused_reason, SendGate,
-    DESKTOP_COMPOSER_PLACEHOLDER, INTERRUPT_CONFIRM_TEXT, STOP_BUTTON_COOLDOWN_MS,
-    TOUCH_COMPOSER_PLACEHOLDER,
+    DESKTOP_COMPOSER_PLACEHOLDER, INTERRUPTED_TOAST_TEXT, INTERRUPT_CONFIRM_TEXT,
+    STOP_BUTTON_COOLDOWN_MS, TOUCH_COMPOSER_PLACEHOLDER,
 };
 use crate::composer::queue::{
     is_queue_row_busy, queue_capabilities, queue_row_preview, QUEUE_LONG_PRESS_MS,
 };
 use crate::composer::suggestions::{composer_native_command, suggestion_popup};
 use crate::composer::view::{current_matches, suggestion_sources};
-use crate::document::{ComposerActions, Document, Draft, Interaction, Queue, QueuedPrompt};
+use crate::document::{
+    ComposerActions, Document, Draft, Interaction, InterruptToast, Queue, QueuedPrompt,
+};
 use crate::questions::gates::{notice_visible, terminal_choice_pending};
 use crate::questions::model::TerminalNotice;
 use crate::state::{ChatContext, ChatState};
@@ -122,9 +124,17 @@ pub fn document(state: &ChatState, _context: &ChatContext, into: &mut Document) 
         queue_long_press_ms: QUEUE_LONG_PRESS_MS,
         stop_button_cooldown_ms: STOP_BUTTON_COOLDOWN_MS,
     };
-    into.interrupt_confirm = composer
-        .interrupt_confirm_armed
-        .then(|| INTERRUPT_CONFIRM_TEXT.to_string());
+    into.interrupt_toast = if composer.interrupt_confirm_armed {
+        Some((INTERRUPT_CONFIRM_TEXT, "notice"))
+    } else if composer.interrupted_toast {
+        Some((INTERRUPTED_TOAST_TEXT, "error"))
+    } else {
+        None
+    }
+    .map(|(text, tone)| InterruptToast {
+        text: text.to_string(),
+        tone: tone.to_string(),
+    });
     into.host_actions = composer_host_actions();
     into.side_chat = crate::composer::side_chat::side_chat_prefix(state);
     into.skills_loading = composer.sources.skills_loading;

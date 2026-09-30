@@ -17,6 +17,12 @@ pub const INTERRUPT_CONFIRM_WINDOW_MS: u64 = 2_000;
 /// The toast a first Escape raises while it waits for the confirming one.
 pub const INTERRUPT_CONFIRM_TEXT: &str = "Press Escape again to interrupt";
 
+/// How long the red toast an interrupt raises stays up.
+pub const INTERRUPTED_TOAST_MS: u64 = 2_000;
+
+/// The red toast an interrupt that stopped a working agent raises.
+pub const INTERRUPTED_TOAST_TEXT: &str = "Agent was interrupted";
+
 /// What the desktop composer says when nothing is blocking it.
 pub const DESKTOP_COMPOSER_PLACEHOLDER: &str =
     "Press Enter to send a message and Tab to Queue.\nUse @ to mention a file and $ for using skills.";

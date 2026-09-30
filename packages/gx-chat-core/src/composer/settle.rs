@@ -221,6 +221,13 @@ pub fn settle(state: &mut ChatState, event: &Event, context: &ChatContext) -> Ve
     {
         state.core.request_publish();
     }
+    if state
+        .core
+        .timer_fired(crate::composer::send::INTERRUPTED_TOAST_TIMER)
+        && std::mem::take(&mut state.composer.interrupted_toast)
+    {
+        state.core.request_publish();
+    }
     match event {
         Event::ComposerBootRead(read) => adopt_boot_read(state, read),
         Event::RpcSettled {

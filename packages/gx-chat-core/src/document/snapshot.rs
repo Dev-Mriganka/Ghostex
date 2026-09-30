@@ -22,8 +22,8 @@ use serde_json::{Map, Value};
 
 use crate::document::{
     AccountStatus, AsyncQuestions, ComposerActions, ComposerChrome, ComposerOverflow,
-    DeferredWorkRow, Draft, EmptyState, HostAction, IncomingDraft, Interaction, NewSessionWelcome,
-    Note, QuestionCard, Queue, TerminalTail, ViewState, WorkingStrip,
+    DeferredWorkRow, Draft, EmptyState, HostAction, IncomingDraft, Interaction, InterruptToast,
+    NewSessionWelcome, Note, QuestionCard, Queue, TerminalTail, ViewState, WorkingStrip,
 };
 
 /// Everything the chat renderer draws, in one value.
@@ -99,9 +99,10 @@ pub struct Document {
     pub incoming_draft: Option<IncomingDraft>,
     pub note: Note,
     pub interaction: Interaction,
-    /// The "press Escape again" toast while a first Escape waits for its confirmation. Family d.
+    /// The toast in the scroll-to-bottom pill's place: "Press Escape again to interrupt" while a
+    /// first Escape waits, then the red "Agent was interrupted". Family d.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interrupt_confirm: Option<String>,
+    pub interrupt_toast: Option<InterruptToast>,
     pub host_actions: Vec<HostAction>,
     /// The Side chat prefix (`/btw `) when the agent takes side questions, else null. Family d.
     pub side_chat: Option<String>,

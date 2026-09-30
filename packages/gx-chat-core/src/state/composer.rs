@@ -74,6 +74,8 @@ pub struct ComposerState {
     /// A first Escape is waiting for the second that confirms the interrupt
     /// (`crate::composer::send::interrupt`); cleared when its timer runs out.
     pub interrupt_confirm_armed: bool,
+    /// The red "Agent was interrupted" toast is up; cleared when its timer runs out.
+    pub interrupted_toast: bool,
     /// Draft transfers being received right now, so a repeated `receiveHandoff` is a no-op.
     pub receiving_handoffs: Vec<String>,
     /// Draft transfers this composer has already taken, kept for the same reason across retries.

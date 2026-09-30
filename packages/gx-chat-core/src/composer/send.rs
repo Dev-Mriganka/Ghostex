@@ -823,6 +823,9 @@ pub fn settle_handoff_acknowledgement(
 /// The timer that ends a first Escape's wait for its confirmation.
 pub const INTERRUPT_CONFIRM_TIMER: &str = "composer.interruptConfirm";
 
+/// The timer that takes the red "Agent was interrupted" toast down.
+pub const INTERRUPTED_TOAST_TIMER: &str = "composer.interruptedToast";
+
 /// Escape: cancel a send that has not left, then ask the agent to stop.
 ///
 /// `confirm` is the renderer's "Press Escape twice to interrupt" setting.
@@ -879,7 +882,17 @@ pub fn interrupt(state: &mut ChatState, context: &ChatContext, confirm: bool) ->
         });
         return effects;
     }
-    sends::begin_interrupt(state, context);
+    // CDXC:SessionChat 2026-10-01 DECISION:
+    // User: "when the user interrupts show a red one that says 'Agent was interrupted' same spot and look as the 'Press escape again..' one". Raised by every interrupt that stopped a working turn (Escape or the Stop button, desktop and phone), for 2 seconds.
+    if sends::begin_interrupt(state, context) {
+        state.composer.interrupted_toast = true;
+        state.core.timers.arm(
+            INTERRUPTED_TOAST_TIMER,
+            context.now_ms,
+            crate::composer::policy::INTERRUPTED_TOAST_MS as f64,
+        );
+        state.core.request_publish();
+    }
     let request_id = state.core.allocate_request_id();
     effects.push(Effect::SendRpc {
         request_id,

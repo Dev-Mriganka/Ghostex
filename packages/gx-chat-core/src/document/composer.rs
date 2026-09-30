@@ -75,6 +75,15 @@ pub struct Interaction {
     pub stop_button_cooldown_ms: u64,
 }
 
+/// The toast drawn in the scroll-to-bottom pill's place, in the pill's own look.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InterruptToast {
+    pub text: String,
+    /// `notice` for the "press Escape again" prompt, `error` (red) for "Agent was interrupted".
+    pub tone: String,
+}
+
 /// A draft handed to this chat from somewhere else, offered before it replaces what is typed.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
