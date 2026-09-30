@@ -4,9 +4,11 @@ use serde_json::{json, Value};
 use crate::domain::{now_iso, sql_error, DomainResult, DomainStateError};
 
 /// Newest rows the read endpoint returns. Mirrors NOTIFICATION_FEED_READ_LIMIT in the shared contract.
-pub(crate) const NOTIFICATION_FEED_READ_LIMIT: usize = 200;
-/// Rows kept before the oldest read rows are pruned. Mirrors NOTIFICATION_FEED_RETENTION_LIMIT in the shared contract.
-pub(crate) const NOTIFICATION_FEED_RETENTION_LIMIT: usize = 500;
+pub(crate) const NOTIFICATION_FEED_READ_LIMIT: usize = 40;
+/// CDXC:Notifications 2026-09-30 DECISION:
+/// User: "make notifications dropdown show max of 40 last notifications please and clear after that". Only the 40 newest rows are kept; anything older is deleted, read or unread, so the unread count and the jump keys never point at a row the panel cannot show. Supersedes the 500-row retention that only pruned read rows.
+/// Mirrors NOTIFICATION_FEED_RETENTION_LIMIT in the shared contract.
+pub(crate) const NOTIFICATION_FEED_RETENTION_LIMIT: usize = 40;
 /// Longest stored body, in characters. Mirrors NOTIFICATION_FEED_BODY_MAX_CHARS in the shared contract.
 pub(crate) const NOTIFICATION_FEED_BODY_MAX_CHARS: usize = 280;
 
@@ -40,7 +42,7 @@ pub(crate) fn bounded_notification_body(text: &str) -> String {
     truncated
 }
 
-/// Insert a row, superseding the session's unread rows first, then prune old read rows.
+/// Insert a row, superseding the session's unread rows first, then prune rows past the retention limit.
 /// One live row per session keeps the unread count equal to the number of sessions waiting, not the number of events.
 pub(crate) fn insert_notification_feed_row(
     db: &Connection,
@@ -78,24 +80,15 @@ pub(crate) fn insert_notification_feed_row(
         .ok_or_else(|| DomainStateError::not_found("Notification was not stored."))
 }
 
-/// Keep at most the retention limit, dropping the oldest READ rows first and never an unread row.
+/// Keep only the newest retention-limit rows and delete everything older.
 fn prune_notification_feed(db: &Connection) -> DomainResult<()> {
-    let total: i64 = db
-        .query_row("SELECT COUNT(*) FROM notification_feed", [], |row| {
-            row.get(0)
-        })
-        .map_err(sql_error)?;
-    let excess = total - NOTIFICATION_FEED_RETENTION_LIMIT as i64;
-    if excess <= 0 {
-        return Ok(());
-    }
     db.execute(
         r#"
-        DELETE FROM notification_feed WHERE id IN (
-          SELECT id FROM notification_feed WHERE readAt IS NOT NULL ORDER BY createdAt ASC LIMIT ?1
+        DELETE FROM notification_feed WHERE id NOT IN (
+          SELECT id FROM notification_feed ORDER BY createdAt DESC, id DESC LIMIT ?1
         )
         "#,
-        params![excess],
+        params![NOTIFICATION_FEED_RETENTION_LIMIT as i64],
     )
     .map_err(sql_error)?;
     Ok(())
@@ -238,6 +231,7 @@ pub(crate) fn read_notification_feed_item(
 /// The full feed state every endpoint returns: newest first, unread count, and the jump target.
 pub(crate) fn read_notification_feed_state(db: &Connection) -> DomainResult<Value> {
     drop_orphaned_notification_feed_rows(db)?;
+    prune_notification_feed(db)?;
     let mut statement = db
         .prepare(&format!(
             "SELECT {ITEM_COLUMNS} FROM notification_feed ORDER BY createdAt DESC, id DESC LIMIT ?1"
