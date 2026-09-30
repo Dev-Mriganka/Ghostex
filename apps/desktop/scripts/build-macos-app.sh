@@ -690,6 +690,32 @@ resolve_remote_gxserver_linux_package_source() {
 	return 0
 }
 
+# CDXC:RemoteMachines 2026-10-01 WHY:
+# A local start used to bundle the leftover Linux package under runtime/macos/Web whenever build/ had none, so a Mac shipped a 2026-08-05 gxserver and Linux installs failed. A locally built package is used only while its source revision matches the checkout's gxserver sources; otherwise the published package of this release is used (tooling/release-gpui/dev-remote-gxserver-package.mjs).
+# SEE-ALSO: server/package-remote-linux.mjs writes the sourceRevision this compares.
+resolve_local_start_remote_gxserver_linux_package() {
+	local default_source="$1"
+	local package_label="$2"
+	local arch revision
+	case "$package_label" in
+	LINUX_X64) arch="x64" ;;
+	LINUX_ARM64) arch="arm64" ;;
+	*) return 0 ;;
+	esac
+	if [[ -f "$default_source/build-identity.json" ]]; then
+		revision="$(sed -n 's/.*"sourceRevision": *"\([0-9a-f]\{40\}\)".*/\1/p' "$default_source/build-identity.json" | head -n 1)"
+		if [[ -n "$revision" ]] && git -C "$REPO_ROOT" diff --quiet "$revision" -- \
+			server packages/paths packages/find packages/project-docs packages/agent-sync packages/editor-client .dependencies/zmx 2>/dev/null; then
+			printf '%s\n' "$default_source"
+			return 0
+		fi
+	fi
+	node "$REPO_ROOT/tooling/release-gpui/dev-remote-gxserver-package.mjs" \
+		--arch "$arch" \
+		--version "$(resolve_gpui_marketing_version)" \
+		--cache-root "$REPO_ROOT/build/remote-gxserver-linux/published" || true
+}
+
 stage_remote_gxserver_linux_package_if_available() {
 	local configured_source="$1"
 	local target_name="$2"
@@ -699,8 +725,20 @@ stage_remote_gxserver_linux_package_if_available() {
 	local source_dir target_dir validation_output
 	local source_is_default=0
 
-	source_dir="$(resolve_remote_gxserver_linux_package_source "$configured_source" "$default_source" "$staged_source")"
 	target_dir="$WEB_DIR/$target_name"
+	if [[ -z "$configured_source" && "$GHOSTEX_LOCAL_START" == "1" ]]; then
+		source_dir="$(resolve_local_start_remote_gxserver_linux_package "$default_source" "$package_label")"
+		if [[ -z "$source_dir" ]] || ! validation_output="$(validate_remote_gxserver_linux_package "$source_dir" "$package_label" 2>&1)"; then
+			[[ -z "${validation_output:-}" ]] || printf '%s\n' "$validation_output" >&2
+			echo "Remote gxserver $package_label package unavailable; this build cannot install gxserver on Linux machines." >&2
+			rm -rf "$target_dir"
+			return 0
+		fi
+		mkdir -p "$target_dir"
+		rsync -a --delete "$source_dir"/ "$target_dir"/
+		return 0
+	fi
+	source_dir="$(resolve_remote_gxserver_linux_package_source "$configured_source" "$default_source" "$staged_source")"
 	if [[ -z "$configured_source" && -d "$default_source" && "$source_dir" == "$default_source" ]]; then
 		source_is_default=1
 	fi
