@@ -51,7 +51,13 @@ export function ManageEmbed() {
   const params = new URLSearchParams(window.location.search);
   const media = params.get('media');
   if (media === 'video' || media === 'audio') {
-    return <ManageEmbedMedia media={media} path={params.get('path') ?? ''} revision={params.get('revision') ?? ''} />;
+    return (
+      <ManageEmbedMedia
+        media={media}
+        path={params.get('resourcePath') ?? params.get('path') ?? ''}
+        revision={params.get('revision') ?? ''}
+      />
+    );
   }
   return <ManageEmbedDocument />;
 }
@@ -61,6 +67,8 @@ function ManageEmbedDocument() {
   const projectId = params.get('projectId') ?? '';
   const projectEditorId = params.get('projectEditorId') ?? projectId;
   const path = params.get('path') ?? '';
+  // An outside file is read and saved by its real path but loads its resources from its grant's mount.
+  const resourcePath = params.get('resourcePath') ?? path;
   const annotate = params.get('annotate') !== '0';
   const drawing = /\.excalidraw$/i.test(path);
   const [content, setContent] = useState<string>();
@@ -106,7 +114,7 @@ function ManageEmbedDocument() {
       <ManageHtmlRenderViewer
         annotationsEnabled={annotate}
         content={content}
-        documentKey={path}
+        documentKey={resourcePath}
         onOpenDocument={(next) =>
           void requestManageFiles({ action: 'openDocsFile', path: next, projectEditorId, projectId })
         }

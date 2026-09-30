@@ -37,26 +37,31 @@ impl ManageChatFileAuthorization {
     fn id(&self) -> String {
         format!("{:x}", Sha256::digest(self.json().to_string().as_bytes()))
     }
+
+    /// The grant a file at `address` (its real absolute path) would have in `project_id`.
+    fn for_address(project_id: &str, address: &Path) -> Option<Self> {
+        Some(Self {
+            file_name: address.file_name()?.to_str()?.to_string(),
+            project_id: project_id.to_string(),
+            root: address.parent()?.to_path_buf(),
+        })
+    }
 }
 
+/// Grants `file`, which lies outside the project, to the project's Files view and returns its
+/// Files address: the file's real absolute path.
+///
+/// CDXC:Docs 2026-09-30 DECISION:
+/// User: Files never hands out the `.ghostex-chat-file/<id>/` routing address. A file outside the project is addressed, shown, copied and sent by its real absolute path; the hashed mount survives only inside the resource URLs its page and images load from (`manage_chat_file_resource_address`). Files from other projects may still open in the current project.
 pub(crate) fn authorize_manage_chat_file(project_id: &str, file: &Path) -> Result<String, String> {
     let file =
         fs::canonicalize(file).map_err(|_| "That document is no longer available.".to_string())?;
-    if file.to_str().is_none() {
-        return Err("That document has no valid file path.".to_string());
-    }
-    let authorization = ManageChatFileAuthorization {
-        file_name: file
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| "That document has no valid file name.".to_string())?
-            .to_string(),
-        project_id: project_id.to_string(),
-        root: file
-            .parent()
-            .ok_or_else(|| "That document has no containing folder.".to_string())?
-            .to_path_buf(),
-    };
+    let address = file
+        .to_str()
+        .ok_or_else(|| "That document has no valid file path.".to_string())?
+        .to_string();
+    let authorization = ManageChatFileAuthorization::for_address(project_id, &file)
+        .ok_or_else(|| "That document has no valid file name.".to_string())?;
     let id = authorization.id();
     let directory = authorization_directory();
     let destination = directory.join(format!("{id}.json"));
@@ -80,8 +85,21 @@ pub(crate) fn authorize_manage_chat_file(project_id: &str, file: &Path) -> Resul
         };
         persist().map_err(|error| format!("Could not remember this file for Files: {error}"))?;
     }
-    Ok(format!(
-        "{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/{id}/{}",
+    Ok(address)
+}
+
+/// Whether a Files address names a file outside the project (by its absolute path).
+pub(crate) fn manage_chat_file_is_address(path: &str) -> bool {
+    Path::new(path).is_absolute()
+}
+
+/// The resource-origin path an outside file's page and images load from, `.ghostex-chat-file/<id>/<name>`,
+/// so sibling stylesheets and images resolve inside its granted folder. Never shown to anyone.
+pub(crate) fn manage_chat_file_resource_address(project_id: &str, address: &str) -> Option<String> {
+    let authorization = ManageChatFileAuthorization::for_address(project_id, Path::new(address))?;
+    Some(format!(
+        "{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/{}/{}",
+        authorization.id(),
         authorization.file_name
     ))
 }
@@ -99,11 +117,19 @@ pub(crate) fn manage_chat_file_address(path: &str) -> Option<(&str, &str)> {
     .then_some((id, inner))
 }
 
+/// The grant behind an outside file's absolute address, or behind a resource-origin path inside
+/// its granted folder; `None` when `project_id` holds no such grant.
 pub(crate) fn resolve_manage_chat_file(
     project_id: &str,
     path: &str,
 ) -> Option<ManageChatFileAuthorization> {
-    let (id, _) = manage_chat_file_address(path)?;
+    let id = match manage_chat_file_address(path) {
+        Some((id, _)) => id.to_string(),
+        None if manage_chat_file_is_address(path) => {
+            ManageChatFileAuthorization::for_address(project_id, Path::new(path))?.id()
+        }
+        None => return None,
+    };
     let bytes = fs::read(authorization_directory().join(format!("{id}.json"))).ok()?;
     let record: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
     let authorization = ManageChatFileAuthorization {
@@ -112,4 +138,16 @@ pub(crate) fn resolve_manage_chat_file(
         root: PathBuf::from(record.get("root")?.as_str()?),
     };
     (authorization.project_id == project_id && authorization.id() == id).then_some(authorization)
+}
+
+/// The real absolute path a resource-origin path names (a link inside an outside HTML file, or an
+/// address saved before outside files were addressed by their real path).
+pub(crate) fn manage_chat_file_real_path(project_id: &str, path: &str) -> Option<String> {
+    let (_, inner) = manage_chat_file_address(path)?;
+    let authorization = resolve_manage_chat_file(project_id, path)?;
+    inner
+        .split('/')
+        .fold(authorization.root, |path, component| path.join(component))
+        .to_str()
+        .map(str::to_string)
 }

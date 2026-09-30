@@ -34,6 +34,11 @@ impl GhostexGpuiApp {
                 &[
                     ("embed", "1".to_string()),
                     ("path", document.path.clone()),
+                    // Where its sibling stylesheets, scripts and media load from.
+                    (
+                        "resourcePath",
+                        self.native_docs_resource_path(&document.path),
+                    ),
                     (
                         "annotate",
                         if document.html_annotate { "1" } else { "0" }.to_string(),

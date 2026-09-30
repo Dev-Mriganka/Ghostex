@@ -64,10 +64,13 @@ impl GhostexGpuiApp {
                 this.open_gpui_mermaid_diagram_modal(&json!({ "source": source }), cx);
             });
         });
+        // Images resolve beside the file on the resource origin, which reaches an outside file's
+        // folder through its grant's mount.
+        let resource_path = self.native_docs_resource_path(path);
         super::blocks::install(
             &editor,
             &self.native_docs.blocks,
-            path.to_string(),
+            resource_path.clone(),
             p.light,
             super::editor_style::mermaid_colors(&p),
             expand,
@@ -79,7 +82,14 @@ impl GhostexGpuiApp {
             document._live_subscription = Some(subscription);
         }
         let scope = self.manage_docs_resource_scope();
-        super::blocks::prerender(&editor, &self.native_docs.blocks, path, p.light, scope, cx);
+        super::blocks::prerender(
+            &editor,
+            &self.native_docs.blocks,
+            &resource_path,
+            p.light,
+            scope,
+            cx,
+        );
         self.native_docs_load_git_base(path, cx);
     }
 
@@ -115,7 +125,15 @@ impl GhostexGpuiApp {
                 self.native_docs_schedule_draft_write(&path, cx);
                 let light = self.native_docs.palette.as_ref().is_some_and(|p| p.light);
                 let scope = self.manage_docs_resource_scope();
-                super::blocks::prerender(editor, &self.native_docs.blocks, &path, light, scope, cx);
+                let resource_path = self.native_docs_resource_path(&path);
+                super::blocks::prerender(
+                    editor,
+                    &self.native_docs.blocks,
+                    &resource_path,
+                    light,
+                    scope,
+                    cx,
+                );
                 self.native_docs_refresh_find(cx);
                 self.native_docs_keep_caret_visible(window, cx);
                 self.native_docs_notify(cx);
@@ -179,7 +197,13 @@ impl GhostexGpuiApp {
         if target.is_empty() {
             return;
         }
-        if let Some(resolved) = super::blocks::resolve_image_path(doc_path, target) {
+        let Some(resolved) = super::blocks::resolve_image_path(doc_path, target) else {
+            return;
+        };
+        if Self::native_docs_is_outside_file(&resolved) {
+            // A link beside an outside file: it opens through a grant of its own.
+            self.native_docs_open_absolute_path(std::path::Path::new(&resolved), cx);
+        } else {
             self.native_docs_open_external(resolved, cx);
         }
     }

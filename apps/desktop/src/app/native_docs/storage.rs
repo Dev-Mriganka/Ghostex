@@ -73,6 +73,15 @@ fn read_raw(store: RecordStore, key: &str) -> Option<String> {
     }
 }
 
+/// A stored file path as Files addresses it now: an outside file saved under its old
+/// `.ghostex-chat-file/<id>/` address becomes its real path, or `None` once its grant is gone.
+fn stored_address(project_id: &str, path: String) -> Option<String> {
+    if crate::app::helpers::manage_chat_file_address(&path).is_none() {
+        return Some(path);
+    }
+    crate::app::helpers::manage_chat_file_real_path(project_id, &path)
+}
+
 /// `readStoredManageOpenFiles`: the stored list, without review documents (which have no file).
 pub(crate) fn read_open_files(project_id: &str) -> Vec<String> {
     read_raw(OPEN_FILES, &format!("{OPEN_FILES_PREFIX}{project_id}"))
@@ -80,6 +89,7 @@ pub(crate) fn read_open_files(project_id: &str) -> Vec<String> {
         .unwrap_or_default()
         .into_iter()
         .filter_map(|path| path.as_str().map(str::to_string))
+        .filter_map(|path| stored_address(project_id, path))
         .filter(|path| !path.is_empty() && !path.starts_with(".ghostex-review"))
         .collect()
 }
@@ -87,6 +97,7 @@ pub(crate) fn read_open_files(project_id: &str) -> Vec<String> {
 /// `readStoredManageActiveFile`: the selected file, if it is still in the stored open list.
 pub(crate) fn read_active_file(project_id: &str, open: &[String]) -> Option<String> {
     read_raw(ACTIVE_FILE, &format!("{ACTIVE_FILE_PREFIX}{project_id}"))
+        .and_then(|path| stored_address(project_id, path))
         .filter(|path| open.contains(path))
 }
 
@@ -105,6 +116,7 @@ pub(crate) fn read_drafts(project_id: &str) -> BTreeMap<String, DocsDraft> {
     stored
         .into_iter()
         .filter_map(|(path, value)| {
+            let path = stored_address(project_id, path)?;
             let draft = value["draft"].as_str()?.to_string();
             let saved_content = value["savedContent"].as_str()?.to_string();
             (draft != saved_content && !draft.is_empty()).then_some((

@@ -90,7 +90,20 @@ impl GhostexGpuiApp {
                     && manage_request_string(&request, "action").as_deref() == Some("openDocsFile")
                 {
                     if let Some(path) = manage_request_string(&request, "path") {
-                        self.native_docs_open_external(path, cx);
+                        // A link inside an outside file names a file beside it on the resource
+                        // origin; it opens by its real path, through a grant of its own.
+                        let outside = self.native_docs.project.as_ref().and_then(|project| {
+                            manage_chat_file_real_path(&project.project_id, &path)
+                        });
+                        match outside {
+                            Some(real) => {
+                                self.native_docs_open_absolute_path(
+                                    std::path::Path::new(&real),
+                                    cx,
+                                );
+                            }
+                            None => self.native_docs_open_external(path, cx),
+                        }
                     }
                     return;
                 }

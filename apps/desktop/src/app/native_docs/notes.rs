@@ -20,6 +20,7 @@ use super::annotations::{
 };
 use super::state::DocsFileKind;
 use crate::GhostexGpuiApp;
+use crate::app::helpers::{manage_chat_file_address, manage_chat_file_real_path};
 
 /// How long Send's outcome stays on the button, and how long Clear stays armed.
 pub(crate) const SEND_STATUS_DURATION: Duration = Duration::from_secs(4);
@@ -79,8 +80,22 @@ impl GhostexGpuiApp {
                 return;
             }
             let content = response["file"]["content"].as_str().unwrap_or_default();
-            let notes = parse_docs_annotations_sidecar(content, now_ms());
+            let mut notes = parse_docs_annotations_sidecar(content, now_ms());
             this.native_docs.notes_saved_key = notes.stable_key();
+            // Notes saved under an outside file's old `.ghostex-chat-file/<id>/` address move to
+            // its real path; the next save writes them there.
+            if let Some(project) = this.native_docs.project.as_ref() {
+                let legacy = notes
+                    .paths()
+                    .filter(|path| manage_chat_file_address(path).is_some())
+                    .map(str::to_string)
+                    .collect::<Vec<_>>();
+                for path in legacy {
+                    if let Some(real) = manage_chat_file_real_path(&project.project_id, &path) {
+                        notes.remap_for_move(&path, &real);
+                    }
+                }
+            }
             this.native_docs.notes = notes;
             this.native_docs.notes_loaded = true;
             this.native_docs.highlights_stale = true;

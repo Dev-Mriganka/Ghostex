@@ -144,7 +144,7 @@ impl GhostexGpuiApp {
         };
         let generation = self.native_docs.generation;
         let path = path.to_string();
-        let relative = path.clone();
+        let relative = self.native_docs_resource_path(&path);
         let background = cx.background_executor().clone();
         cx.spawn(async move |this, cx| {
             let bytes = background

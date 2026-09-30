@@ -9,8 +9,8 @@ use gpui::{Context, Window};
 use super::state::DocsEntryKind;
 use crate::GhostexGpuiApp;
 use crate::app::helpers::{
-    MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT, authorize_manage_chat_file,
-    gpui_remote_project_reference_from_project_id,
+    authorize_manage_chat_file, gpui_remote_project_reference_from_project_id,
+    manage_chat_file_is_address,
 };
 use crate::app::model::TitlebarMode;
 
@@ -119,7 +119,11 @@ impl GhostexGpuiApp {
     ///
     /// CDXC:Docs 2026-09-27 DECISION:
     /// User: the Open File box accepts the path of any file on the computer, not only the project's, with suggestions from the project's files while typing. A file outside the project opens through its one-file grant (`authorize_manage_chat_file`), so Files still never lists folders outside the project.
-    fn native_docs_open_absolute_path(&mut self, path: &Path, cx: &mut Context<Self>) -> bool {
+    pub(crate) fn native_docs_open_absolute_path(
+        &mut self,
+        path: &Path,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let Some(project) = self.native_docs.project.clone() else {
             return false;
         };
@@ -178,6 +182,19 @@ impl GhostexGpuiApp {
 
     /// Whether `path` addresses a file opened from outside the project (it has no tree folders).
     pub(crate) fn native_docs_is_outside_file(path: &str) -> bool {
-        path.starts_with(&format!("{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/"))
+        manage_chat_file_is_address(path)
+    }
+
+    /// The path `path`'s images and page load from on the Docs resource origin: its own path for
+    /// a project file, its granted folder's mount for an outside one.
+    pub(crate) fn native_docs_resource_path(&self, path: &str) -> String {
+        self.native_docs
+            .project
+            .as_ref()
+            .filter(|_| Self::native_docs_is_outside_file(path))
+            .and_then(|project| {
+                crate::app::helpers::manage_chat_file_resource_address(&project.project_id, path)
+            })
+            .unwrap_or_else(|| path.to_string())
     }
 }

@@ -223,18 +223,19 @@ pub(crate) fn serialize_docs_annotations_sidecar_at(
     serialize_docs_annotations_sidecar(annotations_by_path, &iso_timestamp_from_ms(now_ms))
 }
 
-/// A stored key as a clean relative path: no leading `/`, no NUL, no `.` or `..` segment, empty
-/// segments dropped. `None` rejects the key.
+/// A stored key as a clean relative path, or the absolute path of a file outside the project: no
+/// NUL, no `.` or `..` segment, empty segments dropped. `None` rejects the key.
 pub(crate) fn normalize_stored_annotation_path(path: &str) -> Option<String> {
     let trimmed = js_trim(path);
-    if trimmed.is_empty() || trimmed.starts_with('/') || trimmed.contains('\0') {
+    if trimmed.is_empty() || trimmed.contains('\0') {
         return None;
     }
     let components: Vec<&str> = trimmed.split('/').filter(|part| !part.is_empty()).collect();
-    if components.iter().any(|part| *part == "." || *part == "..") {
+    if components.is_empty() || components.iter().any(|part| *part == "." || *part == "..") {
         return None;
     }
-    Some(components.join("/"))
+    let root = if trimmed.starts_with('/') { "/" } else { "" };
+    Some(format!("{root}{}", components.join("/")))
 }
 
 /// One stored note, cleaned the way `normalizeStoredAnnotation` cleans it, or `None` when it is

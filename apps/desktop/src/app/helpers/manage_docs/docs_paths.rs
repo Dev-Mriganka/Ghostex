@@ -50,31 +50,39 @@ impl ManageDocsPath<'_> {
 
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `docs_path` in `server/src/project_docs/roots.rs`. Reserved mount segments
-route configured and chat-authorized roots; every other path is project-relative.
+Mirrors `docs_path` in `server/src/project_docs/roots.rs`. A reserved mount segment
+routes the configured root, an absolute path routes the chat-authorized file, and
+every other path is project-relative.
 One Docs address can therefore only ever mean one root.
 */
 pub(crate) fn manage_docs_path<'a>(
     context: ManageDocsContext<'a>,
     path: Option<&str>,
 ) -> Result<ManageDocsPath<'a>, String> {
-    let outer = manage_normalized_relative_path(path)?;
-    if manage_chat_file_root_relative_path(&outer).is_some() {
-        let (_, inner) = manage_chat_file_address(&outer).ok_or_else(|| {
-            "Reopen this file from its chat link to restore access in Files.".to_string()
-        })?;
-        let inner = inner.to_string();
-        let root = context.roots.chat.as_deref().ok_or_else(|| {
-            "Reopen this file from its chat link to restore access in Files.".to_string()
-        })?;
+    if let Some(address) = path
+        .map(str::trim)
+        .filter(|path| manage_chat_file_is_address(path))
+    {
+        // An outside file is addressed by its real path; only its granted file routes.
+        let unavailable = || "Reopen this file from its chat link to restore access in Files.";
+        let root = context.roots.chat.as_deref().ok_or_else(unavailable)?;
+        let inner = context
+            .roots
+            .chat_file_name
+            .clone()
+            .ok_or_else(unavailable)?;
+        if Path::new(address) != root.join(&inner) {
+            return Err(unavailable().to_string());
+        }
         return Ok(ManageDocsPath {
             chat: true,
             extra: false,
             inner,
-            outer,
+            outer: address.to_string(),
             root,
         });
     }
+    let outer = manage_normalized_relative_path(path)?;
     let Some(inner) = manage_extra_root_relative_path(&outer) else {
         return Ok(ManageDocsPath {
             chat: false,
@@ -97,16 +105,6 @@ pub(crate) fn manage_docs_path<'a>(
         outer,
         root,
     })
-}
-
-/// `Some(inner path)` when a chat-opened document addresses its bounded mount.
-pub(crate) fn manage_chat_file_root_relative_path(outer: &str) -> Option<String> {
-    if outer == MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT {
-        return Some(String::new());
-    }
-    outer
-        .strip_prefix(&format!("{MANAGE_DOCS_CHAT_FILE_MOUNT_SEGMENT}/"))
-        .map(str::to_string)
 }
 
 /// `Some(inner path)` when the path addresses the mounted Docs directory.
