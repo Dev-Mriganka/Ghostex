@@ -3,7 +3,7 @@
 //! theme-simple-controls.tsx, packages/shared/ghostex-settings/titlebar-color.ts).
 //!
 //! CDXC:Theming 2026-09-28 SEE-ALSO:
-//! This is the third copy of the chrome scale: packages/shared/ghostex-settings/titlebar-color.ts owns it and apps/desktop/src/app/helpers/titlebar.rs paints the app with it. The Settings view cannot reach the app helpers (the preview binary includes it alone), so it ports the functions and reads every table (presets, calibrated tints) from the generated catalog; keep the functions in lockstep with titlebar-color.ts.
+//! This is the third copy of the chrome scale: packages/shared/ghostex-settings/titlebar-color.ts owns it and apps/desktop/src/app/helpers/titlebar/ paints the app with it. The Settings view cannot reach the app helpers (the preview binary includes it alone), so it ports the functions and reads every table (presets, calibrated tints) from the generated catalog; keep the functions in lockstep with titlebar-color.ts.
 use super::super::super::catalog::{module, settings_catalog};
 use super::super::super::store::SettingsValues;
 use serde_json::{Map, Value, json};

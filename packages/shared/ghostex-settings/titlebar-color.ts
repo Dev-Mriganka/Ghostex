@@ -15,7 +15,7 @@ export const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARKNESS_PERCENT = 96;
  * CDXC:Theming 2026-09-08 DECISION:
  * User: default background contrast and color must match my current settings: 96 contrast and neutral #808080 tint, resolving to #0b0b0b.
  * This replaces the ice tint at 98 contrast default.
- * SEE-ALSO: apps/desktop/src/app/helpers/titlebar.rs and packages/core-ui/styles/theme.css.
+ * SEE-ALSO: apps/desktop/src/app/helpers/titlebar/ and packages/core-ui/styles/theme.css.
  */
 const CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_SCALE_REFERENCE_DARKNESS_PERCENT = 95;
 // CDXC:Theming 2026-09-08 WHY:
@@ -247,7 +247,7 @@ export function getAccentColorForBackgroundTint(
  * CDXC:Theming 2026-09-23 WHY:
  * The light chat needs an accent that reads on a pale surface: the tint's hue at a dark lightness, and the
  * light chrome's foreground #262626 for a neutral tint (the value theme.css already forces in light mode).
- * SEE-ALSO: `accent_color_for_tint` in apps/desktop/src/app/helpers/titlebar.rs.
+ * SEE-ALSO: `accent_color_for_tint` in apps/desktop/src/app/helpers/titlebar/chrome_tints.rs.
  */
 export const NEUTRAL_TINT_LIGHT_ACCENT_COLOR = '#262626';
 const LIGHT_ACCENT_LIGHTNESS = 0.38;
@@ -370,7 +370,7 @@ export function getSidebarTitlebarGradientColors(backgroundColor: string): Sideb
  * mirror of the dark one: 100 is pure white, the neutral tint at 96 resolves to the shipped #f4f4f5 light
  * chrome, and calibrated pale tints stand in for the very dark ones. The stored key says lightness so it
  * cannot be confused with the dark darkness key. 2026-09-22: User: the light slider goes down to 60, not 85.
- * SEE-ALSO: apps/desktop/src/app/helpers/titlebar.rs ports this for the native chrome.
+ * SEE-ALSO: apps/desktop/src/app/helpers/titlebar/chrome_tints.rs ports this for the native chrome.
  */
 export const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_TINT_COLOR = '#808080';
 export const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_LIGHTNESS_PERCENT = 96;
@@ -474,7 +474,7 @@ export const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_COLOR = getSidebar
  * are unchanged so saved themes keep their look, `gray` is labelled Graphite, and the new tints have calibrated entries
  * in the dark and light tint tables so they read as richly as Blue, Green and Red.
  * SEE-ALSO: `DARK_THEME_PRESET_CONTROLS` / `LIGHT_THEME_PRESET_CONTROLS` and the tint tables in
- * apps/desktop/src/app/helpers/titlebar.rs, which must match these entry for entry.
+ * apps/desktop/src/app/helpers/titlebar/chrome_tints.rs, which must match these entry for entry.
  */
 export type ThemePresetColor =
   | 'gray'
@@ -553,7 +553,7 @@ export const LIGHT_THEME_PRESET_CONTROLS: Readonly<Record<Exclude<LightThemePres
  * theme's chrome (Custom keeps its own slider); the work area colour is the chrome at the work area value instead.
  * Supersedes the same day's single five-step `themeContrast` (-2 to 2), which migrates as -8, -4, 0, 2 or 4 points for
  * both.
- * SEE-ALSO: `theme_contrast_points` in apps/desktop/src/app/helpers/titlebar.rs.
+ * SEE-ALSO: `theme_contrast_points` in apps/desktop/src/app/helpers/titlebar/chrome_tints.rs.
  */
 export const THEME_CONTRAST_MIN_POINTS = -12;
 export const THEME_CONTRAST_MAX_POINTS = 4;
@@ -708,7 +708,7 @@ function isLightSidebarTitlebarBackground(color: string): boolean {
  * contrast than the rest; this replaces the same-day exact match and the earlier 70% / 40% steps). With
  * the shipped neutral chrome these land next to the previous fixed menu colours (#171717 for #191919 /
  * #ffffff), exactly on the previous #0d0d0d dark chat, and on #f7f7f7 for the light chat.
- * SEE-ALSO: apps/desktop/src/app/helpers/titlebar.rs and apps/desktop/src/app/native_chat/appearance.rs
+ * SEE-ALSO: apps/desktop/src/app/helpers/titlebar/ and apps/desktop/src/app/native_chat/appearance.rs
  * paint the native menu and chat.
  */
 export function getSidebarTitlebarMenuBackgroundForChrome(chromeColor: string): string {
@@ -725,7 +725,7 @@ type WorkAreaColorSettings = Parameters<typeof resolveDarkChromeControls>[0] &
 /**
  * The work area's colour for one appearance: the sidebar's chrome with the work area contrast in place of the sidebar
  * contrast, stepped toward white like every chat and terminal background.
- * SEE-ALSO: `work_area_background_for_variant` in apps/desktop/src/app/helpers/titlebar.rs.
+ * SEE-ALSO: `work_area_background_for_variant` in apps/desktop/src/app/helpers/titlebar/chrome_tints.rs.
  */
 export function getWorkAreaBackgroundForSettings(settings: WorkAreaColorSettings, light: boolean): string {
   const delta = (settings.themeWorkAreaContrast ?? 0) - (settings.themeSidebarContrast ?? 0);

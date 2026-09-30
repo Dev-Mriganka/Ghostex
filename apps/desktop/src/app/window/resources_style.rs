@@ -6,7 +6,7 @@ use crate::*;
 /// CDXC:Titlebar 2026-09-22 DECISION:
 /// User: the Tips, Resources, Dev servers and Notifications dropdowns get the Ask Ghostex menu's roundness instead of a hard square look, with the layout unchanged, and they take the background colour the sidebar shows instead of the near-black menu fill.
 /// The panel matches the menu's 8px corners and cards its 6px rows; small buttons, chips and icon tiles take a slightly smaller radius so they stay proportionate.
-/// SEE-ALSO: titlebar/popup_menu_builders.rs `titlebar_popup_menu_with_scroll_behavior`, helpers/titlebar.rs `titlebar_background`.
+/// SEE-ALSO: titlebar/popup_menu_builders.rs `titlebar_popup_menu_with_scroll_behavior`, helpers/titlebar/chrome_colors.rs `titlebar_background`.
 pub(super) const RESOURCE_PANEL_RADIUS: f32 = 8.0;
 pub(super) const RESOURCE_CARD_RADIUS: f32 = 6.0;
 pub(super) const RESOURCE_CONTROL_RADIUS: f32 = 5.0;

@@ -6,7 +6,7 @@
 //! `set_offset_from_scrollbar`, and brackets the drag with the list's own
 //! `scrollbar_drag_started` / `scrollbar_drag_ended`. It also already carries
 //! the app's exact thumb colors (`apply_gpui_component_theme` in
-//! app/helpers/titlebar.rs, shared with packages/components/ui/scrollbar-theme.css),
+//! app/helpers/titlebar/chrome_colors.rs, shared with packages/components/ui/scrollbar-theme.css),
 //! so only the 5px thickness from React's session-chat-scrollbar.css is set here.
 //!
 //! Its mouse handling is scoped to the thumb strip, so it never takes a click,

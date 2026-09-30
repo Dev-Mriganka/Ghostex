@@ -1,4 +1,4 @@
-//! CDXC:WebGpui 2026-09-22 WHY: some desktop files mix pure drawing helpers with native-only code (`helpers/titlebar.rs` reaches into AppKit, CEF and the file system), so they cannot be compiled here whole, and copying the pure functions would let the two apps drift. This script lifts the named items out of the desktop source at build time instead, byte for byte. `extracted-items.txt` is the list, and doubles as the inventory of what a shared UI crate has to own.
+//! CDXC:WebGpui 2026-09-22 WHY: some desktop files mix pure drawing helpers with native-only code (`helpers/titlebar/` reaches into AppKit, CEF and the file system), so they cannot be compiled here whole, and copying the pure functions would let the two apps drift. This script lifts the named items out of the desktop source at build time instead, byte for byte. `extracted-items.txt` is the list, and doubles as the inventory of what a shared UI crate has to own.
 use std::{collections::BTreeMap, env, fs, path::Path};
 
 fn main() {
