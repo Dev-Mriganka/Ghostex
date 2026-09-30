@@ -42,7 +42,7 @@ pub(crate) fn confirmed_agents_terminal_ghostty_surface_close_slots(
 }
 
 #[cfg(target_os = "macos")]
-#[allow(dead_code)] // no caller: the live path uses the same-named GhostexGpuiApp method in app/focus.rs
+#[allow(dead_code)] // no caller: the live path uses the same-named GhostexGpuiApp method in app/focus/agents_tab_actions.rs
 pub(crate) fn consume_confirmed_agents_terminal_ghostty_surface_closes(
     workspace: &mut WorkspaceModel,
     runtime_sessions: &AgentsTerminalRuntimeSessionRegistry,
