@@ -205,7 +205,7 @@ mod backend {
                 };
                 let keycodes: Vec<Option<u8>> =
                     KEYSYMS.iter().map(|sym| keycode_of(*sym)).collect();
-                let base = ModMask::MOD1 | ModMask::CONTROL | ModMask::SHIFT;
+                let base = ModMask::M1 | ModMask::CONTROL | ModMask::SHIFT;
                 // Grab with and without Caps Lock and Num Lock, which X counts as modifiers.
                 let variants = [
                     base,
