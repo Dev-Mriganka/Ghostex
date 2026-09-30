@@ -10,7 +10,7 @@
 //! once something happened would be silent in exactly the run where it matters.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/sidebar_open.rs,
-//! apps/desktop/src/app/gx_store/diagnostics.rs.
+//! apps/desktop/src/app/gx_store/diagnostics/.
 
 use ghostex_gx_core::{ActionEffect, SidebarActionPlan};
 use serde_json::json;

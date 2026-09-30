@@ -9,7 +9,7 @@
 //! renamed a Project Group and `renames` is zero means the old runtime is still the only writer.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/collection_menu.rs,
-//! apps/desktop/src/app/gx_store/diagnostics.rs.
+//! apps/desktop/src/app/gx_store/diagnostics/.
 
 use serde_json::json;
 

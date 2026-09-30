@@ -1,4 +1,4 @@
-//! The desktop's record lines (`gx_store/diagnostics.rs`) are disk logs gated by a diagnostic scenario. The page has no log files, so each record the shared executor files write is a no-op here, under the same name and arity.
+//! The desktop's record lines (`gx_store/diagnostics/`) are disk logs gated by a diagnostic scenario. The page has no log files, so each record the shared executor files write is a no-op here, under the same name and arity.
 #[derive(Default)]
 pub(crate) struct GxStoreDiagnostics;
 
