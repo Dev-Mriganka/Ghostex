@@ -11,7 +11,9 @@ if (localStartOwnsLock) {
 
 import { spawn, spawnSync } from 'node:child_process';
 import {
+  accessSync,
   closeSync,
+  constants as fsConstants,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -19,6 +21,7 @@ import {
   readdirSync,
   readFileSync,
   readSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -88,7 +91,12 @@ const appPath = isDarwin
   : targetsWindows
     ? path.join(gpuiDir, 'build', 'windows', appName)
     : path.join(gpuiDir, 'build', 'linux', appName);
-const installedAppPath = path.join(installDir, isDarwin ? `${appName}.app` : appName);
+const linuxPackagedAppPath =
+  process.platform === 'linux' && !isWsl && !isolatedInstance && !process.env.INSTALL_DIR?.trim()
+    ? resolveLinuxPackagedAppPath()
+    : undefined;
+const installedAppPath = linuxPackagedAppPath ?? path.join(installDir, isDarwin ? `${appName}.app` : appName);
+const linuxUserInstalledAppPath = path.join(installDir, appName);
 const windowsInstalledAppPath = windowsInstallPaths
   ? path.win32.join(windowsInstallPaths.windowsPath, appName)
   : undefined;
@@ -142,14 +150,24 @@ const platformLabel = isDarwin
   : targetsWindows
     ? isWsl
       ? 'Windows via WSL2'
-      : requireWindowsWslRuntime ? 'Windows, WSL2' : 'Windows, PowerShell'
+      : requireWindowsWslRuntime
+        ? 'Windows, WSL2'
+        : 'Windows, PowerShell'
     : 'Linux';
 logStartStep(`Checking local GPUI resources (${platformLabel})...`);
 if (isWindows) {
-  run(windowsPowerShellExecutable(), [
-    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
-    path.join(repoRoot, 'tooling', 'prepare-windows-build.ps1'),
-  ], { quietLabel: 'Windows build prerequisites' });
+  run(
+    windowsPowerShellExecutable(),
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      path.join(repoRoot, 'tooling', 'prepare-windows-build.ps1'),
+    ],
+    { quietLabel: 'Windows build prerequisites' }
+  );
 }
 ensureLocalReferenceCheckouts();
 logStartDetail('Reference checkouts are ready.');
@@ -302,6 +320,7 @@ if (targetsWindows) {
   Without this stop the previous build's control plane kept the port and went on serving the rebuilt app, so a local start never ran the gxserver it had just compiled.
   /api/control/stop ends only the control plane (stopAll is the call that kills sessions); the rebuilt app then starts its bundled gxserver.
   A WSL-driven start is not covered: its state lives on the Windows side, which ghostexStateDir does not resolve from Linux.
+  Native Linux stops it too (2026-10-01): otherwise a start that replaced an older installed package kept that package's gxserver serving the rebuilt app.
   */
   if (isWindows) {
     await stopRunningGxserverControlPlaneBeforeLaunch(appPath);
@@ -319,11 +338,24 @@ if (targetsWindows) {
   await stopRunningGxserverControlPlaneBeforeLaunch(appPath);
   await installAndOpenMacosApp(appPath);
 } else {
-  await closeRunningGpuiBundle(installedAppPath, {
-    action: `before installing rebuilt app to ${installedAppPath}`,
-    includeBundleId: false,
-  });
-  installAndLaunchLinuxApp(appPath);
+  const installNeedsRoot = linuxInstallNeedsRoot();
+  if (installNeedsRoot) {
+    // Ask for the password before anything is closed, so a cancelled prompt leaves the app running.
+    logStartStep(`Installing to ${installedAppPath} needs administrator rights (sudo)...`);
+    run('sudo', ['-v']);
+  }
+  const runningBundlePaths =
+    linuxPackagedAppPath && linuxPackagedAppPath !== linuxUserInstalledAppPath
+      ? [installedAppPath, linuxUserInstalledAppPath]
+      : [installedAppPath];
+  for (const bundlePath of runningBundlePaths) {
+    await closeRunningGpuiBundle(bundlePath, {
+      action: `before installing rebuilt app to ${installedAppPath}`,
+      includeBundleId: false,
+    });
+  }
+  await stopRunningGxserverControlPlaneBeforeLaunch(appPath);
+  installAndLaunchLinuxApp(appPath, { installNeedsRoot });
 }
 pruneStaleIncrementalCaches();
 finishStartStep();
@@ -1138,10 +1170,10 @@ function commandLineBelongsToGpuiBundle(commandLine, bundlePath) {
     const helperExecutable = path.join(helpersRoot, `${helperName}.app`, 'Contents', 'MacOS', helperName);
     return commandLineRunsExecutable(commandLine, helperExecutable);
   }
-  // Flat Linux layout: match only the staged app binaries (Ghostex and
-  // ghostex-gpui-cef-helper). The staged gxserver daemon and zmx sessions
-  // live under the same directory and must survive a rebuild.
-  return ['Ghostex', 'ghostex-gpui-cef-helper'].some((name) =>
+  // Flat Linux layout: match only the app binaries (Ghostex, the release
+  // package's ghostex-gpui-runtime, and ghostex-gpui-cef-helper). The gxserver
+  // daemon and zmx sessions live under the same directory and must survive a rebuild.
+  return ['Ghostex', 'ghostex-gpui-runtime', 'ghostex-gpui-cef-helper'].some((name) =>
     commandLineRunsExecutable(commandLine, path.join(bundlePath, name))
   );
 }
@@ -1239,18 +1271,28 @@ async function verifyCanonicalMacosGpuiLaunch() {
   );
 }
 
-function installAndLaunchLinuxApp(stagedAppPath) {
-  logStartStep(`Installing ${appName} to ${installDir}...`);
-  mkdirSync(installDir, { recursive: true });
-  syncInstalledAppBundle(stagedAppPath);
+function installAndLaunchLinuxApp(stagedAppPath, { installNeedsRoot = false } = {}) {
+  logStartStep(`Installing ${appName} to ${installedAppPath}...`);
+  if (!installNeedsRoot) {
+    mkdirSync(path.dirname(installedAppPath), { recursive: true });
+  }
+  syncInstalledAppBundle(stagedAppPath, { asRoot: installNeedsRoot });
   logStartStep(`Opening ${appName}...`);
   launchLinuxGpuiApp();
 }
 
-function syncInstalledAppBundle(stagedAppPath) {
-  const rsyncArgs = ['-a', '--delete', `${stagedAppPath}/`, `${installedAppPath}/`];
-  if (startVerbose) {
-    run('rsync', rsyncArgs);
+function syncInstalledAppBundle(stagedAppPath, { asRoot = false } = {}) {
+  // A package-owned folder stays root-owned, like the package manager left it.
+  const rsyncArgs = [
+    '-a',
+    '--delete',
+    ...(asRoot ? ['--chown=root:root'] : []),
+    `${stagedAppPath}/`,
+    `${installedAppPath}/`,
+  ];
+  const [command, args] = asRoot ? ['sudo', ['rsync', ...rsyncArgs]] : ['rsync', rsyncArgs];
+  if (startVerbose || asRoot) {
+    run(command, args);
   } else {
     run('rsync', [...rsyncArgs.slice(0, 2), '--itemize-changes', ...rsyncArgs.slice(2)], {
       quietLabel: `Install ${appName} bundle`,
@@ -1258,6 +1300,44 @@ function syncInstalledAppBundle(stagedAppPath) {
     });
   }
   logStartDetail(`Installed bundle synced to ${installedAppPath}.`);
+}
+
+/**
+ * CDXC:Build 2026-10-01 DECISION:
+ * User: "we need to modify bun run start on linux so when i run it it goes and replaces the currently installed app from aur or from whatever package manager". A package (the AUR `ghostex-bin`, the .deb) puts the app folder at /opt/ghostex and a `/usr/bin/ghostex` wrapper that runs `<app>/gxserver/bin/ghostex`, and the menu entry and the `ghostex` command both open that copy, so a start installs over it (with sudo) instead of into ~/.local/share where nothing launches it. The next package upgrade overwrites it again, which is expected. `INSTALL_DIR` and `--isolated` still install where they say.
+ */
+function resolveLinuxPackagedAppPath() {
+  for (const launcher of ['/usr/bin/ghostex', '/usr/local/bin/ghostex']) {
+    let cliPath;
+    try {
+      const resolved = realpathSync(launcher);
+      if (resolved.endsWith('/gxserver/bin/ghostex')) {
+        cliPath = resolved;
+      } else if (statSync(resolved).size < 64 * 1024) {
+        cliPath = readFileSync(resolved, 'utf8').match(/exec\s+"?(\/[^"\s]*\/gxserver\/bin\/ghostex)"?/)?.[1];
+      }
+    } catch {
+      continue;
+    }
+    if (!cliPath) {
+      continue;
+    }
+    const appRoot = path.dirname(path.dirname(path.dirname(cliPath)));
+    if (!appRoot.startsWith(`${homedir()}${path.sep}`) && existsSync(path.join(appRoot, 'Ghostex'))) {
+      return appRoot;
+    }
+  }
+  return undefined;
+}
+
+function linuxInstallNeedsRoot() {
+  const target = existsSync(installedAppPath) ? installedAppPath : path.dirname(installedAppPath);
+  try {
+    accessSync(target, fsConstants.W_OK);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 function ensureMacosInstalledAppBundleBit(appBundlePath) {
@@ -1366,9 +1446,7 @@ async function stopRunningGxserverControlPlaneBeforeLaunch(stagedAppPath) {
     return;
   }
 
-  const endpoints = isWindows
-    ? windowsGxserverEndpoints(stagedAppPath)
-    : [{ baseUrl: gxserverBaseUrl }];
+  const endpoints = isWindows ? windowsGxserverEndpoints(stagedAppPath) : [{ baseUrl: gxserverBaseUrl }];
   for (const endpoint of endpoints) {
     await stopGxserverEndpointBeforeLaunch(endpoint, token, expectedBuildIdentity);
   }
@@ -1426,7 +1504,9 @@ function gxserverControlPlaneStopReason({ actualBuildIdentity, expectedBuildIden
 function readBundledGxserverBuildIdentity(stagedAppPath) {
   const identityPath = isWindows
     ? path.join(stagedAppPath, 'resources', 'build-identity.json')
-    : path.join(stagedAppPath, 'Contents', 'Resources', 'Web', 'gxserver', 'build-identity.json');
+    : isDarwin
+      ? path.join(stagedAppPath, 'Contents', 'Resources', 'Web', 'gxserver', 'build-identity.json')
+      : path.join(stagedAppPath, 'gxserver', 'build-identity.json');
   if (!existsSync(identityPath)) {
     return undefined;
   }
@@ -1461,9 +1541,10 @@ function ghostexStateDir() {
  */
 function windowsGxserverEndpoints(stagedAppPath) {
   const configuredHome = startEnvironment.GHOSTEX_HOME?.trim();
-  const dataDir = configuredHome && path.isAbsolute(configuredHome)
-    ? configuredHome
-    : path.join(startEnvironment.LOCALAPPDATA?.trim() || path.join(homedir(), 'AppData', 'Local'), 'Ghostex', 'Data');
+  const dataDir =
+    configuredHome && path.isAbsolute(configuredHome)
+      ? configuredHome
+      : path.join(startEnvironment.LOCALAPPDATA?.trim() || path.join(homedir(), 'AppData', 'Local'), 'Ghostex', 'Data');
   const script = `
 $ErrorActionPreference = 'Stop'
 $serverPaths = ConvertFrom-Json -InputObject $env:GHOSTEX_START_SERVER_PATHS
@@ -1482,16 +1563,18 @@ $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)
     timeout: 15000,
     env: {
       ...withoutPowerShell7ModulePaths(startEnvironment),
-      GHOSTEX_START_SERVER_PATHS: JSON.stringify(
-        [
-          ...[installedAppPath, stagedAppPath].map((directory) => path.join(directory, 'resources', 'native', 'gxserver.exe')),
-          path.join(dataDir, 'gxserver', 'package', 'bin', 'gxserver.exe'),
-        ]
-      ),
+      GHOSTEX_START_SERVER_PATHS: JSON.stringify([
+        ...[installedAppPath, stagedAppPath].map((directory) =>
+          path.join(directory, 'resources', 'native', 'gxserver.exe')
+        ),
+        path.join(dataDir, 'gxserver', 'package', 'bin', 'gxserver.exe'),
+      ]),
     },
   });
   if (result.status !== 0) {
-    throw new Error(`Could not inspect Windows gxserver listeners: ${result.stderr || result.error || 'PowerShell failed'}`);
+    throw new Error(
+      `Could not inspect Windows gxserver listeners: ${result.stderr || result.error || 'PowerShell failed'}`
+    );
   }
   const records = JSON.parse(result.stdout.trim() || '[]');
   return (Array.isArray(records) ? records : [records]).map(({ pid, port }) => ({
