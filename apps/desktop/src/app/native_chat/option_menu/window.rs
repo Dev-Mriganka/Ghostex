@@ -63,9 +63,9 @@ pub(in crate::app::native_chat) struct ChatOptionMenu {
     /// model pop-up over a terminal session's model pill: the chat view behind it is only its host,
     /// so the pane going off screen must not take it down.
     outside_pane: bool,
-    /// The model pop-up's reasoning levels Left and Right (or the Reasoning list) moved to this visit, by row key.
-    /// Kept on the menu so the Reasoning side list, a panel of its own, can set them too.
-    pub(super) model_efforts: std::collections::HashMap<String, String>,
+    /// The model pop-up's reasoning level Left and Right (or the Reasoning list) last moved to this visit.
+    /// Kept on the menu so the Reasoning side list, a panel of its own, can set it too.
+    pub(super) model_effort: Option<String>,
     /// Keeps the source window's tooltips hidden while the menu is up (`Root::suppress_tooltips`).
     tooltips: Option<gpui::TooltipSuppression>,
 }
@@ -736,7 +736,7 @@ impl NativeChatView {
             compact: below,
             rekeys: 0,
             outside_pane,
-            model_efforts: Default::default(),
+            model_effort: None,
             tooltips,
         });
         let anchor = Bounds::new(content_bounds.origin + trigger.origin, trigger.size);

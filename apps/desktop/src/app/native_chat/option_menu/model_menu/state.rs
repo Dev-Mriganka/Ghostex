@@ -6,7 +6,6 @@ use super::style::{
 };
 use gpui::{Bounds, Context, Entity, Pixels, ScrollStrategy, UniformListScrollHandle, Window};
 use serde_json::{Value, json};
-use std::collections::HashMap;
 
 /// CDXC:SessionChat 2026-09-21 SEE-ALSO:
 /// What the picker shows (tabs, row order, search ranking, favorites, the footer rows and the pill's label) is decided in the core (packages/gx-chat-core/src/menus/picker/model_menu.rs) and projected as the snapshot's `modelMenu`; the core answers `modelMenuView`, `modelMenuPick`, `modelMenuTrait` and `modelMenuFavorite`. This side owns only the cursor and the open side list.
@@ -104,20 +103,23 @@ impl ModelMenuState {
             .or_else(|| rows.iter().find(|row| row["selected"] == true))
     }
 
-    /// The level a pick of `row` carries: where Left and Right left it, else the row's own.
-    pub(super) fn effort_for(&self, row: &Value, efforts: &HashMap<String, String>) -> String {
-        row["key"]
-            .as_str()
-            .and_then(|key| efforts.get(key))
-            .cloned()
-            .or_else(|| row["effort"].as_str().map(str::to_owned))
+    /// The level a pick of `row` carries: where Left and Right (or the Reasoning list) last left it
+    /// when `row` offers that level, else the row's own.
+    ///
+    /// CDXC:SessionChat 2026-10-01 DECISION:
+    /// User: "if i'm on sonnet and i change it from low to high then i press up arrow to move to opus, we should stay on high, not go back to low". The level picked this visit follows the highlight to every model that offers it, instead of being remembered per row.
+    pub(super) fn effort_for(&self, row: &Value, effort: Option<&str>) -> String {
+        effort
+            .filter(|effort| offers_effort(row, effort))
+            .or_else(|| row["effort"].as_str())
             .unwrap_or_default()
+            .to_owned()
     }
 
     /// The footer buttons as drawn: the Reasoning button follows the browsed row.
-    pub(super) fn display_traits(&self, efforts: &HashMap<String, String>) -> Vec<Value> {
+    pub(super) fn display_traits(&self, effort: Option<&str>) -> Vec<Value> {
         let row = self.browsed_row();
-        let effort = row.map(|row| self.effort_for(row, efforts));
+        let effort = row.map(|row| self.effort_for(row, effort));
         self.traits()
             .iter()
             .map(|setting| reasoning_for(setting, row, effort.as_deref()))
@@ -175,6 +177,12 @@ fn reasoning_for(setting: &Value, row: Option<&Value>, effort: Option<&str>) -> 
     setting["browse"] = row["key"].clone();
     setting["browseCurrent"] = selected.into();
     setting
+}
+
+fn offers_effort(row: &Value, effort: &str) -> bool {
+    row["efforts"]
+        .as_array()
+        .is_some_and(|efforts| efforts.iter().any(|entry| entry["value"] == effort))
 }
 
 /// The level Left or Right moves `row` to from `current`, or `None` at an end or on a model without levels.
@@ -273,16 +281,21 @@ impl ChatOptionMenuPanel {
             row["efforts"]
                 .as_array()
                 .is_some_and(|efforts| !efforts.is_empty())
-                .then(|| state.effort_for(row, &self.menu.read(cx).model_efforts))
+                .then(|| state.effort_for(row, self.menu.read(cx).model_effort.as_deref()))
         });
         self.model_menu_pick(index, secondary, effort, cx)
     }
 
-    /// The level a mouse pick of row `index` carries: only one the keyboard or the Reasoning list moved.
+    /// The level a mouse pick of row `index` carries: only one the keyboard or the Reasoning list
+    /// moved, and only when that row offers it.
     pub(super) fn model_menu_browsed_effort(&self, index: usize, cx: &gpui::App) -> Option<String> {
         let state = self.model_menu.as_ref()?;
-        let key = state.rows().get(index)?["key"].as_str()?;
-        self.menu.read(cx).model_efforts.get(key).cloned()
+        let row = state.rows().get(index)?;
+        self.menu
+            .read(cx)
+            .model_effort
+            .clone()
+            .filter(|effort| offers_effort(row, effort))
     }
 }
 

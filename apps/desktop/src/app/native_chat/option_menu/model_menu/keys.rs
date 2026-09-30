@@ -183,13 +183,11 @@ impl ChatOptionMenuPanel {
             }
             "left" | "right" => {
                 let row = state.rows()[state.active].clone();
-                let efforts = &self.menu.read(cx).model_efforts;
-                let current = state.effort_for(&row, efforts);
+                let current = state.effort_for(&row, self.menu.read(cx).model_effort.as_deref());
                 match super::state::step_effort(&row, &current, key == "right") {
                     Some(next) => {
-                        let key = row["key"].as_str().unwrap_or_default().to_owned();
                         self.menu.update(cx, |menu, _| {
-                            menu.model_efforts.insert(key, next);
+                            menu.model_effort = Some(next);
                         });
                     }
                     None => state.shake_at = Some(std::time::Instant::now()),

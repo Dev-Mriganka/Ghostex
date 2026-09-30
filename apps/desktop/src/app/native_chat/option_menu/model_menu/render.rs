@@ -484,7 +484,7 @@ impl ChatOptionMenuPanel {
         };
         let view = state.view.clone();
         let active = state.active;
-        let traits = state.display_traits(&self.menu.read(cx).model_efforts);
+        let traits = state.display_traits(self.menu.read(cx).model_effort.as_deref());
         let shake = state
             .shake_at
             .map_or(0.0, |at| shake_offset(at.elapsed().as_secs_f32()));
