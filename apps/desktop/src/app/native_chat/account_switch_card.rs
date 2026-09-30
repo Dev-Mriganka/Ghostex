@@ -229,6 +229,10 @@ fn account(value: &Value, verified: bool, palette: &Palette, s: f32) -> AnyEleme
         .into_any_element()
 }
 
+/// CDXC:AgentProviders 2026-10-01 WHY:
+/// The moving line under the steps looked slow and choppy. At the shared thirty-frame indicator rate the bar still jumps about 11px a frame across a step, so it moves on every display frame, as the React card's CSS animation did; the card is up only for the few seconds a switch takes and blocks the chat meanwhile, so the extra frames cost nothing that lasts.
+const SWEEP_FRAME_INTERVAL: Duration = Duration::ZERO;
+
 /// `.gx-account-switch-step`: a small numbered circle and label over a 2px line; a finished step
 /// shows an accent check, the active one a filled number and the moving accent line.
 fn step(index: usize, value: &Value, id: &str, palette: &Palette, s: f32) -> AnyElement {
@@ -280,7 +284,8 @@ fn step(index: usize, value: &Value, id: &str, palette: &Palette, s: f32) -> Any
                     gpui::ElementId::Name(format!("account-switch-motion:{id}:{index}").into()),
                     Duration::from_millis(1600),
                     |bar, phase| bar.left(relative(-0.4 + 1.4 * css_ease_in_out(phase))),
-                ),
+                )
+                .frame_interval(SWEEP_FRAME_INTERVAL),
         );
     }
     // `.gx-account-switch-progress` columns: the middle label is the longest, so it grows widest.
