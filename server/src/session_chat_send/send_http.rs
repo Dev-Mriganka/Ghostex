@@ -334,7 +334,7 @@ pub(crate) async fn handle_interrupt_session_chat_http(
     // The interrupt is an Escape as far as the activity state machine is
     // concerned: it ends the hook-backed working claim the way the
     // terminal-pane Escape key does (see the escape branch in
-    // session_status.rs), because no agent hook reports an interrupted turn.
+    // session_status/transition.rs), because no agent hook reports an interrupted turn.
     let _ =
         crate::accounts::recovery::user_action(state, &target.project_id, &target.session_id, true);
     let mut escape_params = Map::new();
