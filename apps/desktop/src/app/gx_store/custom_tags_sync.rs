@@ -2,7 +2,7 @@
 //!
 //! CDXC:Sessions 2026-09-25 WHY:
 //! Settings runs in an app-modal window, so its catalog write arrives as `updateCustomSessionTags`
-//! through `dispatch_gpui_sidebar_host_message` (sidebar_dispatch.rs bounds it first), and the old
+//! through `dispatch_gpui_sidebar_host_message` (sidebar_dispatch/runtime_settings_and_host_messages.rs bounds it first), and the old
 //! runtime used to perform it: this computer's catalog as a debounced write-through with a retry
 //! (`queueCustomSessionTagsServerSync`), a remote machine's as one direct call down that machine's
 //! tunnel (`updateRemoteCustomSessionTags`). Both are here now, with the same timers
@@ -11,7 +11,7 @@
 //! keeps drawing the daemon's copy, which arrives on the presentation stream as it did.
 //!
 //! SEE-ALSO: packages/gx-core/src/workspace_groups/custom_tags_push.rs,
-//! apps/desktop/src/app/sidebar_dispatch.rs (`forward_gpui_custom_session_tags_update_to_sidebar`).
+//! apps/desktop/src/app/sidebar_dispatch/runtime_settings_and_host_messages.rs (`forward_gpui_custom_session_tags_update_to_sidebar`).
 
 use std::time::Duration;
 

@@ -1,5 +1,5 @@
 //! Open and sidebar bridge plumbing for the native New Space / Edit Space dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/space_editor_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/sidebar_dispatch.rs (`forward_gpui_sidebar_space_editor_result_to_sidebar`, the bridge arm this calls).
+//! SEE-ALSO: apps/desktop/src/app/window/space_editor_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/sidebar_dispatch/runtime_settings_and_host_messages.rs (`forward_gpui_sidebar_space_editor_result_to_sidebar`, the bridge arm this calls).
 use crate::app::window::*;
 use crate::*;
 

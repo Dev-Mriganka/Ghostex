@@ -10,7 +10,7 @@
 //! left another would run the action twice or not at all.
 //!
 //! SEE-ALSO: apps/desktop/src/app/native_sidebar/actions.rs (`dispatch_native_sidebar_ui`),
-//! apps/desktop/src/app/sidebar_dispatch.rs (`dispatch_gpui_sidebar_host_message`),
+//! apps/desktop/src/app/sidebar_dispatch/runtime_settings_and_host_messages.rs (`dispatch_gpui_sidebar_host_message`),
 //! apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (`handle_gpui_app_modal_sidebar_command`),
 //! docs/2026-09-25/app-runtime-port/LEDGER.md (the F4 rows).
 

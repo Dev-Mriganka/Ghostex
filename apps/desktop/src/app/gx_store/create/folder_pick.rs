@@ -13,7 +13,7 @@
 //! first session immediately, using the default agent chosen on the Get Started page ('terminal'
 //! means a plain shell).
 //!
-//! SEE-ALSO: apps/desktop/src/app/sidebar_dispatch.rs (`dispatch_gpui_workspace_folder_picked_message`,
+//! SEE-ALSO: apps/desktop/src/app/sidebar_dispatch/ (`dispatch_gpui_workspace_folder_picked_message`,
 //! `handle_gpui_first_launch_create_project_session_message`).
 
 use ghostex_gx_core::ProjectKey;

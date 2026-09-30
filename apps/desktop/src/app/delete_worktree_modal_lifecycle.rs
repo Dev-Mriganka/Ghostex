@@ -1,5 +1,5 @@
 //! Open and sidebar bridge plumbing for the native Delete Worktree dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/delete_worktree_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/sidebar_dispatch.rs (`forward_gpui_worktree_modal_command_to_sidebar`).
+//! SEE-ALSO: apps/desktop/src/app/window/delete_worktree_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/gx_store/git/modal_commands.rs (`forward_gpui_worktree_modal_command_to_sidebar`).
 use crate::app::window::*;
 use crate::*;
 

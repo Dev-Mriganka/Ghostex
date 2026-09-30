@@ -1,5 +1,5 @@
 //! Open, sidebar bridge, and result plumbing for the native Add Worktree dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/create_worktree_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/gx_store/git/modal_commands.rs (`forward_gpui_worktree_modal_command_to_sidebar`), apps/desktop/src/app/sidebar_dispatch.rs (`handle_gpui_pick_worktree_images_message`).
+//! SEE-ALSO: apps/desktop/src/app/window/create_worktree_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/gx_store/git/modal_commands.rs (`forward_gpui_worktree_modal_command_to_sidebar`), apps/desktop/src/app/sidebar_dispatch/app_modal_pickers.rs (`handle_gpui_pick_worktree_images_message`).
 use crate::app::window::*;
 use crate::*;
 

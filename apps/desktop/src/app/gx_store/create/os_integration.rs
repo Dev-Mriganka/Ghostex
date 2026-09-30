@@ -14,7 +14,7 @@
 //! registered (or reused) at the resolved cwd. A provided command launches the session with it
 //! (the Search-by-Text `gx f` launcher contract) instead of macOS's typed `command\r` into a shell.
 //!
-//! SEE-ALSO: apps/desktop/src/app/sidebar_dispatch.rs (`dispatch_gpui_os_integration_command_message`),
+//! SEE-ALSO: apps/desktop/src/app/sidebar_dispatch/folder_pickers_and_os_integration.rs (`dispatch_gpui_os_integration_command_message`),
 //! apps/desktop/src/app/titlebar/help_menu.rs.
 
 use ghostex_gx_core::{
