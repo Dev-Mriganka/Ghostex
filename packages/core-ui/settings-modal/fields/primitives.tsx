@@ -10,7 +10,7 @@ import { Switch } from '@/packages/components/ui/switch';
 import { Textarea as BaseTextarea } from '@/packages/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/packages/components/ui/tooltip';
 import { DisabledSettingControlTooltip } from '../../disabled-setting-control-tooltip';
-import { IconAsterisk, IconArrowBigUp, IconInfoCircle } from '@tabler/icons-react';
+import { IconAsterisk, IconArrowBigUp, IconFlaskFilled, IconInfoCircle } from '@tabler/icons-react';
 
 export const MODIFIED_SETTING_TOOLTIP = 'Modified Setting.\n \nClick to Reset to Default';
 
@@ -302,6 +302,7 @@ export function SettingsListItem({
  */
 export function SettingRow({
   advanced,
+  experimental,
   badge,
   children,
   dependent,
@@ -315,6 +316,7 @@ export function SettingRow({
   wide,
 }: {
   advanced?: boolean;
+  experimental?: boolean;
   /** Rows for newly shipped settings may carry a short label badge. */
   badge?: string;
   children: ReactNode;
@@ -363,6 +365,22 @@ export function SettingRow({
             <span className='settings-row-badge inline-flex px-1.5 py-0.5 text-[11px] font-normal'>{badge}</span>
           ) : null}
           {advanced ? <AdvancedSettingTooltip label={label} /> : null}
+          {experimental ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    aria-label={`${label} is an experimental feature`}
+                    className='ml-0.5 inline-flex size-4 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-muted-foreground'
+                    type='button'
+                  >
+                    <IconFlaskFilled aria-hidden='true' className='size-3.5' />
+                  </button>
+                }
+              />
+              <TooltipContent sideOffset={6}>Experimental Feature</TooltipContent>
+            </Tooltip>
+          ) : null}
           {tooltipText ? <SettingDescriptionTooltip description={tooltipText} label={label} /> : null}
         </span>
         {tooltipText ? <span className='sr-only'>{tooltipText}</span> : null}

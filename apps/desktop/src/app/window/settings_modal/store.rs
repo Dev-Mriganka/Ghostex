@@ -643,11 +643,14 @@ impl SettingsStore {
 
     fn refresh_search(&mut self) {
         let show_advanced = self.show_advanced();
+        let show_experimental = self.bool("showBetaFeatures");
         if self.general_search.query != self.search_query
             || self.general_search.show_advanced != show_advanced
+            || self.general_search.show_experimental != show_experimental
             || self.general_search.sections.is_empty()
         {
-            self.general_search = GeneralSearch::new(&self.search_query, show_advanced);
+            self.general_search =
+                GeneralSearch::new(&self.search_query, show_advanced, show_experimental);
         }
         let debugging_mode = self.bool("debuggingMode");
         self.tab_searches = settings_catalog()

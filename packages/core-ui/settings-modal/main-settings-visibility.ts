@@ -80,6 +80,9 @@ export function createMainSettingsVisibility({
   const visibleFirstLaunchMainSettings = firstLaunchSetupVisibleSettings ?? FIRST_LAUNCH_SETUP_VISIBLE_MAIN_SETTINGS;
   const keepAwakeSettingsVisible = isFirstLaunchSetup || draft.showBetaFeatures;
   const mainSettingVisible = (sectionResult: SettingsSectionSearchResult, settingKey: string) => {
+    if (settingKey === 'terminalShadersEnabled' && !draft.showBetaFeatures) {
+      return false;
+    }
     if (isFirstLaunchSetup) {
       return isFirstLaunchSetupMainSettingVisible(
         settingKey as FirstLaunchSetupMainSettingKey,

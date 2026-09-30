@@ -755,6 +755,11 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       'terminalCursorStyleBlink',
       DEFAULT_ghostex_SETTINGS.terminalCursorStyleBlink
     ),
+    terminalShadersEnabled: readBoolean(
+      source,
+      'terminalShadersEnabled',
+      DEFAULT_ghostex_SETTINGS.terminalShadersEnabled
+    ),
     windowsTerminalBackend:
       source.windowsTerminalBackend === 'wsl' ? 'wsl' : DEFAULT_ghostex_SETTINGS.windowsTerminalBackend,
     windowsWslDistribution: normalizeWindowsWslDistribution(

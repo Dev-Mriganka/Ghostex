@@ -34,6 +34,9 @@ patch_files() {
 	0007-teardown-deadlock-hardening)
 		echo "src/Surface.zig src/renderer/generic.zig src/termio/Exec.zig src/termio/Termio.zig src/termio/mailbox.zig src/termio/stream_handler.zig"
 		;;
+	0008-embed-custom-shader-msl-api)
+		echo "src/apprt/embedded.zig"
+		;;
 	*)
 		echo "unknown patch: $1" >&2
 		return 1
@@ -48,6 +51,7 @@ PATCH_NAMES=(
 	0005-embed-config-string-apis
 	0006-mouse-cmd-click-encode-and-mod-dedupe
 	0007-teardown-deadlock-hardening
+	0008-embed-custom-shader-msl-api
 )
 
 pinned_commit() {

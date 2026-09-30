@@ -8,6 +8,10 @@ WEB_DIR="$REPO_ROOT/apps/desktop/runtime/macos/Web"
 CLI_DIR="$REPO_ROOT/apps/desktop/runtime/macos/CLI"
 GHOSTTY_ROOT="${GHOSTTY_ROOT:-}"
 
+# Desktop source uses the patched GPUI effect API. Apply it before every macOS
+# build entry point, including release packaging, without replacing local edits.
+bun "$REPO_ROOT/tooling/apply-zed-patches.mjs"
+
 if ! xcrun xcodebuild -version >/dev/null 2>&1; then
 	for developer_dir in \
 		"/Applications/Xcode.app/Contents/Developer" \

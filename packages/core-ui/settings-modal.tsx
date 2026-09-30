@@ -142,6 +142,7 @@ import {
 import {
   COPY_ON_SELECT_DESCRIPTION,
   COPY_ON_SELECT_OPTIONS,
+  IS_MAC_HOST,
   IS_WINDOWS_HOST,
   PASTE_PREVIEWABLE_IMAGES_DESCRIPTION,
   getMainSettingsGroupSearch,
@@ -1868,13 +1869,22 @@ export function SettingsModal({
                             {mainSettingVisible(settingsSearch.terminal, 'terminalBackgroundMode') ? (
                               <SelectField
                                 description='Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.'
+                                disabled={IS_MAC_HOST && draft.terminalShadersEnabled}
+                                disabledReason='Custom shaders use the background from your Ghostty config. To edit this override, turn Custom shaders off (enable Experimental Features first if the switch is hidden); your saved choice will return.'
                                 label='Terminal background'
                                 {...getSettingModificationProps('terminalBackgroundMode')}
+                                onResetToDefault={
+                                  IS_MAC_HOST && draft.terminalShadersEnabled
+                                    ? undefined
+                                    : getSettingModificationProps('terminalBackgroundMode').onResetToDefault
+                                }
                                 onChange={(value) =>
                                   applySettingsPatch({
                                     terminalBackgroundMode: value as TerminalBackgroundMode,
                                     ...(value === 'custom' && draft.workspaceBackgroundColor === ''
-                                      ? { workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR }
+                                      ? {
+                                          workspaceBackgroundColor: TERMINAL_BACKGROUND_STARTING_COLOR,
+                                        }
                                       : {}),
                                   })
                                 }
@@ -1891,6 +1901,8 @@ export function SettingsModal({
                               <ColorField
                                 dependent
                                 description='Painted behind terminal text in dark mode. Light mode and window glass keep the theme.'
+                                disabled={IS_MAC_HOST && draft.terminalShadersEnabled}
+                                disabledReason='Custom shaders use the background from your Ghostty config. To edit this override, turn Custom shaders off (enable Experimental Features first if the switch is hidden); your saved choice will return.'
                                 label='Terminal background color'
                                 {...getSettingModificationProps('workspaceBackgroundColor')}
                                 onChange={(value) => updateDraft('workspaceBackgroundColor', value)}
@@ -2164,6 +2176,18 @@ export function SettingsModal({
                                 isModified={getSettingModificationProps('promptEditorBackend').isModified}
                                 onChange={(backend) => updateDraft('promptEditorBackend', backend)}
                                 onResetToDefault={getSettingModificationProps('promptEditorBackend').onResetToDefault}
+                              />
+                            ) : null}
+                            {IS_MAC_HOST &&
+                            draft.showBetaFeatures &&
+                            mainSettingVisible(settingsSearch.terminal, 'terminalShadersEnabled') ? (
+                              <ToggleField
+                                experimental
+                                checked={draft.terminalShadersEnabled}
+                                label='Custom shaders (experimental)'
+                                description='Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions.'
+                                {...getSettingModificationProps('terminalShadersEnabled')}
+                                onChange={(checked) => updateDraft('terminalShadersEnabled', checked)}
                               />
                             ) : null}
                           </SettingsSection>
@@ -2681,6 +2705,7 @@ export function SettingsModal({
                                         : 'All Automations'}
                                     </li>
                                     <li>Power settings and the sidebar menu: Keep Awake</li>
+                                    {IS_MAC_HOST ? <li>Terminal custom shaders (macOS only)</li> : null}
                                   </ul>
                                 </div>
                               </>

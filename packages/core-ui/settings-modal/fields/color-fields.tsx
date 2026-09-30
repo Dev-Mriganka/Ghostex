@@ -4,6 +4,7 @@ import { cn } from '@/packages/components/utils';
 import { Button } from '@/packages/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/packages/components/ui/dialog';
 import { AppTooltip } from '../../app-tooltip';
+import { DisabledSettingControlTooltip } from '../../disabled-setting-control-tooltip';
 import { IconPalette } from '@tabler/icons-react';
 import { DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_TINT_COLOR } from '../../../shared/ghostex-settings';
 import { SettingModificationProps } from '../types';
@@ -42,6 +43,8 @@ export function ColorField({
   dependent,
   advanced,
   description,
+  disabled,
+  disabledReason,
   isModified,
   label,
   onChange,
@@ -51,6 +54,8 @@ export function ColorField({
   dependent?: boolean;
   advanced?: boolean;
   description?: string;
+  disabled?: boolean;
+  disabledReason?: string;
   label: string;
   onChange: (value: string) => void;
   value: string;
@@ -65,23 +70,36 @@ export function ColorField({
       htmlFor={id}
       isModified={isModified}
       label={label}
-      onResetToDefault={onResetToDefault}
+      onResetToDefault={disabled ? undefined : onResetToDefault}
     >
-      <div className='settings-control-lane grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-3'>
-        <SettingsInput
-          aria-label={`${label} picker`}
-          className='h-8 cursor-pointer rounded-none p-1'
-          onChange={(event) => onChange(event.currentTarget.value)}
-          type='color'
-          value={colorValue}
-        />
-        <SettingsInput
-          id={id}
-          className='h-8 px-3'
-          onChange={(event) => onChange(event.currentTarget.value)}
-          value={value}
-        />
-      </div>
+      <DisabledSettingControlTooltip disabled={disabled === true} reason={disabledReason}>
+        <div
+          className={cn(
+            'settings-control-lane grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-3',
+            disabled && 'opacity-50'
+          )}
+        >
+          <SettingsInput
+            aria-label={`${label} picker`}
+            disabled={disabled}
+            className='h-8 cursor-pointer rounded-none p-1'
+            onChange={(event) => {
+              if (!disabled) onChange(event.currentTarget.value);
+            }}
+            type='color'
+            value={colorValue}
+          />
+          <SettingsInput
+            id={id}
+            disabled={disabled}
+            className='h-8 px-3'
+            onChange={(event) => {
+              if (!disabled) onChange(event.currentTarget.value);
+            }}
+            value={value}
+          />
+        </div>
+      </DisabledSettingControlTooltip>
     </SettingRow>
   );
 }

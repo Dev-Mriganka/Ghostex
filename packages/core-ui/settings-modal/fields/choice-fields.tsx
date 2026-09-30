@@ -303,6 +303,7 @@ export function SessionChatThemeField({
 export function ToggleField({
   dependent,
   advanced,
+  experimental,
   checked,
   description,
   disabled,
@@ -315,6 +316,7 @@ export function ToggleField({
 }: {
   dependent?: boolean;
   advanced?: boolean;
+  experimental?: boolean;
   checked: boolean;
   description?: string;
   disabled?: boolean;
@@ -328,6 +330,7 @@ export function ToggleField({
     <SettingRow
       dependent={dependent}
       advanced={advanced}
+      experimental={experimental}
       description={description}
       htmlFor={id}
       isModified={isModified}

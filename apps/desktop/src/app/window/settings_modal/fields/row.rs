@@ -42,6 +42,8 @@ pub(crate) struct RowSpec {
     pub(crate) description: Option<SharedString>,
     pub(crate) subtitle: Option<SharedString>,
     pub(crate) advanced: bool,
+    pub(crate) experimental: bool,
+    pub(crate) disabled_reason: Option<SharedString>,
     /// A setting that only applies while the one above is on: `    ↳ ` before the label.
     pub(crate) dependent: bool,
     /// The control takes its own full-width line under the label.
@@ -88,6 +90,17 @@ impl RowSpec {
 
     pub(crate) fn advanced(mut self, advanced: bool) -> Self {
         self.advanced = advanced;
+        self
+    }
+
+    #[cfg(target_os = "macos")]
+    pub(crate) fn experimental(mut self) -> Self {
+        self.experimental = true;
+        self
+    }
+
+    pub(crate) fn disabled_reason(mut self, reason: Option<SharedString>) -> Self {
+        self.disabled_reason = reason;
         self
     }
 
@@ -420,6 +433,31 @@ pub(crate) fn setting_row<V: SettingsPage>(
     }
     if spec.advanced {
         label_line = label_line.child(advanced_marker(p, &id));
+    }
+    if spec.experimental {
+        label_line = label_line.child(
+            placed_tooltip(
+                div()
+                    .id(ElementId::Name(format!("{id}-experimental").into()))
+                    .flex_shrink_0()
+                    .ml(px(2.0))
+                    .size(px(16.0))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(settings_icon(
+                        "modals/space-editor/flask-filled.svg",
+                        14.0,
+                        p.muted,
+                    )),
+                "Experimental Feature".into(),
+                ManagedTooltipPlacement::Below,
+                6.0,
+                None,
+                false,
+            )
+            .into_any_element(),
+        );
     }
     if let Some(tooltip) = tooltip {
         label_line = label_line.child(label_action_button(

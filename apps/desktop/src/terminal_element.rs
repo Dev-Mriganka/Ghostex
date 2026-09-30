@@ -232,6 +232,8 @@ pub struct TerminalViewSettings {
     /// Carry the resolved terminal appearance so these controls follow the terminal's override independently of the app theme.
     pub light_theme: bool,
     pub cursor_shape: TerminalCursorShape,
+    #[cfg(target_os = "macos")]
+    pub shaders: Option<crate::terminal_shaders::TerminalShaderSettings>,
     pub background_image: Option<TerminalBackgroundImage>,
     /// How much of the default background the pane paints itself; window glass sets it to 0 so the
     /// frosted surface behind the pane shows through. Cells with an explicit background still
@@ -260,6 +262,8 @@ impl Default for TerminalViewSettings {
         Self {
             light_theme: false,
             cursor_shape: TerminalCursorShape::Block,
+            #[cfg(target_os = "macos")]
+            shaders: None,
             background_image: None,
             background_alpha: 1.0,
             cursor_blink: false,
@@ -540,6 +544,8 @@ pub struct TerminalView {
     exit: Option<TerminalExit>,
     pub cursor_shape: TerminalCursorShape,
     settings: TerminalViewSettings,
+    #[cfg(target_os = "macos")]
+    shader_state: crate::terminal_shaders::TerminalShaderState,
     /// Selection over viewport cells, driven by the mouse handlers below.
     pub selection: Option<TerminalSelection>,
     /// IME marked (pre-edit) text drawn at the cursor, driven by the
@@ -721,6 +727,8 @@ impl TerminalView {
             exit: None,
             cursor_shape: TerminalCursorShape::Block,
             settings: TerminalViewSettings::default(),
+            #[cfg(target_os = "macos")]
+            shader_state: Default::default(),
             selection: None,
             marked_text: None,
             marked_selection_utf16: None,
@@ -881,6 +889,12 @@ impl TerminalView {
     }
 
     pub fn apply_settings(&mut self, settings: TerminalViewSettings) {
+        #[cfg(target_os = "macos")]
+        if self.settings.shaders != settings.shaders {
+            // A re-enabled or replaced chain starts with fresh cursor/focus
+            // history, so its first frame cannot trail from stale coordinates.
+            self.shader_state = crate::terminal_shaders::TerminalShaderState::default();
+        }
         self.cursor_shape = settings.cursor_shape;
         self.cursor_blink_visible = true;
         self.settings = settings;
@@ -1236,6 +1250,8 @@ impl TerminalView {
             self.drag = None;
         }
         self.frame = Some(frame);
+        #[cfg(target_os = "macos")]
+        self.shader_state.invalidate();
         self.recompute_search_matches();
         self.update_scroll_button_visibility();
     }
@@ -3500,7 +3516,33 @@ impl Element for TerminalElement {
         cx: &mut App,
     ) {
         self.register_input(bounds, &prepaint.hitbox, window, cx);
-        let layout = &prepaint.layout;
+        #[cfg(target_os = "macos")]
+        if let Some((effect, background_alpha)) =
+            self.shader_effect(bounds, &prepaint.layout, window, cx)
+        {
+            // CDXC:Terminal 2026-09-30 WHY: Ghostty shaders sample the theme's
+            // premultiplied background, even when Ghostex's ordinary terminal
+            // uses a transparent Glass surface. A Metal compile failure still
+            // shows this usable, unshaded capture; the off switch restores the
+            // ordinary Glass path below.
+            window.paint_effect(bounds, effect, |window| {
+                self.paint_content(bounds, &prepaint.layout, Some(background_alpha), window, cx);
+            });
+            return;
+        }
+        self.paint_content(bounds, &prepaint.layout, None, window, cx);
+    }
+}
+
+impl TerminalElement {
+    fn paint_content(
+        &mut self,
+        bounds: Bounds<Pixels>,
+        layout: &TerminalLayout,
+        background_alpha: Option<f32>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
         let origin = bounds.origin;
         let cell_width = layout.metrics.cell_width;
         let line_height = layout.metrics.line_height;
@@ -3513,7 +3555,8 @@ impl Element for TerminalElement {
             )
         };
 
-        let background_alpha = self.terminal.read(cx).settings.background_alpha;
+        let background_alpha =
+            background_alpha.unwrap_or_else(|| self.terminal.read(cx).settings.background_alpha);
         window.paint_quad(fill(
             bounds,
             Hsla {
@@ -3647,6 +3690,76 @@ impl Element for TerminalElement {
                 ));
             }
         });
+    }
+
+    #[cfg(target_os = "macos")]
+    fn shader_effect(
+        &self,
+        bounds: Bounds<Pixels>,
+        layout: &TerminalLayout,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<(gpui::ShaderEffect, f32)> {
+        use crate::terminal_shaders::{ShaderAnimation, ShaderCursor};
+
+        if !window.supports_shader_effects() {
+            return None;
+        }
+        let canvas = window.shader_effect_size(bounds);
+        let scale = window.scale_factor();
+        self.terminal.update(cx, |view, _| {
+            let settings = view.settings.shaders.as_ref()?;
+            if !settings.enabled {
+                return None;
+            }
+            let snapshot = view.frame.as_ref()?;
+            let focused = view.focused && window.is_window_active();
+            let cursor = layout.cursor.as_ref().map(|cursor| {
+                let width = f32::from(layout.metrics.cell_width) * scale;
+                let height = f32::from(layout.metrics.line_height) * scale;
+                let (cursor_width, cursor_height, style) = match cursor.shape {
+                    TerminalCursorShape::Bar => (2.0 * scale, height, 2),
+                    TerminalCursorShape::Underline => {
+                        (width * f32::from(cursor.width_cells), 2.0 * scale, 3)
+                    }
+                    TerminalCursorShape::Block => (
+                        width * f32::from(cursor.width_cells),
+                        height,
+                        i32::from(cursor.hollow),
+                    ),
+                };
+                let color = cursor.color.to_rgb();
+                ShaderCursor {
+                    rect: [
+                        width * f32::from(cursor.col),
+                        height * (f32::from(cursor.row) + 1.0),
+                        cursor_width,
+                        cursor_height,
+                    ],
+                    color: [color.r, color.g, color.b, color.a],
+                    style,
+                }
+            });
+            let animate = settings.animation == ShaderAnimation::Always
+                || (settings.animation == ShaderAnimation::Focused && focused);
+            if animate {
+                window.request_animation_frame();
+            }
+            Some((
+                gpui::ShaderEffect {
+                    id: view.shader_state.id,
+                    shaders: settings.sources.clone(),
+                    uniforms: view.shader_state.uniforms(
+                        [canvas.width.0 as f32, canvas.height.0 as f32],
+                        cursor,
+                        focused,
+                        animate,
+                        snapshot,
+                    ),
+                },
+                settings.background_alpha,
+            ))
+        })
     }
 }
 

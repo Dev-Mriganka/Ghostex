@@ -73,6 +73,16 @@ EOF
 			exit 1
 		fi
 		if [[ -n "$(dependency_git "$destination" status --porcelain --untracked-files=all)" ]]; then
+			# A local start may already have applied the reviewed shader patch.
+			# Accept only its exact diff; staged changes or extra files remain an error.
+			shader_patch="$REPO_ROOT/.dependencies/zed-patches/0001-terminal-shader-effects.patch"
+			if [[ "$name" == "zed" && -f "$shader_patch" ]] &&
+				[[ -z "$(dependency_git "$destination" ls-files --others --exclude-standard)" ]] &&
+				dependency_git "$destination" diff --cached --quiet &&
+				diff -q <(dependency_git "$destination" diff --no-color --no-ext-diff --binary) "$shader_patch" >/dev/null; then
+				printf 'Verified pinned GPUI reference %s with the exact reviewed shader patch at %s\n' "$name" "$revision"
+				continue
+			fi
 			echo "GPUI reference checkout is dirty; refusing a non-reproducible release build: $destination" >&2
 			exit 1
 		fi
