@@ -51,7 +51,7 @@ pub fn installed_executable() -> Option<PathBuf> {
 
 /// CDXC:PromptEditor 2026-09-16 WHY:
 /// Windows named pipes reject socket receive/send timeouts. Poll nonblocking I/O with deadlines so the CLI and desktop cannot hang on a stalled editor daemon.
-/// SEE-ALSO: apps/editor/desktop/src/main.rs and the desktop/CLI editor_daemon clients share this pipe name and newline-delimited JSON protocol.
+/// SEE-ALSO: apps/editor/desktop/src/daemon.rs and the desktop/CLI editor_daemon clients share this pipe name and newline-delimited JSON protocol.
 pub struct PipeStream {
     inner: DuplexPipeStream<Bytes>,
     read_timeout: Option<Duration>,
