@@ -212,7 +212,7 @@ impl GpuiAppModalKind {
             */
             /*
             CDXC:AppModal 2026-09-30 DECISION:
-            User: Settings and Search by Prompt "open way too big. they should open centered in the page like the size that the quick access modal opens, not biggger". The Settings dialog (every entry above) and Search by Prompt open centered on the Quick Access frame.
+            User: Settings and Search by Prompt "open way too big. they should open centered in the page like the size that the quick access modal opens, not biggger", then "please make the settings and find by prompt modals to be bigger by 30% width and height". The Settings dialog (every entry above) and Search by Prompt open centered, 30% wider and taller than the Quick Access frame (900 x 663).
             */
             Self::Settings
             | Self::Hotkeys
@@ -220,8 +220,8 @@ impl GpuiAppModalKind {
             | Self::ConfigureAgents
             | Self::ConfigureActions
             | Self::OpenTargets => size(
-                px(APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH),
-                px(APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT),
+                px(APP_MODAL_HOST_SETTINGS_WINDOW_WIDTH),
+                px(APP_MODAL_HOST_SETTINGS_WINDOW_HEIGHT),
             ),
             Self::AgentsHub | Self::GitFileDiff => size(
                 px(APP_MODAL_HOST_WINDOW_WIDTH),

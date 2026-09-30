@@ -19,11 +19,10 @@ use gpui_component::{Sizable as _, Size as ComponentSize, h_flex, v_flex};
 use serde_json::Value;
 use std::collections::HashMap;
 
-/// The Settings frame, which is the Quick Access frame (CDXC:AppModal 2026-09-30 in
-/// app/model/app_modal_kind.rs): `APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH` x
-/// `APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT`.
-pub(crate) const SETTINGS_MODAL_WIDTH: f32 = 692.0;
-pub(crate) const SETTINGS_MODAL_HEIGHT: f32 = 510.0;
+/// The Settings frame (CDXC:AppModal 2026-09-30 in app/model/app_modal_kind.rs):
+/// `APP_MODAL_HOST_SETTINGS_WINDOW_WIDTH` x `APP_MODAL_HOST_SETTINGS_WINDOW_HEIGHT`.
+pub(crate) const SETTINGS_MODAL_WIDTH: f32 = 900.0;
+pub(crate) const SETTINGS_MODAL_HEIGHT: f32 = 663.0;
 /// The hidden title row above the body (`.ghostex-modal-heading-bar` with an sr-only title).
 const HEADING_HEIGHT: f32 = 20.0;
 /// `.settings-modal-body-layout { padding: 0 1rem 1rem; gap: 1rem }`.
