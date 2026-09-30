@@ -454,3 +454,9 @@ impl AutomationDialog {
         }
     }
 }
+
+impl crate::app::window::ModalCornerClose for AutomationDialog {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

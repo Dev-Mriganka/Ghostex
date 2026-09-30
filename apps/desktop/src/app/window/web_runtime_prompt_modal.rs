@@ -156,3 +156,9 @@ impl Render for GpuiWebRuntimePromptModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiWebRuntimePromptModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.dismiss(window, cx);
+    }
+}

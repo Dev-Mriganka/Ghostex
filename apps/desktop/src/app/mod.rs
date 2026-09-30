@@ -48,6 +48,7 @@ pub(crate) mod drag_resize;
 pub(crate) mod export_transcript_modal_lifecycle;
 pub(crate) mod find_prompts_modal_lifecycle;
 pub(crate) mod floating_reveal;
+pub(crate) mod ghostex_capture;
 pub(crate) mod focus;
 pub(crate) mod focused_chat_hotkeys;
 pub(crate) mod git_commit_modal_lifecycle;

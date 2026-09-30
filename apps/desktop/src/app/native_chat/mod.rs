@@ -70,6 +70,8 @@ mod tool_run;
 mod code_block;
 mod keyboard;
 mod markdown_links;
+mod mermaid;
+mod mermaid_render;
 pub(crate) mod markdown_style;
 mod maximized;
 mod message_actions;

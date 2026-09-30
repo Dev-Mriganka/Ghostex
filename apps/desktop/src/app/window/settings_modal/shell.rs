@@ -409,3 +409,9 @@ impl Render for GpuiSettingsModalWindow {
             )
     }
 }
+
+impl ModalCornerClose for GpuiSettingsModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close(window, cx);
+    }
+}

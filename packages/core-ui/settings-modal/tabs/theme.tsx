@@ -8,9 +8,11 @@ import {
   MAX_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARKNESS_PERCENT,
   MAX_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_LIGHTNESS_PERCENT,
   MAX_WINDOW_GLASS_WORK_AREA_TINT_PERCENT,
+  MAX_WINDOW_GLASS_BLUR_RADIUS,
   MAX_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MAX_WINDOW_GLASS_LIVE_SPEED,
   MAX_WINDOW_GLASS_SIDEBAR_OPACITY_PERCENT,
+  MIN_WINDOW_GLASS_BLUR_RADIUS,
   MIN_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MIN_WINDOW_GLASS_LIVE_SPEED,
   MIN_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARKNESS_PERCENT,
@@ -107,6 +109,7 @@ const THEME_MORE_OPTIONS_KEYS: Readonly<Record<ThemeMoreOptionsGroup, readonly s
     'windowGlassWorkAreaTintDark',
     'windowGlassSidebarOpacityLight',
     'windowGlassWorkAreaTintLight',
+    'windowGlassMenuBlurRadius',
   ],
   chatTerminal: ['terminalGhosttyTheme', 'terminalGhosttyLightTheme'],
 };
@@ -233,7 +236,8 @@ export function ThemeSettingsTab({
     ['sidebarTheme', 'darkThemePreset', 'lightThemePreset'].some(visible) ||
     visible('themeSidebarContrast') ||
     moreHasHit('colours');
-  const transparencyVisible = glassAvailable && (visible('windowGlass') || moreHasHit('transparency'));
+  const transparencyVisible =
+    glassAvailable && (visible('windowGlass') || visible('windowGlassBlurRadius') || moreHasHit('transparency'));
   const chatTerminalVisible =
     visible('sessionChatTheme') || visible('terminalColorScheme') || moreHasHit('chatTerminal');
   const anythingVisible =
@@ -592,6 +596,20 @@ export function ThemeSettingsTab({
                 value={strength.nearest}
               />
             ) : null}
+            {glassOn && visible('windowGlassBlurRadius') ? (
+              <SliderNumberField
+                description='How soft what shows behind the window looks, in points. 0 shows it sharp.'
+                label='Blur'
+                {...getSettingModificationProps('windowGlassBlurRadius')}
+                advanced={false}
+                max={MAX_WINDOW_GLASS_BLUR_RADIUS}
+                min={MIN_WINDOW_GLASS_BLUR_RADIUS}
+                onCommit={(value) => updateDraft('windowGlassBlurRadius', value)}
+                onChange={(value) => updateDraftDebounced('windowGlassBlurRadius', value)}
+                step={1}
+                value={draft.windowGlassBlurRadius}
+              />
+            ) : null}
             {moreOptionsButton(
               'transparency',
               'More transparency options',
@@ -840,6 +858,19 @@ export function ThemeSettingsTab({
                     onChange={(value) => updateDraftDebounced('windowGlassWorkAreaTintLight', value)}
                     step={1}
                     value={draft.windowGlassWorkAreaTintLight}
+                  />
+                ) : null}
+                {glassOn && visible('windowGlassMenuBlurRadius') ? (
+                  <SliderNumberField
+                    description='How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only.'
+                    label='Menu blur'
+                    {...getSettingModificationProps('windowGlassMenuBlurRadius')}
+                    max={MAX_WINDOW_GLASS_BLUR_RADIUS}
+                    min={MIN_WINDOW_GLASS_BLUR_RADIUS}
+                    onCommit={(value) => updateDraft('windowGlassMenuBlurRadius', value)}
+                    onChange={(value) => updateDraftDebounced('windowGlassMenuBlurRadius', value)}
+                    step={1}
+                    value={draft.windowGlassMenuBlurRadius}
                   />
                 ) : null}
                 {visible('windowGlass') ? (

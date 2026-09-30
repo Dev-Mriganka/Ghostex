@@ -552,6 +552,11 @@ impl NativeChatView {
         {
             row = row.child(cards);
         }
+        if !self.in_work_fold
+            && let Some(cards) = self.sent_agent_message_cards(&message["sentMessages"], p, cx)
+        {
+            row = row.child(cards);
+        }
         if self.has_reply_actions(message) {
             row = row.child(self.reply_actions(message, reply_focused, p, cx));
         }

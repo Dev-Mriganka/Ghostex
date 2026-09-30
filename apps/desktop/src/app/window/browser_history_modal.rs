@@ -70,7 +70,6 @@ pub(crate) struct GpuiBrowserHistoryModalWindow {
     /// Window glass was on when the window opened, so its window blurs what is behind it
     /// (`open_native_app_modal`) and the palette is frosted to match.
     glass: bool,
-    was_active: bool,
     focus_handle: FocusHandle,
     _subscriptions: Vec<Subscription>,
 }
@@ -98,14 +97,6 @@ impl GpuiBrowserHistoryModalWindow {
                 }
             },
         );
-        // Clicking outside dismisses it, like Quick Access.
-        let activation = cx.observe_window_activation(window, |this: &mut Self, window, cx| {
-            if window.is_window_active() {
-                this.was_active = true;
-            } else if this.was_active {
-                this.close(cx);
-            }
-        });
         search.update(cx, |input, cx| input.focus(window, cx));
         // Relative times ("5m ago") keep moving while the window stays open.
         cx.spawn(async move |this, cx| {
@@ -134,9 +125,8 @@ impl GpuiBrowserHistoryModalWindow {
             scroll: ScrollHandle::new(),
             pending_scroll: None,
             glass: crate::app::helpers::window_glass_active(),
-            was_active: window.is_window_active(),
             focus_handle: cx.focus_handle(),
-            _subscriptions: vec![change, activation],
+            _subscriptions: vec![change],
         };
         this.request(false, cx);
         this
@@ -726,4 +716,10 @@ fn relative_time_label(visited_at_ms: i64, now_ms: i64) -> String {
         return format!("{hours}h ago");
     }
     format!("{}d ago", hours / 24)
+}
+
+impl crate::app::window::native_modal_kit::ModalCornerClose for GpuiBrowserHistoryModalWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        self.close(cx);
+    }
 }

@@ -26,6 +26,34 @@ static WINDOW_GLASS_WALLPAPER: AtomicBool = AtomicBool::new(false);
 /// `windowGlassImagePlacement` is "desktop": the picture stays still against the screen.
 static WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN: AtomicBool = AtomicBool::new(false);
 
+/// CDXC:Theming 2026-09-30 DECISION:
+/// User: "i'm not able to set the transparency blur level in ghostex on macos please add sliders for this (hope they can work on other oses too)". Settings has a Blur slider (`windowGlassBlurRadius`, 0 to 100 points, default 60: the main window's glass as it always was) and a Menu blur slider (`windowGlassMenuBlurRadius`, default 20: `FROSTED_MENU_BLUR_RADIUS`). Blur reaches every GPUI backend through `set_background_blur_style`: on macOS it sets the live blur, the wallpaper and picture blur and the video blur; on Windows and Linux the system draws the Desktop and windows blur and has no radius to set, so there it sets the wallpaper, picture and video blur. Menu blur is macOS only for the same reason. 0 shows what is behind the glass sharp.
+static WINDOW_GLASS_BLUR_RADIUS: AtomicU8 = AtomicU8::new(WINDOW_GLASS_BLUR_RADIUS_DEFAULT);
+
+/// The main window glass's blur radius in points until Settings says otherwise.
+const WINDOW_GLASS_BLUR_RADIUS_DEFAULT: u8 = 60;
+
+/// `windowGlassMenuBlurRadius`: the blur radius of frosted menus and tooltips.
+static WINDOW_GLASS_MENU_BLUR_RADIUS: AtomicU8 = AtomicU8::new(FROSTED_MENU_BLUR_RADIUS as u8);
+
+/// The blur radius the main window was last given; `u8::MAX` until the first sync.
+static APPLIED_MAIN_WINDOW_GLASS_BLUR: AtomicU8 = AtomicU8::new(u8::MAX);
+
+/// The main window glass's blur radius (`windowGlassBlurRadius`), in points.
+fn window_glass_blur_radius() -> gpui::Pixels {
+    gpui::px(f32::from(WINDOW_GLASS_BLUR_RADIUS.load(Ordering::Relaxed)))
+}
+
+/// Reads a blur radius setting: whole points from 0 to 100 (`MAX_WINDOW_GLASS_BLUR_RADIUS` in
+/// packages/shared/ghostex-settings/option-tables.ts).
+fn read_blur_radius(
+    object: &serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    default: u8,
+) -> u8 {
+    read_glass_percent(object, key).map_or(default, |value| value.clamp(0.0, 100.0).round() as u8)
+}
+
 /// CDXC:Theming 2026-09-23 DECISION:
 /// User: "ok i also want the option that the user picks any image to use as their wallpaper (different one for dark and light modes)". Glass shows has a third choice, Custom image, with one picture for dark mode (`windowGlassImageDark`) and one for light mode (`windowGlassImageLight`); the main window's glass is that picture, blurred and placed like the desktop picture (`windowGlassImagePlacement`).
 ///
@@ -271,6 +299,22 @@ pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::
         )) && matches!(source, Some("wallpaper" | "customImage" | "video" | "live")),
         Ordering::Relaxed,
     );
+    WINDOW_GLASS_BLUR_RADIUS.store(
+        read_blur_radius(
+            object,
+            "windowGlassBlurRadius",
+            WINDOW_GLASS_BLUR_RADIUS_DEFAULT,
+        ),
+        Ordering::Relaxed,
+    );
+    WINDOW_GLASS_MENU_BLUR_RADIUS.store(
+        read_blur_radius(
+            object,
+            "windowGlassMenuBlurRadius",
+            FROSTED_MENU_BLUR_RADIUS as u8,
+        ),
+        Ordering::Relaxed,
+    );
     WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN.store(
         object
             .get("windowGlassImagePlacement")
@@ -444,6 +488,7 @@ pub(crate) fn sync_overlay_window_glass(window: &Window, main_origin: gpui::Poin
     let follows_screen = !main_uses_picture
         || (!main_uses_live && WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN.load(Ordering::Relaxed));
     // The panel plays the main window's own player and live clock, so both show the same frame.
+    window.set_background_blur_style(window_glass_blur_radius(), false);
     window.set_background_live(if main_uses_picture { live } else { None });
     window.set_background_video(if main_uses_picture { video } else { None }, only_on_power);
     window.set_background_wallpaper_image(if main_uses_picture { image } else { None });
@@ -521,10 +566,13 @@ impl GhostexGpuiApp {
                 changed
             })
             .unwrap_or(true);
+        let blur = WINDOW_GLASS_BLUR_RADIUS.load(Ordering::Relaxed);
+        let blur_changed = APPLIED_MAIN_WINDOW_GLASS_BLUR.swap(blur, Ordering::Relaxed) != blur;
         let previous = APPLIED_MAIN_WINDOW_GLASS.swap(code, Ordering::Relaxed);
-        if previous == code && !image_changed && !video_changed && !live_changed {
+        if previous == code && !image_changed && !video_changed && !live_changed && !blur_changed {
             return;
         }
+        window.set_background_blur_style(window_glass_blur_radius(), false);
         window.set_background_live(live);
         window.set_background_video(video.0, video.1);
         window.set_background_wallpaper_image(image);
@@ -571,18 +619,21 @@ pub(crate) fn frosted_menu_alpha() -> f32 {
     }
 }
 
-/// Blur radius of a frosted menu or tooltip window. Narrower than the main window's glass so the
-/// shapes and colours behind a menu still read through it.
+/// Default blur radius of a frosted menu or tooltip window (`windowGlassMenuBlurRadius`).
+/// Narrower than the main window's glass so the shapes and colours behind a menu still read
+/// through it.
 pub(crate) const FROSTED_MENU_BLUR_RADIUS: f32 = 20.0;
 
 /// Whether a frosted menu's backdrop keeps the colour saturation the main window's glass strips.
 pub(crate) const FROSTED_MENU_KEEP_SATURATION: bool = true;
 
-/// Gives a menu or tooltip window the frosted menus' blur (`FROSTED_MENU_BLUR_RADIUS`,
+/// Gives a menu or tooltip window the frosted menus' blur (`windowGlassMenuBlurRadius`,
 /// `FROSTED_MENU_KEEP_SATURATION`). Call it where the window sets its corner radius.
 pub(crate) fn apply_frosted_menu_blur(window: &gpui::Window) {
     window.set_background_blur_style(
-        gpui::px(FROSTED_MENU_BLUR_RADIUS),
+        gpui::px(f32::from(
+            WINDOW_GLASS_MENU_BLUR_RADIUS.load(Ordering::Relaxed),
+        )),
         FROSTED_MENU_KEEP_SATURATION,
     );
 }

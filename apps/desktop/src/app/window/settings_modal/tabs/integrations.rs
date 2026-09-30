@@ -1202,6 +1202,53 @@ impl IntegrationsTab {
     }
 }
 
+impl IntegrationsTab {
+    /// Ghostex Capture: the floating button, its hotkeys and its screenshot tools.
+    fn ghostex_capture_section(
+        &mut self,
+        p: &SettingsPalette,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let enabled = self.store.read(cx).values().bool("ghostexCaptureEnabled");
+        let hotkey = if cfg!(target_os = "macos") {
+            "Cmd+Ctrl+Shift+S"
+        } else {
+            "Alt+Ctrl+Shift+S"
+        };
+        let rows = vec![integration_row(
+            p,
+            "ghostex-capture",
+            Some(if enabled {
+                ListItemStatus::Success
+            } else {
+                ListItemStatus::Neutral
+            }),
+            Some(ICON_DEVICE_DESKTOP),
+            RowTitle {
+                label: "Ghostex Capture".to_string(),
+                description: format!(
+                    "{}. A floating button over every app with your working, waiting and question counts. Screenshot an area, the current app or the full screen, mark it up, and send a prompt without switching to Ghostex. {hotkey} opens it; A, Space, F or T instead of S run an action straight away.",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ),
+                badge: Some("Beta"),
+                pill: None,
+            },
+            vec![switch_control(
+                p,
+                "ghostex-capture-enabled",
+                enabled,
+                false,
+                None,
+                |page: &mut Self, checked, _window, cx| {
+                    save(page, "ghostexCaptureEnabled", json!(checked), cx)
+                },
+                cx,
+            )],
+        )];
+        settings_section(p, "Ghostex Capture", None, None, rows).map(IntoElement::into_any_element)
+    }
+}
+
 fn save(
     page: &mut IntegrationsTab,
     key: &'static str,
@@ -1277,6 +1324,12 @@ impl Render for IntegrationsTab {
                 blocks.extend(
                     self.app_shots_section(&p, window, cx)
                         .map(|element| PageBlock::section("appShots", element)),
+                );
+            }
+            if search.row_visible(section, "ghostexCapture") {
+                blocks.extend(
+                    self.ghostex_capture_section(&p, cx)
+                        .map(|element| PageBlock::section("ghostexCapture", element)),
                 );
             }
         }

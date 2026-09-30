@@ -30,8 +30,10 @@ import {
   DEFAULT_MEDIA_FILE_OPEN_TARGET,
   DEFAULT_WEB_LINK_OPEN_TARGET,
   KEEP_AWAKE_DURATION_OPTIONS,
+  MAX_WINDOW_GLASS_BLUR_RADIUS,
   MAX_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MAX_WINDOW_GLASS_LIVE_SPEED,
+  MIN_WINDOW_GLASS_BLUR_RADIUS,
   MIN_WINDOW_GLASS_LIVE_BRIGHTNESS,
   MIN_WINDOW_GLASS_LIVE_SPEED,
   MEDIA_FILE_OPEN_TARGET_SET,
@@ -238,6 +240,7 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
     gpuiTitlebarActionCommandByProject: normalizeTitlebarProjectSelectionMap(source.gpuiTitlebarActionCommandByProject),
     gpuiTitlebarOpenTargetByProject: normalizeTitlebarProjectSelectionMap(source.gpuiTitlebarOpenTargetByProject),
     appShotsEnabled: readBoolean(source, 'appShotsEnabled', DEFAULT_ghostex_SETTINGS.appShotsEnabled),
+    ghostexCaptureEnabled: readBoolean(source, 'ghostexCaptureEnabled', DEFAULT_ghostex_SETTINGS.ghostexCaptureEnabled),
     appShotsHotkey: normalizeAppShotsHotkey(
       readString(source, 'appShotsHotkey', DEFAULT_ghostex_SETTINGS.appShotsHotkey)
     ),
@@ -1004,6 +1007,14 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
     windowGlassLiveBrightness: normalizeWindowGlassLiveBrightness(
       readNumber(source, 'windowGlassLiveBrightness', DEFAULT_ghostex_SETTINGS.windowGlassLiveBrightness)
     ),
+    windowGlassBlurRadius: normalizeWindowGlassBlurRadius(
+      readNumber(source, 'windowGlassBlurRadius', DEFAULT_ghostex_SETTINGS.windowGlassBlurRadius),
+      DEFAULT_ghostex_SETTINGS.windowGlassBlurRadius
+    ),
+    windowGlassMenuBlurRadius: normalizeWindowGlassBlurRadius(
+      readNumber(source, 'windowGlassMenuBlurRadius', DEFAULT_ghostex_SETTINGS.windowGlassMenuBlurRadius),
+      DEFAULT_ghostex_SETTINGS.windowGlassMenuBlurRadius
+    ),
     windowGlassSidebarOpacityDark: clampWindowGlassSidebarOpacityPercent(
       readNumber(source, 'windowGlassSidebarOpacityDark', DEFAULT_ghostex_SETTINGS.windowGlassSidebarOpacityDark),
       DEFAULT_ghostex_SETTINGS.windowGlassSidebarOpacityDark
@@ -1334,6 +1345,14 @@ function normalizeWindowGlassLiveBrightness(value: number): number {
     return DEFAULT_ghostex_SETTINGS.windowGlassLiveBrightness;
   }
   return Math.round(Math.min(MAX_WINDOW_GLASS_LIVE_BRIGHTNESS, Math.max(MIN_WINDOW_GLASS_LIVE_BRIGHTNESS, value)));
+}
+
+/** Glass and menu blur radius, 0 to 100 points in whole steps. */
+function normalizeWindowGlassBlurRadius(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.round(Math.min(MAX_WINDOW_GLASS_BLUR_RADIUS, Math.max(MIN_WINDOW_GLASS_BLUR_RADIUS, value)));
 }
 
 /** Live glass speed, 0.25 to 2 in quarter steps. */

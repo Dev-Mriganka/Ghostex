@@ -692,6 +692,10 @@ An empty collapsed composer shows only the first placeholder line, and scrolling
 keeps the same toolbar buttons visible.
 Hex colors in messages, inline code, and tables have a small rounded color swatch
 beside the value on desktop, mobile, and web. Copying keeps the original text.
+Mermaid diagrams an agent writes (a ```mermaid block) are drawn as diagrams in
+the desktop and mobile chats once the block is complete. Source switches to the
+diagram's text and Copy copies it. On desktop, the expand button opens a larger
+view you can zoom and pan. The web chat shows the diagram's source.
 
 Use Cmd+P (Recent Sessions) to jump between chats across projects, or
 Cmd+[ and Cmd+] to go back and forward through visited sessions, the same keys
@@ -1259,6 +1263,9 @@ message you have already read. If Ghostex cannot deliver
 a queued message, the row stays in the recipient's queue marked Not delivered
 with Retry and Delete, and the sending agent gets a note saying so. `agents close
 <session-ref>` ends that session, including any unfinished work. `ghostex read-session-chat` and `ghostex read-text` read replies.
+In the chat, a message another agent sent shows as a "Message from" card with
+its first two lines; click it to read the rest. A message the session's own
+agent sent shows as a "Message to" card, closed until you click it.
 An agent can also read or search any other thread, including a sleeping one:
 `ghostex read-session-chat <session> --all --format text` prints the whole
 conversation, and `--grep "<words>" --context 1` finds where a topic came up.
@@ -1527,6 +1534,52 @@ Related settings: `completionSound`, `actionCompletionSound`, `copySound`,
 `hideMenuBarSessionStatusIndicators`, `petOverlayEnabled`,
 `notificationsTitlebarButtonHidden`.
 
+### Ghostex Capture (floating button, screenshots, quick prompts)
+
+Ghostex Capture puts a small Ghostex button over every app, so you can check
+on your agents and send them a prompt without switching to Ghostex. Turn it on
+under Settings > Integrations > Ghostex Capture (off by default). Beside the
+icon, a dark tray shows how many sessions are working (amber), waiting for you
+(blue) and asking a question (pink), across this computer and your remote
+machines; only non-zero numbers are shown. Drag the button anywhere; drop it
+against the left or right screen edge and it tucks away as a thin tab with the
+numbers stacked, sliding out when you hover it. Its spot is remembered per
+screen.
+
+Click the button, or press Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and
+Linux), to open its panel: Screenshot an area (A), Screenshot current app
+(Space), Screenshot full screen (F) and Write a prompt (T), over the same
+Running Agents list as the menu bar dropdown (click a session to open it in
+Ghostex), with Open Ghostex, Hide button, Restart and Quit. Use the same
+modifiers with A, Space, F or T instead of S to run an action straight away,
+from any app. "Hide button" keeps it hidden until you turn the setting on
+again or press the S hotkey.
+
+Screenshots hide the Ghostex Capture windows first. An area capture dims every
+screen and starts with a resizable box where your last area capture was; press
+Enter or A to capture it, or drag outside it to select another area on any
+screen; the current app is the one you
+were using; full screen takes the screen under the mouse. Every capture opens a
+small editor with Crop selected: drag a box to crop and Enter to apply (Enter
+with no box moves on to marking up), then add arrows (A), text (T) and
+rectangles (R), move and resize them with the pointer (V), undo with Cmd+Z, and
+copy the picture with Cmd+C (Ctrl+C). Enter adds the picture to the floating
+prompt box as `[Image #N]`. Each original and edited picture is saved to
+~/Documents/Screenshots on macOS and the Screenshots folder in Pictures on
+Windows and Linux.
+
+The prompt box sends to a new session in the project you last sent to (or the
+most recently active one), or to any project or running session you pick from
+its list, which follows the sidebar's order. Add more screenshots with its
+buttons or the hotkeys, then press Enter. A note under the button says where
+the prompt went, with Open. Closing the prompt box without sending keeps it as
+a draft session in that project, visible in the sidebar; "Write a prompt"
+starts a new prompt, and the small continue button on it brings the draft
+back. On macOS, screenshots need Screen Recording
+permission for Ghostex. Linux support is X11 only.
+
+Related settings: `ghostexCaptureEnabled`.
+
 ## Git and worktrees
 
 In New Project, paste a folder path, `cd ~/dev/my-app`, a quoted path, or a
@@ -1705,7 +1758,11 @@ terminals, and chat on macOS, Windows and Linux. On macOS and Windows, menus and
 Session, Quick Access and the like) turn frosted to match. The Transparency group's Enable
 transparency switch turns it on (Dark only, the default) or off, and
 Strength sets how see-through it is, from 0 (fully solid) to 100 (fully clear); the default
-is 20. More transparency options goes
+is 20. Blur sets how soft what shows behind the window looks, from 0 (sharp) to 100 points;
+the default is 60. On Windows and Linux, Desktop and windows uses the system's own blur, so
+there Blur softens the wallpaper, picture and video (`windowGlassBlurRadius`). On macOS,
+Menu blur under More transparency options does the same for menus and tooltips (default 20;
+menus opened after the change use it) (`windowGlassMenuBlurRadius`). More transparency options goes
 in the order you decide: 1 what shows behind the glass, 2 the pictures or videos,
 3 their position, then Fine-tune the tints and Use transparency (Dark only,
 Always, or Never). With Dark only, light mode stays opaque, so the light-mode

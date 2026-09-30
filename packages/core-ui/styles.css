@@ -1523,6 +1523,40 @@ body.app-modal-host-body {
   padding-right: 0;
 }
 
+/*
+ * CDXC:AppModal 2026-09-30 SEE-ALSO:
+ * The React twin of the round close button every native app modal's window frame draws in its
+ * top-right corner while the pointer is over the modal (apps/desktop/src/app/window/modal_window_frame.rs
+ * holds the user's decision): the same 24px circle, 8px from the window's edges.
+ */
+.ghostex-settings-shadcn .settings-modal-corner-close {
+  align-items: center;
+  background: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  color: var(--foreground);
+  cursor: pointer;
+  display: flex;
+  height: 24px;
+  justify-content: center;
+  opacity: 0;
+  padding: 0;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 24px;
+  z-index: 10;
+}
+
+.ghostex-settings-shadcn.settings-modal-dialog:hover .settings-modal-corner-close,
+.ghostex-settings-shadcn .settings-modal-corner-close:focus-visible {
+  opacity: 1;
+}
+
+.ghostex-settings-shadcn .settings-modal-corner-close:hover {
+  background: color-mix(in srgb, var(--foreground) 16%, var(--background));
+}
+
 .ghostex-settings-shadcn .settings-modal-title-row {
   align-items: center;
   display: flex;

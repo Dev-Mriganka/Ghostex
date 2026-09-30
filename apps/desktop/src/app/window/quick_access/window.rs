@@ -70,7 +70,6 @@ pub(crate) struct GpuiQuickAccessWindow {
     /// keyboard moves and re-ranked queries reveal their row.
     suppress_scroll: bool,
     last_load_more: Option<web_time::Instant>,
-    was_active: bool,
     /// Window glass was on when the window opened, so its window blurs what is behind it
     /// (`open_native_app_modal`) and the palette is frosted to match.
     glass: bool,
@@ -98,13 +97,6 @@ impl GpuiQuickAccessWindow {
                 }
             },
         );
-        let activation = cx.observe_window_activation(window, |this: &mut Self, window, cx| {
-            if window.is_window_active() {
-                this.was_active = true;
-            } else if this.was_active {
-                this.close(cx);
-            }
-        });
         let release = cx.on_release(|_, cx| {
             use crate::app::window::frosted_host::{FrostedHostKind, hide_frosted_host};
             hide_frosted_host(FrostedHostKind::QuickAccessPicker, cx);
@@ -133,11 +125,10 @@ impl GpuiQuickAccessWindow {
             tag_composer_anchor: None,
             suppress_scroll: false,
             last_load_more: None,
-            was_active: window.is_window_active(),
             glass: crate::app::helpers::window_glass_active(),
             menu_frames: QuickAccessMenuFrames::default(),
             focus_handle: cx.focus_handle(),
-            subscriptions: vec![change, activation, release],
+            subscriptions: vec![change, release],
         }
     }
 
@@ -1249,5 +1240,11 @@ impl super::editor::EditorHost for GpuiQuickAccessWindow {
         self.editor_project_menu.close();
         self.editor_tag_menu.toggle();
         cx.notify();
+    }
+}
+
+impl crate::app::window::native_modal_kit::ModalCornerClose for GpuiQuickAccessWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        self.close(cx);
     }
 }

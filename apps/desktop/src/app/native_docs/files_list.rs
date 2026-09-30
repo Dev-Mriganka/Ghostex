@@ -566,23 +566,27 @@ impl GhostexGpuiApp {
         )
     }
 
-    /// The "Open Files" label with its close-all "x" beside the words, centred in its row.
+    /// The "Open Files" label, with the close-all button at the row's right edge, in line with the
+    /// rows' own close buttons.
     ///
-    /// CDXC:Docs 2026-09-25 DECISION:
-    /// User: "add a new button that just says x that closes all open files (next to the word open files) also please adjust the alignment for open files label there so it has equal gap above and below it".
+    /// CDXC:Docs 2026-09-30 DECISION:
+    /// User: the close-all-open-files button sits right-aligned in the "Open Files" row, not beside the label, uses the same x icon as the open files' own close buttons, and shows only while the pointer is over that row. The label keeps equal space above and below it (2026-09-25). This supersedes the 2026-09-25 decision for a plain "x" next to the words.
     fn render_native_docs_open_files_header(
         &mut self,
         p: &DocsPalette,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let hover = p.row_hover;
+        let group: SharedString = "docs-open-files-header".into();
         div()
+            .group(group.clone())
             .flex()
             .flex_none()
             .items_center()
-            .gap(px(4.0))
-            .py(px(6.0))
-            .px(px(14.0))
+            .justify_between()
+            .h(px(26.0))
+            .pl(px(14.0))
+            .pr(px(7.0))
             .text_size(px(11.0))
             .line_height(px(14.0))
             .font_weight(FontWeight::MEDIUM)
@@ -592,14 +596,16 @@ impl GhostexGpuiApp {
                 div()
                     .id("native-docs-close-all")
                     .flex()
+                    .flex_none()
                     .items_center()
                     .justify_center()
-                    .h(px(14.0))
-                    .px(px(3.0))
-                    .rounded(px(3.0))
+                    .size(px(20.0))
+                    .rounded(px(4.0))
                     .cursor_pointer()
+                    .invisible()
+                    .group_hover(group, |style| style.visible())
                     .hover(move |style| style.bg(hover))
-                    .child("x")
+                    .child(titlebar_svg_icon("titlebar/x.svg", 14.0, p.row_text))
                     .tooltip(|window, cx| titlebar_tooltip("Close all open files", window, cx))
                     .on_click(cx.listener(|this, _, window, cx| {
                         cx.stop_propagation();

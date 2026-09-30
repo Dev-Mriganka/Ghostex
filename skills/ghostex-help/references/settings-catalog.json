@@ -2885,6 +2885,18 @@
       "agentWritable": false
     },
     {
+      "key": "ghostexCaptureEnabled",
+      "title": "ghostexCaptureEnabled",
+      "subtitle": "App-managed state saved with the settings; not a user preference.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "section": "internalState",
+      "sectionTitle": "Internal state (not user settings)",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": false
+    },
+    {
       "key": "settingsModalNavigation",
       "title": "settingsModalNavigation",
       "subtitle": "App-managed state saved with the settings; not a user preference.",
@@ -7717,6 +7729,34 @@
       "agentWritable": true
     },
     {
+      "key": "windowGlassBlurRadius",
+      "title": "Blur",
+      "subtitle": "How soft what shows behind the window looks, in points. 0 shows it sharp. On Windows and Linux, Desktop and windows uses the system blur, so this sets the wallpaper, picture and video blur.",
+      "tab": "theme",
+      "tabTitle": "Theme",
+      "group": "appearance",
+      "groupTitle": "Theme",
+      "section": "theming",
+      "sectionTitle": "Theme",
+      "type": "number",
+      "default": 60,
+      "agentWritable": true
+    },
+    {
+      "key": "windowGlassMenuBlurRadius",
+      "title": "Menu blur",
+      "subtitle": "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only.",
+      "tab": "theme",
+      "tabTitle": "Theme",
+      "group": "appearance",
+      "groupTitle": "Theme",
+      "section": "theming",
+      "sectionTitle": "Theme",
+      "type": "number",
+      "default": 20,
+      "agentWritable": true
+    },
+    {
       "key": "windowGlassSidebarOpacityDark",
       "title": "Sidebar tint in dark mode",
       "subtitle": "How much of the desktop the sidebar hides in dark mode. Lower shows more of your desktop through it.",
@@ -8566,6 +8606,17 @@
           "value": "double-left-option"
         }
       ],
+      "agentWritable": false
+    },
+    {
+      "key": "ghostexCapture",
+      "title": "Ghostex Capture",
+      "subtitle": "A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.",
+      "tab": "integrations",
+      "tabTitle": "Integrations",
+      "section": "integrations",
+      "sectionTitle": "Integrations",
+      "type": "ui",
       "agentWritable": false
     },
     {

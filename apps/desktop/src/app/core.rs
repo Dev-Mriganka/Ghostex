@@ -704,8 +704,6 @@ pub struct GhostexGpuiApp {
     pub(crate) pending_keyboard_handoff: Option<PendingKeyboardHandoff>,
     /// True while the pending handoff is the one a closing modal asked for, which yields to a text field the user focused in the meantime.
     pub(crate) pending_keyboard_handoff_returns_from_modal: bool,
-    /// Set once the open native app modal's window has been the key window; a click back into the main window closes only such a modal (native_app_modal_lifecycle.rs).
-    pub(crate) native_app_modal_was_key: std::rc::Rc<std::cell::Cell<bool>>,
     /// The composited terminal the keyboard router currently treats as owner, with the native root it was claimed on, so a terminal that stops rendering can be released.
     pub(crate) composited_terminal_keyboard_owner: Option<(usize, GpuiEngineTerminalEventTarget)>,
     pub(crate) agents_terminal_startup_body_slot_geometries:
@@ -970,6 +968,7 @@ pub struct GhostexGpuiApp {
     pub(crate) native_docs: crate::app::native_docs::state::NativeDocsState,
     pub(crate) native_kanban: crate::app::native_kanban::state::NativeKanbanState,
     pub(crate) floating_reveal: crate::app::floating_reveal::model::FloatingRevealState,
+    pub(crate) ghostex_capture: crate::app::ghostex_capture::GhostexCaptureState,
     pub(crate) panel_motion: crate::app::panel_motion::PanelMotions,
     pub(crate) gx_store: crate::app::gx_store::GxStoreHost,
     pub(crate) quick_access: crate::app::quick_access::host::QuickAccessHost,
@@ -989,6 +988,7 @@ pub struct GhostexGpuiApp {
 
 impl Drop for GhostexGpuiApp {
     fn drop(&mut self) {
+        self.shut_down_ghostex_capture();
         #[cfg(target_os = "windows")]
         crate::navigation_history::windows_mouse::unregister(self.parent_ns_view);
         #[cfg(target_os = "macos")]

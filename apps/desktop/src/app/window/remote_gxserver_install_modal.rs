@@ -279,3 +279,9 @@ impl Render for GpuiRemoteGxserverInstallModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiRemoteGxserverInstallModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_window_and_send(RemoteGxserverInstallModalCommand::Cancel, window, cx);
+    }
+}

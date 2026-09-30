@@ -237,3 +237,9 @@ impl Render for GpuiGitFileDiffModalWindow {
             .child(v_flex().size_full().child(header).child(body))
     }
 }
+
+impl ModalCornerClose for GpuiGitFileDiffModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close(window, cx);
+    }
+}

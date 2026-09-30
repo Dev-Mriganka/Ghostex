@@ -181,6 +181,7 @@ pub(crate) fn gpui_status_indicator_session_from_value(
             "title",
             "sidebarOrder",
             "lastActiveAt",
+            "pendingQuestion",
         ],
     )?;
     Ok(GpuiStatusIndicatorSessionState {
@@ -189,6 +190,10 @@ pub(crate) fn gpui_status_indicator_session_from_value(
             .get("sidebarOrder")
             .and_then(serde_json::Value::as_u64)
             .ok_or(())?,
+        pending_question: match object.get("pendingQuestion") {
+            None => false,
+            Some(value) => value.as_bool().ok_or(())?,
+        },
         session_id: gpui_status_id_field(object, "sessionId")?,
         status: gpui_status_field(object, "status")?,
         title: gpui_status_title_field(object, "title")?,

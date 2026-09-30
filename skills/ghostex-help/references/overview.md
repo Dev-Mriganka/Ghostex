@@ -53,6 +53,10 @@ hotkeys Every shortcut and its default binding
 - **Settings** (Cmd+,): pages for General, Integrations, Extensions, Remote,
   Projects, Agents, Accounts, Actions, Open In, Hotkeys, Debugging, and About, with one
   search box that finds rows on every page.
+- **Dialogs** such as Quick Access, Settings, Search by Prompt and Add Project open
+  over the middle of the window and stay open when you click somewhere else. Close
+  one with Escape or the round × in its top-right corner, which appears while the
+  pointer is over the dialog.
 
 ## Key concepts
 

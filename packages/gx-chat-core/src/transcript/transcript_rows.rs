@@ -13,6 +13,7 @@ use crate::transcript::file_change_rows::{
 };
 use crate::transcript::file_changes::FileChange;
 use crate::transcript::question_exchange::answered_question_exchange;
+use crate::transcript::sent_message::sent_agent_messages;
 use crate::transcript::subagent::{is_subagent_self, tool_subagent};
 use crate::transcript::tool_fold::ToolPair;
 use crate::transcript::tool_rows::{
@@ -76,6 +77,12 @@ pub fn tool_rows(
                 "exchange".to_string(),
                 answered_question_exchange(pair).is_some().into(),
             );
+            // A message sent to another agent is conversation too, drawn as its own card on the
+            // same terms as an answered question.
+            row.insert(
+                "sentMessage".to_string(),
+                (!sent_agent_messages(pair, &[]).is_empty()).into(),
+            );
             row.insert(
                 "name".to_string(),
                 pair.call_name().unwrap_or("Result").into(),
@@ -99,7 +106,9 @@ pub fn tool_rows(
 pub fn tool_fold(pairs: &[ToolPair<'_>]) -> Value {
     let exchanges: Vec<bool> = pairs
         .iter()
-        .map(|pair| answered_question_exchange(pair).is_some())
+        .map(|pair| {
+            answered_question_exchange(pair).is_some() || !sent_agent_messages(pair, &[]).is_empty()
+        })
         .collect();
     tool_run_fold(&exchanges)
 }

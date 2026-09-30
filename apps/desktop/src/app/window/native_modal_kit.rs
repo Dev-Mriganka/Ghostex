@@ -2523,3 +2523,20 @@ pub(crate) fn modal_skinned_button<V: 'static>(
         .children(leading)
         .children(label)
 }
+
+/// The corner close button's size and its distance from the window's top and right edges.
+pub(crate) const MODAL_CORNER_CLOSE_SIZE: f32 = 24.0;
+pub(crate) const MODAL_CORNER_CLOSE_INSET: f32 = 8.0;
+
+/// The hover-only close button a native app modal's window frame draws in its top-right corner
+/// (window/modal_window_frame.rs).
+pub(crate) trait ModalCornerClose: Render {
+    /// Closes the modal the way its Escape key does.
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>);
+
+    /// False while the modal must stay open (first-run onboarding before a project exists) or when
+    /// it draws its own close button in that corner.
+    fn shows_corner_close(&self, _cx: &App) -> bool {
+        true
+    }
+}

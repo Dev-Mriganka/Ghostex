@@ -481,3 +481,9 @@ impl Render for GpuiDeleteWorktreeModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiDeleteWorktreeModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

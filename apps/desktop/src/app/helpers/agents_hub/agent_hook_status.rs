@@ -312,6 +312,13 @@ pub(crate) fn gpui_is_probably_ghostex_command(path: &Path, command: &str) -> bo
         return true;
     }
     let realpath = gpui_realpath_or_self(path);
+    /*
+    CDXC:Cli 2026-09-30 WHY:
+    The Homebrew cask's `command_wrapper` stanza installs HOMEBREW_PREFIX/bin/ghostex as a symlink to the marked wrapper at Caskroom/ghostex/<version>/.homebrew-command-wrappers/ghostex, so the marker is read from the file the symlink resolves to. Without this every Homebrew install failed skill installs with "could not prove it belongs to Ghostex" (GitHub issue #182).
+    */
+    if gpui_is_marked_ghostex_wrapper_file(&realpath) {
+        return true;
+    }
     if gpui_is_ghostex_app_owned_command_realpath(command, &realpath) {
         return true;
     }

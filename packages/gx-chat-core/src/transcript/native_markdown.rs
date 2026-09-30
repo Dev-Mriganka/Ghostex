@@ -10,6 +10,7 @@
 //!   * a fenced block that names a file gets its header's label, icon, and open-file target
 //!     appended to the fence's info string;
 //!   * a GitHub alert quote (`> [!NOTE]`) becomes a marked, unquoted section;
+//!   * a finished ```mermaid fence is wrapped in marks, so the renderer draws the diagram;
 //!   * a picture written into prose becomes a marked token carrying its image source;
 //!   * a file reference written as inline code, or a path somebody typed into a prompt, becomes a
 //!     real Markdown link, so the native reference pill and the React file chip point at the same
@@ -18,8 +19,9 @@
 //! Rust only splits on the markers and lays the pieces out.
 //!
 //! CDXC:SessionChat 2026-09-18 SEE-ALSO:
-//! The marker vocabulary below is mirrored in apps/desktop/src/app/native_chat/rich_markdown.rs and
-//! apps/desktop/src/app/native_chat/code_block.rs. Change them together.
+//! The marker vocabulary below is mirrored in apps/desktop/src/app/native_chat/rich_markdown.rs,
+//! apps/desktop/src/app/native_chat/code_block.rs, apps/desktop/src/app/native_chat/mermaid.rs and
+//! apps/mobile/app/src/chat/native/transcript/markdown/parse.ts. Change them together.
 
 use markdown::mdast::Node;
 use markdown::ParseOptions;
@@ -44,6 +46,8 @@ pub const NATIVE_ALERT_CLOSE: &str = "\u{e000}/alert";
 pub const NATIVE_TABLE_OPEN: &str = "\u{e000}table";
 pub const NATIVE_TABLE_CLOSE: &str = "\u{e000}/table";
 pub const NATIVE_IMAGE_OPEN: &str = "\u{e000}image:";
+pub const NATIVE_MERMAID_OPEN: &str = "\u{e000}mermaid";
+pub const NATIVE_MERMAID_CLOSE: &str = "\u{e000}/mermaid";
 
 /// What the native code-block header shows, as JSON on the fence's info string.
 fn fence_header(info: &str) -> Option<String> {
@@ -389,6 +393,28 @@ fn is_table_delimiter(line: &str) -> bool {
     at == line.len()
 }
 
+/// The line that closes a ```mermaid fence opened at `open`, when the fence is finished.
+///
+/// CDXC:SessionChat 2026-09-30 WHY: A fence still streaming stays an ordinary code block until its closing run arrives, as the React chat kept an unclosed diagram pending, so the renderer never tries to draw half a diagram on every streamed token. The marked section keeps the fence lines verbatim: the renderer draws the diagram from the lines between them and shows them as its source.
+fn closed_mermaid_fence(
+    lines: &[&str],
+    open: usize,
+    character: u8,
+    run: usize,
+    info: &str,
+) -> Option<usize> {
+    let language = js_trim(info).split(is_js_space).next().unwrap_or_default();
+    if !language.eq_ignore_ascii_case("mermaid") {
+        return None;
+    }
+    lines[open + 1..]
+        .iter()
+        .position(|line| {
+            fence_close(line).is_some_and(|(closing, length)| closing == character && length >= run)
+        })
+        .map(|offset| open + 1 + offset)
+}
+
 /// One pass over the lines: annotate fenced blocks, mark the pictures written into prose, and lift
 /// GitHub alert quotes out of the Markdown into a marked section.
 ///
@@ -412,6 +438,13 @@ fn mark_blocks(markdown: &str) -> String {
             continue;
         }
         if let Some((character, run, info)) = fence_open(line) {
+            if let Some(close) = closed_mermaid_fence(&lines, index, character, run, info) {
+                result.push(NATIVE_MERMAID_OPEN.to_string());
+                result.extend(lines[index..=close].iter().map(|line| (*line).to_string()));
+                result.push(NATIVE_MERMAID_CLOSE.to_string());
+                index = close + 1;
+                continue;
+            }
             fence = Some((character, run));
             result.push(match fence_header(info) {
                 Some(header) => format!("{line} {header}"),

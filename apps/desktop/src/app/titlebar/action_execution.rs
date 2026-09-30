@@ -261,6 +261,16 @@ impl GhostexGpuiApp {
         }
         let group_id = selection.group_id;
         let session_id = selection.session_id;
+        /*
+        CDXC:CommandPane 2026-09-30 WHY:
+        Clicking a quick action while the command pane is collapsed only expanded the pane and never ran the command. Reveal makes the slot count as mounted, but the surface record left over from before the collapse is stale, so the rerun wrote to it (or found nothing to write to) and skipped the launch payload. Judge mounted reuse by whether the slot was on screen before the reveal; a collapsed pane takes the exact-slot launch payload path, which the remount consumes.
+        */
+        let slot_was_rendered_before_reveal = self
+            .command_pane
+            .is_current_terminal_body_mount_slot(CommandTerminalBodyMountSlotId {
+                group_id,
+                session_id,
+            });
         self.reveal_command_group_dock(group_id, cx);
         if matches!(
             selection.kind,
@@ -297,8 +307,8 @@ impl GhostexGpuiApp {
         let mounted_reuse_surface_available = matches!(
             selection.kind,
             CommandPaneActionSessionSelectionKind::Reused
-        ) && self
-            .gpui_command_action_mounted_reuse_surface_available(slot_id);
+        ) && slot_was_rendered_before_reveal
+            && self.gpui_command_action_mounted_reuse_surface_available(slot_id);
         let startup_text = if mounted_reuse_surface_available {
             None
         } else {

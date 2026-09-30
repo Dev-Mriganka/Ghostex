@@ -582,3 +582,9 @@ impl Render for GpuiRenameWorktreeModalWindow {
         .capture_action(cx.listener(Self::on_escape_action))
     }
 }
+
+impl ModalCornerClose for GpuiRenameWorktreeModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

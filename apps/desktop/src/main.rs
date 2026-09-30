@@ -550,7 +550,6 @@ fn main() {
                             */
                             #[cfg(target_os = "macos")]
                             cef::refresh_sidebar_pointer_inside();
-                            app.close_native_app_modal_clicked_away(cx);
                         }
                     })
                     .detach();

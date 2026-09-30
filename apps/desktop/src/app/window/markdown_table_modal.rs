@@ -10,12 +10,12 @@ use crate::app::native_chat::appearance::ChatAppearance;
 use crate::app::native_chat::table_preview::table_preview_content;
 use gpui::{
     App, Context, FocusHandle, InteractiveElement as _, IntoElement, KeyDownEvent,
-    ParentElement as _, Render, ScrollHandle, Styled as _, Subscription, Window, div,
+    ParentElement as _, Render, ScrollHandle, Styled as _, Window, div,
 };
 use std::rc::Rc;
 
 pub(crate) enum MarkdownTableModalCommand {
-    /// Escape, the close button, or a click outside the window.
+    /// Escape or the close button.
     Close,
     /// A link in the table: closes the popup, then opens it where the app opens web links.
     OpenLink { href: String, external: bool },
@@ -29,8 +29,6 @@ pub(crate) struct GpuiMarkdownTableModalWindow {
     source: String,
     focus_handle: FocusHandle,
     scroll: ScrollHandle,
-    was_active: bool,
-    _activation: Subscription,
 }
 
 impl GpuiMarkdownTableModalWindow {
@@ -43,21 +41,12 @@ impl GpuiMarkdownTableModalWindow {
     ) -> Self {
         let focus_handle = cx.focus_handle();
         focus_handle.focus(window, cx);
-        let activation = cx.observe_window_activation(window, |this: &mut Self, window, cx| {
-            if window.is_window_active() {
-                this.was_active = true;
-            } else if this.was_active {
-                (this.host)(MarkdownTableModalCommand::Close, cx);
-            }
-        });
         Self {
             host,
             palette,
             source,
             focus_handle,
             scroll: ScrollHandle::new(),
-            was_active: window.is_window_active(),
-            _activation: activation,
         }
     }
 
@@ -107,5 +96,16 @@ impl Render for GpuiMarkdownTableModalWindow {
             .on_key_down(cx.listener(Self::on_key_down))
             .child(header)
             .child(table)
+    }
+}
+
+impl ModalCornerClose for GpuiMarkdownTableModalWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        (self.host)(MarkdownTableModalCommand::Close, cx);
+    }
+
+    /// It draws its own close button in that corner.
+    fn shows_corner_close(&self, _cx: &App) -> bool {
+        false
     }
 }

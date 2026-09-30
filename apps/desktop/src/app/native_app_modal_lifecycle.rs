@@ -13,23 +13,8 @@ use crate::app::window::*;
 use crate::*;
 use gpui::{AnyEntity, WindowHandle};
 use gpui_component::Root;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
-
-/// Native dialogs that close when the user clicks back into the main window.
-///
-/// CDXC:AppModal 2026-09-27 DECISION:
-/// User: "can we make clicking away from a window close it please in the gpui app?", except Settings, Agents Hub and Find by Prompt. Settings runs in the React modal host, which keeps its current behaviour; Find by Prompt (native since 2026-09-27) and Agents Hub (native since 2026-09-28) are left out of this list, so they stay open.
-/// Only dialogs where closing is a plain cancel of a short action are listed. Dialogs that hold typed work (Session Note, Delayed Send, Add Worktree, the space editor), run a flow (Remote Setup, gxserver install, Portless setup), cancel a running export when closed (Export Transcript) or open on their own and need an answer (Update Available, Missing Project Folder, Agent Hooks Required) stay open. Quick Access, the new-thread picker, Browser History and the Markdown and Mermaid viewers already close when they lose focus.
-/// "Clicking away" means the main window becoming key again; switching to another app (to copy a name or a token) never closes a dialog.
-fn native_app_modal_closes_when_clicked_away(kind: GpuiAppModalKind) -> bool {
-    matches!(
-        kind,
-        GpuiAppModalKind::RenameSession
-            | GpuiAppModalKind::RenameWorktree
-            | GpuiAppModalKind::DeleteWorktree
-    )
-}
 
 pub(crate) struct NativeAppModal {
     pub(crate) kind: GpuiAppModalKind,
@@ -58,7 +43,7 @@ impl GhostexGpuiApp {
 
     /// Opens `kind` as a native window whose content is built by `build`.
     /// Replaces any open app modal, React or native.
-    pub(crate) fn open_native_app_modal<V: Render>(
+    pub(crate) fn open_native_app_modal<V: ModalCornerClose>(
         &mut self,
         kind: GpuiAppModalKind,
         width: f32,
@@ -96,9 +81,8 @@ impl GhostexGpuiApp {
         };
         let view_slot: Rc<RefCell<Option<AnyEntity>>> = Rc::new(RefCell::new(None));
         let view_out = view_slot.clone();
-        let was_key = Rc::new(Cell::new(false));
-        self.native_app_modal_was_key = was_key.clone();
-        let window_border = self.gpui_native_modal_palette().window_border();
+        let palette = self.gpui_native_modal_palette();
+        let window_border = palette.window_border();
         let window = cx
             .open_window(options, move |window, cx| {
                 crate::app::window::popup_frame::frame_app_modal_window(window, window_border);
@@ -111,15 +95,9 @@ impl GhostexGpuiApp {
                 window.activate_window();
                 let view = build(window, cx);
                 *view_out.borrow_mut() = Some(view.clone().into_any());
+                let frame = cx.new(|_| ModalWindowFrame::new(view, palette));
                 cx.new(|cx| {
-                    // The modal opens activated from a spawned task, and a dialog opened from a context menu can see the main window turn key for a moment first; only a dialog that has been key closes on click-away.
-                    cx.observe_window_activation(window, move |_, window, _| {
-                        if window.is_window_active() {
-                            was_key.set(true);
-                        }
-                    })
-                    .detach();
-                    Root::new(view, window, cx)
+                    Root::new(frame, window, cx)
                         .bordered(false)
                         .bg(gpui::transparent_black())
                 })
@@ -130,17 +108,6 @@ impl GhostexGpuiApp {
             (Some(window), Some(view)) => Some(NativeAppModal { kind, window, view }),
             _ => None,
         };
-    }
-
-    /// The main window became key again: a click landed back in it while a native dialog was open.
-    pub(crate) fn close_native_app_modal_clicked_away(&mut self, cx: &mut gpui::Context<Self>) {
-        if self
-            .native_app_modal_kind()
-            .is_some_and(native_app_modal_closes_when_clicked_away)
-            && self.native_app_modal_was_key.get()
-        {
-            self.close_native_app_modal_from_bridge(cx);
-        }
     }
 
     pub(crate) fn native_app_modal_kind(&self) -> Option<GpuiAppModalKind> {

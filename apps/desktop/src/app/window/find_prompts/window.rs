@@ -1058,3 +1058,9 @@ impl Focusable for GpuiFindPromptsModalWindow {
         self.search.read(cx).focus_handle(cx)
     }
 }
+
+impl crate::app::window::native_modal_kit::ModalCornerClose for GpuiFindPromptsModalWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        self.post(FindPromptsModalCommand::Close, cx);
+    }
+}

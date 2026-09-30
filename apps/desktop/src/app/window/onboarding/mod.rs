@@ -1211,3 +1211,17 @@ impl GpuiOnboardingWindow {
         cx.notify();
     }
 }
+
+impl super::native_modal_kit::ModalCornerClose for GpuiOnboardingWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        // Escape never closes onboarding; the corner button is the window's close, which counts as finishing.
+        if self.can_close() {
+            self.finish(FinishTarget::None, cx);
+        }
+    }
+
+    /// First-run setup stays open until the sidebar has a project.
+    fn shows_corner_close(&self, _cx: &App) -> bool {
+        self.can_close()
+    }
+}

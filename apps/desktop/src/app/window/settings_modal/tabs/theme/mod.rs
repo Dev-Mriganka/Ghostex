@@ -92,6 +92,7 @@ impl MoreGroup {
                 "windowGlassWorkAreaTintDark",
                 "windowGlassSidebarOpacityLight",
                 "windowGlassWorkAreaTintLight",
+                "windowGlassMenuBlurRadius",
             ],
             MoreGroup::ChatTerminal => &["terminalGhosttyTheme", "terminalGhosttyLightTheme"],
         }

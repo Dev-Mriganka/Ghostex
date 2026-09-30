@@ -257,6 +257,13 @@ pub(crate) struct PanelMotions {
     was_animating: bool,
 }
 
+impl PanelMotions {
+    /// Whether a panel was still sliding on the last frame drawn.
+    pub(crate) fn animating(&self) -> bool {
+        self.was_animating
+    }
+}
+
 impl GhostexGpuiApp {
     /// Samples every panel's tween for this frame and keeps frames coming while one runs. Called
     /// at the top of the root render, before anything reads a panel's size.

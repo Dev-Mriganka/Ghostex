@@ -26,6 +26,10 @@ bead statuses, add bead comments, or link a session to a card.
   installed Beads version.
 - Inspect nearby beads before creating a new one so title, labels, status, and
   external-ref style match the project.
+- If the project has no Beads workspace yet (no `.beads` folder, or `bd` says
+  no beads database was found), stop and ask the user whether they want Beads
+  set up in this project. Run `bd init`, or anything else that creates `.beads`
+  files, only after they say yes.
 
 ## Working A Bead: Link This Session First
 

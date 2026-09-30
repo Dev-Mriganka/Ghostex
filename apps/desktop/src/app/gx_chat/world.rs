@@ -496,6 +496,9 @@ pub(super) fn drive(world: &mut World, key: &str, events: Vec<Event>) {
     // for every chat with a view attached, which is every chat a gesture reaches.
     let mut requests: Vec<HostRequest> = world.held_requests.remove(key).unwrap_or_default();
     let mut rounds = 0usize;
+    // TEMPORARY: model pill flicker hunt (`pill_trace.rs`).
+    #[cfg(not(target_arch = "wasm32"))]
+    let pill_trace = super::pill_trace::enabled();
     while !pending.is_empty() && rounds < MAX_SETTLE_ROUNDS {
         rounds += 1;
         let mut answers: Vec<Event> = Vec::new();
@@ -510,7 +513,15 @@ pub(super) fn drive(world: &mut World, key: &str, events: Vec<Event>) {
                 retained.touched_at = Instant::now();
                 let session_key = retained.session_key.clone();
                 let context = context(retained.core.state());
-                (retained.core.handle(event, context), session_key)
+                #[cfg(not(target_arch = "wasm32"))]
+                let event_kind = pill_trace.then(|| super::pill_trace::event_kind(&event));
+                let effects = retained.core.handle(event, context);
+                #[cfg(not(target_arch = "wasm32"))]
+                if let Some(event_kind) = event_kind {
+                    let state = retained.core.state();
+                    super::pill_trace::observe(key, &event_kind, state, &self::context(state));
+                }
+                (effects, session_key)
             };
             for effect in effects {
                 *world

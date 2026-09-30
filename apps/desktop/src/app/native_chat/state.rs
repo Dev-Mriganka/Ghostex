@@ -66,6 +66,8 @@ pub(crate) struct NativeChatView {
     pub(super) table_preview: super::table_preview::TablePreviewState,
     /// Bytes for the transcript's pictures, read once and shared by the thumbnails and the viewer.
     pub(super) images: super::images::ChatImageCache,
+    /// The transcript's Mermaid diagrams, drawn once per source and theme.
+    pub(super) mermaid: super::mermaid::ChatMermaidCache,
     /// True while a completed turn's work rows render, which is where answered question cards are suppressed.
     pub(super) in_work_fold: bool,
     /// True while any row of a completed turn renders: its writes belong to that turn's "N files changed" fold.
@@ -313,6 +315,7 @@ impl NativeChatView {
             image_viewer: Default::default(),
             table_preview: Default::default(),
             images: Default::default(),
+            mermaid: Default::default(),
             in_work_fold: false,
             hide_file_changes: false,
             disclosure_motion: Default::default(),

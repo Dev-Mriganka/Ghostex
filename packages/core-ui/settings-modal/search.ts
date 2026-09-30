@@ -475,6 +475,12 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             title: 'App Shots',
           },
           {
+            key: 'ghostexCapture',
+            subtitle:
+              'A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.',
+            title: 'Ghostex Capture',
+          },
+          {
             key: 'cuaPermissions',
             subtitle:
               'Trycua needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.',

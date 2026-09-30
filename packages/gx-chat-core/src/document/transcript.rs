@@ -61,6 +61,9 @@ pub enum TranscriptItem {
         work: Vec<ProjectedMessage>,
         /// Answered question cards, hoisted out of the fold.
         questions: Vec<Value>,
+        /// Cards for the messages the turn's work sent other agents, hoisted out of the fold.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        sent_messages: Vec<Value>,
         artifacts: Vec<ProjectedMessage>,
         /// Omitted, not null, when the turn has no reply.
         #[serde(rename = "final", default, skip_serializing_if = "Option::is_none")]

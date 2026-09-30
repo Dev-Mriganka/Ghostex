@@ -966,3 +966,14 @@ impl Render for GpuiRemoteSetupModalWindow {
         .child(self.render_close_button(cx))
     }
 }
+
+impl ModalCornerClose for GpuiRemoteSetupModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close(window, cx);
+    }
+
+    /// It draws its own close button in that corner.
+    fn shows_corner_close(&self, _cx: &App) -> bool {
+        false
+    }
+}

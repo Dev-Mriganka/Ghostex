@@ -184,6 +184,7 @@ How to use this file:
 
 - **gpuiTitlebarActionCommandByProject** `gpuiTitlebarActionCommandByProject` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **gpuiTitlebarOpenTargetByProject** `gpuiTitlebarOpenTargetByProject` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
+- **ghostexCaptureEnabled** `ghostexCaptureEnabled` (boolean, default false) [not agent-writable]: App-managed state saved with the settings; not a user preference.
 - **settingsModalNavigation** `settingsModalNavigation` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **projectWebsiteViews** `projectWebsiteViews` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **appIconSourceId** `appIconSourceId` (text, default (empty)) [advanced, not agent-writable]: App-managed state saved with the settings; not a user preference.
@@ -232,6 +233,8 @@ How to use this file:
 - **Live background for light mode** `windowGlassLiveStyleLight` (one of aurora | ink | drift | nebula | silk | bokeh | waves | mesh | video; default drift): The animation, or your own video, the glass shows in light mode when Live shows behind the glass. Option labels: aurora = Aurora, ink = Ink, drift = Drift, nebula = Nebula, silk = Silk, bokeh = Bokeh, waves = Waves, mesh = Mesh, video = Your video.
 - **Live background speed** `windowGlassLiveSpeed` (number default 1): How fast the Live animation moves, from a quarter of its pace to twice as fast.
 - **Live background brightness** `windowGlassLiveBrightness` (number default 60): How bright the Live animation glows behind the glass. Lower keeps it a subtle glow.
+- **Blur** `windowGlassBlurRadius` (number default 60): How soft what shows behind the window looks, in points. 0 shows it sharp. On Windows and Linux, Desktop and windows uses the system blur, so this sets the wallpaper, picture and video blur.
+- **Menu blur** `windowGlassMenuBlurRadius` (number default 20): How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only.
 - **Sidebar tint in dark mode** `windowGlassSidebarOpacityDark` (number default 88): How much of the desktop the sidebar hides in dark mode. Lower shows more of your desktop through it.
 - **Work area tint in dark mode** `windowGlassWorkAreaTintDark` (number default 81): How much of the desktop the work area hides in dark mode, set on its own so either area can be the darker one. Lower shows more of your desktop through it.
 - **Sidebar tint in light mode** `windowGlassSidebarOpacityLight` (number default 93): How much of the desktop the sidebar hides in light mode. Lower shows more of your desktop through it.
@@ -299,6 +302,7 @@ How to use this file:
 - **Tools** `managedTools` (Settings UI row without a settings key; use `ghostex settings open`): Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.
 - **Bundled Agent Skills** `bundledAgentSkills` (Settings UI row without a settings key; use `ghostex settings open`): Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.
 - **App Shots** `appShots` (Settings UI row without a settings key; use `ghostex settings open`): Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.
+- **Ghostex Capture** `ghostexCapture` (Settings UI row without a settings key; use `ghostex settings open`): A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.
 - **Trycua Permissions** `cuaPermissions` (Settings UI row without a settings key; use `ghostex settings open`): Trycua needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.
 ## Extensions (tab `extensions`)
 

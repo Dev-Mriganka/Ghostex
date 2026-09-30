@@ -342,6 +342,13 @@ impl OptionStore {
     ///
     /// An unchanged footer is still fresh evidence after a rejected CLI toggle, so a detection
     /// taken since the change started replaces the value rather than clearing it.
+    ///
+    /// CDXC:SessionChat 2026-09-30 WHY:
+    /// Without fresh evidence the pill goes back to the agent's last detected value, as
+    /// [`OptionStore::rollback`] does, never to nothing. gxserver only publishes a detection when
+    /// the screen changes, so re-picking the model the agent already runs (or picking only a new
+    /// effort) is never confirmed; clearing the value on expiry left the model pill reading a bare
+    /// "Model" until something else changed on screen, over a minute in the trace that found it.
     pub fn expire(&mut self, now_ms: i64) {
         let due: Vec<u64> = self
             .pending
@@ -364,17 +371,15 @@ impl OptionStore {
             };
             for id in change.values.keys() {
                 self.release(id, change_id);
-                match self.detected_state.get(id) {
-                    Some(detected)
-                        if detected
-                            .detected_at
-                            .as_deref()
-                            .and_then(parse_iso_millis)
-                            .is_some_and(|at| at >= change.started_at) =>
-                    {
-                        next.insert(id.clone(), detected.clone());
+                match self
+                    .detected_state
+                    .get(id)
+                    .or_else(|| change.previous.get(id))
+                {
+                    Some(previous) => {
+                        next.insert(id.clone(), previous.clone());
                     }
-                    _ => {
+                    None => {
                         next.remove(id);
                     }
                 }

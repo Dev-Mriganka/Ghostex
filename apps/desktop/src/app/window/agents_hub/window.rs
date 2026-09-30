@@ -968,3 +968,9 @@ impl Render for GpuiAgentsHubModalWindow {
             )
     }
 }
+
+impl super::super::native_modal_kit::ModalCornerClose for GpuiAgentsHubModalWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        self.send(AgentsHubModalCommand::Close, cx);
+    }
+}

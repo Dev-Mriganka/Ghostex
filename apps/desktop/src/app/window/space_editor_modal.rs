@@ -1162,3 +1162,9 @@ pub(crate) fn command_score(string: &str, abbreviation: &str) -> f64 {
     };
     scorer.score(0, 0)
 }
+
+impl ModalCornerClose for GpuiSpaceEditorModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

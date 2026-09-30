@@ -1,7 +1,6 @@
 //! App modals in the page. The desktop opens every app modal through one door (`open_app_modal_from_bridge`): the native GPUI dialogs (and Quick Access) as borderless child windows, the rest in its reusable CEF window. The page has no CEF, so only the native dialogs open here, as the platform's overlay windows, through the desktop's own dialog and lifecycle files; a modal that exists only as a CEF page is answered with a toast that says so.
 use gpui::{
-    AppContext as _, Bounds, Context, Render, Styled as _, Window, WindowBounds, WindowOptions, px,
-    size,
+    AppContext as _, Bounds, Context, Styled as _, Window, WindowBounds, WindowOptions, px, size,
 };
 use gpui_component::Root;
 use serde_json::Value;
@@ -93,7 +92,7 @@ impl GhostexGpuiApp {
     }
 
     /// Opens `kind` as an overlay window centred on the page, replacing any open dialog.
-    pub(crate) fn open_native_app_modal<V: Render>(
+    pub(crate) fn open_native_app_modal<V: crate::app::window::ModalCornerClose>(
         &mut self,
         kind: GpuiAppModalKind,
         width: f32,
@@ -128,14 +127,16 @@ impl GhostexGpuiApp {
         };
         let view_slot: Rc<RefCell<Option<gpui::AnyEntity>>> = Rc::new(RefCell::new(None));
         let view_out = view_slot.clone();
-        let window_border = self.gpui_native_modal_palette().window_border();
+        let palette = self.gpui_native_modal_palette();
+        let window_border = palette.window_border();
         let window = cx
             .open_window(options, move |window, cx| {
                 crate::app::window::popup_frame::frame_app_modal_window(window, window_border);
                 window.activate_window();
                 let view = build(window, cx);
                 *view_out.borrow_mut() = Some(view.clone().into_any());
-                cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
+                let frame = cx.new(|_| crate::app::window::ModalWindowFrame::new(view, palette));
+                cx.new(|cx| Root::new(frame, window, cx).bg(gpui::transparent_black()))
             })
             .ok();
         let view = view_slot.borrow_mut().take();

@@ -64,6 +64,12 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
    * enabling the beta feature is a single explicit toggle.
    */
   appShotsEnabled: false,
+  /**
+   * CDXC:GhostexCapture 2026-09-30 WHY:
+   * The floating button sits over every app, so it is opt-in: a new install or an update must not
+   * put a window on top of someone's screen they never asked for.
+   */
+  ghostexCaptureEnabled: false,
   appShotsHotkey: 'both-command',
   /*
    * CDXC:AppShots 2026-06-29-02:59:
@@ -583,6 +589,8 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   windowGlassLiveStyleLight: 'drift',
   windowGlassLiveSpeed: 1,
   windowGlassLiveBrightness: 60,
+  windowGlassBlurRadius: 60,
+  windowGlassMenuBlurRadius: 20,
   windowGlassSidebarOpacityDark: DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT,
   windowGlassWorkAreaTintDark: DEFAULT_WINDOW_GLASS_WORK_AREA_TINT_DARK_PERCENT,
   windowGlassSidebarOpacityLight: DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_LIGHT_PERCENT,

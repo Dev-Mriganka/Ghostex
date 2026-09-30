@@ -62,6 +62,8 @@ pub struct IndicatorCandidate {
     pub icon_data_url: Option<String>,
     pub last_interaction_at: Option<String>,
     pub order: usize,
+    /// The session has an unanswered question card (the sidebar's pink dot).
+    pub pending_question: bool,
     pub project_id: String,
     pub project_title: String,
     pub session_id: String,
@@ -206,6 +208,7 @@ pub fn indicator_candidates(
                     icon_data_url: icon_data_url.clone(),
                     last_interaction_at: row.last_interaction_at.clone(),
                     order: candidates.len(),
+                    pending_question: row.pending_question_count > 0,
                     project_id,
                     project_title,
                     session_id: row.sidebar_session_id.clone(),
@@ -239,12 +242,41 @@ fn status_counts(candidates: &[IndicatorCandidate]) -> (u64, u64, u64) {
     (attention, available, working)
 }
 
+/// Working, waiting-for-you and asking-a-question counts split the way the sidebar's section
+/// headers split them (`SectionView`): every working row counts as working, a row with an
+/// unanswered question counts as a question and not as attention.
+///
+/// CDXC:GhostexCapture 2026-09-30 DECISION:
+/// User: the floating Ghostex Capture button shows three numbers, "working, attention, question
+/// asked", for all local and remote sessions that currently have them.
+fn section_counts(candidates: &[IndicatorCandidate]) -> Value {
+    let (mut working, mut attention, mut question) = (0u64, 0u64, 0u64);
+    for candidate in candidates {
+        if candidate.pending_question {
+            question += 1;
+        } else if candidate.status == "attention" {
+            attention += 1;
+        }
+        if candidate.status == "working" {
+            working += 1;
+        }
+    }
+    let mut counts = Map::new();
+    counts.insert("attention".into(), Value::from(attention));
+    counts.insert("question".into(), Value::from(question));
+    counts.insert("working".into(), Value::from(working));
+    Value::Object(counts)
+}
+
 /// `createGpuiSessionStatusIndicatorsPayload`.
 pub fn status_indicators_payload(candidates: &[IndicatorCandidate], hide_menu_bar: bool) -> Value {
     let (attention, available, working) = status_counts(candidates);
     let mut projects: Vec<Map<String, Value>> = Vec::new();
     let mut project_ids: Vec<&str> = Vec::new();
-    for candidate in candidates.iter().filter(|candidate| counts(candidate)) {
+    for candidate in candidates
+        .iter()
+        .filter(|candidate| counts(candidate) || candidate.pending_question)
+    {
         let index = match project_ids
             .iter()
             .position(|id| *id == candidate.project_id)
@@ -282,6 +314,9 @@ pub fn status_indicators_payload(candidates: &[IndicatorCandidate], hide_menu_ba
         if let Some(last) = &candidate.last_interaction_at {
             session.insert("lastActiveAt".into(), Value::from(last.as_str()));
         }
+        if candidate.pending_question {
+            session.insert("pendingQuestion".into(), Value::Bool(true));
+        }
         session.insert(
             "sessionId".into(),
             Value::from(candidate.session_id.as_str()),
@@ -299,6 +334,7 @@ pub fn status_indicators_payload(candidates: &[IndicatorCandidate], hide_menu_ba
         "projects".into(),
         Value::Array(projects.into_iter().map(Value::Object).collect()),
     );
+    payload.insert("sectionCounts".into(), section_counts(candidates));
     payload.insert(
         "type".into(),
         Value::from(SESSION_STATUS_INDICATORS_MESSAGE_TYPE),

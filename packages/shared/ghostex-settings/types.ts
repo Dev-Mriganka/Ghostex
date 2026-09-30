@@ -255,6 +255,7 @@ export type ghostexSettings = {
   gpuiTitlebarActionCommandByProject: Record<string, string>;
   gpuiTitlebarOpenTargetByProject: Record<string, string>;
   appShotsEnabled: boolean;
+  ghostexCaptureEnabled: boolean;
   appShotsHotkey: AppShotsHotkey;
   appShotsMetadataEnabled: boolean;
   /**
@@ -855,6 +856,12 @@ export type ghostexSettings = {
   windowGlassLiveSpeed: number;
   /** How bright the Live style is drawn, 10 to 100 percent (default 60). */
   windowGlassLiveBrightness: number;
+  /**
+   * CDXC:Theming 2026-09-30 SEE-ALSO:
+   * Blur radius in points, 0 to 100, of the main window's glass (default 60) and of frosted menus and tooltips (default 20); window_glass.rs holds the user's decision and passes them to each GPUI backend through `set_background_blur_style`.
+   */
+  windowGlassBlurRadius: number;
+  windowGlassMenuBlurRadius: number;
   /**
    * CDXC:Theming 2026-09-23 SEE-ALSO:
    * Whether the Wallpaper only or Custom image picture covers the window and moves with it (static) or stays still against the screen (desktop); window_glass.rs holds the user's decision and the GPUI macOS and Linux backends place it.

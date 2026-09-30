@@ -31,6 +31,8 @@ pub mod prose;
 pub mod question_exchange;
 pub mod raw_html;
 pub mod rows;
+pub mod sent_message;
+pub mod shell_script;
 pub mod side_question;
 pub mod simple;
 pub mod subagent;

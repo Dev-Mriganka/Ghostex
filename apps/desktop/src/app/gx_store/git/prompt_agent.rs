@@ -132,7 +132,7 @@ impl GhostexGpuiApp {
     /// Agent sessions carry the gxserver-owned first-prompt title settings before hooks claim the
     /// prompt. The daemon owns eligibility, title generation and command submission; the app only
     /// supplies the saved title-generation agent or command and any already-known first prompt.
-    fn git_first_prompt_title_runtime_settings(
+    pub(crate) fn git_first_prompt_title_runtime_settings(
         &self,
         first_user_message: Option<&str>,
         first_user_input_draft: Option<&str>,

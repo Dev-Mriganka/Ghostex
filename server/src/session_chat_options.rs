@@ -2311,43 +2311,22 @@ fn merge_session_chat_option_selections(
     .then_some(merged)
 }
 
-/// Full detection for one session: resolve structured transcript metadata,
-/// then let any current terminal statusline value win per option. `None` means
-/// neither agent-owned source proved a value.
-///
-/// CDXC:AgentScreenDetection 2026-08-19: the same capture is classified
-/// for terminal-state notices, so both readings ride one process spawn.
-pub fn detect_session_chat_terminal_state(
+/// The option readings that live on disk rather than on the screen: the transcript's structured
+/// metadata, and the statusline sidecar Claude, Cursor and Hermes write. Also returns Claude's own
+/// session id and transcript path, which the task store hangs off.
+#[allow(clippy::type_complexity)]
+fn read_session_chat_stored_selections(
     repository: &DomainRepository<'_>,
     hook_state_directory: &Path,
     project_id: &str,
     session_id: &str,
-    agent_id: Option<&str>,
-) -> SessionChatTerminalDetection {
-    if agent_id == Some("opencode") {
-        return repository
-            .get_session(project_id, session_id)
-            .ok()
-            .flatten()
-            .as_ref()
-            .map(crate::session_chat_opencode::detect)
-            .unwrap_or_default();
-    }
-    /*
-    CDXC:SessionChat 2026-08-26:
-    Two independent reasons to spend a capture on this session now. The
-    statusline grammar covers three agents; the composer signature table covers
-    nine, so an agent with only the latter (cursor, copilot, opencode, gemini,
-    omp) reaches the funnel through this second door and gets every reading the
-    capture can support — which for it is composer readiness alone, since the
-    notice, activity and fleet classifiers are all keyed on the option agent.
-    */
-    let agent = session_chat_option_agent(agent_id);
-    if agent.is_none()
-        && !crate::session_chat_composer::has_session_chat_composer_signature(agent_id)
-    {
-        return SessionChatTerminalDetection::default();
-    }
+    agent: Option<SessionChatOptionAgent>,
+) -> (
+    Option<SessionChatDetectedSelection>,
+    Option<SessionChatDetectedSelection>,
+    Option<String>,
+    Option<String>,
+) {
     let transcript = agent.and_then(|agent| {
         read_session_chat_transcript_selection(repository, project_id, session_id, agent)
     });
@@ -2397,6 +2376,88 @@ pub fn detect_session_chat_terminal_state(
         }
         _ => None,
     };
+    (
+        transcript,
+        statusline,
+        claude_session_id,
+        claude_session_path,
+    )
+}
+
+/// CDXC:AgentScreenDetection 2026-09-30 WHY:
+/// A session that is not running has no screen, but its last model, effort and mode are still on
+/// disk (the transcript's metadata and the statusline sidecar), which is what the chat's pills show
+/// until the session runs again. Answering a sleeping session's read with "probed, nothing
+/// detected" drew a bare "Model" pill for as long as it slept, and flashed it on every chat opened
+/// on a session that was still waking.
+pub(crate) fn detect_session_chat_stored_options(
+    repository: &DomainRepository<'_>,
+    hook_state_directory: &Path,
+    project_id: &str,
+    session_id: &str,
+    agent_id: Option<&str>,
+) -> Option<SessionChatDetectedOptions> {
+    let agent = session_chat_option_agent(agent_id)?;
+    let (transcript, statusline, _, _) = read_session_chat_stored_selections(
+        repository,
+        hook_state_directory,
+        project_id,
+        session_id,
+        Some(agent),
+    );
+    merge_session_chat_option_selections(transcript, statusline, None)
+        .map(|mut selection| {
+            crate::session_chat_hermes_status::restore_hermes_model_id(&mut selection);
+            selection
+        })
+        .map(SessionChatDetectedOptions::new)
+}
+
+/// Full detection for one session: resolve structured transcript metadata,
+/// then let any current terminal statusline value win per option. `None` means
+/// neither agent-owned source proved a value.
+///
+/// CDXC:AgentScreenDetection 2026-08-19: the same capture is classified
+/// for terminal-state notices, so both readings ride one process spawn.
+pub fn detect_session_chat_terminal_state(
+    repository: &DomainRepository<'_>,
+    hook_state_directory: &Path,
+    project_id: &str,
+    session_id: &str,
+    agent_id: Option<&str>,
+) -> SessionChatTerminalDetection {
+    if agent_id == Some("opencode") {
+        return repository
+            .get_session(project_id, session_id)
+            .ok()
+            .flatten()
+            .as_ref()
+            .map(crate::session_chat_opencode::detect)
+            .unwrap_or_default();
+    }
+    /*
+    CDXC:SessionChat 2026-08-26:
+    Two independent reasons to spend a capture on this session now. The
+    statusline grammar covers three agents; the composer signature table covers
+    nine, so an agent with only the latter (cursor, copilot, opencode, gemini,
+    omp) reaches the funnel through this second door and gets every reading the
+    capture can support — which for it is composer readiness alone, since the
+    notice, activity and fleet classifiers are all keyed on the option agent.
+    */
+    let agent = session_chat_option_agent(agent_id);
+    if agent.is_none()
+        && !crate::session_chat_composer::has_session_chat_composer_signature(agent_id)
+    {
+        return SessionChatTerminalDetection::default();
+    }
+    let (transcript, statusline, claude_session_id, claude_session_path) =
+        read_session_chat_stored_selections(
+            repository,
+            hook_state_directory,
+            project_id,
+            session_id,
+            agent,
+        );
     // CDXC:SessionChat 2026-09-03: disk, not screen, so it is read
     // whether or not the capture below succeeds.
     let tasks = crate::session_chat_agent_tasks::read_session_chat_agent_tasks(

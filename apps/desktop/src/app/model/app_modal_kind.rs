@@ -292,7 +292,7 @@ impl GpuiAppModalKind {
 
     /// CDXC:AppModal 2026-09-08 DECISION:
     /// User: use the terminal quick picker's borderless style for all app modals, including Settings, Quick Access, Add Project, Search by Prompt, Rename Session, and Delayed Send.
-    /// This extends the earlier table and Mermaid popup decision; Settings and Quick Access need no close button because clicking outside dismisses them.
+    /// This extends the earlier table and Mermaid popup decision. Clicking outside no longer closes a modal; the hover-only corner close button of `window/modal_window_frame.rs` is the close control instead (CDXC:AppModal 2026-09-30).
     pub(crate) fn has_titlebar(self) -> bool {
         false
     }

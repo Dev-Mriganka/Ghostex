@@ -57,6 +57,7 @@ mod added_project;
 mod app_shot;
 mod attention;
 mod burst;
+mod capture_targets;
 mod client_document;
 mod client_storage_init;
 mod collection_menu;
@@ -147,6 +148,7 @@ pub(crate) use sidebar_ui_storage::{
 };
 
 pub(crate) use activation_focus::{menu_bar_session_focus_id, palette_session_focus_id};
+pub(crate) use capture_targets::CaptureTargetProject;
 pub(crate) use client_storage_init::initialize_client_storage_at_start;
 pub(crate) use host::GxStoreHost;
 pub(crate) use primary_launcher::read_primary_agent_launcher_id;

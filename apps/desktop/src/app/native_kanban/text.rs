@@ -332,15 +332,19 @@ pub(crate) fn board_notice(message: &str, project_path: &str) -> KanbanNotice {
             "Ghostex can install it there for you: click Install Beads.".to_string(),
         ]
     } else if is_missing_project {
-        vec!["This project does not have a Beads workspace yet. Copy a fix prompt for an agent to inspect and initialize it safely.".to_string()]
+        vec!["This project does not have a Beads workspace yet. Copy a fix prompt for an agent to inspect and initialize it safely; the agent asks you before it creates any Beads files.".to_string()]
     } else {
         vec![
             message.to_string(),
             "Update Beads to the latest release, then retry. If this is a remote-backed migration, follow the coordinated migration instructions instead of migrating multiple clones independently.".to_string(),
         ]
     };
+    /*
+    CDXC:ProjectBoard 2026-09-30 DECISION:
+    User: "add a message to confirm with the user before creating the beads files". An agent handed this prompt must ask the user and wait for a yes before running bd init or anything else that creates `.beads` files in a project that has none.
+    */
     let fix_prompt = format!(
-        "Fix this Beads Project Board issue.\n\nProject path: {project_path}\n\nNotice: {title}\n\nReported issue:\n{message}\n\nUse the machine-installed bd CLI in the environment that runs this project. Diagnose and correct the underlying problem safely. Preserve all existing and unpushed Beads data. If this is a remote-backed database or migration, follow the coordinated migration gate: designate exactly one clone to migrate and publish, and have every other clone adopt that result. Do not bypass the remote migration gate or migrate multiple clones independently. Verify the fix by running a normal read such as bd status from the project path, then report what changed."
+        "Fix this Beads Project Board issue.\n\nProject path: {project_path}\n\nNotice: {title}\n\nReported issue:\n{message}\n\nUse the machine-installed bd CLI in the environment that runs this project. Diagnose and correct the underlying problem safely. If the project has no Beads workspace yet, stop and ask the user to confirm they want Beads set up in this project before running bd init or anything else that creates .beads files, and wait for their answer. Preserve all existing and unpushed Beads data. If this is a remote-backed database or migration, follow the coordinated migration gate: designate exactly one clone to migrate and publish, and have every other clone adopt that result. Do not bypass the remote migration gate or migrate multiple clones independently. Verify the fix by running a normal read such as bd status from the project path, then report what changed."
     );
     KanbanNotice {
         title: title.to_string(),

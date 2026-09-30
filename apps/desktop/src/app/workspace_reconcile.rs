@@ -82,6 +82,7 @@ impl GhostexGpuiApp {
         self.sidebar_session_status_indicators = next_state;
         self.apply_gpui_menu_bar_status_item_state();
         self.deliver_gpui_session_attention_notifications(attention_notifications, cx);
+        self.sync_ghostex_capture(cx);
         cx.notify();
     }
 

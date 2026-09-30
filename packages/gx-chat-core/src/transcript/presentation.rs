@@ -31,6 +31,7 @@ use crate::transcript::native_markdown::native_markdown;
 use crate::transcript::noise::suppressed_turn_presentation;
 use crate::transcript::prose::prose_markdown;
 use crate::transcript::question_exchange::answered_question_exchange;
+use crate::transcript::sent_message::{project_sent_messages, resolve_recipients};
 use crate::transcript::simple::{simple_edit_label, tool_count_label};
 use crate::transcript::system_cards::classify_system_card;
 use crate::transcript::tool_fold::{pair_tool_blocks, split_blocks, ToolPair};
@@ -201,6 +202,10 @@ pub fn project_message(
     );
     projected.insert("questions".to_string(), Value::Array(questions));
     projected.insert(
+        "sentMessages".to_string(),
+        Value::Array(project_sent_messages(message, &tool_pairs, line_breaks)),
+    );
+    projected.insert(
         "images".to_string(),
         Value::Array(images.iter().map(image_source).collect()),
     );
@@ -247,6 +252,7 @@ pub fn project_message(
         .filter(|row| {
             row.get("hasCall") == Some(&Value::Bool(true))
                 && row.get("exchange") != Some(&Value::Bool(true))
+                && row.get("sentMessage") != Some(&Value::Bool(true))
         })
         .count();
     projected.insert(
@@ -498,7 +504,7 @@ pub fn build_scope(
         backfill: Vec::new(),
     };
 
-    let items: Vec<TranscriptItem> = if summary {
+    let mut items: Vec<TranscriptItem> = if summary {
         // CDXC:SessionChat 2026-09-26 DECISION: User: when summary mode is enabled, don't collapse the last agent reply. The newest turn with a reply keeps it open (it stays open while the next prompt is working), and the reader can still fold it.
         let latest_reply = projection
             .summary_turns
@@ -636,6 +642,20 @@ pub fn build_scope(
                             }
                         })
                         .collect(),
+                    /* Only the folded rows' cards: an artifact row draws its own. */
+                    sent_messages: collapsed_work
+                        .iter()
+                        .flat_map(|row| {
+                            match builder
+                                .message_or_placeholder(row, eager)
+                                .get("sentMessages")
+                                .cloned()
+                            {
+                                Some(Value::Array(cards)) => cards,
+                                _ => Vec::new(),
+                            }
+                        })
+                        .collect(),
                     artifacts: visible_artifacts
                         .iter()
                         .map(|message| builder.message_or_placeholder(message, eager))
@@ -648,6 +668,8 @@ pub fn build_scope(
             })
             .collect()
     };
+
+    resolve_recipients(&mut items);
 
     // `itemIndex`: the first row that draws a given id, which is what a dash jumps to.
     let mut item_index: Vec<(String, usize)> = Vec::with_capacity(items.len());

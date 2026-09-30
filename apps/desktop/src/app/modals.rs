@@ -1437,6 +1437,7 @@ impl GhostexGpuiApp {
         );
         self.apply_gpui_sidebar_visibility_memory_from_saved_settings(settings_snapshot);
         self.apply_gpui_command_pane_side_from_saved_settings(settings_snapshot);
+        self.ghostex_capture_settings_changed(settings_snapshot, cx);
         refresh_gpui_visual_settings(settings_snapshot);
         apply_gpui_component_theme(cx);
         self.native_kanban_notify_appearance(cx);

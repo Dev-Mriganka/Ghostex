@@ -268,3 +268,9 @@ impl Render for GpuiSessionNoteModalWindow {
         .capture_action(cx.listener(Self::on_escape_action))
     }
 }
+
+impl ModalCornerClose for GpuiSessionNoteModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

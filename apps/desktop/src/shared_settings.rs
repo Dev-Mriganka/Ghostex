@@ -40,6 +40,7 @@ pub const DEFAULT_KEEP_AWAKE_PREVENT_LID_SLEEP: bool = false;
 pub const DEFAULT_KEEP_AWAKE_WHILE_WORKING_SESSIONS: bool = false;
 pub const DEFAULT_HIDE_KEEP_AWAKE_TITLEBAR_CONTROL: bool = false;
 pub const DEFAULT_APP_SHOTS_ENABLED: bool = false;
+pub const DEFAULT_GHOSTEX_CAPTURE_ENABLED: bool = false;
 pub const DEFAULT_APP_SHOTS_HOTKEY: SharedAppShotsHotkey = SharedAppShotsHotkey::BothCommand;
 const MIN_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 10.0;
 const MAX_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 90.0;
@@ -721,6 +722,12 @@ impl SharedSidebarSettingsSnapshot {
                 self.object.get("appShotsHotkey").and_then(Value::as_str),
             ),
         }
+    }
+
+    /// Whether the floating Ghostex Capture button, its hotkeys and its capture tools are on.
+    pub fn ghostex_capture_enabled(&self) -> bool {
+        strict_bool_field(&self.object, "ghostexCaptureEnabled")
+            .unwrap_or(DEFAULT_GHOSTEX_CAPTURE_ENABLED)
     }
 
     pub fn external_editor_settings(&self) -> SharedDefaultEditorSettings {

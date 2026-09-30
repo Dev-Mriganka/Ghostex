@@ -16,3 +16,7 @@ agents_terminal_startup app/model/agents_terminal_startup.rs TerminalSessionId
 # The desktop's typed-operation HTTP framing, for the phone's own POST to the gxserver it was given.
 gxserver_http app/helpers/os_cli/process_and_constants.rs GPUI_GXSERVER_PRODUCT GPUI_GXSERVER_PROTOCOL_HEADER GPUI_GXSERVER_PROTOCOL_VERSION
 gxserver_http app/helpers/board_gxserver/typed_operations.rs gxserver_http_response_body gxserver_decode_chunked_http_body gxserver_find_crlf
+# The diagram types the transcript's Mermaid card shows as source (mermaid_render.rs).
+mermaid_note app/window/mermaid_diagram_modal.rs unsupported_note diagram_keyword
+# The Docs view's Mermaid-to-picture helpers; the phone supplies its own `fontdb` (mermaid_render.rs).
+mermaid_blocks app/native_docs/blocks.rs mermaid_svg svg_natural_size rasterize_svg_scaled svg_tree rasterize_tree

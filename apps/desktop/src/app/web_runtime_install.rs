@@ -14,19 +14,53 @@ use crate::*;
 const WEB_RUNTIME_IN_USE_MESSAGE: &str =
     "The web runtime is in use. Restart Ghostex, then do this before opening a web view.";
 
+/// How often a runtime start waiting for a panel slide checks whether it has settled: one frame.
+const WEB_RUNTIME_START_SLIDE_POLL: std::time::Duration = std::time::Duration::from_millis(16);
+/// The longest a runtime start waits for panels to settle, well past the slowest slide (320ms).
+const WEB_RUNTIME_START_SLIDE_WAIT_MAX: std::time::Duration = std::time::Duration::from_secs(1);
+
 impl GhostexGpuiApp {
     /// Verifies the installed runtime and starts CEF. `request_cef_runtime` calls it once per
     /// process, when the first web view is about to be shown.
+    ///
+    /// CDXC:CefRuntime 2026-09-30 DECISION:
+    /// User: clicking a file link must "react instantly" and "keep the loading stuff to after the view is visible so the user doesn't feel like they need to click again". The first web view of a launch (an HTML file in Files, for example) starts CEF, and both halves of that start used to run on the UI thread inside the click's first frame: the `codesign` checks of the 319MB framework, then `cef::initialize`. The view panel's slide froze shut for seconds with only the toast showing. The checks now run in the background, and `cef::initialize` (which must run on the UI thread) waits for any panel slide to settle, so the view is on screen with its loading state before the start takes the thread.
     pub(crate) fn start_web_runtime(&mut self, cx: &mut gpui::Context<Self>) {
         #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-        match cef_component_window::verified_cef_runtime_readiness() {
-            Ok(cef_component_window::CefRuntimeReadiness::Ready) => self.initialize_cef(cx),
-            Ok(cef_component_window::CefRuntimeReadiness::InstallRequired { .. }) => {
-                self.cef_runtime_requested = false;
-                set_web_runtime_state(WebRuntimeState::NotInstalled);
-                self.refresh_web_runtime_views(cx);
-            }
-            Err(message) => self.fail_web_runtime_start(message, cx),
+        {
+            let readiness = cx
+                .background_executor()
+                .spawn(async { cef_component_window::verified_cef_runtime_readiness() });
+            cx.spawn(async move |this, cx| {
+                let readiness = readiness.await;
+                let started_waiting = std::time::Instant::now();
+                loop {
+                    let Ok(sliding) = this.update(cx, |this, _| this.panel_motion.animating())
+                    else {
+                        return;
+                    };
+                    if !sliding || started_waiting.elapsed() >= WEB_RUNTIME_START_SLIDE_WAIT_MAX {
+                        break;
+                    }
+                    cx.background_executor()
+                        .timer(WEB_RUNTIME_START_SLIDE_POLL)
+                        .await;
+                }
+                // One more frame so the settled panel is painted before the start holds the thread.
+                cx.background_executor()
+                    .timer(WEB_RUNTIME_START_SLIDE_POLL)
+                    .await;
+                let _ = this.update(cx, |this, cx| match readiness {
+                    Ok(cef_component_window::CefRuntimeReadiness::Ready) => this.initialize_cef(cx),
+                    Ok(cef_component_window::CefRuntimeReadiness::InstallRequired { .. }) => {
+                        this.cef_runtime_requested = false;
+                        set_web_runtime_state(WebRuntimeState::NotInstalled);
+                        this.refresh_web_runtime_views(cx);
+                    }
+                    Err(message) => this.fail_web_runtime_start(message, cx),
+                });
+            })
+            .detach();
         }
         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
         self.initialize_cef(cx);

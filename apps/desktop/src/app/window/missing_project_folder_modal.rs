@@ -185,3 +185,9 @@ impl Render for GpuiMissingProjectFolderModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiMissingProjectFolderModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_window_and_send(MissingProjectFolderModalCommand::Cancel, window, cx);
+    }
+}

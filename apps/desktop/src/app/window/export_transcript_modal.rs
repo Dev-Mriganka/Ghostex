@@ -871,3 +871,9 @@ impl Render for GpuiExportTranscriptModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiExportTranscriptModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

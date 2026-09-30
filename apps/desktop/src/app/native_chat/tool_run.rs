@@ -48,12 +48,16 @@ impl NativeChatView {
         // commentary heading), so it shows every row and adds no group of its own: React passed
         // `showAllRows` at exactly those call sites, and the core carries the rule in tool_rows.rs.
         let show_all = message["toolsShowAllRows"] == true;
-        // An answered question renders as its own exchange card. It stays a plain row only where a
-        // hoisted card already shows the exchange somewhere else, which was React's
-        // `questionPairsAsRows` (now the core's questions/hoisting.rs).
-        let questions_as_rows = show_all || self.in_work_fold;
+        // An answered question renders as its own exchange card, and a message sent to another
+        // agent as its own message card. Each stays a plain row only where its card already shows
+        // somewhere else, which was React's `questionPairsAsRows` (now the core's
+        // questions/hoisting.rs).
+        let cards_as_rows = show_all || self.in_work_fold;
         let visible: Vec<usize> = (0..tools.len())
-            .filter(|index| questions_as_rows || tools[*index]["exchange"] != true)
+            .filter(|index| {
+                cards_as_rows
+                    || (tools[*index]["exchange"] != true && tools[*index]["sentMessage"] != true)
+            })
             .collect();
         if visible.is_empty() {
             return Vec::new();

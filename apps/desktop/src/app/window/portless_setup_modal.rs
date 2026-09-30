@@ -363,3 +363,9 @@ impl Render for GpuiPortlessSetupModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiPortlessSetupModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.dismiss(window, cx);
+    }
+}

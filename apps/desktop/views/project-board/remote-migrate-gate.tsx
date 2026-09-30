@@ -137,7 +137,7 @@ Notice: ${title}
 Reported issue:
 ${message}
 
-Use the machine-installed bd CLI in the environment that runs this project. Diagnose and correct the underlying problem safely. Preserve all existing and unpushed Beads data. If this is a remote-backed database or migration, follow the coordinated migration gate: designate exactly one clone to migrate and publish, and have every other clone adopt that result. Do not bypass the remote migration gate or migrate multiple clones independently. Verify the fix by running a normal read such as bd status from the project path, then report what changed.`;
+Use the machine-installed bd CLI in the environment that runs this project. Diagnose and correct the underlying problem safely. If the project has no Beads workspace yet, stop and ask the user to confirm they want Beads set up in this project before running bd init or anything else that creates .beads files, and wait for their answer. Preserve all existing and unpushed Beads data. If this is a remote-backed database or migration, follow the coordinated migration gate: designate exactly one clone to migrate and publish, and have every other clone adopt that result. Do not bypass the remote migration gate or migrate multiple clones independently. Verify the fix by running a normal read such as bd status from the project path, then report what changed.`;
 }
 
 function buildRemoteMigrationFixPrompt({ gate, projectPath }: { gate: RemoteMigrateGate; projectPath: string }) {
@@ -260,7 +260,7 @@ export function ProjectBoardNotice({ message, projectPath }: { message: string; 
       ]
     : isMissingProject
       ? [
-          'This project does not have a Beads workspace yet. Copy a fix prompt for an agent to inspect and initialize it safely.',
+          'This project does not have a Beads workspace yet. Copy a fix prompt for an agent to inspect and initialize it safely; the agent asks you before it creates any Beads files.',
         ]
       : [
           message,

@@ -343,6 +343,8 @@ impl GhostexGpuiApp {
         self.native_docs_leave_peek(cx);
     }
 
+    /// CDXC:Docs 2026-09-30 DECISION:
+    /// User: typing in the files search must not hide the floating list. GPUI's default hover mode reports "not hovered" after every keystroke, which read as the pointer leaving a peek and closed it, so the drawer's hover listener keeps hit-testing the pointer while the user types.
     fn render_native_docs_drawer(
         &mut self,
         window: &mut Window,
@@ -369,6 +371,7 @@ impl GhostexGpuiApp {
             .key_context("NativeDocs")
             .on_action(cx.listener(Self::handle_native_docs_action))
             .on_key_down(cx.listener(Self::native_docs_key_down))
+            .hover_listener_mode(gpui::HoverListenerMode::InputModalityIndependent)
             .on_hover(cx.listener(|this, hovered: &bool, _, cx| {
                 this.native_docs_drawer_hovered(*hovered, cx)
             }))

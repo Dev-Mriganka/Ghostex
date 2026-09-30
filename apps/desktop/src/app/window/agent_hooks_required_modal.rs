@@ -434,3 +434,9 @@ impl Render for GpuiAgentHooksRequiredModalWindow {
         )
     }
 }
+
+impl ModalCornerClose for GpuiAgentHooksRequiredModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_window_and_send(AgentHooksRequiredModalCommand::Close, window, cx);
+    }
+}

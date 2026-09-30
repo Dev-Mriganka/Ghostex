@@ -299,7 +299,10 @@ impl Turn {
         self.final_found |= reply;
         let question = message.blocks.iter().any(|block|
             matches!(block, SessionChatBlock::ToolCall { name, .. } if crate::session_chat_interactive::is_ask_user_question_tool(name)));
-        if question {
+        let sent_message = message.blocks.iter().any(|block| {
+            matches!(block, SessionChatBlock::ToolCall { name, input, .. } if sends_agent_message(name, input))
+        });
+        if question || sent_message {
             if let Some(adjacent) = self.adjacent.as_ref().filter(|next| {
                 next.blocks
                     .iter()
@@ -319,6 +322,7 @@ impl Turn {
         if preserve
             || final_reply
             || question
+            || sent_message
             || visible
             || message
                 .async_questions
@@ -346,6 +350,27 @@ impl Turn {
             result.push(value);
         }
         result
+    }
+}
+
+/// CDXC:SessionChat 2026-09-30 WHY:
+/// A collapsed turn keeps the call that sent another agent a message, and the result after it, the way it keeps an answered question: the chat lifts that call out of the folded work as a "Message to" card, so a turn that deferred it would lose the card until opened. The test is loose on purpose; an extra row only stays inside the fold, and the chat core decides which calls are sends.
+/// SEE-ALSO: packages/gx-chat-core/src/transcript/sent_message.rs
+fn sends_agent_message(name: &str, input: &Value) -> bool {
+    if crate::session_chat_interactive::normalize_session_chat_tool_name(name) == "sendmessage" {
+        return input.get("message").is_some_and(Value::is_string);
+    }
+    let mentions = |text: &str| text.contains("agents send") || text.contains("agents create");
+    let command = |value: Option<&Value>| match value {
+        Some(Value::String(text)) => mentions(text),
+        Some(Value::Array(parts)) => parts.iter().filter_map(Value::as_str).any(mentions),
+        _ => false,
+    };
+    match input {
+        Value::String(text) => mentions(text),
+        _ => ["command", "cmd", "script"]
+            .iter()
+            .any(|key| command(input.get(*key))),
     }
 }
 

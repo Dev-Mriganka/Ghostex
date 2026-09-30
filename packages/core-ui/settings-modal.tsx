@@ -29,7 +29,7 @@ import {
   type SettingsModalTab,
   type SettingsModalTabVisibilityOptions,
 } from './settings-modal-tabs';
-import { IconChevronDown, IconChevronRight, IconInfoCircle } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronRight, IconInfoCircle, IconX } from '@tabler/icons-react';
 import { type CompletionSoundSetting } from '../shared/completion-sound';
 import { GHOSTEX_RECOMMENDED_GHOSTTY_CONFIG_LINES } from '../shared/ghostty-config-actions';
 import {
@@ -3170,6 +3170,16 @@ export function SettingsModal({
             </div>
           </Tabs>
         </TooltipProvider>
+        {!isFirstLaunchSetup ? (
+          <button
+            aria-label='Close settings'
+            className='settings-modal-corner-close'
+            onClick={closeSettingsModal}
+            type='button'
+          >
+            <IconX aria-hidden='true' size={14} stroke={2} />
+          </button>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

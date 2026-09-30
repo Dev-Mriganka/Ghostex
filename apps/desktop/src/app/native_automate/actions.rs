@@ -164,8 +164,9 @@ impl NativeAutomateView {
         };
         self.close_dialog(cx);
         self.request_sessions(&draft.project_id, cx);
+        let palette = host.palette;
         let config = AutomationDialogConfig {
-            palette: host.palette,
+            palette,
             all_projects: scope.all_projects,
             project_name: scope.project_name.clone(),
             state,
@@ -208,8 +209,9 @@ impl NativeAutomateView {
                 window.activate_window();
                 let dialog = cx.new(|cx| AutomationDialog::new(config, view, window, cx));
                 *dialog_out.borrow_mut() = Some(dialog.clone());
+                let frame = cx.new(|_| crate::app::window::ModalWindowFrame::new(dialog, palette));
                 cx.new(|cx| {
-                    Root::new(dialog, window, cx)
+                    Root::new(frame, window, cx)
                         .bordered(false)
                         .bg(gpui::transparent_black())
                 })

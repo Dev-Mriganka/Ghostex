@@ -550,6 +550,7 @@ fn main() {
     let gpui_terminal_mouse_cursor = manifest_dir.join("native/macos/GpuiTerminalMouseCursor.m");
     let gpui_settings_notifications = manifest_dir.join("native/macos/GpuiSettingsNotifications.m");
     let gpui_app_shots = manifest_dir.join("native/macos/GpuiAppShots.m");
+    let gpui_ghostex_capture = manifest_dir.join("native/macos/GpuiGhostexCapture.m");
     let gpui_app_icon = manifest_dir.join("native/macos/GpuiAppIcon.m");
     let gpui_accessibility_display_options =
         manifest_dir.join("native/macos/GpuiAccessibilityDisplayOptions.m");
@@ -656,6 +657,13 @@ fn main() {
     gpui_macos_objc_build()
         .file(gpui_app_shots)
         .compile("ghostex_gpui_app_shots");
+
+    // Ghostex Capture's floating windows, system-wide hotkeys and screenshots (see the file's
+    // CDXC:GhostexCapture note).
+    println!("cargo:rerun-if-changed={}", gpui_ghostex_capture.display());
+    gpui_macos_objc_build()
+        .file(gpui_ghostex_capture)
+        .compile("ghostex_gpui_ghostex_capture");
 
     /*
     CDXC:Icons 2026-07-12:

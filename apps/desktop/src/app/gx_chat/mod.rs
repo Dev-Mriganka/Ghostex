@@ -49,6 +49,9 @@ mod host_records;
 mod identity;
 mod locale;
 mod outbox;
+// TEMPORARY: model pill flicker hunt.
+#[cfg(not(target_arch = "wasm32"))]
+mod pill_trace;
 mod platform;
 mod queries;
 mod refusals;

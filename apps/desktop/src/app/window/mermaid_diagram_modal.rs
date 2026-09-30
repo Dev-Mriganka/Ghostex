@@ -1,5 +1,6 @@
 //! Native GPUI Mermaid diagram popup: the larger view of a ```mermaid block, opened from the Docs
-//! Markdown page and from Markdown in Settings > Extensions.
+//! Markdown page, from Markdown in Settings > Extensions, and from a diagram in the chat transcript
+//! (apps/desktop/src/app/native_chat/mermaid.rs).
 //!
 //! The diagram is drawn by the Rust renderer the native Docs view uses (`mermaid_svg` in
 //! apps/desktop/src/app/native_docs/blocks.rs, mermaid-rs-renderer then resvg), in the app's
@@ -15,7 +16,7 @@ use gpui::{
     AnyElement, App, ClickEvent, ClipboardItem, Context, CursorStyle, FocusHandle,
     InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, MouseDownEvent,
     MouseMoveEvent, ParentElement as _, Pixels, Point, Render, RenderImage, ScrollHandle, Size,
-    StatefulInteractiveElement as _, Styled as _, Subscription, Window, div, img, point, px,
+    StatefulInteractiveElement as _, Styled as _, Window, div, img, point, px,
 };
 use gpui_component::{h_flex, v_flex};
 use std::cell::Cell;
@@ -43,7 +44,7 @@ const COPIED_FOR: Duration = Duration::from_millis(1200);
 
 /// CDXC:SessionChat 2026-09-27 WHY:
 /// mermaid-rs-renderer draws every Mermaid type the React viewer drew, but two come out unusable: kanban cards lose their text after the first word (`[Port`), and a timeline in the dark theme puts white text on pastel boxes. Those open on the source with a note instead of a broken picture. Checked against mermaid.js 11.17 on flowchart, sequence, class, state, ER, gantt, pie, mindmap, gitGraph, journey, timeline, quadrant, xychart, sankey, block, requirement, C4, kanban, architecture, packet, radar and treemap samples.
-fn unsupported_note(source: &str, light: bool) -> Option<&'static str> {
+pub(crate) fn unsupported_note(source: &str, light: bool) -> Option<&'static str> {
     match diagram_keyword(source) {
         "kanban" => Some("Kanban diagrams can’t be drawn here yet. This is the diagram’s source."),
         "timeline" if !light => {
@@ -74,7 +75,7 @@ fn diagram_keyword(source: &str) -> &str {
 }
 
 pub(crate) enum MermaidDiagramModalCommand {
-    /// Escape, the close button, or a click outside the window.
+    /// Escape or the close button.
     Close,
 }
 
@@ -121,8 +122,6 @@ pub(crate) struct GpuiMermaidDiagramModalWindow {
     copied: bool,
     copied_generation: u64,
     focus_handle: FocusHandle,
-    was_active: bool,
-    _activation: Subscription,
 }
 
 impl GpuiMermaidDiagramModalWindow {
@@ -135,13 +134,6 @@ impl GpuiMermaidDiagramModalWindow {
     ) -> Self {
         let focus_handle = cx.focus_handle();
         focus_handle.focus(window, cx);
-        let activation = cx.observe_window_activation(window, |this: &mut Self, window, cx| {
-            if window.is_window_active() {
-                this.was_active = true;
-            } else if this.was_active {
-                (this.host)(MermaidDiagramModalCommand::Close, cx);
-            }
-        });
         let light = palette.light;
         let (mode, diagram) = match unsupported_note(&source, light) {
             Some(note) => (Mode::Source, Diagram::Unavailable(note.to_string())),
@@ -197,8 +189,6 @@ impl GpuiMermaidDiagramModalWindow {
             copied: false,
             copied_generation: 0,
             focus_handle,
-            was_active: window.is_window_active(),
-            _activation: activation,
         }
     }
 
@@ -611,5 +601,16 @@ impl Render for GpuiMermaidDiagramModalWindow {
                     .child(toolbar)
                     .child(body),
             )
+    }
+}
+
+impl ModalCornerClose for GpuiMermaidDiagramModalWindow {
+    fn close_from_corner(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        self.close(cx);
+    }
+
+    /// It draws its own close button in that corner.
+    fn shows_corner_close(&self, _cx: &App) -> bool {
+        false
     }
 }

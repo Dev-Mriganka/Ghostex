@@ -5526,17 +5526,25 @@ and error text instead of the muted description tone.
 }
 
 /*
- * The path bar's submit action stays as quiet as its `New Folder` neighbour —
- * one raised step above the #161616 bar, hairline separator, normal label
- * colour — instead of a bright primary block that breaks the strip.
+ * The path bar's actions (`Add`, `New Folder`, and the step-specific submits)
+ * share one filled look so they read as clickable: a visibly raised fill over
+ * the #161616 bar, medium-weight label, and a clear hover step.
  */
-.add-project-modal [data-add-project-field='submit'] {
-  background: var(--gx-modal-raised, #1d1d1d);
+.add-project-modal [data-add-project-field='submit'],
+.add-project-modal [data-add-project-field='newFolder'],
+.add-project-modal [data-add-project-field='newFolderSubmit'],
+.add-project-modal [data-add-project-field='repositoryAction'] {
+  background: #2c2c2c;
   color: var(--foreground);
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.add-project-modal [data-add-project-field='submit']:hover:not(:disabled) {
-  background: var(--gx-modal-raised-hover, #232323);
+.add-project-modal [data-add-project-field='submit']:hover:not(:disabled),
+.add-project-modal [data-add-project-field='newFolder']:hover:not(:disabled),
+.add-project-modal [data-add-project-field='newFolderSubmit']:hover:not(:disabled),
+.add-project-modal [data-add-project-field='repositoryAction']:hover:not(:disabled) {
+  background: #3a3a3a;
 }
 
 /*

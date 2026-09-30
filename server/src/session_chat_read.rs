@@ -663,7 +663,32 @@ pub(crate) async fn handle_read_session_chat_http(
         has no screen, so detection is skipped entirely above — but the answer
         ("nothing to read") is settled, not pending. Saying so keeps a stopped
         session's pills from sitting under a loading skeleton forever.
+        The values the session last ran with are still on disk, so they are
+        reported (see `detect_session_chat_stored_options`).
         */
+        let paths = state.paths.clone();
+        let server_id = state.metadata.server_id.clone();
+        let hook_state_directory =
+            crate::session_chat_options::session_chat_hook_state_directory(&state.paths);
+        let (stored_project, stored_session) = (project_id.clone(), session_id.clone());
+        let stored_agent = terminal_agent.clone();
+        let stored = tokio::task::spawn_blocking(move || {
+            let db = open_gxserver_database(&paths).ok()?;
+            let repository = DomainRepository::new(&db, server_id.as_str());
+            crate::session_chat_options::detect_session_chat_stored_options(
+                &repository,
+                &hook_state_directory,
+                &stored_project,
+                &stored_session,
+                stored_agent.as_deref(),
+            )
+        })
+        .await
+        .ok()
+        .flatten();
+        if let Some(stored) = stored {
+            result.insert("selectedOptions".to_string(), stored.to_value());
+        }
         result.insert("screenProbed".to_string(), json!(true));
     }
     let stored_prompt = stored_prompt

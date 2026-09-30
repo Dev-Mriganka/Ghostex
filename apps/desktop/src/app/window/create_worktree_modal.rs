@@ -1479,3 +1479,9 @@ fn base_branch_label(branch: &WorktreeBaseBranchOption) -> String {
         branch.name.clone()
     }
 }
+
+impl ModalCornerClose for GpuiCreateWorktreeModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

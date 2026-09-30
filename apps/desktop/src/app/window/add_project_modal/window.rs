@@ -939,3 +939,9 @@ impl GpuiAddProjectModalWindow {
         cx.notify();
     }
 }
+
+impl super::super::native_modal_kit::ModalCornerClose for GpuiAddProjectModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close(window, cx);
+    }
+}

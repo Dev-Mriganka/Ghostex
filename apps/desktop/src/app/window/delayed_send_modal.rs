@@ -1189,3 +1189,9 @@ fn duration_parts_from_ms(delay_ms: u64) -> (u64, u64) {
     let total_minutes = delay_ms.div_ceil(MINUTE_MS).max(1);
     (total_minutes / 60, total_minutes % 60)
 }
+
+impl ModalCornerClose for GpuiDelayedSendModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

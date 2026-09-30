@@ -349,7 +349,6 @@ impl GhostexGpuiApp {
                 terminal_text_marked_range: None,
                 pending_keyboard_handoff: None,
                 pending_keyboard_handoff_returns_from_modal: false,
-                native_app_modal_was_key: Default::default(),
                 composited_terminal_keyboard_owner: None,
                 agents_terminal_startup_body_slot_geometries: HashMap::new(),
                 agents_terminal_parked_owner_body_slot_geometries: HashMap::new(),
@@ -505,6 +504,7 @@ impl GhostexGpuiApp {
                 native_docs: Default::default(),
                 native_kanban: Default::default(),
                 floating_reveal: Default::default(),
+                ghostex_capture: Default::default(),
                 panel_motion: Default::default(),
                 gx_store: Default::default(),
                 quick_access: Default::default(),
@@ -587,6 +587,7 @@ impl GhostexGpuiApp {
                 cx.weak_entity(),
                 cx.to_async(),
             );
+            this.initialize_ghostex_capture(cx);
             let startup_activity_changed = this.restore_gpui_command_startup_activity_intents(
                 command_startup_activity_restore_intents,
                 cx,

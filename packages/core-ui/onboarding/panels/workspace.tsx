@@ -98,7 +98,6 @@ export function WorkspacePanel({ props, go, toast }: PanelProps) {
             <span className='vsub-d'>Agents can open, click, type and screenshot pages in this browser.</span>
           </div>
           <Toggle
-            size='sm'
             on={drive}
             disabled={!views.browser}
             onClick={toggleBrowserSkill}

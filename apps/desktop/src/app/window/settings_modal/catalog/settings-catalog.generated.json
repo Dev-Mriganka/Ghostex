@@ -5107,6 +5107,16 @@
               "subtitle": "How bright the Live animation glows behind the glass. Lower keeps it a subtle glow."
             },
             {
+              "key": "windowGlassBlurRadius",
+              "title": "Blur",
+              "subtitle": "How soft what shows behind the window looks, in points. 0 shows it sharp. On Windows and Linux, Desktop and windows uses the system blur, so this sets the wallpaper, picture and video blur."
+            },
+            {
+              "key": "windowGlassMenuBlurRadius",
+              "title": "Menu blur",
+              "subtitle": "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only."
+            },
+            {
               "key": "windowGlassSidebarOpacityDark",
               "title": "Sidebar tint in dark mode",
               "subtitle": "How much of the desktop the sidebar hides in dark mode. Lower shows more of your desktop through it."
@@ -6612,6 +6622,11 @@
                     "value": "double-left-option"
                   }
                 ]
+              },
+              {
+                "key": "ghostexCapture",
+                "title": "Ghostex Capture",
+                "subtitle": "A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away."
               },
               {
                 "key": "cuaPermissions",
@@ -8457,6 +8472,8 @@
             "windowGlassLiveStyleLight",
             "windowGlassLiveSpeed",
             "windowGlassLiveBrightness",
+            "windowGlassBlurRadius",
+            "windowGlassMenuBlurRadius",
             "windowGlassSidebarOpacityDark",
             "windowGlassWorkAreaTintDark",
             "windowGlassSidebarOpacityLight",
@@ -8617,6 +8634,8 @@
             "windowGlassLiveStyleLight",
             "windowGlassLiveSpeed",
             "windowGlassLiveBrightness",
+            "windowGlassBlurRadius",
+            "windowGlassMenuBlurRadius",
             "windowGlassSidebarOpacityDark",
             "windowGlassWorkAreaTintDark",
             "windowGlassSidebarOpacityLight",
@@ -8734,6 +8753,8 @@
             "windowGlassLiveStyleLight",
             "windowGlassLiveSpeed",
             "windowGlassLiveBrightness",
+            "windowGlassBlurRadius",
+            "windowGlassMenuBlurRadius",
             "windowGlassSidebarOpacityDark",
             "windowGlassWorkAreaTintDark",
             "windowGlassSidebarOpacityLight",
@@ -11291,6 +11312,7 @@
           "gpuiTitlebarActionCommandByProject": {},
           "gpuiTitlebarOpenTargetByProject": {},
           "appShotsEnabled": false,
+          "ghostexCaptureEnabled": false,
           "appShotsHotkey": "both-command",
           "appShotsMetadataEnabled": false,
           "agentAcceptAllEnabled": false,
@@ -11751,6 +11773,8 @@
           "windowGlassLiveStyleLight": "drift",
           "windowGlassLiveSpeed": 1,
           "windowGlassLiveBrightness": 60,
+          "windowGlassBlurRadius": 60,
+          "windowGlassMenuBlurRadius": 20,
           "windowGlassSidebarOpacityDark": 88,
           "windowGlassWorkAreaTintDark": 81,
           "windowGlassSidebarOpacityLight": 93,
@@ -13998,6 +14022,7 @@
         "MAX_SIDEBAR_TOOLTIP_DELAY_MS": 2000,
         "MAX_TERMINAL_PANE_PADDING_PX": 64,
         "MAX_TERMINAL_VIEW_WIDTH_PERCENT": 100,
+        "MAX_WINDOW_GLASS_BLUR_RADIUS": 100,
         "MAX_WINDOW_GLASS_LIVE_BRIGHTNESS": 100,
         "MAX_WINDOW_GLASS_LIVE_SPEED": 2,
         "MAX_WINDOW_GLASS_SIDEBAR_OPACITY_PERCENT": 100,
@@ -14024,6 +14049,7 @@
         "MIN_SIDEBAR_TOOLTIP_DELAY_MS": 0,
         "MIN_TERMINAL_PANE_PADDING_PX": 0,
         "MIN_TERMINAL_VIEW_WIDTH_PERCENT": 50,
+        "MIN_WINDOW_GLASS_BLUR_RADIUS": 0,
         "MIN_WINDOW_GLASS_LIVE_BRIGHTNESS": 10,
         "MIN_WINDOW_GLASS_LIVE_SPEED": 0.25,
         "MIN_WINDOW_GLASS_SIDEBAR_OPACITY_PERCENT": 0,

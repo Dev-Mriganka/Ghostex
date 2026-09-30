@@ -789,3 +789,9 @@ impl GpuiGitCommitModalWindow {
         cx.notify();
     }
 }
+
+impl ModalCornerClose for GpuiGitCommitModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

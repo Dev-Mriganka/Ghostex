@@ -154,7 +154,9 @@ impl ThemeTab {
         let values = t.values.clone();
         let visible_fn = t.visible.clone();
         let visible = |key: &str| visible_fn(key);
-        if !(visible("windowGlass") || more_has_hit(MoreGroup::Transparency, t.searching, &visible))
+        if !(visible("windowGlass")
+            || visible("windowGlassBlurRadius")
+            || more_has_hit(MoreGroup::Transparency, t.searching, &visible))
         {
             return None;
         }
@@ -215,6 +217,31 @@ impl ThemeTab {
                 },
                 nearest,
                 saver,
+                window,
+                cx,
+            ));
+        }
+        if glass_on && visible("windowGlassBlurRadius") {
+            rows.push(slider_number_field(
+                self,
+                &p,
+                t.spec_plain(
+                    "windowGlassBlurRadius",
+                    "Blur",
+                    if cfg!(target_os = "macos") {
+                        "How soft what shows behind the window looks, in points. 0 shows it sharp."
+                    } else {
+                        "How soft the wallpaper, picture or video behind the window looks, in points. 0 shows it sharp. Desktop and windows uses your system's own blur."
+                    },
+                ),
+                Some(reset_key::<Self>("windowGlassBlurRadius")),
+                SliderBinding {
+                    key: "windowGlassBlurRadius",
+                    min: number("MIN_WINDOW_GLASS_BLUR_RADIUS"),
+                    max: number("MAX_WINDOW_GLASS_BLUR_RADIUS"),
+                    step: 1.0,
+                },
+                values.f64("windowGlassBlurRadius"),
                 window,
                 cx,
             ));
@@ -494,6 +521,28 @@ impl ThemeTab {
                     step: 1.0,
                 },
                 values.f64(key),
+                window,
+                cx,
+            ));
+        }
+        // Windows and Linux menus use the system's own blur, which has no radius to set.
+        if cfg!(target_os = "macos") && glass_on && t.visible("windowGlassMenuBlurRadius") {
+            rows.push(slider_number_field(
+                self,
+                &p,
+                t.spec(
+                    "windowGlassMenuBlurRadius",
+                    "Menu blur",
+                    "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. Applies to menus opened after the change.",
+                ),
+                Some(reset_key::<Self>("windowGlassMenuBlurRadius")),
+                SliderBinding {
+                    key: "windowGlassMenuBlurRadius",
+                    min: number("MIN_WINDOW_GLASS_BLUR_RADIUS"),
+                    max: number("MAX_WINDOW_GLASS_BLUR_RADIUS"),
+                    step: 1.0,
+                },
+                values.f64("windowGlassMenuBlurRadius"),
                 window,
                 cx,
             ));

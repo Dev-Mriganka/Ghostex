@@ -324,7 +324,7 @@ impl GpuiOnboardingWindow {
             "ws-toggle-skill",
             drive,
             drive_thumb,
-            ToggleSize::Sm,
+            ToggleSize::Lg,
             !browser_on,
         );
         // A disabled switch is out of the tab order.
@@ -333,7 +333,7 @@ impl GpuiOnboardingWindow {
                 s,
                 skill_toggle,
                 "ws-toggle-skill",
-                interact::Ring::new(9.5, 1.0),
+                interact::Ring::new(17.0, 1.0),
                 interact::Keys::EnterSpace,
                 cx,
                 |this, _, cx| {

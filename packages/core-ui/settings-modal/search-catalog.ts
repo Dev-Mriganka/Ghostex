@@ -700,6 +700,17 @@ export function getSettingsSearchSectionDefinitions() {
           title: 'Live background brightness',
         },
         {
+          key: 'windowGlassBlurRadius',
+          subtitle:
+            'How soft what shows behind the window looks, in points. 0 shows it sharp. On Windows and Linux, Desktop and windows uses the system blur, so this sets the wallpaper, picture and video blur.',
+          title: 'Blur',
+        },
+        {
+          key: 'windowGlassMenuBlurRadius',
+          subtitle: 'How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only.',
+          title: 'Menu blur',
+        },
+        {
           key: 'windowGlassSidebarOpacityDark',
           subtitle:
             'How much of the desktop the sidebar hides in dark mode. Lower shows more of your desktop through it.',

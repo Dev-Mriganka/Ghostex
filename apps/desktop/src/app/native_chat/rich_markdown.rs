@@ -18,7 +18,8 @@ use serde_json::{Value, json};
  *
  * CDXC:SessionChat 2026-09-18 SEE-ALSO:
  * The marks are written by the core's native Markdown pass
- * (packages/gx-chat-core/src/transcript/native_markdown.rs). Alert colours
+ * (packages/gx-chat-core/src/transcript/native_markdown.rs); a marked Mermaid
+ * fence is drawn by mermaid.rs. Alert colours
  * mirror the --alert-* families the React chat's theme rules defined in
  * packages/core-ui/styles/chat.css until 2026-09-25.
  */
@@ -41,6 +42,8 @@ enum Segment {
         children: Vec<Segment>,
     },
     Table(String),
+    /// A finished ```mermaid fence, its lines as written.
+    Mermaid(String),
     /// A line that has a picture in it, as the run of text and pictures it is made of.
     Flow(Vec<FlowPart>),
 }
@@ -143,6 +146,19 @@ fn parse(lines: &[&str]) -> Vec<Segment> {
                 .unwrap_or(lines.len());
             flush(&mut prose, &mut segments);
             segments.push(Segment::Table(
+                lines[index + 1..end.min(lines.len())].join("\n"),
+            ));
+            index = end + 1;
+            continue;
+        }
+        if line == super::mermaid::OPEN {
+            let end = lines[index + 1..]
+                .iter()
+                .position(|line| *line == super::mermaid::CLOSE)
+                .map(|offset| index + 1 + offset)
+                .unwrap_or(lines.len());
+            flush(&mut prose, &mut segments);
+            segments.push(Segment::Mermaid(
                 lines[index + 1..end.min(lines.len())].join("\n"),
             ));
             index = end + 1;
@@ -484,6 +500,7 @@ impl NativeChatView {
                     .child(table_actions(source.clone(), &cx.weak_entity(), p))
                     .into_any_element()
             }
+            Segment::Mermaid(fence) => self.mermaid_card(format!("{id}:{index}"), fence, p, cx),
             // The air around an inline picture is the picture's own margin, exactly as React's
             // frame carries it, so the row itself adds nothing between a word and the picture
             // beside it. It wraps because a sentence with two pictures in it still has to fit the
