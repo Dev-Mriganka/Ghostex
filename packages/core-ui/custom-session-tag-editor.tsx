@@ -22,7 +22,7 @@ export type CustomSessionTagEditorSubmit = {
  * CDXC:Sessions 2026-09-12 DECISION:
  * User: the New tag form lives only in Settings > Sidebar Tags, and it has to be built from the same rounded controls as the rest of Settings.
  * So it is the Settings swatch button, Input, and Button primitives rather than hand-rolled CSS, and it is laid out as one more row of the tag list: the icon trigger doubles as the live preview by drawing the chosen glyph in the chosen color next to the name field.
- * SEE-ALSO: packages/core-ui/settings-modal/fields.tsx (SidebarTagListSettingsField owns the catalog write).
+ * SEE-ALSO: packages/core-ui/settings-modal/fields/tag-list-field.tsx (SidebarTagListSettingsField owns the catalog write).
  */
 export function CustomSessionTagEditorForm({
   autoFocus = true,

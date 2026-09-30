@@ -26,7 +26,20 @@ const sharedSidebarContractSource = [
 // CDXC:RepoStructure 2026-08-22: settings-modal.tsx was split into
 // packages/core-ui/settings-modal/*; these mirror the pieces raw-source
 // assertions below now need to read from.
-const settingsModalFieldsSource = readFileSync(new URL('./settings-modal/fields.tsx', import.meta.url), 'utf8');
+// settings-modal/fields.tsx is a barrel over settings-modal/fields/*.tsx.
+const settingsModalFieldsSource = [
+  'fields.tsx',
+  'fields/primitives.tsx',
+  'fields/terminal-dev-server-ports-field.tsx',
+  'fields/basic-fields.tsx',
+  'fields/picker-fields.tsx',
+  'fields/color-fields.tsx',
+  'fields/choice-fields.tsx',
+  'fields/diagnostic-logging-field.tsx',
+  'fields/tag-list-field.tsx',
+]
+  .map((file) => readFileSync(new URL(`./settings-modal/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 const settingsModalTypesSource = readFileSync(new URL('./settings-modal/types.ts', import.meta.url), 'utf8');
 const settingsModalAgentsTabSource = readFileSync(new URL('./settings-modal/tabs/agents.tsx', import.meta.url), 'utf8');
 const settingsModalIntegrationsTabSource = readFileSync(
