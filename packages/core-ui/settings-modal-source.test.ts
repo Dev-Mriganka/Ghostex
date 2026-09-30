@@ -11,10 +11,18 @@ const raisedTabRailStylesSource = readFileSync(
   new URL('../components/ui/raised-tab-rail.css', import.meta.url),
   'utf8'
 );
-const sharedSidebarContractSource = readFileSync(
-  new URL('../shared/session-grid-contract-sidebar.ts', import.meta.url),
-  'utf8'
-);
+// session-grid-contract-sidebar.ts is a barrel over per-concern
+// session-grid-contract-sidebar-*.ts modules; check them as one text.
+const sharedSidebarContractSource = [
+  'session-grid-contract-sidebar.ts',
+  'session-grid-contract-sidebar-tooling.ts',
+  'session-grid-contract-sidebar-sessions.ts',
+  'session-grid-contract-sidebar-hud.ts',
+  'session-grid-contract-sidebar-messages.ts',
+  'session-grid-contract-sidebar-commands.ts',
+]
+  .map((file) => readFileSync(new URL(`../shared/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 // CDXC:RepoStructure 2026-08-22: settings-modal.tsx was split into
 // packages/core-ui/settings-modal/*; these mirror the pieces raw-source
 // assertions below now need to read from.

@@ -26,10 +26,18 @@ const nativeHostProtocolSource = readFileSync(
   new URL('../../../packages/shared/native-ghostty-host-protocol.ts', import.meta.url),
   'utf8'
 );
-const sidebarContractSource = readFileSync(
-  new URL('../../../packages/shared/session-grid-contract-sidebar.ts', import.meta.url),
-  'utf8'
-);
+// session-grid-contract-sidebar.ts is a barrel over per-concern
+// session-grid-contract-sidebar-*.ts modules; check them as one text.
+const sidebarContractSource = [
+  'session-grid-contract-sidebar.ts',
+  'session-grid-contract-sidebar-tooling.ts',
+  'session-grid-contract-sidebar-sessions.ts',
+  'session-grid-contract-sidebar-hud.ts',
+  'session-grid-contract-sidebar-messages.ts',
+  'session-grid-contract-sidebar-commands.ts',
+]
+  .map((file) => readFileSync(new URL(`../../../packages/shared/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 // server/src/portless.rs was split into server/src/portless/{mod,types,status,
 // sync,admin,slug,launchd,listener_discovery,repository,tests}.rs. The
 // assertions below span struct/fn definitions that now live in types.rs and

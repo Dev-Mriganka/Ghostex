@@ -250,7 +250,7 @@ notRequired, cliMissing}`; `updateRequired` labeled "outdated", else "missing".
 
 Real message types: import from the shared contract (e.g.
 `SidebarAgentHookStatusMessage`, `SidebarGhostexCliStatusMessage` — see
-`packages/shared/session-grid-contract-sidebar.ts` and how
+`packages/shared/session-grid-contract-sidebar-tooling.ts` and how
 `packages/core-ui/first-launch-setup-modal.stories.tsx:13-35` builds fixtures from
 `DEFAULT_SIDEBAR_AGENTS`). Never hand-roll shapes the real components validate.
 

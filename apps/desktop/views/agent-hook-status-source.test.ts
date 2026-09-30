@@ -2,10 +2,18 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 const modalHostSource = readFileSync(new URL('./modal-host.tsx', import.meta.url), 'utf8');
-const contractSource = readFileSync(
-  new URL('../../../packages/shared/session-grid-contract-sidebar.ts', import.meta.url),
-  'utf8'
-);
+// session-grid-contract-sidebar.ts is a barrel over per-concern
+// session-grid-contract-sidebar-*.ts modules; check them as one text.
+const contractSource = [
+  'session-grid-contract-sidebar.ts',
+  'session-grid-contract-sidebar-tooling.ts',
+  'session-grid-contract-sidebar-sessions.ts',
+  'session-grid-contract-sidebar-hud.ts',
+  'session-grid-contract-sidebar-messages.ts',
+  'session-grid-contract-sidebar-commands.ts',
+]
+  .map((file) => readFileSync(new URL(`../../../packages/shared/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 // packages/shared/gxserver-protocol.ts is a barrel over per-concern
 // gxserver-protocol-*.ts modules; check the whole contract as one text.
 const gxserverProtocolSource = [

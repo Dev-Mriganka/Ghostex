@@ -23,10 +23,18 @@ const commandPaletteSearchSource = readFileSync(
 );
 const commandInputSource = readFileSync(new URL('../components/ui/command.tsx', import.meta.url), 'utf8');
 const modalHostSource = readFileSync(new URL('../../apps/desktop/views/modal-host.tsx', import.meta.url), 'utf8');
-const sessionGridContractSource = readFileSync(
-  new URL('../shared/session-grid-contract-sidebar.ts', import.meta.url),
-  'utf8'
-);
+// session-grid-contract-sidebar.ts is a barrel over per-concern
+// session-grid-contract-sidebar-*.ts modules; check them as one text.
+const sessionGridContractSource = [
+  'session-grid-contract-sidebar.ts',
+  'session-grid-contract-sidebar-tooling.ts',
+  'session-grid-contract-sidebar-sessions.ts',
+  'session-grid-contract-sidebar-hud.ts',
+  'session-grid-contract-sidebar-messages.ts',
+  'session-grid-contract-sidebar-commands.ts',
+]
+  .map((file) => readFileSync(new URL(`../shared/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 const sidebarStylesSource = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
 
 describe('command palette modes', () => {
