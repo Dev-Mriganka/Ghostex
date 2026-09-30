@@ -109,7 +109,7 @@ pub(crate) fn manage_project_directory(root: &Path, relative_path: &str) -> Opti
 
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `append_extra_root_entries` in `server/src/project_docs.rs`, so the
+Mirrors `append_extra_root_entries` in `server/src/project_docs/tree.rs`, so the
 local Docs pane and a remote project's Docs pane list the same tree. The mounted
 Docs directory is walked to the bottom and files are narrowed to the extensions
 Docs renders.
@@ -167,7 +167,7 @@ pub(crate) fn manage_append_docs_extra_root_entries(
 
 /*
 CDXC:Docs 2026-08-10:
-Mirrors `name_extra_root_tree_entries` in server/src/project_docs.rs: every
+Mirrors `name_extra_root_tree_entries` in server/src/project_docs/tree.rs: every
 mounted entry carries the name the tree shows it under beside the routing
 address it answers to, so the reserved segment never reaches Copy Path or text
 pasted into a terminal.

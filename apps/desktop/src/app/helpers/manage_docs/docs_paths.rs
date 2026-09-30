@@ -50,7 +50,7 @@ impl ManageDocsPath<'_> {
 
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `docs_path` in `server/src/project_docs.rs`. Reserved mount segments
+Mirrors `docs_path` in `server/src/project_docs/roots.rs`. Reserved mount segments
 route configured and chat-authorized roots; every other path is project-relative.
 One Docs address can therefore only ever mean one root.
 */
@@ -250,7 +250,7 @@ fn manage_nested_built_in_docs_relative_paths(root: &Path) -> Vec<String> {
 
 /*
 CDXC:Docs 2026-08-09:
-Mirrors `scan_roots` in `server/src/project_docs.rs`. Docs folders is
+Mirrors `scan_roots` in `server/src/project_docs/scan_roots.rs`. Docs folders is
 project-root-relative again, the meaning it had before a custom root existed:
 built-in Docs folders plus each configured folder. Round 2 made it narrow the
 custom root instead; with additive mounting that is no longer coherent, because
@@ -529,7 +529,7 @@ pub(crate) fn manage_docs_extra_root_name(configured: &str) -> String {
 /*
 CDXC:Docs 2026-08-09:
 The persistent project/configured roots mirror `DocsRoots` in
-`server/src/project_docs.rs`; `chat` is the folder selected by this request's
+`server/src/project_docs/roots.rs`; `chat` is the folder selected by this request's
 persisted native file grant. The configured mount carries either its location
 or its error because that failure belongs on one tree node.
 */
