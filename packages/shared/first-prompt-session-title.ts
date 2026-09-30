@@ -72,7 +72,7 @@ export function resolveFirstPromptAutoRenameStrategy(
   if (normalizedAgentName === 'claude' || normalizedAgentName === 'claude code' || normalizedAgentName === 'codex') {
     /**
      * CDXC:SessionTitles 2026-09-11 SEE-ALSO:
-     * Claude and Codex own first-prompt naming; match the decisions in server/src/server/title_generation.rs and the claim policy in server/src/agents/activity.rs.
+     * Claude and Codex own first-prompt naming; match the decisions in server/src/server/title_generation/first_prompt_decision.rs and the claim policy in server/src/agents/activity.rs.
      */
     return undefined;
   }

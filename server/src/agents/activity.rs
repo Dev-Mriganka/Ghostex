@@ -722,7 +722,7 @@ pub(crate) fn first_prompt_claim_agent_name(
 pub(crate) fn first_prompt_claim_strategy(agent_name: Option<&str>) -> Option<&'static str> {
     match normalize_first_prompt_claim_agent_name(agent_name).as_deref() {
         // CDXC:SessionTitles 2026-09-11 SEE-ALSO:
-        // Keep Claude and Codex claim eligibility aligned with first_prompt_auto_title_strategy in server/title_generation.rs so no running title job blocks terminal input.
+        // Keep Claude and Codex claim eligibility aligned with first_prompt_auto_title_strategy in server/title_generation/first_prompt_decision.rs so no running title job blocks terminal input.
         Some("claude" | "codex") => Some("agentAutoTitle"),
         // See first_prompt_auto_title_strategy: this agent names its own
         // sessions and the metadata sync adopts those names.

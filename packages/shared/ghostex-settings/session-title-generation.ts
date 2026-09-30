@@ -5,7 +5,7 @@ import { type SessionTitleGenerationAgent } from './types';
  * CDXC:SessionTitles 2026-09-11 WHY:
  * Pi and Antigravity CLI are title-generation agents because both ship a non-interactive print mode (`pi -p`, `agy -p`) that was verified against the real binaries, and a machine with only those two CLIs used to be stuck with the Codex default, which is not installed there (GitHub issue #125).
  * The values are sidebar agent ids, not executables, because settings and gxserver resolve the command through the sidebar agent registry.
- * SEE-ALSO: server/src/server/title_generation.rs (normalize_title_generation_agent, build_title_generation_command).
+ * SEE-ALSO: server/src/server/title_generation/title_command.rs (normalize_title_generation_agent, build_title_generation_command).
  */
 export const SESSION_TITLE_GENERATION_AGENT_OPTIONS: ReadonlyArray<{
   label: string;
