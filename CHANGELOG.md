@@ -4,12 +4,14 @@
 
 ## 10.7.0 - 2026-09-30
 
-**Ghostex 10.7.0 is out.** Ghostex Capture puts a floating button over every app for screenshots and quick prompts, every install button now works with one click on a fresh computer, Mermaid diagrams are drawn in chat, window glass gets Blur sliders, GPT 6.1 Sol arrives for Codex, and Linux and Windows get a round of fixes.
+**Ghostex 10.7.0 is out.** Floating Capture puts a floating button over every app for screenshots and quick prompts, every install button now works with one click on a fresh computer, Mermaid diagrams are drawn in chat, window glass gets Blur sliders, GPT 6.1 Sol and Side chat arrive for Codex, off-screen web pages sleep to free memory, and Linux and Windows get a round of fixes.
 
-### 📸 Ghostex Capture
-- **A floating Ghostex button over every app shows how many sessions are working, waiting for you, or asking a question.** Turn it on in Settings > Integrations > Ghostex Capture (off by default), drag it anywhere, or drop it against a screen edge to tuck it away as a thin tab.
-- **Screenshot an area, the current app or the full screen from any app,** then crop it and add arrows, text and rectangles before it goes into your prompt. Click the button or press Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) to open the panel, or use the same keys with A, Space, F or T to run an action straight away.
-- **Write a prompt without switching to Ghostex.** The floating prompt box sends to a new session in the project you last used, or to any project or running session you pick, and a prompt you close without sending is kept as a draft in the sidebar. Screenshots need Screen Recording permission on macOS, and Linux support is X11 only.
+### 📸 Floating Capture
+- **A floating Ghostex button over every app shows how many sessions are working, waiting for you, or asking a question.** Turn it on at the top of Settings > Integrations > Floating Capture or during setup (off by default), drag it anywhere, or drop it against a screen edge to tuck it away as a thin tab.
+- **Screenshot an area, the current app or the full screen from any app,** then crop it, zoom and pan, and add arrows, text and rectangles before it goes into your prompt. Click the button or press Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) to open the panel, or use the same keys with A, Space, F or T to run an action straight away.
+- **Write a prompt without switching to Ghostex.** The floating prompt box sends to a new session in the project you last used, or to any project or running session you pick, and a prompt you close without sending is kept as a draft in the sidebar. Ghostex switches to the session after a send without coming in front of the app you are in. Screenshots need Screen Recording permission on macOS, and Linux support is X11 only.
+
+- **Floating Capture replaces App Shots,** which is removed together with its settings.
 
 ### 🧰 One-click installs
 - **Every install button works with one click on a fresh computer and installs what it needs first,** and its tooltip says exactly how Ghostex installs it. Installing an agent that needs npm installs Node.js on its own.
@@ -22,12 +24,17 @@
 - **GPT 6.1 Sol takes the Sol spot in the Codex model picker,** and GPT 6 Sol moves under Legacy.
 - **In the model picker, Enter now saves the highlighted model and level as the agent's default,** and Option+Enter uses them in this session only, on the computer and the phone.
 - **Codex's Sign in with Device Code shows a Sign in to Codex card** with a clickable link and the one-time code, handy on a remote computer, and when Codex quits to the terminal the chat offers Restart Codex on the same conversation.
+- **Codex chats get Side chat and `/btw`.** Codex answers in a side conversation in its terminal, so sending one switches to Terminal View. In any chat, typing `/btw` on its own and pressing Enter turns Side chat on without sending anything, and Close hides a side question card at once.
 - **Messages between agents show as cards:** a message from another agent shows its first two lines, a message your session's agent sent stays closed, and a click opens either one, on the computer and the phone.
 
-### 🎨 Window glass, windows and the board
+### 🎨 Window glass, windows and web pages
 - **Settings > Theme > Transparency has a Blur slider** that sets how soft what shows behind the window looks, plus a Menu blur slider on macOS for menus and tooltips.
 - **Settings and Search by Prompt open 30% larger,** app windows such as Settings close with a corner close button instead of a click outside, and tab rails and segmented controls no longer paint an opaque slab over frosted surfaces.
+- **Off-screen web pages sleep to free memory.** A browser tab or a Files, website or extension view that has been off screen for its Auto Sleep time closes and reloads when you select it again; tabs playing sound or holding text you have not sent stay awake, and the page another Space opens on stays loaded so swiping there is instant.
+- **An open menu hides the tooltips of the window behind it,** typing and shortcuts work right after a dialog closes, a newly opened view tab scrolls into view, and the project header buttons in the sidebar show their hotkeys.
 - **Kanban lanes keep a minimum width and the board scrolls sideways,** and long lanes stay fast.
+
+- **Link CLI accepts the `ghostex` command that Homebrew installed** instead of reporting it as a foreign command, and the phone finds the CLI on your computer over SSH.
 
 ### 🐧 Linux and Windows
 - **Linux: the sidebar and Settings keep a normal size under XWayland** (Hyprland and Omarchy among them), and closing Settings no longer crashes the built-in browser's graphics process.
