@@ -18,7 +18,7 @@ mod windows_updater;
 #[path = "../cef_component_window.rs"]
 mod cef_component_window;
 #[cfg(target_os = "linux")]
-#[path = "../component_store.rs"]
+#[path = "../component_store/mod.rs"]
 mod component_store;
 
 #[cfg(target_os = "linux")]

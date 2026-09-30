@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
  * On-demand runtime components (CEF and the Code-tab editor payloads, every platform) are published to this separate public repository, never to maddada/Ghostex.
  * The nine component releases that already exist in maddada/Ghostex stay there because shipped installs download from them; they are deleted by hand only once no supported install references them.
  * This constant is the only place the components repository is spelled out: the shell and PowerShell scripts and the workflows read it through `GHOSTEX_COMPONENTS_REPO` (resolved by running this file), and every sealed manifest records it per component so old manifests keep pointing at the repository they were sealed with.
- * SEE-ALSO: tooling/release-gpui/publish-component.mjs, tooling/release-gpui/on-demand-manifest.mjs, tooling/release-gpui/mirror-component-release.mjs, apps/desktop/src/component_store.rs, tooling/release-gpui/components-repo-setup.md.
+ * SEE-ALSO: tooling/release-gpui/publish-component.mjs, tooling/release-gpui/on-demand-manifest.mjs, tooling/release-gpui/mirror-component-release.mjs, apps/desktop/src/component_store/, tooling/release-gpui/components-repo-setup.md.
  */
 export const COMPONENTS_GITHUB_REPO = 'maddada/ghostex-components';
 

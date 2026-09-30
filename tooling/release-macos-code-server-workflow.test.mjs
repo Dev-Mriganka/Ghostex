@@ -240,7 +240,7 @@ describe('phased macOS code-server prerequisite contract', () => {
 
 describe('active WSL2 code-server consumer contract', () => {
   test('shares one complete archive payload contract between release and installed consumers', () => {
-    const nativeVerifier = repoFile('apps/desktop/src/component_store.rs');
+    const nativeVerifier = repoFile('apps/desktop/src/component_store/code_server_archive.rs');
     const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform.rs');
 
     expect(CODE_SERVER_ARCHIVE_CONTRACT.requiredEntries).toEqual(
@@ -266,7 +266,7 @@ describe('active WSL2 code-server consumer contract', () => {
       expect.arrayContaining(['lib/node', 'lib/vscode/node_modules/@vscode/ripgrep/bin/rg'])
     );
     expect(CODE_SERVER_ARCHIVE_CONTRACT.readinessSignal).toBe('promptEditorIpcReady');
-    expect(nativeVerifier).toContain('include_str!("../../../packages/shared/code-server-archive-contract.json")');
+    expect(nativeVerifier).toContain('include_str!("../../../../packages/shared/code-server-archive-contract.json")');
     expect(nativeVerifier).toContain('verify_installed_windows_code_server_component');
     expect(windowsConsumer).toContain('verify_code_server_archive');
     expect(windowsConsumer).toContain('code_server_payload_shell_validation_script');
@@ -341,7 +341,9 @@ describe('active WSL2 code-server consumer contract', () => {
   });
 
   test('authenticates every configured, bundled, and on-demand archive before WSL extraction or reuse', () => {
-    const componentStore = repoFile('apps/desktop/src/component_store.rs');
+    const componentStore = ['store.rs', 'code_server_archive.rs']
+      .map((file) => repoFile(`apps/desktop/src/component_store/${file}`))
+      .join('\n');
     const sourceServer = repoFile('apps/desktop/src/app/helpers/source_server/code_server.rs');
     const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform.rs');
     const verifyIndex = windowsConsumer.indexOf('crate::component_store::verify_code_server_archive(');
