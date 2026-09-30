@@ -3,20 +3,13 @@ import { detectghostexHotkeyPlatform } from "@/packages/shared/ghostex-hotkeys";
 import {
   IconAlertTriangle,
   IconArrowLeft,
-  IconBrandAzure,
-  IconBrandBitbucket,
-  IconBrandGithub,
-  IconBrandGitlab,
   IconCornerLeftUp,
-  IconDeviceDesktop,
   IconFolder,
   IconFolderCheck,
   IconFolderPlus,
   IconFolderRoot,
   IconGitBranch,
-  IconLink,
   IconSearch,
-  IconServer,
 } from "@tabler/icons-react";
 import {
   useCallback,
@@ -25,7 +18,6 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
 } from "react";
 import { Button } from "@/packages/components/ui/button";
 import { Checkbox } from "@/packages/components/ui/checkbox";
@@ -75,7 +67,6 @@ import {
 } from "./add-project-input";
 import { MiddleEllipsisText } from "./middle-ellipsis-text";
 import type {
-  AddProjectBrowseEntry,
   AddProjectBrowseResult,
   AddProjectCloneJob,
   AddProjectClonePreview,
@@ -86,6 +77,31 @@ import type {
   AddProjectSourceControlDiscovery,
   AddProjectSourceId,
 } from "./types";
+import {
+  EMPTY_BROWSE_ENTRIES,
+  BROWSE_UP_VALUE,
+  ADD_PROJECT_ROW_ICON_CLASS,
+  ADD_PROJECT_ACTION_ADDON_CLASS,
+  ADD_PROJECT_ACTION_BUTTON_CLASS,
+  ADD_PROJECT_PATH_BAR_CLASS,
+  DEFAULT_CLONE_OPTIONS,
+  buildInitialViewStack,
+  describeError,
+  cssEscape,
+  delay,
+} from "./add-project-modal-model";
+import type {
+  AddProjectBusyKind,
+  AddProjectCloneFlow,
+  AddProjectCloneOptions,
+  AddProjectView,
+  AddProjectRow,
+} from "./add-project-modal-model";
+import {
+  AddProjectFooterHint,
+  machineIcon,
+  sourceIcon,
+} from "./add-project-modal-parts";
 
 /*
  * CDXC:AddProject 2026-07-30:
@@ -106,81 +122,6 @@ import type {
  *    server call surfaces a "still working" notice instead of silently dying;
  *    the host owns the hard timeout.
  */
-
-const EMPTY_BROWSE_ENTRIES: readonly AddProjectBrowseEntry[] = [];
-const BROWSE_UP_VALUE = "browse:up";
-const ADD_PROJECT_ROW_ICON_CLASS = "size-4 text-muted-foreground/80";
-
-/*
- * CDXC:AddProject 2026-08-18:
- * The dialog's action buttons are titlebar chrome, not inset controls: each one
- * fills its container's full height, sits flush against the container edge, and
- * carries a single side border as the only separator. A row of them therefore
- * reads as one connected strip the way the titlebar Tips actions do, instead of
- * as floating pills with gaps around them.
- */
-const ADD_PROJECT_ACTION_ADDON_CLASS =
-  "h-full gap-0 self-stretch p-0 has-[>button]:ml-0 has-[>button]:mr-0";
-const ADD_PROJECT_ACTION_BUTTON_CLASS =
-  "h-full self-stretch border-y-0 border-r-0 border-l border-l-border/70 px-3 text-sm";
-
-/*
- * CDXC:AddProject 2026-08-19:
- * The path bar is the dialog's only text field and it is autofocused, so the
- * shared InputGroup focus treatment (ring + accent border) would draw a
- * permanent highlight frame around the whole strip. Keep the resting border and
- * drop the focus ring instead of hiding focus outright: the caret already shows
- * where typing lands.
- */
-const ADD_PROJECT_PATH_BAR_CLASS =
-  "h-10 bg-input/30 has-[[data-slot=input-group-control]:focus-visible]:border-input has-[[data-slot=input-group-control]:focus-visible]:ring-0";
-
-type AddProjectBusyKind =
-  "add" | "clone" | "createFolder" | "lookup" | "preview";
-
-interface AddProjectCloneFlow {
-  readonly remoteUrl: string;
-  readonly repository: AddProjectRepositoryInfo | null;
-  readonly repositoryInput: string;
-  readonly source: AddProjectSourceId;
-  readonly step: "destination" | "repository" | "review";
-}
-
-interface AddProjectCloneOptions {
-  readonly branchName: string;
-  readonly cloneMainOnly: boolean;
-  readonly shallowClone: boolean;
-}
-
-const DEFAULT_CLONE_OPTIONS: AddProjectCloneOptions = {
-  branchName: "",
-  cloneMainOnly: false,
-  shallowClone: false,
-};
-
-type AddProjectView =
-  | { readonly kind: "machines" }
-  | { readonly kind: "sources"; readonly machineId: string }
-  | {
-      readonly initialQuery: string;
-      readonly kind: "browse";
-      readonly machineId: string;
-    }
-  | { readonly kind: "clone"; readonly machineId: string };
-
-interface AddProjectRow {
-  readonly dataAttributes?: Readonly<Record<string, string>>;
-  readonly description?: string;
-  readonly disabled?: boolean;
-  readonly field: string;
-  readonly icon: ReactNode;
-  readonly onSelect: () => void;
-  readonly searchTerms?: readonly string[];
-  readonly submenu?: boolean;
-  readonly title: string;
-  readonly trailing?: ReactNode;
-  readonly value: string;
-}
 
 export function AddProjectModal(props: AddProjectModalProps) {
   if (!props.isOpen) {
@@ -2025,96 +1966,4 @@ function AddProjectModalBody(props: AddProjectModalProps) {
       </div>
     </div>
   );
-}
-
-/*
- * CDXC:AddProject 2026-07-31:
- * Footer hints render their keys as key caps so the shortcut row reads as
- * chrome instead of a run-on sentence ("Enter Select Backspace Back Esc Close").
- */
-function AddProjectFooterHint({
-  keys,
-  label,
-}: {
-  readonly keys: string;
-  readonly label: string;
-}): ReactNode {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-      <span className="inline-flex items-center gap-1">
-        {keys.split(" ").map((key) => (
-          <kbd
-            className="inline-flex h-5 min-w-5 items-center justify-center rounded-none border border-border/70 bg-muted/60 px-1.5 font-sans text-sm leading-none text-muted-foreground"
-            key={key}
-          >
-            {key}
-          </kbd>
-        ))}
-      </span>
-      {label}
-    </span>
-  );
-}
-
-function buildInitialViewStack(
-  options: readonly AddProjectMachineOption[],
-  initialMachineId: string | undefined,
-): AddProjectView[] {
-  if (options.length === 0) {
-    return [];
-  }
-  const preselected = initialMachineId
-    ? options.find((option) => option.machineId === initialMachineId)
-    : undefined;
-  if (preselected) {
-    return [{ kind: "sources", machineId: preselected.machineId }];
-  }
-  if (options.length === 1) {
-    return [{ kind: "sources", machineId: options[0].machineId }];
-  }
-  return [{ kind: "machines" }];
-}
-
-function machineIcon(option: AddProjectMachineOption): ReactNode {
-  const isLocal = option.machineId === "local";
-  return isLocal ? (
-    <IconDeviceDesktop className={ADD_PROJECT_ROW_ICON_CLASS} />
-  ) : (
-    <IconServer className={ADD_PROJECT_ROW_ICON_CLASS} />
-  );
-}
-
-function sourceIcon(source: AddProjectSourceId): ReactNode {
-  switch (source) {
-    case "azure-devops":
-      return <IconBrandAzure className={ADD_PROJECT_ROW_ICON_CLASS} />;
-    case "bitbucket":
-      return <IconBrandBitbucket className={ADD_PROJECT_ROW_ICON_CLASS} />;
-    case "github":
-      return <IconBrandGithub className={ADD_PROJECT_ROW_ICON_CLASS} />;
-    case "gitlab":
-      return <IconBrandGitlab className={ADD_PROJECT_ROW_ICON_CLASS} />;
-    default:
-      return <IconLink className={ADD_PROJECT_ROW_ICON_CLASS} />;
-  }
-}
-
-function describeError(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message.trim();
-  }
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error.trim();
-  }
-  return fallback;
-}
-
-function cssEscape(value: string): string {
-  return value.replace(/["\\]/gu, "\\$&");
-}
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
 }
