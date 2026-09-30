@@ -11,7 +11,7 @@
 //! here: the sidebar keeps drawing the daemon's copy, exactly as it did.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/custom_tags_sync.rs (the host),
-//! packages/shared/gxserver-protocol.ts (`GxserverCustomSessionTagsState`).
+//! packages/shared/gxserver-protocol-presentation.ts (`GxserverCustomSessionTagsState`).
 
 use serde_json::Value;
 

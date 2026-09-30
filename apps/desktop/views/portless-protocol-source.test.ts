@@ -1,8 +1,25 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-const gxserverProtocolSource = readFileSync(
-  new URL('../../../packages/shared/gxserver-protocol.ts', import.meta.url),
+// packages/shared/gxserver-protocol.ts is a barrel over per-concern
+// gxserver-protocol-*.ts modules; check the whole contract as one text.
+const gxserverProtocolSource = [
+  'gxserver-protocol.ts',
+  'gxserver-protocol-core.ts',
+  'gxserver-protocol-health.ts',
+  'gxserver-protocol-agents.ts',
+  'gxserver-protocol-prompts.ts',
+  'gxserver-protocol-projects.ts',
+  'gxserver-protocol-domain.ts',
+  'gxserver-protocol-sessions.ts',
+  'gxserver-protocol-presentation.ts',
+  'gxserver-protocol-session-runtime.ts',
+  'gxserver-protocol-events.ts',
+]
+  .map((file) => readFileSync(new URL(`../../../packages/shared/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
+const gxserverProtocolHealthSource = readFileSync(
+  new URL('../../../packages/shared/gxserver-protocol-health.ts', import.meta.url),
   'utf8'
 );
 const nativeHostProtocolSource = readFileSync(
@@ -64,7 +81,7 @@ describe('Portless Phase 12 protocol plumbing source contract', () => {
     expect(presentationRustSource).toContain('"portless".to_string()');
 
     const sharedStatusSource = sourceBetween(
-      gxserverProtocolSource,
+      gxserverProtocolHealthSource,
       'export type GxserverPortlessProtocol',
       'export interface GxserverRuntimeMetadata'
     );
@@ -169,7 +186,7 @@ describe('Portless Phase 12 protocol plumbing source contract', () => {
     sanitized enum/boolean/protocol updates.
     */
     const sharedStatusSource = sourceBetween(
-      gxserverProtocolSource,
+      gxserverProtocolHealthSource,
       'export type GxserverPortlessProtocol',
       'export interface GxserverPortlessAdminActionAvailability'
     );

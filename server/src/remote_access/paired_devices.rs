@@ -10,7 +10,7 @@ use crate::tailcat::{
 use super::authorized_keys::remove_authorized_key;
 use super::repository::{RemotePairedDeviceRecord, RemotePairingRepository};
 
-/// Wire shape of `GxserverPairedDevice` in `packages/shared/gxserver-protocol.ts`.
+/// Wire shape of `GxserverPairedDevice` in `packages/shared/gxserver-protocol-health.ts`.
 pub fn paired_device_json(device: &RemotePairedDeviceRecord) -> Value {
     json!({
         "id": device.id,

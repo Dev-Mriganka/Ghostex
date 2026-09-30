@@ -978,13 +978,19 @@ package_gxserver_if_needed() {
 		exit 1
 	fi
 	package_version="$(gxserver_rust_package_version)"
+	# packages/shared/gxserver-protocol.ts is a barrel over gxserver-protocol-*.ts; hash every part.
+	local protocol_path_args=()
+	local protocol_source
+	for protocol_source in "$REPO_ROOT"/packages/shared/gxserver-protocol*.ts; do
+		protocol_path_args+=(--path "$protocol_source")
+	done
 	package_digest="$(fingerprint_inputs \
 		--value "gxserver-package-v9-rust-only" \
 		--value "arch=$GHOSTEX_MACOS_ARCH" \
 		--value "version=$package_version" \
 		--value "rust=$(path_identity "$rust_bin")" \
 		--path "$SCRIPT_DIR/prepare-macos-runtime.sh" \
-		--path "$REPO_ROOT/packages/shared/gxserver-protocol.ts" \
+		"${protocol_path_args[@]}" \
 		--path "$GXSERVER_RS_ROOT/src" \
 		--path "$GXSERVER_RS_ROOT/Cargo.toml" \
 		--path "$GXSERVER_RS_ROOT/Cargo.lock" \
