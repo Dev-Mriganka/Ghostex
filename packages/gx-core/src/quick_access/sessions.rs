@@ -4,6 +4,9 @@
 //! Ported from `apps/desktop/sidebar/native-quick-access/sessions.ts` (deleted; see git history).
 //!
 //! SEE-ALSO: packages/core-ui/previous-session-search.ts (the search rules ported below).
+//!
+//! CDXC:Sessions 2026-09-30 SEE-ALSO:
+//! apps/mobile/app/src/sessions/sessionSearch.ts mirrors `filter_sessions`, `matches_token`, the newest-first order and the day groups for the phone's session search (the phone links gx-chat-core, not gx-core); change both together.
 
 use std::collections::BTreeMap;
 

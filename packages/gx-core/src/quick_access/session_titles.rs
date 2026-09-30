@@ -2,6 +2,9 @@
 //! (packages/shared/session-grid-contract-session.ts): a creation default such as
 //! `Codex Session`, a numbered `Session 3`, a path, or an agent status word is not a name a
 //! session search should find.
+//!
+//! CDXC:Sessions 2026-09-30 SEE-ALSO:
+//! apps/mobile/app/src/sessions/sessionSearch.ts keeps a copy of these placeholder titles for the phone's session search; add a new agent's default title there too.
 
 use std::collections::BTreeSet;
 use std::sync::OnceLock;

@@ -1521,6 +1521,9 @@ sessions, so any client can control agents on any machine.
   If the connection fails while saved sessions are still visible, the Sessions
   list shows a warning with the failure reason and a Retry button. The warning
   clears once the list successfully refreshes.
+  To find a session on the phone, tap the search button at the top right of the
+  Sessions list and type part of its name or tag; it searches the open sessions
+  of every connected computer, newest first, and tapping a result opens it.
   Paired devices are listed and can be removed. On the phone, open Web Preview
   from the machine menu and enter a website address or a port such as `3000`
   immediately, or choose a listening port from the list. The address bar stays
