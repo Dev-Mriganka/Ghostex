@@ -539,7 +539,7 @@ impl<'a> DomainRepository<'a> {
     /// CDXC:SessionIdentity 2026-09-11 WHY:
     /// The live-process identity pass runs on every presentation poll and, while a session's title is still a placeholder, re-hunts a trusted title among the project's other rows each time.
     /// That hunt hydrated the whole project, 7,000 stopped rows included, for every such session on every poll; it was the largest CPU cost left in gxserver after the presentation reads were scoped.
-    /// SEE-ALSO: `select_trusted_title_for_identity` and `live_process_identity_update_is_noop` in agents/identity.rs.
+    /// SEE-ALSO: `select_trusted_title_for_identity` in agents/identity/trusted_titles.rs and `live_process_identity_update_is_noop` in agents/identity/state_update.rs.
     pub fn list_sessions_matching_identity(
         &self,
         project_id: &str,

@@ -238,7 +238,7 @@ pub(crate) fn create_agent_session_params_for_project(
 /// CDXC:SessionTitles 2026-09-09 DECISION:
 /// User: empty Claude/Codex sessions show "∗ Claude Session" / "∗ Codex Session", never the custom agent name or ID created for an account.
 /// Identity updates used the custom configuration ID as a display name and overwrote the launcher's placeholder title.
-/// SEE-ALSO: agents/identity.rs, agents/session_state_ingest.rs, agents/drafts.rs, presentation/session_attributes.rs.
+/// SEE-ALSO: agents/identity/, agents/session_state_ingest.rs, agents/drafts.rs, presentation/session_attributes.rs.
 pub(crate) fn project_agent_session_default_title(project: &Value, session: &Value) -> String {
     let agent_id = read_text_value(session, "agentId");
     let family = session_agent_family_id(project, session);
