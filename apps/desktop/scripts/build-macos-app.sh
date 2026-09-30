@@ -68,7 +68,7 @@ esac
 
 # Versioning: Sparkle compares CFBundleVersion, so packaged GPUI builds carry
 # the same semver-derived numeric build value scheme as the macOS app
-# (release-ghostex.mjs releaseBuildVersion). Defaults come from the repo
+# (release-ghostex-config.mjs releaseBuildVersion). Defaults come from the repo
 # package.json version; release automation passes both explicitly.
 GHOSTEX_GPUI_MARKETING_VERSION="${GHOSTEX_GPUI_MARKETING_VERSION:-}"
 GHOSTEX_GPUI_BUILD_VERSION="${GHOSTEX_GPUI_BUILD_VERSION:-}"

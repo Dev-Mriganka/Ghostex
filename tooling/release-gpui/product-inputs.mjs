@@ -80,7 +80,10 @@ export const IGNORED_FOR_RELEASE = Object.freeze([
     path: '.dependencies/ghostty-patches',
     why: 'Source-sync overlay only; release jobs compile the already-patched tracked ghostty tree.',
   },
-  { path: 'apps/gpui-web', why: 'GPUI web build; built from a checkout with `bun run web:build`, never part of a GPUI release artifact.' },
+  {
+    path: 'apps/gpui-web',
+    why: 'GPUI web build; built from a checkout with `bun run web:build`, never part of a GPUI release artifact.',
+  },
   {
     path: 'apps/mobile/views/find',
     why: 'Mobile Find Prompts bundle source; consumed by the mobile submodule build, not by release jobs.',
@@ -166,6 +169,16 @@ const GXSERVER_PATHSPECS = Object.freeze([
   { pathspec: 'skills/**' },
   { pathspec: 'tooling/build-remote-gxserver-linux-release.sh' },
   { pathspec: 'tooling/release-ghostex.mjs' },
+  { pathspec: 'tooling/release-ghostex-config.mjs' },
+  { pathspec: 'tooling/release-ghostex-process.mjs' },
+  { pathspec: 'tooling/release-ghostex-github.mjs' },
+  { pathspec: 'tooling/release-ghostex-signing.mjs' },
+  { pathspec: 'tooling/release-ghostex-terminal.mjs' },
+  { pathspec: 'tooling/release-ghostex-preflight.mjs' },
+  { pathspec: 'tooling/release-ghostex-build.mjs' },
+  { pathspec: 'tooling/release-ghostex-notes.mjs' },
+  { pathspec: 'tooling/release-ghostex-publish.mjs' },
+  { pathspec: 'tooling/release-ghostex-homebrew.mjs' },
   { pathspec: 'tooling/release-gpui/prepare-references.sh' },
   /*
    * release-gpui-runtime.yml was split into the gxserver package workflow and

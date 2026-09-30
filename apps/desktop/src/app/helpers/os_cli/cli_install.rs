@@ -483,7 +483,7 @@ pub(crate) fn gpui_is_ghostex_owned_command_path(
 
 /// CDXC:Cli 2026-09-30 WHY:
 /// The Homebrew cask links HOMEBREW_PREFIX/bin/<command> to its marked wrapper at Caskroom/ghostex/<version>/.homebrew-command-wrappers/<command>. That link is Ghostex's own command, so repair counts it as installed and never rewrites it: replacing it would leave Homebrew's uninstall and upgrade pointing at a file Ghostex wrote. Before this, a Homebrew install made Link CLI report "does not belong to Ghostex" (GitHub PR #181).
-/// SEE-ALSO: the same Caskroom pattern in `gpui_is_probably_ghostex_command` (agents_hub/agent_hook_status.rs) and in tooling/release-ghostex.mjs.
+/// SEE-ALSO: the same Caskroom pattern in `gpui_is_probably_ghostex_command` (agents_hub/agent_hook_status.rs) and in tooling/release-ghostex-homebrew.mjs.
 fn gpui_is_homebrew_ghostex_command_path(command: &str, path: &Path) -> bool {
     let is_symlink = fs::symlink_metadata(path)
         .map(|metadata| metadata.file_type().is_symlink())

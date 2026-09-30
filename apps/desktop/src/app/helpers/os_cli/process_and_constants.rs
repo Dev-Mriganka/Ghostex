@@ -464,7 +464,7 @@ pub(crate) const GPUI_MACOS_NOTIFICATION_SETTINGS_URL: &str =
 /// would have made CLI repair and `brew upgrade` treat their own wrappers as
 /// foreign. Changing it means accepting both spellings for at least one
 /// release.
-/// SEE-ALSO: the cask body and `validateGhostexCask` in tooling/release-ghostex.mjs.
+/// SEE-ALSO: the cask body and `validateGhostexCask` in tooling/release-ghostex-homebrew.mjs.
 pub(crate) const GPUI_GHOSTEX_CLI_WRAPPER_MARKER: &str = "CDXC:CliInstall 2026-06-12-09:31";
 pub(crate) const GPUI_BUNDLED_GHOSTEX_AGENT_SKILL_NAMES: &[&str] = &[
     /*

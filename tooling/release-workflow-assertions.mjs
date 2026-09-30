@@ -920,19 +920,19 @@ export function preflightLiteralProbes({ sparklePublicKey, signingIdentity, gith
       why: 'the app stamps this key into Info.plist as SUPublicEDKey',
     },
     {
-      file: 'tooling/release-ghostex.mjs',
+      file: 'tooling/release-ghostex-config.mjs',
       id: 'sparkle-public-key/release-driver',
       literal: sparklePublicKey,
       why: 'release-ghostex.mjs verifies signed appcasts against the same key',
     },
     {
-      file: 'tooling/release-ghostex.mjs',
+      file: 'tooling/release-ghostex-config.mjs',
       id: 'signing-identity/release-driver',
       literal: signingIdentity,
       why: 'preflight probes the local keychain for the identity release-ghostex.mjs signs with',
     },
     {
-      file: 'tooling/release-ghostex.mjs',
+      file: 'tooling/release-ghostex-config.mjs',
       id: 'github-repo/release-driver',
       literal: githubRepo,
       why: 'preflight looks for an existing release in the repository release-ghostex.mjs publishes to',
