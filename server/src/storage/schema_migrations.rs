@@ -1212,4 +1212,8 @@ pub const GXSERVER_STORAGE_MIGRATIONS: &[Migration] = &[
         id: "0040_prune_consumed_draft_recovery",
         sql: include_str!("migrations/0040_prune_consumed_draft_recovery.sql"),
     },
+    Migration {
+        id: "0041_coordinators",
+        sql: include_str!("migrations/0041_coordinators.sql"),
+    },
 ];

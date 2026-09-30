@@ -213,7 +213,7 @@ pub fn session_folders_remembered(
 ) -> bool {
     folders_remembered(&repository_trust_folders(
         repository, project_id, session_id,
-    ))
+    )) || crate::coordinators::coordinator_thread_folder_trusted(repository, project_id, session_id)
 }
 
 /// Applied to every trust-prompt notice in the detection funnel: an

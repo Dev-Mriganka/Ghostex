@@ -38,6 +38,19 @@ pub fn handle_with_ids(
             state.extras.panels.tasks_show_completed = flag(action, "expanded");
             Vec::new()
         }
+        ActionKind::ToggleCoordinatorThreads => {
+            state.extras.panels.threads_collapsed = !flag(action, "open");
+            Vec::new()
+        }
+        ActionKind::ToggleCoordinatorThreadsDone => {
+            state.extras.panels.threads_show_done = flag(action, "expanded");
+            Vec::new()
+        }
+        // Opening a thread is the host's: it focuses (and wakes) another session.
+        ActionKind::OpenCoordinatorThread => vec![Effect::HostAction {
+            action: "openCoordinatorThread".to_string(),
+            params: Box::new(Value::Object(action.params.clone())),
+        }],
 
         ActionKind::SearchOpen => {
             search::open(&mut state.extras.search);

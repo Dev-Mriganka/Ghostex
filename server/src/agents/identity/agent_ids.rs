@@ -220,6 +220,20 @@ pub(crate) fn infer_agent_id_from_command(command: &str) -> Option<String> {
     None
 }
 
+/// The agent CLI a command line starts, read from its executable word only (environment assignments
+/// and `env`/`exec`/`command` prefixes skipped), so `git log | grep claude` names no agent.
+pub(crate) fn infer_agent_id_from_command_executable(command: &str) -> Option<String> {
+    let mut offset = 0;
+    while let Some((_, end, word)) = crate::agents::command_word(command, offset) {
+        offset = end;
+        if word.contains('=') || matches!(word.as_str(), "env" | "exec" | "command") {
+            continue;
+        }
+        return infer_agent_id_from_command(&word);
+    }
+    None
+}
+
 pub(crate) fn is_agent_associated(session: &Value, identity: &ResolvedIdentity) -> bool {
     session.get("kind").and_then(Value::as_str) == Some("agent")
         || session.get("agentId").and_then(Value::as_str).is_some()

@@ -3,6 +3,7 @@ pub mod actions;
 pub mod agent_sync;
 mod agent_cli;
 mod agents;
+mod coordinator;
 pub mod args;
 pub mod attach;
 pub mod automations;
@@ -77,6 +78,7 @@ const HELP_GATE_EXCLUDED: &[&str] = &[
     "account-login",
     "agent-cli",
     "agents",
+    "coordinator",
     "automations",
     "bd",
     "beads",
@@ -172,6 +174,7 @@ fn is_known_command(name: &str) -> bool {
         "account-login",
         "agent-cli",
         "agents",
+        "coordinator",
         "sessions",
         "s",
         "list-sessions",
@@ -353,6 +356,7 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
         "account-login" => account_login::run(args),
         "agent-cli" => agent_cli::run(args),
         "agents" => agents::run(args),
+        "coordinator" => coordinator::run(args),
         "sessions" | "s" | "list-sessions" | "ls" => sessions::sessions_command(args),
         "find" | "f" => launchers::zehn_search_command(args),
         "history" | "h" => launchers::history_command(args),

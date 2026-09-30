@@ -130,6 +130,7 @@ pub mod background_tasks;
 mod bot_sync;
 mod browser_tcp;
 mod close_after_done_runtime;
+mod coordinator_runtime;
 pub mod commit_message_generation;
 pub mod http_endpoints;
 pub mod http_infra;

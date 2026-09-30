@@ -71,6 +71,10 @@ pub struct PanelsState {
     pub tasks_show_completed: bool,
     /// The task list length the fold was last reset against; `-1` before the first projection.
     pub task_signature: i64,
+    /// A coordinator's Threads panel is folded to its header.
+    pub threads_collapsed: bool,
+    /// Its Done group is listed.
+    pub threads_show_done: bool,
 }
 
 impl Default for PanelsState {
@@ -80,6 +84,8 @@ impl Default for PanelsState {
             tasks_collapsed: false,
             tasks_show_completed: false,
             task_signature: -1,
+            threads_collapsed: false,
+            threads_show_done: false,
         }
     }
 }

@@ -66,5 +66,6 @@ mod worker;
 mod world;
 
 pub(crate) use identity::LOCAL_MACHINE_ID;
+pub(crate) use transport::current_model_catalog;
 pub(crate) use worker::{ChatHostHandle, set_endpoint, set_touch_composer};
 pub(crate) use world::ChatHostOutput;

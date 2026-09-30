@@ -69,6 +69,16 @@ pub(super) fn send(args: &Arguments) -> CliResult<Value> {
             next_step
         ))
     })?;
+    // CDXC:Coordinators 2026-09-30 WHY: a coordinator's follow-up to a thread it already marked done reopens that thread, or its reply would go unsupervised and never be reported back.
+    let _ = call_gxserver_rpc(
+        "/api/linkCoordinatorThread",
+        &json!({
+            "coordinatorProjectId": sender["projectId"], "coordinatorSessionId": sender["sessionId"],
+            "projectId": recipient["projectId"], "sessionId": recipient["sessionId"],
+            "onlyIfCoordinator": true, "reopenOnly": true,
+        }),
+        &flags,
+    );
     Ok(json!({
         "ok": true,
         "status": if args.delivery == Delivery::Queue { "queued" } else { "accepted" },

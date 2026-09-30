@@ -611,10 +611,13 @@ pub(super) async fn route_http(
             &body_json,
             |repository, db, params, _| {
                 let project = repository.resolve_create_session_project(params)?;
+                let params =
+                    &coordinator_runtime::prepare_coordinator_create_params(&state, params)?;
                 let create_params = create_agent_session_params_for_project(db, &project, params)?;
                 let created_session = repository.create_session(&create_params, false)?;
                 let session =
                     apply_created_session_identity(repository, &created_session, &create_params)?;
+                crate::coordinators::register_created_coordinator(db, params, &session)?;
                 let project_id = value_text(&session, "projectId")?;
                 let session_id = value_text(&session, "sessionId")?;
                 restore_parked_project_for_new_session(&state, db, repository, &project_id)?;
@@ -1547,6 +1550,24 @@ pub(super) async fn route_http(
         in memory with a TTL — see `session_keep_awake` — and is honored by
         `/api/sleepSession` only for automatic sweeps.
         */
+        "/api/readCoordinator"
+        | "/api/listCoordinators"
+        | "/api/updateCoordinator"
+        | "/api/linkCoordinatorThread"
+        | "/api/setCoordinatorThreadResolved" => {
+            let path = endpoint.path.clone();
+            handle_domain_http(
+                &state,
+                endpoint.path,
+                request_id,
+                &body_json,
+                |repository, db, params, _| {
+                    coordinator_runtime::handle_coordinator_http(
+                        &state, &path, db, repository, params,
+                    )
+                },
+            )
+        }
         "/api/toggleCloseAfterDone" => handle_domain_http(
             &state,
             endpoint.path,

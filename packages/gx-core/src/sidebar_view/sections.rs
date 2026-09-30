@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use super::inputs::{SectionCollapse, SectionId};
-use super::ordering::section_of;
 use super::view::{SectionView, SessionRow, SessionView};
 
 /// What `projectSessionSections` returns beside the sections themselves.
@@ -16,21 +15,17 @@ pub(crate) struct SectionLayout {
     pub(crate) hidden_session_count: usize,
 }
 
-/// Builds the headings of one group from its rows in display order.
+/// Builds the headings of one group from its rows in display order and the section each row sits
+/// in (`section_of`, except that a coordinator's threads sit in its section).
 pub(crate) fn project_session_sections(
     sessions: &[SessionView],
+    section_by_session: &[SectionId],
     is_active_group: bool,
     is_project_group: bool,
     collapse: SectionCollapse,
     expanded: bool,
     compact_count: u32,
-    enable_parking: bool,
-    now_ms: u64,
 ) -> SectionLayout {
-    let section_by_session: Vec<SectionId> = sessions
-        .iter()
-        .map(|session| section_of(&session.row, enable_parking, now_ms))
-        .collect();
     // A group whose only section is Sessions draws no heading for it, so nothing could expand it
     // again: its stored collapse is ignored until another section shows up.
     let lone_sessions = section_by_session

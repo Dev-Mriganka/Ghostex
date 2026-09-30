@@ -480,6 +480,18 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         the other session-scoped lifecycle calls next to it.
         */
         | "/api/holdSessionsAwake"
+        /*
+        CDXC:Coordinators 2026-09-30 WHY:
+        A coordinator and its threads live on the machine that runs them, so a
+        client looking at a remote machine reads and steers them there, like
+        the session calls around these. They carry project/session ids plus
+        bounded text (goal, instructions, one memory note).
+        */
+        | "/api/readCoordinator"
+        | "/api/listCoordinators"
+        | "/api/updateCoordinator"
+        | "/api/linkCoordinatorThread"
+        | "/api/setCoordinatorThreadResolved"
         | "/api/toggleCloseAfterDone"
         | "/api/openConversation"
         | "/api/sleepSession"

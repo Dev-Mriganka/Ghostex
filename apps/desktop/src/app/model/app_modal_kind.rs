@@ -43,6 +43,8 @@ pub(crate) enum GpuiAppModalKind {
     PortlessSetup,
     Extension(ExtensionId),
     UpdateAvailable,
+    /// Name, agent, goal and first request of a new coordinator (new_coordinator_modal_lifecycle.rs).
+    NewCoordinator,
 }
 
 impl GpuiAppModalKind {
@@ -83,6 +85,7 @@ impl GpuiAppModalKind {
                 ExtensionId::new(value.trim_start_matches("extension:")).map(Self::Extension)
             }
             "updateAvailable" => Some(Self::UpdateAvailable),
+            "newCoordinator" => Some(Self::NewCoordinator),
             _ => None,
         }
     }
@@ -122,6 +125,7 @@ impl GpuiAppModalKind {
             Self::PortlessSetup => "portlessSetup",
             Self::Extension(id) => extension_modal_id(id),
             Self::UpdateAvailable => "updateAvailable",
+            Self::NewCoordinator => "newCoordinator",
         }
     }
 
@@ -159,6 +163,7 @@ impl GpuiAppModalKind {
             Self::PortlessSetup => "Ghostex Portless Setup",
             Self::Extension(_) => "Ghostex Extension",
             Self::UpdateAvailable => "Ghostex Update",
+            Self::NewCoordinator => "Ghostex New Coordinator",
         }
     }
 
@@ -266,6 +271,10 @@ impl GpuiAppModalKind {
             Self::UpdateAvailable => size(
                 px(APP_MODAL_HOST_UPDATE_AVAILABLE_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_UPDATE_AVAILABLE_WINDOW_HEIGHT),
+            ),
+            Self::NewCoordinator => size(
+                px(crate::app::window::NEW_COORDINATOR_MODAL_WIDTH),
+                px(crate::app::window::NEW_COORDINATOR_MODAL_INITIAL_HEIGHT),
             ),
             Self::Extension(id) => extension_modal_window_size(id),
             Self::RemoteGxserverInstall => size(
@@ -400,7 +409,8 @@ impl GpuiAppModalKind {
             Self::MermaidDiagram | Self::MarkdownTable => serde_json::json!({
                 "modal": self.modal_id(), "source": "", "type": "open",
             }),
-            Self::Extension(_) => serde_json::Value::Null,
+            // A New Coordinator open names its project, which only the sidebar knows.
+            Self::Extension(_) | Self::NewCoordinator => serde_json::Value::Null,
             Self::UpdateAvailable => serde_json::json!({
                 "modal": self.modal_id(),
                 "type": "open",

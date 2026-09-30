@@ -13,6 +13,7 @@ mod board_links_host;
 mod bot;
 mod browser;
 mod claim;
+mod coordinator;
 mod focus_created;
 mod folder_pick;
 mod os_integration;

@@ -40,5 +40,6 @@ mod space_gesture;
 pub(crate) mod state;
 mod status;
 mod sticky;
+mod threads;
 mod tooltips;
 pub(crate) mod usage;

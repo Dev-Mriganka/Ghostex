@@ -1322,6 +1322,59 @@ Related settings: Settings > Agents (Default Prompt Agent, Agent approvals,
 Agent Hooks, Default view per agent), `agentAcceptAllEnabled`,
 `showQuickModelPickerInTerminal` (Option+P model picker).
 
+## Coordinators
+
+A coordinator is one agent you talk to about a stream of work in a project. You
+tell it what needs doing; it answers quick questions itself and hands every real
+task to a thread, which is an ordinary agent session it starts and briefs, so it
+stays free to talk to you while the threads work in parallel. It is Ghostex's
+version of the Projects features in Cursor and Claude Code.
+
+- **Start one**: hover a project in the sidebar, open the Select Agent menu (the
+  arrow beside its agent button) and choose **New Coordinator…**. Name it, pick
+  Claude or Codex and its model and effort (medium by default, which is plenty
+  for routing work), and optionally give it a one-line goal and a first request;
+  it opens in chat. A project can have several coordinators, one per stream of
+  work.
+- **Threads in the sidebar**: a coordinator's row shows a crew icon with the
+  number of open threads (light blue when one waits on you, orange while one
+  works), and its threads sit indented right under it with their own status
+  dots. Click a thread to watch it or talk to it directly; answer its
+  questions and approvals there. Pinning the coordinator takes its threads
+  along. A thread the coordinator marks done is parked and leaves the tree.
+- **Threads panel in the chat**: above the coordinator's message box, the
+  Threads panel lists its threads under Waiting on you, Working and Finished,
+  each with one line (what it asks, what it is doing, or how its last report
+  began) and its branch; tap or click a thread to open it, and use "N done" to
+  list the finished ones. It shows on the phone and in the browser too.
+- **Reports come back by themselves**: when a thread finishes a turn, Ghostex
+  sends its final message to the coordinator (a "Message from" card in its
+  chat); when a thread waits on a question, an approval, or a screen such as
+  folder trust or an expired login, the coordinator is told what it is asking.
+  The coordinator then checks the work, starts the next step, and tells you
+  what needs you. Nobody has to poll.
+- **Worktrees**: the coordinator can give a thread its own git worktree and
+  branch, so parallel threads never edit the same checkout. A coordinator's
+  threads trust the project's own folder and the worktrees Ghostex makes for
+  them, so they start without stopping at the agent's folder-trust question.
+- **Goal, standing instructions and memory**: every thread's brief carries the
+  coordinator's goal, its standing instructions (rules such as which branch to
+  target or how to verify work) and its memory notes. Tell the coordinator
+  "remember that…" and it saves a note that every later thread receives; ask it
+  to change the goal or the instructions the same way.
+- **Just ask**: "run these three as separate threads", "use worktrees", "give me
+  a status of every thread", "use a cheaper model for threads", "don't merge
+  anything without asking" all work in plain words.
+
+Coordinators run on Claude or Codex; threads can be any configured agent. From
+a terminal or another agent: `ghostex coordinator create --title <name>
+[--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator status`,
+`ghostex coordinator start-thread --title <title> --task <brief> [--worktree]
+[--agent <id>] [--model <m>] [--effort <e>]`, `ghostex coordinator
+resolve|reopen <thread>`, `ghostex coordinator remember <note>`, `ghostex
+coordinator set-goal|set-instructions`, and `ghostex coordinator guide` (the
+coordinator's own playbook). `ghostex coordinator --help` lists every flag.
+
 ## Project board (Kanban)
 
 The Kanban view is a board over the Beads issue tracker: every card is a bead

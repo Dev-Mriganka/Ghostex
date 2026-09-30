@@ -81,6 +81,10 @@ pub fn side_state_moves(
         || cleared(&side.agent_fleet, &session.agent_fleet)
         || cleared(&side.agent_tasks, &session.agent_tasks)
         || side.app_commands.is_some()
+        || side
+            .coordinator_threads
+            .as_ref()
+            .is_some_and(|threads| session.coordinator_threads.as_ref() != Some(threads))
         || side.retired_async_question_ids.is_some()
         || nullable(&side.account_switch, &session.account_switch)
         || nullable(

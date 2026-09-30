@@ -156,6 +156,24 @@ pub(super) fn receive(world: &mut World, inbound: Inbound) {
     }
 }
 
+/// The newest model catalog this computer has: the last one gxserver pushed (kept in client
+/// storage), else the one bundled with the build. The New Coordinator dialog's model list.
+pub(crate) fn current_model_catalog()
+-> Option<ghostex_gx_chat_core::menus::catalog::AgentModelCatalog> {
+    let record = StorageKey {
+        store: MODEL_CATALOG_STORE.to_string(),
+        suffix: String::new(),
+    };
+    storage::read(&record, super::platform::now_millis())
+        .ok()
+        .flatten()
+        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
+        .and_then(|catalog| {
+            ghostex_gx_chat_core::menus::catalog::parse_agent_model_catalog(&catalog)
+        })
+        .or_else(ghostex_gx_chat_core::menus::catalog::bundled_agent_model_catalog)
+}
+
 /// `adoptPublishedAgentModelCatalog`: a pushed catalog replaces the lineup only when it is at least
 /// as new as the one in effect, is cached for the next boot read, and reaches every chat.
 ///

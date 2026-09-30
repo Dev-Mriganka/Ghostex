@@ -6,7 +6,7 @@ use crate::ghostex_cli::{
 };
 use serde_json::{json, Value};
 
-pub(super) fn text<'a>(session: &'a Value, key: &str) -> &'a str {
+pub(crate) fn text<'a>(session: &'a Value, key: &str) -> &'a str {
     session
         .get(key)
         .and_then(Value::as_str)
@@ -14,11 +14,11 @@ pub(super) fn text<'a>(session: &'a Value, key: &str) -> &'a str {
         .unwrap_or_default()
 }
 
-pub(super) fn is_agent(session: &Value) -> bool {
+pub(crate) fn is_agent(session: &Value) -> bool {
     !text(session, "agentId").is_empty()
 }
 
-pub(super) fn inventory_flags(flags: &Flags, reference: &str) -> CliResult<Flags> {
+pub(crate) fn inventory_flags(flags: &Flags, reference: &str) -> CliResult<Flags> {
     let mut flags = flags.clone();
     if rpc::is_gxserver_global_session_ref(reference) {
         let target = rpc::resolve_gxserver_server_target(&flags, &json!({"globalRef": reference}))?;
@@ -37,7 +37,7 @@ pub(super) fn inventory_flags(flags: &Flags, reference: &str) -> CliResult<Flags
 
 /// CDXC:SessionIdentity 2026-09-17 DECISION:
 /// User: agents must obtain their own session and agent identifiers from the CLI for message headers. Resolve exact environment identifiers, never the focused pane or a matching title.
-pub(super) fn caller() -> CliResult<Value> {
+pub(crate) fn caller() -> CliResult<Value> {
     let (key, reference) = ["GHOSTEX_GLOBAL_SESSION_REF", "GHOSTEX_NATIVE_SESSION_ID", "GHOSTEX_SESSION_ID", "ZMX_SESSION"]
         .into_iter()
         .find_map(|key| std::env::var(key).ok().filter(|value| !value.trim().is_empty()).map(|value| (key, value.trim().to_owned())))
@@ -111,7 +111,7 @@ fn name_bot_sessions(rows: &mut [Value], flags: &Flags) {
     }
 }
 
-pub(super) fn summary(row: &Value) -> Value {
+pub(crate) fn summary(row: &Value) -> Value {
     let mut result = serde_json::Map::new();
     for key in [
         "globalRef",
@@ -156,7 +156,7 @@ fn header_value(row: &Value, key: &str) -> String {
 /// CDXC:Cli 2026-09-18 DECISION:
 /// User: the header must not render as a heading. The old `MESSAGE FROM` header ended in a dashed line, which Markdown reads as a setext underline, so the chat turned the whole header into an h2. A blank line now separates header and body.
 /// SEE-ALSO: packages/gx-chat-core/src/transcript/agent_message.rs parses this header (and the old dashed one) into the chat's message card.
-pub(super) fn message(sender: &Value, body: &str) -> String {
+pub(crate) fn message(sender: &Value, body: &str) -> String {
     let sender = summary(sender);
     format!("Message from another agent\nAgent: {}\nSession: {}\nSession ID: {}\nAgent ID: {}\nAgent Session ID: {}\nReply to: {}\n\n{}",
         header_value(&sender, "agentName"), header_value(&sender, "title"), header_value(&sender, "sessionId"),

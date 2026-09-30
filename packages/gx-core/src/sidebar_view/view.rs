@@ -195,6 +195,24 @@ pub struct SessionView {
     pub is_focused: bool,
     pub is_visible: bool,
     pub is_multi_selected: bool,
+    /// Where the row sits in its coordinator's tree; default for every other row.
+    pub nesting: RowNesting,
+}
+
+/// A coordinator's tree in the list: its open threads drawn right under it, indented.
+///
+/// CDXC:Coordinators 2026-09-30 WHY:
+/// The sidebar is where Ghostex users already scan status, so it is the always-visible overview of a coordinator's work: the coordinator row, then each open thread with its own status dot. A thread follows its coordinator's section (a pinned coordinator takes its threads to Pinned) unless the user parked or snoozed it, and a done thread leaves the tree. This is a group-level value because it reads other rows, which a cached row must never do.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RowNesting {
+    /// How deep under a coordinator the row is drawn; 0 for a top-level row.
+    pub depth: u8,
+    /// The last thread directly under its coordinator, where the tree line ends.
+    pub last_child: bool,
+    /// On a coordinator row: the open threads drawn under it, and how many wait on someone or work.
+    pub thread_count: u16,
+    pub waiting_threads: u16,
+    pub working_threads: u16,
 }
 
 impl SessionRow {
@@ -257,6 +275,12 @@ pub struct SessionRow {
     pub timing: SessionTiming,
     /// The session facts only the row's menus and its Copy Details text read.
     pub menu_facts: SessionMenuFacts,
+    /// The session is a coordinator (it starts and supervises thread sessions).
+    pub is_coordinator: bool,
+    /// The coordinator this session is a thread of, on the same machine.
+    pub coordinator_parent: Option<SessionKey>,
+    /// A thread's state: `waiting`, `working`, `finished`, `sleeping`, `closed` or `done`.
+    pub thread_state: Option<String>,
 }
 
 /// What a row's context menu, hover actions and Copy Details need beyond what it draws.

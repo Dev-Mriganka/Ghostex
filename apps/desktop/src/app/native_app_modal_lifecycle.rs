@@ -168,6 +168,9 @@ impl GhostexGpuiApp {
             GpuiAppModalKind::UpdateAvailable => {
                 self.open_gpui_update_available_modal(open_message, cx);
             }
+            GpuiAppModalKind::NewCoordinator => {
+                self.open_gpui_new_coordinator_modal(open_message, cx);
+            }
             GpuiAppModalKind::RemoteSetup => {
                 self.open_gpui_remote_setup_modal(open_message, cx);
             }

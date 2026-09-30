@@ -11,6 +11,7 @@ use super::inputs::{SidebarSettings, SidebarUiState};
 use super::ordering::{order_rows_for_display, row_deadline_ms};
 use super::sections::project_session_sections;
 use super::tags::matches_tag_filters;
+use super::threads::nest_threads;
 use super::view::{
     GroupCore, GroupSummary, ProjectContextView, RemoteMachineView, SessionRow, SessionView,
     WorktreeView,
@@ -153,6 +154,7 @@ pub(crate) fn build_group(
             SessionView {
                 is_focused,
                 is_visible,
+                nesting: Default::default(),
                 is_multi_selected: ui
                     .selected_session_ids
                     .iter()
@@ -179,6 +181,8 @@ pub(crate) fn build_group(
         })
         .collect();
     let tag_filtered_out = !ui.selected_tag_filters.is_empty() && sessions.is_empty();
+    let (sessions, section_by_session) =
+        nest_threads(sessions, settings.enable_session_parking, now_ms);
 
     let is_project_group = plan.project.is_some();
     let section_collapse = ui
@@ -193,13 +197,12 @@ pub(crate) fn build_group(
         .contains(&plan.storage_id);
     let layout = project_session_sections(
         &sessions,
+        &section_by_session,
         is_active,
         is_project_group,
         section_collapse,
         expanded,
         settings.project_session_list_collapsed_count,
-        settings.enable_session_parking,
-        now_ms,
     );
     let summary = group_summary(&sessions);
     let core = GroupCore {

@@ -33,6 +33,7 @@ mod space_switch;
 pub(crate) mod spaces;
 pub(crate) mod tags;
 pub(crate) mod text;
+mod threads;
 pub(crate) mod view;
 
 pub use armed_actions::{

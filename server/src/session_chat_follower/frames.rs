@@ -239,6 +239,11 @@ pub(super) fn emit_state_frame(
             insert_optional_queue(&mut frame, queue.as_ref());
             insert_optional_app_commands(&mut frame, config);
             insert_optional_returned_prompt(&mut frame, config);
+            crate::coordinators::insert_coordinator_threads(
+                &mut frame,
+                &config.project_id,
+                &config.session_id,
+            );
             insert_optional_agent_session_id(&mut frame, config);
             Value::Object(frame)
         },
@@ -310,6 +315,11 @@ pub(super) fn emit_snapshot_frame(
             insert_optional_queue(&mut frame, queue.as_ref());
             insert_optional_app_commands(&mut frame, config);
             insert_optional_returned_prompt(&mut frame, config);
+            crate::coordinators::insert_coordinator_threads(
+                &mut frame,
+                &config.project_id,
+                &config.session_id,
+            );
             insert_optional_agent_session_id(&mut frame, config);
             Value::Object(frame)
         },

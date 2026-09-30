@@ -1,0 +1,422 @@
+//! `/api/*Coordinator*` endpoints: read, list, update, link and resolve.
+
+use chrono::Utc;
+use rusqlite::Connection;
+use serde_json::{json, Map, Value};
+
+use super::records::{
+    link_thread, list_coordinators, list_threads, list_threads_for, now_iso, read_coordinator,
+    read_thread, set_thread_resolved, write_coordinator, CoordinatorMemoryNote, CoordinatorRecord,
+    SessionKey, ThreadRecord, COORDINATOR_GOAL_MAX_CHARS, COORDINATOR_INSTRUCTIONS_MAX_CHARS,
+    COORDINATOR_MEMORY_MAX_NOTES, COORDINATOR_MEMORY_NOTE_MAX_CHARS,
+};
+use super::state::{classify_thread_session, ThreadProgress, ThreadState};
+use crate::domain::{DomainRepository, DomainStateError};
+use crate::ids::create_global_session_ref;
+use crate::presentation::{
+    effective_lifecycle_state, presentation_activity, project_session_title,
+};
+
+/// What an endpoint answered, plus the sessions whose presentation changed.
+pub struct CoordinatorEndpointOutput {
+    pub result: Value,
+    pub changed_sessions: Vec<SessionKey>,
+}
+
+pub const COORDINATOR_ENDPOINTS: &[&str] = &[
+    "/api/readCoordinator",
+    "/api/listCoordinators",
+    "/api/updateCoordinator",
+    "/api/linkCoordinatorThread",
+    "/api/setCoordinatorThreadResolved",
+];
+
+fn text(params: &Map<String, Value>, key: &str) -> Option<String> {
+    params
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn required_ids(
+    params: &Map<String, Value>,
+    project_key: &str,
+    session_key: &str,
+) -> Result<SessionKey, DomainStateError> {
+    match (text(params, project_key), text(params, session_key)) {
+        (Some(project_id), Some(session_id)) => Ok((project_id, session_id)),
+        _ => Err(DomainStateError::bad_request(format!(
+            "This coordinator request needs {project_key} and {session_key}."
+        ))),
+    }
+}
+
+pub fn handle_coordinator_endpoint(
+    endpoint_path: &str,
+    db: &Connection,
+    repository: &DomainRepository<'_>,
+    params: &Map<String, Value>,
+) -> Result<CoordinatorEndpointOutput, DomainStateError> {
+    match endpoint_path {
+        "/api/readCoordinator" => {
+            let key = required_ids(params, "projectId", "sessionId")?;
+            let coordinator = resolve_coordinator(db, &key)?;
+            Ok(CoordinatorEndpointOutput {
+                result: coordinator_view(db, repository, &coordinator)?,
+                changed_sessions: Vec::new(),
+            })
+        }
+        "/api/listCoordinators" => {
+            let project_id = text(params, "projectId");
+            let threads = list_threads(db)?;
+            let mut rows = Vec::new();
+            for coordinator in list_coordinators(db)? {
+                if project_id
+                    .as_ref()
+                    .is_some_and(|project_id| *project_id != coordinator.project_id)
+                {
+                    continue;
+                }
+                let Some(session) =
+                    repository.get_session(&coordinator.project_id, &coordinator.session_id)?
+                else {
+                    continue;
+                };
+                let mut counts = Map::new();
+                for thread in threads
+                    .iter()
+                    .filter(|thread| thread.coordinator_key() == coordinator.key())
+                {
+                    let thread_session =
+                        repository.get_session(&thread.project_id, &thread.session_id)?;
+                    let state = classify_thread_session(
+                        thread_session.as_ref(),
+                        ThreadProgress::of(thread),
+                        &now_iso(),
+                        false,
+                    );
+                    let count = counts.entry(state.as_str().to_string()).or_insert(json!(0));
+                    *count = json!(count.as_u64().unwrap_or(0) + 1);
+                }
+                rows.push(json!({
+                    "globalRef": create_global_session_ref(repository.server_id.as_str(), &coordinator.project_id, &coordinator.session_id),
+                    "projectId": coordinator.project_id,
+                    "sessionId": coordinator.session_id,
+                    "title": session_title_of(&session),
+                    "goal": coordinator.goal,
+                    "lifecycleState": effective_lifecycle_state(&session),
+                    "threadCounts": counts,
+                }));
+            }
+            Ok(CoordinatorEndpointOutput {
+                result: json!({ "coordinators": rows }),
+                changed_sessions: Vec::new(),
+            })
+        }
+        "/api/updateCoordinator" => {
+            let key = required_ids(params, "projectId", "sessionId")?;
+            let mut coordinator = resolve_coordinator(db, &key)?;
+            apply_update(&mut coordinator, params)?;
+            write_coordinator(db, &coordinator)?;
+            Ok(CoordinatorEndpointOutput {
+                result: coordinator_view(db, repository, &coordinator)?,
+                changed_sessions: vec![coordinator.key()],
+            })
+        }
+        "/api/linkCoordinatorThread" => {
+            let coordinator_key =
+                required_ids(params, "coordinatorProjectId", "coordinatorSessionId")?;
+            let thread_key = required_ids(params, "projectId", "sessionId")?;
+            let only_if_coordinator =
+                params.get("onlyIfCoordinator").and_then(Value::as_bool) == Some(true);
+            // A message from a coordinator to its own done thread reopens it, so the reply is
+            // supervised and reported again; any other recipient is left alone.
+            if params.get("reopenOnly").and_then(Value::as_bool) == Some(true) {
+                let reopened = match read_thread(db, &thread_key.0, &thread_key.1)? {
+                    Some(thread)
+                        if thread.coordinator_key() == coordinator_key && thread.is_resolved() =>
+                    {
+                        set_thread_resolved(db, &thread_key.0, &thread_key.1, false)?;
+                        set_parked(repository, &thread_key, false)?;
+                        true
+                    }
+                    _ => false,
+                };
+                return Ok(CoordinatorEndpointOutput {
+                    result: json!({ "linked": false, "reopened": reopened }),
+                    changed_sessions: if reopened {
+                        vec![thread_key]
+                    } else {
+                        Vec::new()
+                    },
+                });
+            }
+            if read_coordinator(db, &coordinator_key.0, &coordinator_key.1)?.is_none() {
+                if only_if_coordinator {
+                    return Ok(CoordinatorEndpointOutput {
+                        result: json!({ "linked": false }),
+                        changed_sessions: Vec::new(),
+                    });
+                }
+                return Err(DomainStateError::not_found(
+                    "That session is not a coordinator.",
+                ));
+            }
+            if coordinator_key == thread_key {
+                return Err(DomainStateError::bad_request(
+                    "A coordinator cannot be its own thread.",
+                ));
+            }
+            if repository
+                .get_session(&thread_key.0, &thread_key.1)?
+                .is_none()
+            {
+                return Err(DomainStateError::not_found(
+                    "The thread session does not exist.",
+                ));
+            }
+            let task = text(params, "task").unwrap_or_default();
+            link_thread(
+                db,
+                &thread_key.0,
+                &thread_key.1,
+                &coordinator_key.0,
+                &coordinator_key.1,
+                &task,
+            )?;
+            Ok(CoordinatorEndpointOutput {
+                result: json!({
+                    "linked": true,
+                    "globalRef": create_global_session_ref(repository.server_id.as_str(), &thread_key.0, &thread_key.1),
+                }),
+                changed_sessions: vec![thread_key],
+            })
+        }
+        "/api/setCoordinatorThreadResolved" => {
+            let thread_key = required_ids(params, "projectId", "sessionId")?;
+            let resolved = params
+                .get("resolved")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| DomainStateError::bad_request("Say resolved: true or false."))?;
+            if read_thread(db, &thread_key.0, &thread_key.1)?.is_none() {
+                return Err(DomainStateError::not_found(
+                    "That session is not a coordinator thread.",
+                ));
+            }
+            let changed = set_thread_resolved(db, &thread_key.0, &thread_key.1, resolved)?;
+            if changed {
+                set_parked(repository, &thread_key, resolved)?;
+            }
+            let thread = read_thread(db, &thread_key.0, &thread_key.1)?
+                .ok_or_else(|| DomainStateError::not_found("The thread disappeared."))?;
+            let view = thread_view(repository, &thread)?;
+            Ok(CoordinatorEndpointOutput {
+                result: json!({ "changed": changed, "thread": view }),
+                changed_sessions: vec![thread_key],
+            })
+        }
+        _ => Err(DomainStateError::not_found(format!(
+            "{endpoint_path} is not a coordinator endpoint."
+        ))),
+    }
+}
+
+/// CDXC:Coordinators 2026-09-30 WHY:
+/// A done thread is parked so the sidebar's Sessions list keeps only the work in flight (Claude hides resolved threads the same way), and reopening unparks it. Parking is the ordinary reversible flag; "Unpark after sending a message" still brings a parked thread back when the user talks to it.
+fn set_parked(
+    repository: &DomainRepository<'_>,
+    key: &SessionKey,
+    parked: bool,
+) -> Result<(), DomainStateError> {
+    let Some(session) = repository.get_session(&key.0, &key.1)? else {
+        return Ok(());
+    };
+    if session
+        .get("isParked")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+        == parked
+    {
+        return Ok(());
+    }
+    let mut update = Map::new();
+    update.insert("projectId".to_string(), json!(key.0));
+    update.insert("sessionId".to_string(), json!(key.1));
+    update.insert("isParked".to_string(), Value::Bool(parked));
+    repository.update_session(&update)?;
+    Ok(())
+}
+
+/// The coordinator a request names: the coordinator itself, or the coordinator of a thread.
+fn resolve_coordinator(
+    db: &Connection,
+    key: &SessionKey,
+) -> Result<CoordinatorRecord, DomainStateError> {
+    if let Some(record) = read_coordinator(db, &key.0, &key.1)? {
+        return Ok(record);
+    }
+    if let Some(thread) = read_thread(db, &key.0, &key.1)? {
+        if let Some(record) = read_coordinator(
+            db,
+            &thread.coordinator_project_id,
+            &thread.coordinator_session_id,
+        )? {
+            return Ok(record);
+        }
+    }
+    Err(DomainStateError::not_found(
+        "That session is not a coordinator. Create one with ghostex coordinator create.",
+    ))
+}
+
+fn apply_update(
+    coordinator: &mut CoordinatorRecord,
+    params: &Map<String, Value>,
+) -> Result<(), DomainStateError> {
+    if let Some(goal) = params.get("goal").and_then(Value::as_str) {
+        let goal = goal.trim();
+        if goal.chars().count() > COORDINATOR_GOAL_MAX_CHARS {
+            return Err(DomainStateError::bad_request(format!(
+                "Keep the goal under {COORDINATOR_GOAL_MAX_CHARS} characters; put details in the instructions."
+            )));
+        }
+        coordinator.goal = goal.to_string();
+    }
+    if let Some(instructions) = params.get("instructions").and_then(Value::as_str) {
+        let instructions = instructions.trim();
+        if instructions.chars().count() > COORDINATOR_INSTRUCTIONS_MAX_CHARS {
+            return Err(DomainStateError::bad_request(format!(
+                "Standing instructions are limited to {COORDINATOR_INSTRUCTIONS_MAX_CHARS} characters."
+            )));
+        }
+        coordinator.instructions = instructions.to_string();
+    }
+    if let Some(note) = params.get("remember").and_then(Value::as_str) {
+        let note = note.split_whitespace().collect::<Vec<_>>().join(" ");
+        if note.is_empty() {
+            return Err(DomainStateError::bad_request("The note is empty."));
+        }
+        if note.chars().count() > COORDINATOR_MEMORY_NOTE_MAX_CHARS {
+            return Err(DomainStateError::bad_request(format!(
+                "Keep a note to one line under {COORDINATOR_MEMORY_NOTE_MAX_CHARS} characters."
+            )));
+        }
+        if coordinator.memory.len() >= COORDINATOR_MEMORY_MAX_NOTES {
+            return Err(DomainStateError::bad_request(format!(
+                "Memory holds {COORDINATOR_MEMORY_MAX_NOTES} notes. Forget or merge old ones first."
+            )));
+        }
+        if !coordinator
+            .memory
+            .iter()
+            .any(|existing| existing.text.eq_ignore_ascii_case(&note))
+        {
+            coordinator.memory.push(CoordinatorMemoryNote {
+                text: note,
+                created_at: now_iso(),
+            });
+        }
+    }
+    if let Some(number) = params.get("forget").and_then(Value::as_u64) {
+        let index = (number as usize)
+            .checked_sub(1)
+            .filter(|index| *index < coordinator.memory.len());
+        let Some(index) = index else {
+            return Err(DomainStateError::bad_request(format!(
+                "There is no note {number}. Run ghostex coordinator status to see the numbers."
+            )));
+        };
+        coordinator.memory.remove(index);
+    }
+    Ok(())
+}
+
+pub(crate) fn session_title_of(session: &Value) -> String {
+    project_session_title(session)
+        .get("displayTitle")
+        .or_else(|| session.get("title"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// One thread as the CLI and the clients read it.
+pub fn thread_view(
+    repository: &DomainRepository<'_>,
+    thread: &ThreadRecord,
+) -> Result<Value, DomainStateError> {
+    let session = repository.get_session(&thread.project_id, &thread.session_id)?;
+    let generated_at = now_iso();
+    let state = classify_thread_session(
+        session.as_ref(),
+        ThreadProgress::of(thread),
+        &generated_at,
+        false,
+    );
+    let mut view = json!({
+        "globalRef": create_global_session_ref(repository.server_id.as_str(), &thread.project_id, &thread.session_id),
+        "projectId": thread.project_id,
+        "sessionId": thread.session_id,
+        "state": state.as_str(),
+        "task": thread.task.chars().take(300).collect::<String>(),
+        "createdAt": thread.created_at,
+        "reportedAt": thread.reported_at,
+        "resolvedAt": thread.resolved_at,
+        "lastReport": thread.last_report,
+    });
+    if let Some(session) = session.as_ref() {
+        view["title"] = json!(session_title_of(session));
+        view["agentId"] = session.get("agentId").cloned().unwrap_or(Value::Null);
+        view["lifecycleState"] = json!(effective_lifecycle_state(session));
+        view["activity"] = json!(presentation_activity(session, &generated_at));
+        if let Some(marker) = crate::worktree_sessions::read_worktree_session_marker(session) {
+            view["branch"] = json!(marker.branch);
+            view["worktreePath"] = json!(marker.path);
+        }
+        if state == ThreadState::Waiting {
+            if let Some(prompt) = super::state::thread_prompt(session) {
+                view["waitingFor"] = json!(prompt.summary);
+            }
+        }
+    }
+    Ok(view)
+}
+
+/// The coordinator, its memory and every thread, most urgent state first.
+pub fn coordinator_view(
+    db: &Connection,
+    repository: &DomainRepository<'_>,
+    coordinator: &CoordinatorRecord,
+) -> Result<Value, DomainStateError> {
+    let session = repository.get_session(&coordinator.project_id, &coordinator.session_id)?;
+    let mut threads = list_threads_for(db, &coordinator.project_id, &coordinator.session_id)?
+        .iter()
+        .map(|thread| thread_view(repository, thread))
+        .collect::<Result<Vec<_>, _>>()?;
+    let order = |state: &str| match state {
+        "waiting" => ThreadState::Waiting.order(),
+        "finished" => ThreadState::Finished.order(),
+        "working" => ThreadState::Working.order(),
+        "sleeping" => ThreadState::Sleeping.order(),
+        "closed" => ThreadState::Closed.order(),
+        _ => ThreadState::Done.order(),
+    };
+    threads.sort_by_key(|thread| order(thread["state"].as_str().unwrap_or_default()));
+    Ok(json!({
+        "coordinator": {
+            "globalRef": create_global_session_ref(repository.server_id.as_str(), &coordinator.project_id, &coordinator.session_id),
+            "projectId": coordinator.project_id,
+            "sessionId": coordinator.session_id,
+            "title": session.as_ref().map(session_title_of).unwrap_or_default(),
+            "agentId": session.as_ref().and_then(|session| session.get("agentId").cloned()).unwrap_or(Value::Null),
+            "goal": coordinator.goal,
+            "instructions": coordinator.instructions,
+            "memory": coordinator.memory_value(),
+            "createdAt": coordinator.created_at,
+        },
+        "threads": threads,
+        "generatedAt": Utc::now().to_rfc3339(),
+    }))
+}

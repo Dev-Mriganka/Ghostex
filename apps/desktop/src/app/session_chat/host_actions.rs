@@ -589,7 +589,8 @@ impl GhostexGpuiApp {
             );
             return;
         }
-        if action == "selectForkBranch" {
+        // CDXC:Coordinators 2026-09-30 WHY: a row of a coordinator's Threads panel opens that thread the way a fork branch opens: wake it when it was closed, then focus and reveal it in the sidebar.
+        if action == "selectForkBranch" || action == "openCoordinatorThread" {
             self.select_session_chat_fork_branch(session_id, &message, cx);
             return;
         }

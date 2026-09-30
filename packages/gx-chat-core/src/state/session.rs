@@ -61,6 +61,9 @@ pub struct SessionState {
     pub app_commands: Vec<Value>,
     /// The prompt the agent handed back after an Escape. Unchanged on omission.
     pub returned_prompt: Option<Value>,
+    /// A coordinator's threads (`{ threads, doneCount }`); present only for a coordinator.
+    /// Unchanged on omission.
+    pub coordinator_threads: Option<Value>,
     /// Latched once gxserver has read this session's screen; an omission never unsets it.
     pub screen_probed: bool,
     /// Live work as the chat channel itself reports it.
@@ -123,6 +126,7 @@ impl Default for SessionState {
             agent_tasks: None,
             app_commands: Vec::new(),
             returned_prompt: None,
+            coordinator_threads: None,
             screen_probed: false,
             server_working: false,
             session_activity_working: false,

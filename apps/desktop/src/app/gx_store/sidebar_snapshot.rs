@@ -855,6 +855,31 @@ fn build_session(
         "isGeneratingFirstPromptTitle".to_string(),
         Value::Bool(row.is_generating_first_prompt_title),
     );
+    // The coordinator tree (gx-core `RowNesting`), drawn by native_sidebar/threads.rs.
+    if row.is_coordinator {
+        details.insert("isCoordinator".to_string(), Value::Bool(true));
+    }
+    if session.nesting.depth > 0 {
+        details.insert(
+            "threadDepth".to_string(),
+            Value::from(session.nesting.depth),
+        );
+        details.insert(
+            "threadLast".to_string(),
+            Value::Bool(session.nesting.last_child),
+        );
+    }
+    if session.nesting.thread_count > 0 {
+        details.insert(
+            "coordinatorThreads".to_string(),
+            json!({
+                "count": session.nesting.thread_count,
+                "waiting": session.nesting.waiting_threads,
+                "working": session.nesting.working_threads,
+            }),
+        );
+    }
+    insert_optional(&mut details, "threadState", row.thread_state.clone());
     NativeSidebarSession {
         session_id: row.sidebar_session_id.clone(),
         display_title: Some(row.display_title.clone()),

@@ -41,6 +41,7 @@ pub fn read_presentation_snapshot(
     );
     insert_delayed_send_presentation_payload(db, &mut snapshot)?;
     crate::close_after_done::insert_close_after_done_presentation_payload(&mut snapshot, db);
+    crate::coordinators::insert_coordinator_presentation_payload(&mut snapshot, db, &repository);
     insert_session_chat_queue_presentation_payload(&mut snapshot, db);
     insert_session_chat_draft_presentation_payload(&mut snapshot, db);
     insert_session_agent_note_presentation_payload(&mut snapshot, db);
@@ -156,6 +157,7 @@ pub fn build_presentation_session_delta(
     );
     insert_delayed_send_session_projection(db, &mut presentation_session)?;
     crate::close_after_done::insert_close_after_done_session_projection(&mut presentation_session, db);
+    crate::coordinators::insert_coordinator_session_projection(&mut presentation_session, db, &session);
     insert_session_chat_queue_session_projection(
         &mut presentation_session,
         db,

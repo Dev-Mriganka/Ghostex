@@ -258,6 +258,7 @@ pub async fn run_gxserver_foreground(
     session_auto_sleep_sweep::start_session_auto_sleep_sweep(state.clone());
     bot_sync::start_bot_project_sync(state.clone());
     close_after_done_runtime::start_close_after_done_runtime(state.clone());
+    coordinator_runtime::start_coordinator_runtime(state.clone());
     /*
     CDXC:SessionChat 2026-08-21:
     The queue scheduler is built HERE rather than beside the other runtimes

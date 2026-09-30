@@ -198,7 +198,7 @@ pub struct TurnLifecycle {
 /// | Key | Absent means |
 /// | --- | --- |
 /// | `prompt`, `terminalNotice`, `terminalActivity`, `agentFleet`, `agentTasks` | CLEARED |
-/// | `selectedOptions`, `draft`, `appCommands`, `returnedPrompt` | UNCHANGED |
+/// | `selectedOptions`, `draft`, `appCommands`, `returnedPrompt`, `coordinatorThreads` | UNCHANGED |
 /// | `queue` | the daemon has no queue support (present even when empty otherwise) |
 /// | `screenProbed` | not probed yet (sticky once true) |
 /// | `agentSessionId` | snapshot or replaced: cleared; state: unchanged |
@@ -232,6 +232,10 @@ pub struct ChatSideState {
     pub app_commands: Option<Vec<Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub returned_prompt: Option<Value>,
+    /// A coordinator's threads (`{ threads: [...], doneCount }`), carried only for a coordinator
+    /// session; the Threads panel above its composer. Absent means unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coordinator_threads: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_session_id: Option<String>,
     #[serde(default, skip_serializing_if = "Tri::is_absent")]

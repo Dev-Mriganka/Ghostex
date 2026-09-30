@@ -227,5 +227,6 @@ fn row(id: &str, lifecycle_state: &str, is_browser: bool) -> SessionView {
         is_focused: false,
         is_visible: false,
         is_multi_selected: false,
+        nesting: Default::default(),
     }
 }

@@ -99,6 +99,9 @@ pub struct Document {
     pub incoming_draft: Option<IncomingDraft>,
     pub note: Note,
     pub interaction: Interaction,
+    /// The "press Escape again" toast while a first Escape waits for its confirmation. Family d.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interrupt_confirm: Option<String>,
     pub host_actions: Vec<HostAction>,
     /// The Side chat prefix (`/btw `) when the agent takes side questions, else null. Family d.
     pub side_chat: Option<String>,
@@ -166,6 +169,8 @@ pub struct Document {
     pub agent_fleet_strip: Tri<Value>,
     /// The task panel, or `null`. Family f.
     pub agent_tasks_panel: Tri<Value>,
+    /// A coordinator's Threads panel, or `null`. Family f.
+    pub coordinator_threads_panel: Tri<Value>,
     /// The subagent viewer, or `null` when closed. Family f.
     pub subagent: Tri<Value>,
     /// Transcript search, or `null` when closed. Family f.

@@ -53,6 +53,7 @@ fn scope<'a>(
         working_directory,
         line_breaks,
         live_side_question: None,
+        agent_fleet: None,
     }
 }
 

@@ -1,0 +1,74 @@
+Run a coordinator: one agent you talk to, which hands the work to thread sessions,
+keeps track of them, and reports back.
+
+USAGE
+  ghostex coordinator create [--project-id <id>] [--agent <agent-id>] [--title <name>]
+                             [--model <m>] [--effort <e>] [--goal <text>]
+                             [--task <first message>] [--json]
+  ghostex coordinator list [--project-id <id>] [--json]
+  ghostex coordinator status [--coordinator <ref>] [--all] [--json]
+  ghostex coordinator start-thread --title <title> (--task <text> | --body-file <path>)
+                             [--agent <agent-id>] [--model <m>] [--effort <e>]
+                             [--worktree [--base-branch <branch>]] [--project-id <id>]
+                             [--coordinator <ref>] [--json]
+  ghostex coordinator link <session-ref> [--task <text>] [--coordinator <ref>]
+  ghostex coordinator resolve <thread-ref> [--json]
+  ghostex coordinator reopen <thread-ref> [--json]
+  ghostex coordinator remember <note> [--coordinator <ref>]
+  ghostex coordinator forget <number> [--coordinator <ref>]
+  ghostex coordinator set-goal <text> [--coordinator <ref>]
+  ghostex coordinator set-instructions (<text> | --body-file <path>) [--coordinator <ref>]
+  ghostex coordinator guide
+
+WHAT A COORDINATOR IS
+  A coordinator is an agent session (Claude or Codex) with a standing role: it
+  answers quick questions itself and starts a thread for every piece of real
+  work. Threads are ordinary agent sessions; they sit under their coordinator in
+  the sidebar. When a thread finishes a turn, Ghostex forwards its final message
+  to the coordinator as a "Message from another agent" (first line
+  "Ghostex thread report: ..."); when a thread waits on a question or an
+  approval, the coordinator is told what it asks. The coordinator never has to
+  poll. `ghostex coordinator guide` prints the coordinator's full playbook.
+
+CREATE
+  create starts a coordinator in your project (--project-id picks another).
+  --agent takes an id from `ghostex agents types`; it must be a Claude or Codex
+  agent, and defaults to the first Claude agent listed. --model picks its model
+  (a value from the agent's model list, such as sonnet or opus[1m]); --effort
+  defaults to medium, which is plenty for routing work. --goal is one line the
+  coordinator works toward. --task sends it a first message.
+
+STATUS
+  status prints the goal, the standing instructions, the memory notes, and every
+  thread grouped by state: Waiting on you, Finished, Working, Sleeping, Closed,
+  Done (done threads are counted; --all lists them). Inside a coordinator
+  session it describes that coordinator; elsewhere pass --coordinator <ref>.
+  Run from a thread, it describes the thread's coordinator.
+
+THREADS
+  start-thread creates an agent session in the coordinator's project, links it,
+  and sends it the task. Ghostex appends the goal, the standing instructions,
+  the memory notes and the reporting rules to every task, so write only the task
+  itself. The agent defaults to the coordinator's own agent. --worktree gives the
+  thread its own git worktree and branch (from --base-branch, or the default
+  branch). --model and --effort apply to this thread only (Claude and Codex).
+  link adopts a session that already exists as a thread.
+  `ghostex agents send <thread-ref> "<text>"` sends a thread a follow-up;
+  `ghostex read-session-chat <thread-ref> --last 2 --format text` reads it.
+  `ghostex agents create` run by a coordinator also links the new session.
+  resolve marks a thread done (it leaves the sidebar tree and stops reporting);
+  reopen brings it back. Neither touches the session itself.
+
+MEMORY AND INSTRUCTIONS
+  remember saves a one-line note (a preference, a decision, a pitfall); every
+  new thread receives the notes. forget removes note <number> as numbered by
+  status. set-goal and set-instructions replace the goal and the standing
+  instructions; an empty value clears them.
+
+STATES
+  waiting   a question, an approval or another prompt needs an answer
+  working   the thread is running a turn
+  finished  its turn ended; its report was sent to the coordinator
+  sleeping  its session is asleep
+  closed    its session was closed (it is then marked done)
+  done      resolved

@@ -275,6 +275,19 @@ pub(crate) fn session_row(
             can_schedule_delayed_send: remote_capable,
             can_toggle_close_after_done: remote_capable,
         },
+        is_coordinator: session.coordinator_role.as_deref() == Some("coordinator"),
+        coordinator_parent: match (
+            session.coordinator_project_id.as_deref(),
+            session.coordinator_session_id.as_deref(),
+        ) {
+            (Some(project_id), Some(session_id)) => Some(SessionKey {
+                machine: key.machine.clone(),
+                project_id: project_id.to_string(),
+                session_id: session_id.to_string(),
+            }),
+            _ => None,
+        },
+        thread_state: session.coordinator_thread_state.clone(),
         key: Some(key),
     }
 }

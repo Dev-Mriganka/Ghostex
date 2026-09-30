@@ -494,6 +494,19 @@ pub struct PresentationSession {
     pub fork_branch_count: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fork_family_session_ids: Option<Vec<String>>,
+    /// `coordinator` for a coordinator session, `thread` for a session a coordinator started;
+    /// absent otherwise. A coordinator that is also another coordinator's thread says
+    /// `coordinator` and still carries the thread fields below.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coordinator_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coordinator_project_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coordinator_session_id: Option<String>,
+    /// `waiting`, `working`, `finished`, `sleeping`, `closed` or `done`; an unknown value reads as
+    /// `finished`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coordinator_thread_state: Option<String>,
 
     // Title block.
     #[serde(default, deserialize_with = "crate::de::null_as_default")]

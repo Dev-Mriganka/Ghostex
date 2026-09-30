@@ -176,6 +176,11 @@ pub fn fold_state(previous: Option<&FoldedSnapshot>, incoming: StateCarrier<'_>)
         .clone()
         .or_else(|| previous_side.and_then(|state| state.returned_prompt.clone()));
 
+    folded.result.state.coordinator_threads = side
+        .coordinator_threads
+        .clone()
+        .or_else(|| previous_side.and_then(|state| state.coordinator_threads.clone()));
+
     folded.result.state.account_switch = match &side.account_switch {
         Tri::Absent => previous_side
             .map(|state| state.account_switch.clone())

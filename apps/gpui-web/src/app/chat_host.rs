@@ -15,13 +15,33 @@ impl GhostexGpuiApp {
 
     pub(crate) fn web_chat_host_action(
         &mut self,
-        _session: &SessionKey,
+        session: &SessionKey,
         message: &Value,
         cx: &mut gpui::Context<Self>,
     ) {
         match message["action"].as_str().or_else(|| message["method"].as_str()) {
             // The composer's terminal button: the same session, as a terminal.
             Some("terminalView" | "switchToTerminal") => self.web_show_terminal(true, cx),
+            // A row of a coordinator's Threads panel: that thread's chat, on the same machine.
+            Some("openCoordinatorThread") => {
+                let text = |key: &str| {
+                    message[key]
+                        .as_str()
+                        .or_else(|| message["params"][key].as_str())
+                        .map(str::to_string)
+                };
+                if let (Some(project_id), Some(session_id)) = (text("projectId"), text("sessionId")) {
+                    self.web_open_session_in_work_area(
+                        SessionKey {
+                            machine: session.machine.clone(),
+                            project_id,
+                            session_id,
+                        },
+                        false,
+                        cx,
+                    );
+                }
+            }
             Some("composerReady") => {}
             other => log::info!("chat host action not handled on web yet: {other:?}"),
         }

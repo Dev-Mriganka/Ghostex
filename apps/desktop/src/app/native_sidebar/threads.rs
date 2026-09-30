@@ -1,0 +1,136 @@
+//! A coordinator's tree in the sidebar: indented thread rows with a tree line, and the badge on the
+//! coordinator row. Visual only; the row itself stays the click, drag and menu target.
+//!
+//! SEE-ALSO: packages/gx-core/src/sidebar_view/threads.rs (the order and depth),
+//! apps/desktop/src/app/gx_store/sidebar_snapshot.rs (`threadDepth`, `threadLast`, `coordinatorThreads`).
+
+use gpui::prelude::FluentBuilder;
+use gpui::{AnyElement, IntoElement, ParentElement, Styled, div, px, rgb};
+use serde_json::Value;
+
+use super::{appearance::SidebarAppearance, model::NativeSidebarSession};
+use crate::app::helpers::*;
+
+/// Indent per tree level; one agent icon plus the row gap, so a thread's icon sits under its
+/// coordinator's title.
+pub(crate) const THREAD_INDENT: f32 = 16.0;
+/// The coordinator marker and the open-thread count.
+const COORDINATOR_ICON: &str = "titlebar/users-group.svg";
+const WAITING_COLOR: u32 = 0x95d7f6;
+
+pub(crate) fn thread_depth(session: &NativeSidebarSession) -> f32 {
+    session
+        .details
+        .get("threadDepth")
+        .and_then(Value::as_u64)
+        .unwrap_or(0) as f32
+}
+
+/// The tree line: from the top of the row down to the icon (the last thread) or through the row
+/// (a thread with siblings below it), then across to the icon.
+pub(crate) fn thread_connector(
+    session: &NativeSidebarSession,
+    appearance: &SidebarAppearance,
+) -> Option<AnyElement> {
+    let depth = thread_depth(session);
+    if depth < 1.0 {
+        return None;
+    }
+    let scale = appearance.scale;
+    let last = session.details.get("threadLast").and_then(Value::as_bool) == Some(true);
+    let color = chrome_color(0x4a4a4a, 0xc8c8c8);
+    // Under the middle of the parent's 15px icon, which starts at the row's 5px inset.
+    let x = (5.0 + 7.0 + (depth - 1.0) * THREAD_INDENT) * scale;
+    let height = super::session_list::SESSION_HEIGHT * scale;
+    let mid = height / 2.0;
+    // The line starts right under the parent's icon, which sits centred in the row above.
+    let rise = (mid - 7.5 * scale) + super::session_list::SESSION_SPACING * scale;
+    Some(
+        div()
+            .absolute()
+            .top(px(-rise))
+            .left(px(x))
+            .w(px((THREAD_INDENT - 5.0) * scale))
+            .h(if last {
+                px(rise + mid)
+            } else {
+                px(rise + height + super::session_list::SESSION_SPACING * scale)
+            })
+            .child(
+                div()
+                    .absolute()
+                    .left_0()
+                    .top_0()
+                    .bottom_0()
+                    .w(px(1.0 * scale))
+                    .bg(color),
+            )
+            .child(
+                div()
+                    .absolute()
+                    .left_0()
+                    .top(px(rise + mid - 0.5 * scale))
+                    .w(px((THREAD_INDENT - 6.0) * scale))
+                    .h(px(1.0 * scale))
+                    .bg(color),
+            )
+            .into_any_element(),
+    )
+}
+
+/// The coordinator row's marker: the crew icon, plus how many open threads sit under it, tinted
+/// when one waits on someone (light blue) or works (orange).
+///
+/// CDXC:Coordinators 2026-09-30 WHY:
+/// A coordinator looks like any other session of its agent otherwise, and its thread rows alone do not say which row they hang from once the list scrolls. The count is the open threads drawn under it; done threads leave the tree.
+pub(crate) fn coordinator_badge(
+    session: &NativeSidebarSession,
+    appearance: &SidebarAppearance,
+) -> Option<AnyElement> {
+    if session
+        .details
+        .get("isCoordinator")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
+        return None;
+    }
+    let scale = appearance.scale;
+    let threads = session.details.get("coordinatorThreads");
+    let count = threads
+        .and_then(|threads| threads.get("count"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let waiting = threads
+        .and_then(|threads| threads.get("waiting"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let working = threads
+        .and_then(|threads| threads.get("working"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let tint = if waiting > 0 {
+        rgb(WAITING_COLOR).into()
+    } else if working > 0 {
+        rgb(super::status::WORKING_COLOR).into()
+    } else {
+        appearance.muted
+    };
+    Some(
+        div()
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .gap(px(2.0 * scale))
+            .child(titlebar_svg_icon(COORDINATOR_ICON, 13.0 * scale, tint))
+            .when(count > 0, |badge| {
+                badge.child(
+                    div()
+                        .text_size(px(11.5 * scale))
+                        .text_color(tint)
+                        .child(count.to_string()),
+                )
+            })
+            .into_any_element(),
+    )
+}

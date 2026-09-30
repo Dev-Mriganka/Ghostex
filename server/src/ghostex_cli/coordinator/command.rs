@@ -1,0 +1,450 @@
+use serde_json::{json, Value};
+
+use super::threads;
+use crate::ghostex_cli::{
+    agents,
+    args::{parse_args, Flags, ParsedArgs},
+    output::print_json,
+    rpc::{call_gxserver_rpc, CliError, CliResult},
+    selector, sessions,
+};
+
+/// CDXC:Coordinators 2026-09-30 WHY:
+/// One verb family for everything a coordinator (or a user steering one) does, so the coordinator's playbook can name exact commands and `ghostex coordinator --help` is the one page to read. Messaging and reading threads stay on the existing `ghostex agents send` and `read-session-chat`, which already carry the sender header and reply reference.
+pub(crate) fn run(args: &[String]) -> CliResult<()> {
+    let wants_help = args.is_empty()
+        || args
+            .iter()
+            .any(|arg| arg == "-h" || arg == "--help" || arg == "help");
+    if wants_help {
+        print!("{}", include_str!("help.txt"));
+        return Ok(());
+    }
+    let command = args[0].as_str();
+    let parsed = parse_args(&args[1..]);
+    match command {
+        "guide" => {
+            print!("{}", crate::coordinators::COORDINATOR_ROLE_PROMPT);
+            Ok(())
+        }
+        "create" => create(&parsed),
+        "list" => list(&parsed),
+        "status" => status(&parsed),
+        "start-thread" => threads::start_thread(&parsed),
+        "link" => threads::link(&parsed),
+        "resolve" | "reopen" => threads::set_resolved(&parsed, command == "resolve"),
+        "remember" | "forget" | "set-goal" | "set-instructions" => update(command, &parsed),
+        other => Err(CliError::Other(format!(
+            "Unknown coordinator command: {other}. See ghostex coordinator --help."
+        ))),
+    }
+}
+
+pub(super) fn flag_text(flags: &Flags, key: &str) -> Option<String> {
+    flags
+        .string_value(key)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+pub(super) fn text_or_file(parsed: &ParsedArgs, text_key: &str) -> CliResult<Option<String>> {
+    if let Some(path) = flag_text(&parsed.flags, "bodyFile") {
+        return std::fs::read_to_string(&path)
+            .map(Some)
+            .map_err(|error| CliError::Other(format!("Could not read {path}: {error}")));
+    }
+    Ok(flag_text(&parsed.flags, text_key))
+}
+
+/// The session a `--coordinator <ref>` (or `--thread` style positional) names, from the list.
+pub(super) fn resolve_session(reference: &str, flags: &Flags) -> CliResult<(Value, Flags)> {
+    let flags = agents::inventory_flags(flags, reference)?;
+    let rows = sessions::fetch_session_list(&flags, false)?;
+    let row = selector::resolve_one_listed_session(reference, &rows, &flags)?;
+    Ok((row, flags))
+}
+
+/// The coordinator a command acts on: `--coordinator <ref>`, else the calling session.
+pub(super) fn target_coordinator(parsed: &ParsedArgs) -> CliResult<(Value, Flags)> {
+    let base = server_flags(&parsed.flags);
+    match flag_text(&parsed.flags, "coordinator") {
+        Some(reference) => resolve_session(&reference, &base),
+        None => {
+            let caller = agents::caller().map_err(|error| {
+                CliError::Other(format!(
+                    "{error} Outside a coordinator session, pass --coordinator <ref>."
+                ))
+            })?;
+            let flags = agents::inventory_flags(&base, agents::text(&caller, "globalRef"))?;
+            Ok((caller, flags))
+        }
+    }
+}
+
+/// Only the flags the RPC layer reads (the server choice); command flags stay out of it.
+pub(super) fn server_flags(flags: &Flags) -> Flags {
+    let mut result = Flags::default();
+    if let Some(server) = flags.string_value("server") {
+        result.insert_text("server", server);
+    }
+    result
+}
+
+pub(super) fn read_view(session: &Value, flags: &Flags) -> CliResult<Value> {
+    call_gxserver_rpc(
+        "/api/readCoordinator",
+        &json!({
+            "projectId": session["projectId"],
+            "sessionId": session["sessionId"],
+        }),
+        flags,
+    )
+}
+
+fn create(parsed: &ParsedArgs) -> CliResult<()> {
+    let base = server_flags(&parsed.flags);
+    let caller = agents::caller().ok();
+    let project_id = match flag_text(&parsed.flags, "projectId") {
+        Some(project_id) => project_id,
+        None => caller
+            .as_ref()
+            .map(|caller| agents::text(caller, "projectId").to_string())
+            .filter(|project| !project.is_empty())
+            .ok_or_else(|| {
+                CliError::Other(
+                    "Pass --project-id <id> (ghostex sessions --json lists project ids).".into(),
+                )
+            })?,
+    };
+    let flags = match (flag_text(&parsed.flags, "projectId"), caller.as_ref()) {
+        (None, Some(caller)) => agents::inventory_flags(&base, agents::text(caller, "globalRef"))?,
+        _ => base,
+    };
+    let hud = call_gxserver_rpc("/api/readSidebarHud", &json!({}), &flags)?;
+    let agent_rows = hud["agents"].as_array().cloned().unwrap_or_default();
+    let agent_id = match flag_text(&parsed.flags, "agent") {
+        Some(agent) => {
+            if !agent_rows.iter().any(|row| agents::text(row, "agentId") == agent) {
+                return Err(CliError::Other(format!(
+                    "Unknown or hidden agent type: {agent}. Run ghostex agents types and use a Claude or Codex agentId."
+                )));
+            }
+            agent
+        }
+        None => default_coordinator_agent(&agent_rows).ok_or_else(|| {
+            CliError::Other(
+                "No Claude or Codex agent is configured. Pass --agent <agent-id> from ghostex agents types.".into(),
+            )
+        })?,
+    };
+    let title = flag_text(&parsed.flags, "title").unwrap_or_else(|| "Coordinator".to_string());
+    let goal = flag_text(&parsed.flags, "goal").unwrap_or_default();
+    let created = call_gxserver_rpc(
+        "/api/createAgentSession",
+        &json!({
+            "projectId": project_id,
+            "agentId": agent_id,
+            "launchSettings": launch_settings_for(&agent_rows, &agent_id),
+            "title": title,
+            "coordinator": { "goal": goal },
+            // CDXC:Coordinators 2026-09-30 SEE-ALSO: DEFAULT_COORDINATOR_EFFORT in apps/desktop/src/app/window/new_coordinator_modal.rs (the user's medium-effort decision); the CLI keeps the same default.
+            "agentEffort": flag_text(&parsed.flags, "effort").unwrap_or_else(|| "medium".to_string()),
+        })
+        .as_object()
+        .map(|object| {
+            let mut object = object.clone();
+            if let Some(model) = flag_text(&parsed.flags, "model") {
+                object.insert("agentModel".to_string(), json!(model));
+            }
+            Value::Object(object)
+        })
+        .unwrap_or_default(),
+        &flags,
+    )?;
+    let session = created
+        .get("session")
+        .cloned()
+        .ok_or_else(|| CliError::Other("Create response has no session.".into()))?;
+    let reference = agents::text(&session, "globalRef").to_string();
+    call_gxserver_rpc(
+        "/api/startSessionProvider",
+        &json!({"globalRef": reference, "projectId": session["projectId"], "sessionId": session["sessionId"]}),
+        &flags,
+    )
+    .map_err(|error| {
+        CliError::Other(format!(
+            "Created coordinator {reference}, but its agent did not start: {error}. Open it in Ghostex to retry; do not create another."
+        ))
+    })?;
+    let mut result = json!({
+        "ok": true,
+        "status": "created",
+        "globalRef": reference,
+        "session": agents::summary(&session),
+    });
+    if let Some(task) = flag_text(&parsed.flags, "task") {
+        call_gxserver_rpc(
+            "/api/queueSessionChatPrompt",
+            &json!({
+                "globalRef": reference, "projectId": session["projectId"], "sessionId": session["sessionId"],
+                "text": task, "startupSend": true,
+            }),
+            &flags,
+        )?;
+        result["taskStatus"] = json!("queued");
+    }
+    if parsed.flags.truthy("json") {
+        print_json(&result);
+    } else {
+        println!("Created coordinator \"{title}\" ({reference}).");
+        println!("Talk to it in Ghostex, or send it work with: ghostex agents send {reference} \"<request>\"");
+    }
+    Ok(())
+}
+
+/// `{ agentCommand, icon }` of a launcher from `/api/readSidebarHud`, the way the desktop sends
+/// it: custom agents are listed per machine, so a project that does not list one still launches it.
+pub(super) fn launch_settings_for(rows: &[Value], agent_id: &str) -> Value {
+    let mut settings = serde_json::Map::new();
+    if let Some(row) = rows
+        .iter()
+        .find(|row| agents::text(row, "agentId") == agent_id)
+    {
+        for (from, to) in [("command", "agentCommand"), ("icon", "icon")] {
+            let value = agents::text(row, from);
+            if !value.is_empty() {
+                settings.insert(to.to_string(), json!(value));
+            }
+        }
+    }
+    Value::Object(settings)
+}
+
+/// The first configured agent whose command runs Claude, else Codex.
+fn default_coordinator_agent(rows: &[Value]) -> Option<String> {
+    let executable = |row: &Value| {
+        agents::text(row, "command")
+            .split_whitespace()
+            .find(|word| !word.contains('='))
+            .map(|word| {
+                std::path::Path::new(word)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or_default()
+                    .to_string()
+            })
+            .unwrap_or_default()
+    };
+    ["claude", "codex"].iter().find_map(|family| {
+        rows.iter()
+            .find(|row| executable(row) == *family || agents::text(row, "agentId") == *family)
+            .map(|row| agents::text(row, "agentId").to_string())
+    })
+}
+
+fn list(parsed: &ParsedArgs) -> CliResult<()> {
+    let flags = server_flags(&parsed.flags);
+    let mut params = json!({});
+    if let Some(project_id) = flag_text(&parsed.flags, "projectId") {
+        params["projectId"] = json!(project_id);
+    }
+    let result = call_gxserver_rpc("/api/listCoordinators", &params, &flags)?;
+    if parsed.flags.truthy("json") {
+        print_json(&result);
+        return Ok(());
+    }
+    let rows = result["coordinators"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if rows.is_empty() {
+        println!("No coordinators. Create one with: ghostex coordinator create --title \"<name>\"");
+        return Ok(());
+    }
+    for row in rows {
+        let counts = row["threadCounts"]
+            .as_object()
+            .map(|counts| {
+                counts
+                    .iter()
+                    .map(|(state, count)| format!("{count} {state}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .filter(|text| !text.is_empty())
+            .unwrap_or_else(|| "no threads".to_string());
+        println!(
+            "{}\t{}\t{}",
+            agents::text(&row, "globalRef"),
+            agents::text(&row, "title"),
+            counts
+        );
+    }
+    Ok(())
+}
+
+fn status(parsed: &ParsedArgs) -> CliResult<()> {
+    let (session, flags) = target_coordinator(parsed)?;
+    let view = read_view(&session, &flags)?;
+    if parsed.flags.truthy("json") {
+        print_json(&view);
+        return Ok(());
+    }
+    print_status(&view, parsed.flags.truthy("all"));
+    Ok(())
+}
+
+fn first_line(text: &str, max: usize) -> String {
+    crate::coordinators::report_headline(text, max)
+}
+
+pub(super) fn print_status(view: &Value, all: bool) {
+    let coordinator = &view["coordinator"];
+    println!(
+        "Coordinator: {} ({})",
+        agents::text(coordinator, "title"),
+        agents::text(coordinator, "globalRef")
+    );
+    let goal = agents::text(coordinator, "goal");
+    println!("Goal: {}", if goal.is_empty() { "(not set)" } else { goal });
+    let instructions = agents::text(coordinator, "instructions");
+    if instructions.is_empty() {
+        println!("Standing instructions: (none)");
+    } else {
+        println!("Standing instructions:");
+        for line in instructions.lines() {
+            println!("  {line}");
+        }
+    }
+    let memory = coordinator["memory"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if memory.is_empty() {
+        println!("Memory: (no notes)");
+    } else {
+        println!("Memory:");
+        for (index, note) in memory.iter().enumerate() {
+            println!("  {}. {}", index + 1, agents::text(note, "text"));
+        }
+    }
+    let threads = view["threads"].as_array().cloned().unwrap_or_default();
+    if threads.is_empty() {
+        println!("Threads: none yet. Start one with: ghostex coordinator start-thread --title \"<title>\" --task \"<brief>\"");
+        return;
+    }
+    println!("Threads:");
+    for (state, heading) in [
+        ("waiting", "Waiting on you"),
+        ("finished", "Finished"),
+        ("working", "Working"),
+        ("sleeping", "Sleeping"),
+        ("closed", "Closed"),
+        ("done", "Done"),
+    ] {
+        let group = threads
+            .iter()
+            .filter(|thread| agents::text(thread, "state") == state)
+            .collect::<Vec<_>>();
+        if group.is_empty() {
+            continue;
+        }
+        if state == "done" && !all {
+            println!(
+                "  Done: {} (ghostex coordinator status --all lists them)",
+                group.len()
+            );
+            continue;
+        }
+        println!("  {heading}:");
+        for thread in group {
+            let title = agents::text(thread, "title");
+            let mut line = format!(
+                "    - {} [{}]",
+                if title.is_empty() {
+                    "(untitled)"
+                } else {
+                    title
+                },
+                agents::text(thread, "globalRef")
+            );
+            let branch = agents::text(thread, "branch");
+            if !branch.is_empty() {
+                line.push_str(&format!(" branch {branch}"));
+            }
+            println!("{line}");
+            let waiting_for = agents::text(thread, "waitingFor");
+            if !waiting_for.is_empty() {
+                println!("      waiting for: {}", first_line(waiting_for, 160));
+            }
+            let report = agents::text(thread, "lastReport");
+            if !report.is_empty() && state != "waiting" {
+                println!("      last report: {}", first_line(report, 160));
+            } else if report.is_empty() && state == "working" {
+                println!(
+                    "      task: {}",
+                    first_line(agents::text(thread, "task"), 160)
+                );
+            }
+        }
+    }
+}
+
+fn update(command: &str, parsed: &ParsedArgs) -> CliResult<()> {
+    let (session, flags) = target_coordinator(parsed)?;
+    let value = parsed.rest.join(" ");
+    let mut params = json!({
+        "projectId": session["projectId"],
+        "sessionId": session["sessionId"],
+    });
+    match command {
+        "remember" => {
+            if value.trim().is_empty() {
+                return Err(CliError::Other(
+                    "Usage: ghostex coordinator remember \"<one line>\"".into(),
+                ));
+            }
+            params["remember"] = json!(value);
+        }
+        "forget" => {
+            let number = value
+                .trim()
+                .parse::<u64>()
+                .ok()
+                .filter(|number| *number > 0)
+                .ok_or_else(|| {
+                    CliError::Other(
+                        "Usage: ghostex coordinator forget <number> (numbers come from ghostex coordinator status).".into(),
+                    )
+                })?;
+            params["forget"] = json!(number);
+        }
+        "set-goal" => params["goal"] = json!(value),
+        _ => {
+            let text = match text_or_file(parsed, "text")? {
+                Some(text) => text,
+                None => value,
+            };
+            params["instructions"] = json!(text);
+        }
+    }
+    let view = call_gxserver_rpc("/api/updateCoordinator", &params, &flags)?;
+    if parsed.flags.truthy("json") {
+        print_json(&view);
+        return Ok(());
+    }
+    match command {
+        "remember" => {
+            let count = view["coordinator"]["memory"]
+                .as_array()
+                .map(Vec::len)
+                .unwrap_or(0);
+            println!("Saved as note {count}. Every new thread receives it.");
+        }
+        "forget" => println!("Note removed."),
+        "set-goal" => println!("Goal updated."),
+        _ => println!("Standing instructions updated. They reach threads started from now on."),
+    }
+    Ok(())
+}

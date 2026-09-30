@@ -92,6 +92,21 @@ pub(super) fn create(args: &Arguments) -> CliResult<Value> {
         .filter(|value| value.is_object())
         .unwrap_or(session);
     let mut result = json!({"ok": true, "status": "created", "globalRef": reference, "session": identity::summary(live_session)});
+    // CDXC:Coordinators 2026-09-30 WHY: a coordinator that starts a worker the `$ghostex-agents` way still gets it as a tracked thread; for any other caller the link is a no-op.
+    if let Some(caller) = caller.clone().or_else(|| identity::caller().ok()) {
+        let linked = call_gxserver_rpc(
+            "/api/linkCoordinatorThread",
+            &json!({
+                "coordinatorProjectId": caller["projectId"], "coordinatorSessionId": caller["sessionId"],
+                "projectId": session["projectId"], "sessionId": session["sessionId"],
+                "task": body.as_deref().unwrap_or_default(), "onlyIfCoordinator": true,
+            }),
+            &flags,
+        );
+        if linked.is_ok_and(|linked| linked["linked"] == json!(true)) {
+            result["coordinatorThread"] = json!(true);
+        }
+    }
     if let Some(message) = message {
         let receipt = call_gxserver_rpc("/api/queueSessionChatPrompt", &json!({
             "globalRef": reference, "projectId": session["projectId"], "sessionId": session["sessionId"],

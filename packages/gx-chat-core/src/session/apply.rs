@@ -83,6 +83,9 @@ pub fn apply_state_frame(
     if let Some(prompt) = frame.state.returned_prompt.clone() {
         apply_returned_prompt(state, &prompt);
     }
+    if let Some(threads) = frame.state.coordinator_threads.clone() {
+        state.session.coordinator_threads = Some(threads);
+    }
     if frame.state.screen_probed == Some(true) {
         state.session.screen_probed = true;
     }
@@ -358,6 +361,9 @@ pub fn apply_authoritative(
     }
     if let Some(prompt) = result.state.returned_prompt.clone() {
         apply_returned_prompt(state, &prompt);
+    }
+    if let Some(threads) = result.state.coordinator_threads.clone() {
+        state.session.coordinator_threads = Some(threads);
     }
     if result.state.screen_probed == Some(true) {
         state.session.screen_probed = true;

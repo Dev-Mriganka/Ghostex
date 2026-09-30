@@ -5,4 +5,4 @@ mod identity;
 mod lifecycle;
 
 pub(super) use command::run;
-pub(super) use identity::resolve_names;
+pub(super) use identity::{caller, inventory_flags, resolve_names, summary, text};

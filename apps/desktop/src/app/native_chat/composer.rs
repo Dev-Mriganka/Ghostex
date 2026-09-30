@@ -338,6 +338,9 @@ impl NativeChatView {
             );
         }
         if !maximized {
+            if let Some(threads) = self.render_coordinator_threads(p, cx) {
+                footer = footer.child(super::suggestions::stack_member(threads, &stack_top));
+            }
             if let Some(tasks) = self.render_agent_tasks(p, cx) {
                 footer = footer.child(super::suggestions::stack_member(tasks, &stack_top));
             }

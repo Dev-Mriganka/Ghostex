@@ -48,6 +48,18 @@ as that agent's working folder when you agree on file ownership. The block
 does not say whether the session is running or busy: check
 `ghostex agents list --all --json` before you send.
 
+## When the user wants one agent to run the work
+
+When the user wants an agent that keeps handing work to other agents and
+reporting back ("be my lead on this", "run these as parallel threads and tell
+me when they are done"), a Ghostex coordinator does that with supervision built
+in: Ghostex sends it each thread's final message and every question a thread is
+stuck on, so nothing has to poll. Start one with `ghostex coordinator create`
+(Ghostex releases from 2026-09-30 on; if `ghostex coordinator --help` is
+missing, the installed Ghostex is older, so use the workflow below instead). If
+you are a coordinator yourself, follow `ghostex coordinator guide` rather than
+the waiting habits below.
+
 ## Core workflow
 
 1. **Know where you are.** Resolve your own session and project from the CLI

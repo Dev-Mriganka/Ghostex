@@ -339,3 +339,10 @@ fn string_list(value: Option<&Value>) -> Option<Vec<String>> {
     }
     Some(list)
 }
+
+/// The `agent-model-catalog.json` snapshot bundled with the build, the lineup a host falls back to
+/// before gxserver pushes a newer one.
+pub fn bundled_agent_model_catalog() -> Option<AgentModelCatalog> {
+    const BUNDLED: &str = include_str!("../../../../agent-model-catalog.json");
+    parse_agent_model_catalog(&serde_json::from_str::<Value>(BUNDLED).ok()?)
+}

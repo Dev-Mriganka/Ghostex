@@ -9,7 +9,9 @@ use crate::extras::welcome::{
     empty_state_copy, new_session_welcome_title, shows_new_session_welcome, welcome_agent_icon,
     welcome_agent_name,
 };
-use crate::extras::{panels, save_markdown, search, subagent, terminal_tail, working_strip};
+use crate::extras::{
+    coordinator_threads, panels, save_markdown, search, subagent, terminal_tail, working_strip,
+};
 use crate::state::{ChatContext, ChatState};
 
 /// Writes family f's keys into `into`.
@@ -26,6 +28,11 @@ pub fn document(state: &ChatState, context: &ChatContext, into: &mut Document) {
     let (fleet_strip, tasks_panel, _) = panels::project(state, context);
     into.agent_fleet_strip = Tri::Value(fleet_strip);
     into.agent_tasks_panel = Tri::Value(tasks_panel);
+    into.coordinator_threads_panel = Tri::Value(coordinator_threads::project(
+        state.session.coordinator_threads.as_ref(),
+        extras.panels.threads_collapsed,
+        extras.panels.threads_show_done,
+    ));
 
     let working = state.session.server_working || state.session.external_working;
     into.working_strip = working_strip::working_strip(state, context, working);
@@ -54,7 +61,16 @@ pub fn document(state: &ChatState, context: &ChatContext, into: &mut Document) {
     into.new_session_welcome = show_welcome.then(|| {
         let agent_name = welcome_agent_name(state.session.agent.as_deref());
         NewSessionWelcome {
-            title: new_session_welcome_title(agent_name.as_deref()),
+            // CDXC:Coordinators 2026-09-30 WHY: a new coordinator's first screen says what it is for; the generic "What should we build with Claude?" hides that this agent hands the work to threads.
+            title: if coordinator_threads::is_coordinator(
+                state.session.coordinator_threads.as_ref(),
+            ) {
+                crate::extras::welcome::wrap_new_session_welcome_title(
+                    "What should this coordinator work on?",
+                )
+            } else {
+                new_session_welcome_title(agent_name.as_deref())
+            },
             icon: welcome_agent_icon(state.session.agent.as_deref(), None),
             // The welcome drops its headline once a notice or question card takes the space below
             // it; both cards are family c's, so the flag reads their published state.

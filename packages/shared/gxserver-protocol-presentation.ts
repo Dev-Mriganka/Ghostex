@@ -278,6 +278,11 @@ export interface GxserverPresentationSession {
   forkedFromSessionId?: GxserverSessionId;
   forkBranchCount?: number;
   forkFamilySessionIds?: GxserverSessionId[];
+  /** `coordinator` or `thread`; absent for every other session (gxserver `coordinators/presentation.rs`). */
+  coordinatorRole?: 'coordinator' | 'thread';
+  coordinatorProjectId?: GxserverProjectId;
+  coordinatorSessionId?: GxserverSessionId;
+  coordinatorThreadState?: 'waiting' | 'working' | 'finished' | 'sleeping' | 'closed' | 'done';
   /** Stable Action identity used to reuse an existing command-surface session. */
   commandId?: string;
   attention?: GxserverPresentationAttentionState;

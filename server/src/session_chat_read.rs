@@ -536,6 +536,8 @@ pub(crate) async fn handle_read_session_chat_http(
     if let Some(agent_session_id) = agent_session_id.as_deref() {
         result.insert("agentSessionId".to_string(), json!(agent_session_id));
     }
+    // CDXC:Coordinators 2026-09-30 WHY: outside the running gate, because a sleeping coordinator's threads keep working and its panel must still show them.
+    crate::coordinators::insert_coordinator_threads(&mut result, &project_id, &session_id);
     let mut screen_prompt = None;
     /*
     The pills' "what is the agent ACTUALLY running" value. Structured

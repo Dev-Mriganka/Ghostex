@@ -282,6 +282,22 @@ fn plan_project_action(view: &SidebarView, command: &Value) -> Option<SidebarAct
                 payload: Value::Object(open),
             }))
         }
+        "coordinator" => {
+            let mut open = Map::new();
+            open.insert("type".to_string(), Value::String("open".to_string()));
+            open.insert(
+                "modal".to_string(),
+                Value::String("newCoordinator".to_string()),
+            );
+            open.insert("groupId".to_string(), Value::String(group_id.to_string()));
+            open.insert(
+                "projectName".to_string(),
+                Value::String(group.core.title.clone()),
+            );
+            Some(SidebarActionPlan::one(ActionEffect::OpenAppModal {
+                payload: Value::Object(open),
+            }))
+        }
         // `getQuickAccessSessionProjectId`: the machine-scoped id for a remote project and the
         // editor's own id otherwise, which are the same string here (the workspace project id),
         // except for a remote group whose machine context carries no project id. That is the

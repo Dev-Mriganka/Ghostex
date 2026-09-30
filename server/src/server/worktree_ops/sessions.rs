@@ -40,6 +40,8 @@ pub(crate) struct WorktreeSessionCreateRequest {
     existing_worktree_path: Option<String>,
     first_prompt: Option<String>,
     start_from_origin: bool,
+    /// CDXC:Coordinators 2026-09-30 WHY: a coordinator's worktree thread keeps the title, model, effort and launcher (`launchSettings`, which carries a custom agent's command into a project that does not list it) it was started with; the ordinary create path already understands all four.
+    agent_session_params: Map<String, Value>,
 }
 
 #[derive(Clone)]
@@ -174,12 +176,30 @@ pub(crate) fn normalize_worktree_session_create_request(
             ))
         }
     };
+    let mut agent_session_params: Map<String, Value> = ["title", "agentModel", "agentEffort"]
+        .into_iter()
+        .filter_map(|key| {
+            params
+                .get(key)
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(|value| (key.to_string(), Value::String(value.to_string())))
+        })
+        .collect();
+    if let Some(launch_settings) = params
+        .get("launchSettings")
+        .filter(|value| value.is_object())
+    {
+        agent_session_params.insert("launchSettings".to_string(), launch_settings.clone());
+    }
     Ok(WorktreeSessionCreateRequest {
         agent_id,
         base_branch,
         existing_worktree_path,
         first_prompt,
         start_from_origin: params.get("startFromOrigin").and_then(Value::as_bool) == Some(true),
+        agent_session_params,
     })
 }
 
@@ -580,6 +600,9 @@ pub(crate) fn create_and_start_worktree_session(
     let mut create_params = if let Some(agent_id) = request.agent_id.as_deref() {
         create_params.insert("agentId".to_string(), Value::String(agent_id.to_string()));
         create_params.insert("requireLaunchCommand".to_string(), Value::Bool(true));
+        for (key, value) in &request.agent_session_params {
+            create_params.insert(key.clone(), value.clone());
+        }
         if let Some(prompt) = request.first_prompt.as_deref() {
             create_params.insert(
                 "runtimeSettings".to_string(),

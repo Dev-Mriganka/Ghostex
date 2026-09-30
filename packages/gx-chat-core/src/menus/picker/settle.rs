@@ -434,8 +434,7 @@ pub fn outbox_retry_selection(state: &ChatState) -> Option<ModelPickerSelection>
 /// SEAM.md section 4: the JSON tables are already platform neutral and must not be ported; the
 /// crate includes the same file gxserver bundles.
 fn bundled_agent_model_catalog() -> Option<crate::menus::catalog::AgentModelCatalog> {
-    const BUNDLED: &str = include_str!("../../../../../agent-model-catalog.json");
-    parse_agent_model_catalog(&serde_json::from_str::<Value>(BUNDLED).ok()?)
+    crate::menus::catalog::bundled_agent_model_catalog()
 }
 
 /// The half of the composer boot read that is family e2's: the context preferences for both

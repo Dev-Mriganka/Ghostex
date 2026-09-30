@@ -465,6 +465,10 @@ pub fn usage() -> String {
             "Communicate and coordinate with other agents",
         ),
         format_help_command(
+            "coordinator --help",
+            "Run a coordinator: one agent you talk to that starts, supervises, and reports on thread sessions",
+        ),
+        format_help_command(
             "agent-cli status | install <agent> | update <agent> [--json]",
             "Install, update, and check the agent CLIs (claude, codex, cursor, grok, …)",
         ),

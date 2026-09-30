@@ -65,6 +65,13 @@ pub(crate) fn create_agent_session_params_for_project(
         params,
         configured_command,
     )?;
+    let configured_command = apply_coordinator_role(
+        &agent_id,
+        &agent_config,
+        &launch_settings,
+        params,
+        configured_command,
+    )?;
     if let Some(command) = configured_command.as_ref() {
         runtime_settings
             .entry("accountBaseCommand")
@@ -76,6 +83,20 @@ pub(crate) fn create_agent_session_params_for_project(
         agent_icon.as_deref(),
         &mut runtime_settings,
     )?;
+    /*
+    CDXC:SessionIdentity 2026-09-30 WHY: A create that names no agent Ghostex knows and only carries a command (Find's resume sends `os-integration-terminal` with `claude --resume <id>`, as `ghostex://terminal` does) locked the row to that placeholder id, so `launch_agent_mismatch` refused every hook the agent sent and only the ~20s live-process scan could name it. Chat View cannot open before that, so a session resumed from Find sat in the terminal (observed 2026-09-30, session S90:P3lv0:G41ci: its SessionStart hook arrived 1.5s after launch and was dropped). The agent the command starts is the session's agent from creation; the launch command and account are still resolved under the requested id, so the command runs exactly as given.
+    */
+    let session_agent_id = (agent_icon.is_none()
+        && !agent_id.starts_with("custom-")
+        && default_agent_command(&agent_id).is_none()
+        && resolve_project_agent_config(project, &agent_id, None).is_empty())
+    .then(|| {
+        configured_command
+            .as_deref()
+            .and_then(infer_agent_id_from_command_executable)
+    })
+    .flatten()
+    .unwrap_or_else(|| agent_id.clone());
     let launch_plan = build_agent_launch_plan(AgentLaunchInput {
         accept_all_mode: read_text_from_map(&agent_config, "acceptAllMode")
             .or_else(|| read_text_from_map(&launch_settings, "acceptAllMode")),
@@ -111,7 +132,10 @@ pub(crate) fn create_agent_session_params_for_project(
     let agent_activity = if runtime_settings.get("agentActivity").is_some() {
         normalize_agent_activity_value(runtime_settings.get("agentActivity"), "idle")
     } else {
-        default_activity(Some(&agent_id), launch_submits_prompt.then_some("working"))
+        default_activity(
+            Some(&session_agent_id),
+            launch_submits_prompt.then_some("working"),
+        )
     };
     runtime_settings.insert("agentActivity".to_string(), agent_activity);
     runtime_settings.insert(
@@ -124,7 +148,10 @@ pub(crate) fn create_agent_session_params_for_project(
                 .to_string(),
         ),
     );
-    runtime_settings.insert("launchAgentId".to_string(), Value::String(agent_id.clone()));
+    runtime_settings.insert(
+        "launchAgentId".to_string(),
+        Value::String(session_agent_id.clone()),
+    );
     if let Some(first_user_message) = launch_plan_object
         .get("firstUserMessage")
         .and_then(Value::as_str)
@@ -198,7 +225,7 @@ pub(crate) fn create_agent_session_params_for_project(
     );
 
     let mut normalized = params.clone();
-    normalized.insert("agentId".to_string(), Value::String(agent_id));
+    normalized.insert("agentId".to_string(), Value::String(session_agent_id));
     normalized.insert("kind".to_string(), Value::String("agent".to_string()));
     normalized.insert("launchSettings".to_string(), Value::Object(launch_settings));
     normalized.insert(
@@ -284,6 +311,35 @@ fn apply_requested_agent_model(
         .or_else(|| default_agent_command(&family).map(str::to_string))
         .unwrap_or_else(|| family.clone());
     with_agent_model_options(&base, &family, model.as_deref(), effort.as_deref()).map(Some)
+}
+
+/// CDXC:Coordinators 2026-09-30 WHY:
+/// A coordinator's role is a system prompt flag in the saved base command (see coordinators/role.rs), added here beside the per-session model flags so resume, fork and account wrapping keep it. Only Claude and Codex have such a flag, so a coordinator on any other agent is refused rather than started without its role.
+fn apply_coordinator_role(
+    agent_id: &str,
+    agent_config: &Map<String, Value>,
+    launch_settings: &Map<String, Value>,
+    params: &Map<String, Value>,
+    command: Option<String>,
+) -> Result<Option<String>, DomainStateError> {
+    let Some(request) = crate::coordinators::coordinator_create_request(params)? else {
+        return Ok(command);
+    };
+    let role_file = request.role_file.ok_or_else(|| {
+        DomainStateError::corrupt_state("The coordinator role file was not prepared.")
+    })?;
+    let family = resume_agent_family_id(Some(agent_id.to_string()), agent_config, launch_settings)
+        .filter(|family| crate::coordinators::coordinator_agent_family_supported(family))
+        .ok_or_else(|| {
+            DomainStateError::bad_request(
+                "A coordinator runs on Claude or Codex. Pick one of those agents.",
+            )
+        })?;
+    let base = command
+        .or_else(|| default_agent_command(&family).map(str::to_string))
+        .unwrap_or_else(|| family.clone());
+    crate::coordinators::with_coordinator_role(&base, &family, std::path::Path::new(&role_file))
+        .map(Some)
 }
 
 pub(crate) fn create_agent_session_default_title(

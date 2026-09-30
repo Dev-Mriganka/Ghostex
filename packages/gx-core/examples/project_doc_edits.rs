@@ -138,6 +138,7 @@ fn group(group_id: &str, sidebar_session_ids: &[&str]) -> ghostex_gx_core::Group
                     is_focused: false,
                     is_visible: true,
                     is_multi_selected: false,
+                    nesting: Default::default(),
                 })
                 .collect(),
             remote_machine: None,
