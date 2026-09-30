@@ -24,7 +24,7 @@ impl Provider {
     /// The backend setting picks which gxserver runs — the native Windows build or the Linux build inside the distribution — so the platform this code is compiled for is already the user's choice and no setting is read here.
     /// Codex Swap has no Linux install script, so Linux and WSL keep Homebrew (with the tap-trust step its README requires) and fall back to a source build only where brew is absent, which is the common case inside WSL.
     /// Claude Swap is a Python tool and installs the same way everywhere.
-    /// SEE-ALSO: packages/shared/ghostex-settings/types.ts (windowsTerminalBackend), apps/desktop/src/windows_terminal_backend/platform.rs.
+    /// SEE-ALSO: packages/shared/ghostex-settings/types.ts (windowsTerminalBackend), apps/desktop/src/windows_terminal_backend/platform/.
     pub(crate) fn install_command(self, home: &std::path::Path) -> String {
         match self {
             Self::Claude => "uv tool install claude-swap".to_string(),

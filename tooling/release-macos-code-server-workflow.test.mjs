@@ -241,7 +241,7 @@ describe('phased macOS code-server prerequisite contract', () => {
 describe('active WSL2 code-server consumer contract', () => {
   test('shares one complete archive payload contract between release and installed consumers', () => {
     const nativeVerifier = repoFile('apps/desktop/src/component_store/code_server_archive.rs');
-    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform.rs');
+    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform/packaged_install.rs');
 
     expect(CODE_SERVER_ARCHIVE_CONTRACT.requiredEntries).toEqual(
       expect.arrayContaining([
@@ -345,7 +345,7 @@ describe('active WSL2 code-server consumer contract', () => {
       .map((file) => repoFile(`apps/desktop/src/component_store/${file}`))
       .join('\n');
     const sourceServer = repoFile('apps/desktop/src/app/helpers/source_server/code_server.rs');
-    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform.rs');
+    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform/packaged_install.rs');
     const verifyIndex = windowsConsumer.indexOf('crate::component_store::verify_code_server_archive(');
     const extractIndex = windowsConsumer.indexOf('tar -xzf - -C', verifyIndex);
     const outerSidecarDownloadIndex = componentStore.indexOf('if let Some(sidecar_name) = &asset.sha256_sidecar_name');
@@ -389,7 +389,7 @@ describe('active WSL2 code-server consumer contract', () => {
       'mv -f -- "$marker_next" "$marker_path"\nfalse',
     ],
   ])('rolls back a WSL Source install failure %s', async (_label, needle, injected) => {
-    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform.rs');
+    const windowsConsumer = repoFile('apps/desktop/src/windows_terminal_backend/platform/packaged_install.rs');
     const installerSection = windowsConsumer.slice(
       windowsConsumer.indexOf('fn install_packaged_source_runtime('),
       windowsConsumer.indexOf('fn ensure_source_runtime_installed(')
