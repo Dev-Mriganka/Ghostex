@@ -134,7 +134,7 @@ impl GhostexGpuiApp {
             self.native_docs.format_bar_collapsed = super::storage::read_format_bar_collapsed();
             self.native_docs.line_numbers = true;
             self.native_docs.git_changes = true;
-            // The Docs page starts with the full content width (`markdown-review-viewer.tsx` 63).
+            // Docs starts with the full content width, as the former React Docs page did.
             self.native_docs.constrain_width = false;
         }
         self.native_docs_ensure_search(window, cx);

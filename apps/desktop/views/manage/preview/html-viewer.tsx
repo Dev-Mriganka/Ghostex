@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { installAppScrollbars } from '@/packages/components/ui/app-scrollbars';
 import scrollbarStyles from '@/packages/components/ui/app-scrollbars.css?inline';
 import { ManageWebKitWindow } from '../types';
-import { isHtmlPath } from '../file-tree-utils';
 
 export const MANAGE_AGENTATION_VERSION = '3.0.2';
 export const MANAGE_AGENTATION_REACT_VERSION = '18.2.0';
@@ -200,7 +199,7 @@ export function manageHtmlLinkedDocumentPath(href: string, resourceBaseUrl: stri
     return undefined;
   }
   const path = components.join('/');
-  return isHtmlPath(path) ? path : undefined;
+  return /\.html?$/iu.test(path) ? path : undefined;
 }
 
 export function injectManageHtmlResourceBase(documentValue: Document, resourceBaseUrl: string | undefined): void {

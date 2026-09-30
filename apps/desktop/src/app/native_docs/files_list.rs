@@ -1,5 +1,5 @@
 //! The files list: its header buttons, Search, Open Files and the Project Docs tree, drawn
-//! natively with the Docs page's metrics (`apps/desktop/views/manage/styles.ts`).
+//! natively with the former React Docs page's metrics.
 
 use std::cell::Cell;
 use std::collections::HashSet;
@@ -752,7 +752,7 @@ impl GhostexGpuiApp {
                         .when(keyboard_focused && !selected, |this| {
                             this.bg(hover_bg).text_color(strong)
                         })
-                        // Drag to move (`tree_drag.rs`, the Docs page's `manage-app.tsx` 2193-2307).
+                        // Drag to move (`tree_drag.rs`).
                         .map(|this| {
                             let drag = DocsTreeDrag {
                                 path: row.path.clone(),
@@ -913,7 +913,7 @@ impl GhostexGpuiApp {
             .on_key_down(cx.listener(Self::native_docs_tree_key_down))
             .track_scroll(&self.native_docs.tree_scroll)
             // Dragging a row near the list's top or bottom edge scrolls it, 12px per move within
-            // 30px of the edge, like the Docs page (`file-tree.tsx` 184-189).
+            // 30px of the edge, like the former React Docs page.
             .on_drag_move(
                 cx.listener(|this, event: &gpui::DragMoveEvent<DocsTreeDrag>, _, cx| {
                     let (y, bounds) = (event.event.position.y, event.bounds);

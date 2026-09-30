@@ -61,10 +61,8 @@ impl ArtifactKind {
         }
     }
 
-    /// `createInitialArtifactContent`, byte for byte.
-    ///
-    /// CDXC:Docs 2026-09-24 SEE-ALSO:
-    /// templates/page.html and templates/drawing.excalidraw are generated from `createInitialArtifactContent` in apps/desktop/views/manage/file-tree-utils.ts, and must match it while that page still ships.
+    /// The starting content of a new file, byte for byte what the former React Docs page's
+    /// `createInitialArtifactContent` wrote (templates/page.html and templates/drawing.excalidraw).
     fn initial_content(self) -> &'static str {
         match self {
             Self::Markdown => "# Untitled\n\n",
@@ -258,6 +256,7 @@ impl GhostexGpuiApp {
         let Some(main) = self.main_window_handle else {
             return;
         };
+        let menu = menu.suppress_tooltips_in(window, cx);
         let trigger = Bounds::new(origin + trigger.origin, trigger.size);
         let app = cx.entity();
         cx.defer(move |cx| {
@@ -357,7 +356,7 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        // The Docs page's row menu (`file-tree-ui.tsx` 376-582): while a
+        // The row menu, as the former React Docs page drew it: while a
         // file operation runs every row but Copy Relative Path is disabled and the running one
         // reads "…ing"; Delete takes a second click ("Confirm delete"), with no dialog.
         self.native_docs.entry_menu = Some((path.to_string(), kind, position));

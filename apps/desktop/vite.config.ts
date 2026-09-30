@@ -21,13 +21,12 @@ import {
 const gpuiRoot = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = path.resolve(gpuiRoot, '..', '..');
 const sidebarOutDir = path.resolve(gpuiRoot, 'dist/sidebar');
-const cefHtmlEntries = ['kanban.html', 'manage.html', 'modal-host.html'] as const;
+const cefHtmlEntries = ['manage.html', 'modal-host.html'] as const;
 /*
  * CDXC:CefRuntime 2026-06-28-16:18:
- * GPUI CEF entry modules should describe the stable surface they mount, not the historical porting phase. Keep this explicit entry map as the source of truth for the sidebar, Kanban, and Manage bundle inputs so HTML wrappers, Vite output, and packaged resources stay aligned.
+ * GPUI CEF entry modules should describe the stable surface they mount, not the historical porting phase. Keep this explicit entry map as the source of truth for the CEF bundle inputs so HTML wrappers, Vite output, and packaged resources stay aligned.
  */
 const cefHtmlEntryScripts = {
-  'kanban.html': path.resolve(gpuiRoot, 'sidebar/kanban-main.tsx'),
   'manage.html': path.resolve(gpuiRoot, 'sidebar/manage-main.tsx'),
   'modal-host.html': path.resolve(gpuiRoot, 'views/modal-host.tsx'),
 } satisfies Record<(typeof cefHtmlEntries)[number], string>;
@@ -42,19 +41,19 @@ function inlineCefHtmlAssets(): Plugin {
        * The packaged GPUI sidebar is loaded by CEF from a file:// app resource URL. Chromium blocks external module scripts and stylesheets from that opaque origin, so the app bundle must ship a self-contained HTML entry that mounts React without relaxing file-origin security switches.
        *
        * CDXC:CefRuntime 2026-06-24-11:03:
-       * Source-independent Kanban and Manage GPUI workarea pages are first-party CEF HTML entries beside the sidebar entry. Inline every emitted CEF entry so real runtime surfaces can navigate to bundled file URLs without a dev server, WKWebView/WebKit, temporary pages, or relaxed file-origin switches.
+       * The Files view's embed page (manage.html) is a first-party CEF HTML entry beside the sidebar entry. Inline every emitted CEF entry so real runtime surfaces can navigate to bundled file URLs without a dev server, WKWebView/WebKit, temporary pages, or relaxed file-origin switches.
        *
        * CDXC:AppModal 2026-06-24-10:42:
        * The GPUI app-modal window loads the same React modal host entry as macOS through a first-party CEF HTML file. Keep modal-host.html in the inlined CEF entry set so Settings, Hotkeys, and Command Palette can open without WebKit, duplicated modal UI, temporary pages, or dev-server-only assets.
        *
        * CDXC:CefRuntime 2026-06-24-22:01:
-       * Inlining only Vite's entry chunks leaves `import "./chunk.js"` specifiers inside the HTML-root module, even though emitted chunks live under assets/. CEF then loads a blank file:// sidebar before React can mount. Keep Vite as the CSS/HTML producer, but replace each CEF entry script with a single esbuild browser bundle so sidebar, Kanban, Manage, and app-modal hosts do not depend on file-url module graph loading or relaxed Chromium switches.
+       * Inlining only Vite's entry chunks leaves `import "./chunk.js"` specifiers inside the HTML-root module, even though emitted chunks live under assets/. CEF then loads a blank file:// sidebar before React can mount. Keep Vite as the CSS/HTML producer, but replace each CEF entry script with a single esbuild browser bundle so the Manage page and the app-modal host do not depend on file-url module graph loading or relaxed Chromium switches.
        *
        * CDXC:CefRuntime 2026-06-24-22:07:
        * Rebuild the final file from the source HTML instead of regex-editing Vite's transformed inline JavaScript. Generated React code can contain script-tag-shaped strings, so final HTML assembly must extract only emitted style tags from Vite output, then inject the esbuild single-file module into the original CEF wrapper.
        *
        * CDXC:CefRuntime 2026-07-08:
-       * Entries that load their page module through a dynamic import (Manage's shared Docs app, Kanban's tasks placeholder) get their CSS attached to the dynamic chunk instead of a <link> in the entry HTML, and Vite's runtime CSS loader is removed with the replaced module script while the esbuild bundle drops .css imports. Walk each entry's full chunk graph, including dynamic imports, and inline every reachable CSS asset so pages like Docs keep their editor styles without shipping unrelated entries' CSS.
+       * Entries that load their page module through a dynamic import (Manage's embed page) get their CSS attached to the dynamic chunk instead of a <link> in the entry HTML, and Vite's runtime CSS loader is removed with the replaced module script while the esbuild bundle drops .css imports. Walk each entry's full chunk graph, including dynamic imports, and inline every reachable CSS asset so pages like Manage keep their styles without shipping unrelated entries' CSS.
        */
       const stagedImages = collectCefStagedImages(bundle, outDir);
       for (const htmlEntry of cefHtmlEntries) {
@@ -420,7 +419,6 @@ export default defineConfig({
        * The GPUI shell resolves the bundled pages through Contents/Resources/sidebar/<entry>.html. Keep the Vite HTML entries at the package root so production-style packaging and local development share those URLs.
        */
       input: {
-        kanban: path.resolve(gpuiRoot, 'kanban.html'),
         manage: path.resolve(gpuiRoot, 'manage.html'),
         modalHost: path.resolve(gpuiRoot, 'modal-host.html'),
       },

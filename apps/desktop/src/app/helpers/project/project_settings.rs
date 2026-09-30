@@ -4,7 +4,6 @@
 // recent-project mutations, and project settings/presentation conversions.
 // See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
-use crate::app::helpers::web_bridge_types::SidebarRuntimeSettingsSnapshot;
 use std::{
     collections::{HashMap, HashSet},
     time::Duration,
@@ -548,92 +547,4 @@ pub(crate) fn gpui_project_snapshot_is_quick_automations_overview(
     snapshot: Option<&GpuiProjectSnapshot>,
 ) -> bool {
     gpui_active_project_id_from_snapshot(snapshot) == Some(GPUI_QUICK_AUTOMATIONS_PROJECT_ID)
-}
-
-// Unused since Automate became a native view (app/native_automate/); kept while the React
-// Automate page is.
-#[allow(dead_code)]
-pub(crate) fn automate_workarea_runtime_url_from_project_snapshot(
-    snapshot: &GpuiProjectSnapshot,
-    runtime_settings: &SidebarRuntimeSettingsSnapshot,
-) -> Option<ProjectWorkareaRealRuntimeUrl> {
-    /*
-    CDXC:Automations 2026-07-04-23:18:
-    Automate mirrors macOS `createProjectAutomateEditorUrl`: use the bundled Kanban/tasks CEF page, the explicit project identity params, the automate-mode project editor id, and `surface=automations`. Projectless contexts, missing project path, or missing automateBoardId must stay on the placeholder instead of synthesizing an Automate URL.
-
-    CDXC:Automations 2026-07-26:
-    Project-scoped Automate is no longer an experimental GPUI feature. Mark that first-party workarea explicitly so the shared page does not apply the Show Beta Features content gate. All Automations keeps its existing experimental startup seed.
-    */
-    if !snapshot.feature_availability.automate {
-        return None;
-    }
-    let active_project_id = snapshot.active_project_id.as_ref()?.0.clone();
-    if active_project_id == GPUI_QUICK_AUTOMATIONS_PROJECT_ID {
-        /*
-        CDXC:Automations 2026-07-08:
-        Mirror macOS `createQuickAutomationsProjectEditorUrl` in `native/sidebar/native-sidebar.tsx`: the quick-automations project is a real Automate overview surface with empty `projectPath`, all-project scope, and the same Show Beta Features seed. Its identity is the project id, so it must not require an in-memory project path or be rejected by the projectless guard.
-        */
-        let surface_id = snapshot.surface_ids.automate_board_id.as_ref()?.clone();
-        let base_url = gpui_cef_html_entry_url("GHOSTEX_GPUI_KANBAN_URL", "kanban.html").ok()?;
-        return ProjectWorkareaRealRuntimeUrl::from_authorized_runtime_url(
-            append_url_query_params_with_percent_encoded_spaces(
-                base_url,
-                &[
-                    (
-                        "projectName",
-                        GPUI_QUICK_AUTOMATIONS_DISPLAY_TITLE.to_string(),
-                    ),
-                    ("projectPath", String::new()),
-                    ("projectId", GPUI_QUICK_AUTOMATIONS_PROJECT_ID.to_string()),
-                    ("projectEditorId", surface_id),
-                    ("surface", "automations".to_string()),
-                    ("scope", "all".to_string()),
-                    (
-                        "beadsDisplayKey",
-                        GPUI_QUICK_AUTOMATIONS_DISPLAY_TITLE.to_string(),
-                    ),
-                    (
-                        "showBetaFeatures",
-                        if runtime_settings.show_beta_features {
-                            "true"
-                        } else {
-                            "false"
-                        }
-                        .to_string(),
-                    ),
-                ],
-            ),
-        );
-    }
-    if snapshot.is_quick_projectless {
-        return None;
-    }
-    let project_path = snapshot
-        .in_memory_project_path
-        .as_ref()?
-        .to_string_lossy()
-        .to_string();
-    let surface_id = snapshot.surface_ids.automate_board_id.as_ref()?.clone();
-    let base_url = gpui_cef_html_entry_url("GHOSTEX_GPUI_KANBAN_URL", "kanban.html").ok()?;
-    ProjectWorkareaRealRuntimeUrl::from_authorized_runtime_url(append_url_query_params(
-        base_url,
-        &[
-            ("projectName", snapshot.display_name.clone()),
-            ("projectPath", project_path),
-            ("projectId", active_project_id),
-            ("projectEditorId", surface_id),
-            ("beadsDisplayKey", snapshot.display_name.clone()),
-            ("surface", "automations".to_string()),
-            ("automationExperimental", "false".to_string()),
-            (
-                "showBetaFeatures",
-                if runtime_settings.show_beta_features {
-                    "true"
-                } else {
-                    "false"
-                }
-                .to_string(),
-            ),
-        ],
-    ))
 }

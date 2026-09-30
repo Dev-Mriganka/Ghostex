@@ -2644,25 +2644,6 @@ pub(crate) fn append_url_query_params(mut url: String, params: &[(&str, String)]
     url
 }
 
-pub(crate) fn append_url_query_params_with_percent_encoded_spaces(
-    mut url: String,
-    params: &[(&str, String)],
-) -> String {
-    if params.is_empty() {
-        return url;
-    }
-    url.push(if url.contains('?') { '&' } else { '?' });
-    for (index, (key, value)) in params.iter().enumerate() {
-        if index > 0 {
-            url.push('&');
-        }
-        url.push_str(&encode_search_query(key).replace('+', "%20"));
-        url.push('=');
-        url.push_str(&encode_search_query(value).replace('+', "%20"));
-    }
-    url
-}
-
 pub(crate) fn titlebar_mode_switcher_items(
     availability: ProjectScopedWorkareaAvailability,
 ) -> Vec<TitlebarModeSwitcherItem> {

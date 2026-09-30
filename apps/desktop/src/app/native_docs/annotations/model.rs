@@ -2,12 +2,7 @@
 //! quoted passage or on the whole file), its quick labels and colours, the rules that decide
 //! whether a note is valid and whether it still has to be sent, and the JavaScript-compatible text
 //! helpers (whitespace class, trimming, UTF-16 lengths) the rest of the module needs to produce the
-//! same values the React Docs page produces.
-//!
-//! CDXC:Docs 2026-09-24 SEE-ALSO: apps/desktop/views/manage/types.ts, annotation-store.tsx,
-//! constants.ts and preview/manage-preview.tsx (`addAnnotation`). The field names, id shape,
-//! quote normalization and limits must match the React page until it is deleted, because both
-//! read and write the same sidecar.
+//! same values the former React Docs page produced, so sidecars it wrote still load.
 
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{Serialize, Serializer};
@@ -178,6 +173,8 @@ pub(crate) struct DocsAnnotation {
     pub(crate) scope: DocsAnnotationScope,
     #[serde(rename = "type")]
     pub(crate) kind: DocsAnnotationType,
+    /// CDXC:Docs 2026-09-15 DECISION:
+    /// User: every note remembers when it was last edited and last delivered to the agent, so Send offers the new ones first and sent notes keep a Sent mark. A note is pending while it has never been sent or was edited after its last send; there is no finish or archive step, so notes stay until the user clears them.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) updated_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

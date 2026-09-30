@@ -1,7 +1,6 @@
 //! Moving files and folders by dragging them in the files list: onto a folder moves the item into
 //! it, onto a file moves it beside that file (a top-level file's row and the empty space below the
-//! rows mean the `docs` folder), like the Docs page (`apps/desktop/views/manage/manage-app.tsx`
-//! 2193-2307).
+//! rows mean the `docs` folder), like the former React Docs page did.
 
 use gpui::{
     Context, IntoElement, ParentElement as _, Render, SharedString, Styled as _, Window, div, px,

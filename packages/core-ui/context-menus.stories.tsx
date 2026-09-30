@@ -13,48 +13,15 @@ import {
   ContextMenuSeparator,
 } from '@/packages/components/ui/context-menu';
 import { useAppScrollbars } from '@/packages/components/ui/app-scrollbars';
-import { ManageFileContextMenu } from '@/apps/desktop/views/manage/file-tree-ui';
 
 function ContextMenusPreview() {
   useAppScrollbars();
   const [selected, setSelected] = useState('No action selected');
-  const [docsMenu, setDocsMenu] = useState<{ x: number; y: number }>();
-  const selectDocsAction = (label: string) => {
-    setSelected(label);
-    setDocsMenu(undefined);
-  };
   return (
     <main style={{ padding: 24, minHeight: '100%', color: 'var(--app-foreground)' }}>
       <h1>Shared app menus</h1>
       <p>Right-click each target. Click Spaces to open its submenu, then move across other rows.</p>
       <p role='status'>{selected}</p>
-      <AppMenuThemeProvider theme='light'>
-        <button type='button' onClick={(event) => setDocsMenu({ x: event.clientX, y: event.clientY })}>
-          Open Docs file menu
-        </button>
-        {docsMenu ? (
-          <ManageFileContextMenu
-            canAddToSessionContext
-            canCreateHere
-            canDelete
-            canDuplicate
-            canRename
-            confirmingDelete={false}
-            isCreatingFolder={false}
-            position={docsMenu}
-            onAddToSessionContext={() => selectDocsAction('Add to Session Context')}
-            onCopyFullPath={() => selectDocsAction('Copy Full Path')}
-            onCopyPath={() => selectDocsAction('Copy Path')}
-            onCreateFileHere={(kind) => selectDocsAction(`Create ${kind}`)}
-            onCreateFolderHere={() => selectDocsAction('Create folder')}
-            onDuplicate={() => selectDocsAction('Duplicate')}
-            onDelete={() => selectDocsAction('Delete')}
-            onDismiss={() => setDocsMenu(undefined)}
-            onRename={() => selectDocsAction('Rename')}
-            onRevealInFinder={() => selectDocsAction('Open File/Folder Location')}
-          />
-        ) : null}
-      </AppMenuThemeProvider>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
         {(['light', 'dark'] as const).map((theme) => (
           <AppMenuThemeProvider theme={theme} key={theme}>

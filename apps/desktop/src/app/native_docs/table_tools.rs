@@ -1,5 +1,5 @@
-//! The Docs page's table controls over the live editor (`meo/helpers/tables.ts` 2351-2490 and
-//! `meo/styles.css` 2583-2712): while the caret is in a table, a six-button toolbar at the table's
+//! The table controls over the live editor, ported from the former React Docs page: while the
+//! caret is in a table, a six-button toolbar at the table's
 //! top left (Insert row above / below, Insert column left / right, Delete row / column) and a sort
 //! button on each header cell. Sorting rewrites the table's rows (one undo step); the Docs page
 //! sorted the view first and wrote it with "Apply Sort".

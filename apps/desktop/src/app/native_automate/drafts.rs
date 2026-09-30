@@ -1,6 +1,6 @@
-//! The create/edit form's draft and the schedule wording, ported from
-//! apps/desktop/views/project-board/automations-drafts.ts so the native dialog builds the same
-//! definition the React dialog saved.
+//! The create/edit form's draft and the schedule wording, ported from the deleted
+//! apps/desktop/views/project-board/automations-drafts.ts (in git history) so the native dialog
+//! builds the same definition the React dialog saved.
 
 use super::model::{AutomationDefinition, AutomationExecutionMode, AutomationSchedule};
 use chrono::{DateTime, Datelike as _, Local, NaiveDateTime, TimeZone as _, Timelike as _, Utc};

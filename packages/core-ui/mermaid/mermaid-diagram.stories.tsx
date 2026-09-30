@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { MermaidDiagram, MermaidDiagramModal } from './mermaid-diagram';
 import { SessionChatMarkdown } from '../chat/session-chat-markdown';
-import { createEditor } from '@/apps/desktop/views/meo/editor';
-import '@/apps/desktop/views/meo/styles.css';
 
 const FLOWCHART = `flowchart TB
     UI["Shared UI · GPUI Kit<br/>History window, search, previews, settings"]
@@ -78,24 +76,6 @@ export const Streaming: Story = {
     />
   ),
 };
-
-function DocsEditor() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    const editor = createEditor({
-      parent: ref.current,
-      initialMode: 'live',
-      text: `${fence(FLOWCHART)}\n\n${fence(SEQUENCE)}`,
-      onApplyChanges: () => {},
-      onOpenLink: () => {},
-      onSelectionChange: () => {},
-    });
-    return () => editor.destroy();
-  }, []);
-  return <div ref={ref} className='editor-root' />;
-}
-export const Docs: Story = { render: () => <DocsEditor /> };
 
 function NativeExpandedDiagram() {
   useEffect(() => {

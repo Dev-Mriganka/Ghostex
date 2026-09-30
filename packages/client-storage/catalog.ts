@@ -374,7 +374,7 @@ export const storageCatalog = Object.freeze({
   nativeSettings: define(
     'nativeSettings',
     'Legacy native settings cache',
-    desktop + 'views/project-board/constants.ts',
+    desktop + 'src/shared_settings.rs',
     'ghostex-native-settings',
     objectCodec,
     { policy: 'cache', maxAgeMs: null }
@@ -382,14 +382,14 @@ export const storageCatalog = Object.freeze({
   boardView: define(
     'boardView',
     'Board view preferences',
-    desktop + 'views/project-board/constants.ts',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostex-project-board-view',
     objectCodec
   ),
   boardCards: define(
     'boardCards',
     'Board card preferences',
-    desktop + 'views/project-board/card-view-options.ts',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostexProjectBoardCardView.v1',
     objectCodec
   ),
@@ -404,28 +404,28 @@ export const storageCatalog = Object.freeze({
   docsSide: define(
     'docsSide',
     'Docs sidebar position',
-    desktop + 'views/manage/manage-app.tsx',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostex.manage.sidebarSide',
     enumCodec(['left', 'right'])
   ),
   docsPinned: define(
     'docsPinned',
     'Docs sidebar pin',
-    desktop + 'views/manage/manage-app.tsx',
+    desktop + 'src/app/native_docs/storage.rs',
     'ghostex.manage.sidebarPinned',
     boolean
   ),
   docsFormatting: define(
     'docsFormatting',
     'Docs formatting bar',
-    desktop + 'views/manage/meo-toolbar.tsx',
+    desktop + 'src/app/native_docs/storage.rs',
     'ghostex.manage.formattingBarCollapsed',
     boolean
   ),
   docsIndex: define(
     'docsIndex',
     'Docs directory cache',
-    desktop + 'views/manage/file-index.ts',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostex-docs-index-v1:',
     objectCodec,
     { ...cache, backend: 'session', maxAgeMs: null, maxEntryBytes: 512 * KiB, maxBytes: MiB, maxEntries: 2 }
@@ -433,7 +433,7 @@ export const storageCatalog = Object.freeze({
   docsOpenFiles: define(
     'docsOpenFiles',
     'Open documents',
-    desktop + 'views/manage/open-documents.ts',
+    desktop + 'src/app/native_docs/storage.rs',
     'ghostex.manage.openFiles.',
     stringListCodec,
     disk
@@ -441,7 +441,7 @@ export const storageCatalog = Object.freeze({
   docsDrafts: define(
     'docsDrafts',
     'Unsaved documents',
-    desktop + 'views/manage/open-documents.ts',
+    desktop + 'src/app/native_docs/storage.rs',
     'ghostex.manage.drafts.',
     objectCodec,
     { ...protectedDisk, maxEntryBytes: 8 * MiB }
@@ -449,7 +449,7 @@ export const storageCatalog = Object.freeze({
   docsActiveFile: define(
     'docsActiveFile',
     'Selected document',
-    desktop + 'views/manage/manage-app.tsx',
+    desktop + 'src/app/native_docs/storage.rs',
     'ghostex.manage.activeFile.',
     textCodec,
     disk

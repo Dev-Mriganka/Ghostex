@@ -1,5 +1,5 @@
-//! The files list from the keyboard, like the Docs page (`file-tree.tsx` 190-210 and
-//! `open-files-list.tsx` 41-58): in the tree the arrows, Home and End, Page Up and Page Down move
+//! The files list from the keyboard, like the former React Docs page: in the tree the arrows,
+//! Home and End, Page Up and Page Down move
 //! between rows, Enter or Space opens a file or folder, and the context-menu key or Shift+F10
 //! opens the row menu; in Open Files, Enter or Space shows the file and Delete or Backspace
 //! closes it.

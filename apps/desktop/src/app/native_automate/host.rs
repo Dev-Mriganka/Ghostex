@@ -12,9 +12,8 @@ use gpui::{
 };
 
 impl GhostexGpuiApp {
-    /// The Automate scope for the sidebar's active project, with the same gates the CEF page's
-    /// URL had (`automate_workarea_runtime_url_from_project_snapshot`): no Automate feature, a
-    /// projectless context, or missing identity leaves the static placeholder.
+    /// The Automate scope for the sidebar's active project: no Automate feature, a projectless
+    /// context, or missing identity leaves the static placeholder.
     fn native_automate_scope(&self) -> Option<AutomateScope> {
         let snapshot = self.latest_sidebar_project_snapshot.as_ref()?;
         if !snapshot.feature_availability.automate {

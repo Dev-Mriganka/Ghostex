@@ -1,5 +1,5 @@
-//! The create/edit automation dialog: the native twin of
-//! apps/desktop/views/project-board/automation-dialog.tsx, drawn with the app modals' kit
+//! The create/edit automation dialog, ported from the deleted React
+//! apps/desktop/views/project-board/automation-dialog.tsx (in git history), drawn with the app modals' kit
 //! (window/native_modal_kit.rs) in its own child window. This file owns its state and what its
 //! controls do; dialog_render.rs lays it out.
 

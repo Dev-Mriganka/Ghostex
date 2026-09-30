@@ -44,8 +44,8 @@ pub(crate) fn syntax_style(p: &DocsPalette) -> zorite_editor::SyntaxStyle {
         alert_important: pick(0x715299, 0xb6a3cc),
         alert_warning: pick(0x27272a, 0xe5e5e5),
         alert_caution: pick(0x27272a, 0xededed),
-        // The Docs page's alert icons (`meo/helpers/alerts.ts`): lucide Info, Lightbulb,
-        // AlertCircle, AlertTriangle and XCircle.
+        // The former React Docs page's alert icons: lucide Info, Lightbulb, AlertCircle,
+        // AlertTriangle and XCircle.
         alert_icons: Some(zorite_editor::AlertIcons {
             note: "files-view/l-info-2.svg".into(),
             tip: "files-view/l-lightbulb-2.svg".into(),
@@ -73,10 +73,8 @@ pub(crate) fn syntax_style(p: &DocsPalette) -> zorite_editor::SyntaxStyle {
     }
 }
 
-/// The token colours of fenced code: the Docs page's (`SYNTAX_TAG_SPECS` in
-/// `meo/themeDefaults.ts` over `MANAGE_MEO_THEME`'s palette and `syntaxTokens` in
-/// `manage/meo-toolbar.tsx`), mapped from CodeMirror's tags to the tree-sitter captures the
-/// highlighter names. Keywords and numbers purple, functions, types and properties slate, strings
+/// The token colours of fenced code: the former React Docs page's CodeMirror theme, mapped from
+/// CodeMirror's tags to the tree-sitter captures the highlighter names. Keywords and numbers purple, functions, types and properties slate, strings
 /// and variables in the text colour (green in light), comments grey italic.
 pub(crate) fn code_theme(
     light: bool,

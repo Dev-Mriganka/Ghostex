@@ -1,6 +1,7 @@
 //! The words the board shows or hands to an agent: Beads failure messages, the board notice and
 //! its fix prompts, the draft title of an untitled ticket, and the Start work prompt. Ported from
-//! project-board-shared.ts, board-state.ts and remote-migrate-gate.tsx.
+//! the deleted React board's project-board-shared.ts, board-state.ts and remote-migrate-gate.tsx
+//! (apps/desktop/views/, in git history).
 
 use serde_json::Value;
 
@@ -179,7 +180,8 @@ pub(crate) fn draft_title(prompt: &str) -> String {
     }
 }
 
-/// `buildAgentWorkPrompt`: what Start work sends to the agent.
+/// What Start work sends to the agent: line for line the prompt `build_board_bead_work_prompt` in
+/// server/src/board_start_work.rs sends for `ghostex board start-work`.
 pub(crate) fn agent_work_prompt(ticket: &BoardTicket) -> String {
     let bead_id = &ticket.issue.id;
     let description = ticket.issue.description.trim();

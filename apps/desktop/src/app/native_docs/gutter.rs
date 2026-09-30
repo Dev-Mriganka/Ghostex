@@ -78,9 +78,9 @@ fn numbers_width(numbers: bool) -> f32 {
 /// row keeps its number at the top.
 const NUMBER_ROW_H: f32 = 14. * 1.7;
 
-/// CDXC:Docs 2026-09-28 WHY: the Docs page's gutter order is line numbers, git stripe, fold lane
-/// (`meo/editor.ts` 1440-1444, 47px in all), so the fold chevrons sit right before the text; the
-/// native gutter used to put the fold lane first.
+/// CDXC:Docs 2026-09-28 WHY: the former React Docs page's gutter order is line numbers, git
+/// stripe, fold lane (47px in all), so the fold chevrons sit right before the text; the native
+/// gutter used to put the fold lane first.
 pub(crate) fn render(
     model: GutterModel<'_>,
     palette: &DocsPalette,
@@ -191,7 +191,7 @@ pub(crate) fn render(
             .collect::<Vec<_>>()
     });
     // The fold lane: a 14px chevron on every heading whose section has content, turned right while
-    // it is folded (`meo/helpers/headingCollapse.ts`).
+    // it is folded.
     let fold_x = stripe_x + px(STRIPE_W);
     let folds = model.live.map(|live| {
         model
@@ -260,7 +260,7 @@ pub(crate) fn render(
 
 /// The git overview ruler: a 3px strip 10px from the document's right edge with a 50% mark for
 /// each run of changed lines, placed by line number over the part of the track the text fills, and
-/// a 5px bar where the text ends (`meo/helpers/gitDiffOverviewRuler.ts`).
+/// a 5px bar where the text ends.
 pub(crate) fn render_overview_ruler(
     changes: &(Vec<LineChange>, Vec<usize>),
     content_bottom: Pixels,

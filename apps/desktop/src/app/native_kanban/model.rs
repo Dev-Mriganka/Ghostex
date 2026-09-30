@@ -1,6 +1,6 @@
 //! The board data the native Kanban draws: Beads issues as `bd` returns them, the lanes a board's
-//! status config yields, and the display ids and labels the React board shows. Ported from
-//! apps/desktop/views/project-board-shared.ts, which stays the reference for every rule here.
+//! status config yields, and the display ids and labels the board shows. Ported from the deleted
+//! apps/desktop/views/project-board-shared.ts (in git history); this file is now the reference.
 
 use serde_json::Value;
 

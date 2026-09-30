@@ -1,5 +1,5 @@
-//! The files list's "Rename item" dialog (`ManageRenameDialog` in
-//! `apps/desktop/views/manage/file-tree-ui.tsx` 584-664): the app-modal look over the Files view,
+//! The files list's "Rename item" dialog (ported from the former React Docs page's
+//! `ManageRenameDialog`): the app-modal look over the Files view,
 //! the whole current name selected, Cancel and Rename, the refusal under the field, Escape or a
 //! click outside to close.
 

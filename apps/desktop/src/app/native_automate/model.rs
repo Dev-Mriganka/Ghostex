@@ -1,7 +1,7 @@
 //! The automation state the Automate view shows, parsed from the `automationState` object the
-//! gxserver automation endpoints return (the `ProjectAutomationsBridgeState` shape in
-//! packages/shared/automations.ts). Entries that do not parse are dropped one by one, the way the
-//! shared TypeScript normalizers drop them, instead of failing the whole state.
+//! gxserver automation endpoints return (the `ProjectAutomationsBridgeState` shape of the deleted
+//! packages/shared/automations.ts, in git history). Entries that do not parse are dropped one by
+//! one, the way those TypeScript normalizers dropped them, instead of failing the whole state.
 
 use serde::Deserialize;
 use serde_json::Value;

@@ -325,7 +325,7 @@ impl GhostexGpuiApp {
     ) -> Option<AnyElement> {
         let find = self.native_docs.find.as_ref().filter(|find| find.visible)?;
         let needle_empty = find.query.read(cx).value().is_empty();
-        // The Docs page's find status (`markdown-review-viewer.tsx` 157-243).
+        // The find status, worded as the former React Docs page worded it.
         let (status, no_results) = match &find.status {
             Some((text, error)) => (text.clone(), *error),
             None if needle_empty => (String::new(), false),

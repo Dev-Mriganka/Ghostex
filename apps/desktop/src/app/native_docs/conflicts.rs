@@ -1,6 +1,6 @@
 //! Git merge conflicts in a Markdown document: `<<<<<<<` … `=======` … `>>>>>>>` blocks get the
 //! Docs page's Accept Current / Accept Incoming / Accept Both buttons in a row above their first line, in live
-//! and source mode alike (`apps/desktop/views/meo/helpers/mergeConflicts.ts`).
+//! and source mode alike, as the former React Docs editor did.
 
 use std::ops::Range;
 

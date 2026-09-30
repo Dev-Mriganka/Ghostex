@@ -72,6 +72,6 @@ A chat bug that is really about the session (what reaches the terminal, what the
 ## Where not to start new work
 
 - **React chat, the TypeScript chat brain and the phone's WebView chat**: deleted on 2026-09-25; do not restore them. What remains in `packages/core-ui/chat/` is the Markdown renderer, the GhostexEditor's Lexical prompt input and the Stashed Prompts draft storage, not a chat.
-- **React Kanban and Automate pages** (`apps/desktop/views/tasks-placeholder.tsx`, `apps/desktop/views/project-board/`): retired; the native views are `native_kanban/` and `native_automate/`.
+- **React Kanban and Automate pages** (`apps/desktop/views/tasks-placeholder.tsx`, `apps/desktop/views/project-board/`): deleted on 2026-09-30; the native views are `native_kanban/` and `native_automate/`.
 - **The old TypeScript gxserver**: gone; gxserver is Rust only.
 - **The desktop QuickJS app runtime**: deleted on 2026-09-25. Its behaviour lives in gxserver, `gx-core` and `apps/desktop/src/app/gx_store/`; do not add a JavaScript engine or service back to the desktop.

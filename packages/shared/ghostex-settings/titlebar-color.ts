@@ -230,7 +230,7 @@ export function getSidebarTitlebarBackgroundForDarkness(
  *
  * CDXC:Theming 2026-09-21 WHY:
  * A neutral tint (white, gray, black) has no hue to follow and a gray accent stops reading as an accent next to the foreground text, so neutral tints paint the shipped sky tone.
- * SEE-ALSO: the static --ghostex-accent in packages/core-ui/styles/theme.css and apps/desktop/views/project-board/styles.ts.
+ * SEE-ALSO: the static --ghostex-accent in packages/core-ui/styles/theme.css.
  */
 export const NEUTRAL_TINT_ACCENT_COLOR = '#86d3f8';
 const ACCENT_LIGHTNESS = 0.75;

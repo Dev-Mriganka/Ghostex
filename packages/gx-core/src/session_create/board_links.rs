@@ -1,5 +1,6 @@
 //! The Project Board's conversation links: the durable records that tie a Beads ticket to the
-//! agent conversation that worked it, read and rewritten the way `bead-conversation-links.ts` does.
+//! agent conversation that worked it, read and rewritten the way the deleted
+//! packages/shared/bead-conversation-links.ts (in git history) did.
 //!
 //! CDXC:ProjectBoard 2026-05-26-10:16:
 //! Project-board cards need durable Ghostex-owned links from Beads tickets to agent conversations.
@@ -15,8 +16,7 @@
 //! and each write stays on its own row. A session id is stored relative to the row that owns the
 //! link, so links are re-expressed against the board project before they are shown.
 //!
-//! SEE-ALSO: packages/shared/bead-conversation-links.ts, server/src/board_start_work.rs (the
-//! daemon's writer of the same links).
+//! SEE-ALSO: server/src/board_start_work.rs (the daemon's writer of the same links).
 
 use std::collections::{BTreeSet, HashMap};
 

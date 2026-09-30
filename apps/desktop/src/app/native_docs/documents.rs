@@ -317,6 +317,9 @@ impl GhostexGpuiApp {
     }
 
     /// Cmd+S: writes the active document to disk.
+    ///
+    /// CDXC:Docs 2026-09-15 DECISION:
+    /// User: Markdown and text files no longer save on their own; edits stay unsaved until Cmd+S, with the unsaved state shown on the header icon and the open-files row. Excalidraw drawings keep their one-second autosave (the browser area's embed page) because drawing gestures have no natural save moment.
     pub(crate) fn native_docs_save_active(&mut self, cx: &mut Context<Self>) {
         let Some(path) = self.native_docs.active.clone() else {
             return;

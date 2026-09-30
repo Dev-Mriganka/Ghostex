@@ -1,7 +1,7 @@
 //! The native GPUI Automate view (the view panel's automations page) and its create/edit dialog.
-//! SEE-ALSO: apps/desktop/views/project-board/automations.tsx, automation-dialog.tsx and
-//! automations-drafts.ts (the React page this ports), app/helpers/board_gxserver/automation.rs
-//! (the bridge logic both call).
+//! SEE-ALSO: app/helpers/board_gxserver/automation.rs (the bridge logic it calls). It was ported
+//! from the deleted React page (apps/desktop/views/project-board/automations.tsx,
+//! automation-dialog.tsx and automations-drafts.ts, in git history).
 mod actions;
 mod detail;
 mod dialog;

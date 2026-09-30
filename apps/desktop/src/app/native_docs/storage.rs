@@ -43,6 +43,8 @@ const DRAFTS: RecordStore = RecordStore {
 };
 
 const OPEN_FILES_PREFIX: &str = "ghostex.manage.openFiles.";
+/// CDXC:Docs 2026-09-15 DECISION:
+/// User: every file opened in Docs gets a row in an open-files list above the tree, each open file keeps its own unsaved draft while another is selected, and drafts survive a quit or reload, still marked unsaved. Open files and drafts are stored per project; a draft is applied on top of the disk content the next time its file is read.
 const DRAFTS_PREFIX: &str = "ghostex.manage.drafts.";
 const ACTIVE_FILE_PREFIX: &str = "ghostex.manage.activeFile.";
 const SIDEBAR_PINNED_KEY: &str = "ghostex.manage.sidebarPinned";

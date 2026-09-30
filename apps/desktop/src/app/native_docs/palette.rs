@@ -1,5 +1,5 @@
-//! The native Docs view's colours and type. The solid values are the Docs page's own tokens
-//! (`apps/desktop/views/manage/styles.ts`); under window glass the fills become light washes of
+//! The native Docs view's colours and type. The solid values are the former React Docs page's
+//! own tokens; under window glass the fills become light washes of
 //! the text ink, the way the native Kanban's do, so the frosted work area shows through.
 
 use gpui::{Hsla, rgb};

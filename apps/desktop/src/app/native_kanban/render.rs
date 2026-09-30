@@ -14,8 +14,8 @@ use crate::GhostexGpuiApp;
 use crate::app::model::TitlebarMode;
 
 impl GhostexGpuiApp {
-    /// CDXC:ProjectBoard 2026-09-23 DECISION:
-    /// User: "build each of kanban/automate as native gpui matching the style of chat view ... they're just crud". On desktop the Kanban view is this native GPUI board instead of the React page in a CEF browser, so it can take part in window glass: it paints no page fill under glass, and its lanes and cards are light washes of the chat's ink. The React board stays for the web app; its logic is ported here and Beads calls go through the same Rust bridge functions the page's messages reached.
+    /// CDXC:ProjectBoard 2026-09-30 DECISION:
+    /// The user chose to delete the React Kanban/Automate page on 2026-09-30 because the web app it was kept for is gone, so this native GPUI board is the only board. It takes part in window glass: it paints no page fill under glass, and its lanes and cards are light washes of the chat's ink. This supersedes the 2026-09-23 decision that kept the React page as the spec for this port (the deleted apps/desktop/views/project-board/, in git history).
     ///
     /// Runs in the app's render: the title, toolbar, notice and side panel are drawn here and the
     /// lanes by the cached view (`view.rs`). `None` when the current context has no Kanban

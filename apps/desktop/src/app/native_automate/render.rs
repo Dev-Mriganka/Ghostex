@@ -25,7 +25,8 @@ impl NativeAutomateView {
             .map(|scope| scope.project_name.clone())
             .unwrap_or_default();
         let show_controls = scope.is_some_and(|scope| !scope.coming_soon);
-        // Eyebrow copy follows the CDXC:Automations 2026-09-17 decision in project-board-app.tsx.
+        // CDXC:Automations 2026-09-17 DECISION:
+        // User: rename Automations Overview to All Automations, drop the Experimental label, and use Overview as the all-project page eyebrow. The project Automate surface still uses Automations so the page title is not repeated. This supersedes the 2026-06-30 eyebrow copy.
         let eyebrow = if all { "Overview" } else { "Automations" };
         let tabs = h_flex().gap(px(4.0)).children(AutomateTab::ALL.map(|tab| {
             let active = self.tab == tab;
@@ -251,8 +252,8 @@ impl NativeAutomateView {
     }
 }
 
-/// CDXC:Automations 2026-09-23 DECISION:
-/// User: "build each of kanban/automate as native gpui matching the style of chat view ... they're just crud". The desktop Automate view is this GPUI page instead of the React page in a CEF browser, so it can sit on the window glass like the chat; the React page (apps/desktop/views/project-board/automations.tsx) stays for other hosts and is the behaviour spec.
+/// CDXC:Automations 2026-09-30 DECISION:
+/// The user chose to delete the React Kanban/Automate page on 2026-09-30 because the web app it was kept for is gone, so this native GPUI page is the only Automate view; it sits on the window glass like the chat. This supersedes the 2026-09-23 decision that kept the React page (the deleted apps/desktop/views/project-board/automations.tsx, in git history) as the behaviour spec.
 impl Render for NativeAutomateView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if self.is_initial_loading() {

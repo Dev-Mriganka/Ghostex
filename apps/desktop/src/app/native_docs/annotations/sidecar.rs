@@ -1,13 +1,8 @@
 //! The annotations sidecar, `.ghostex/manage-annotations.json`: every file's notes keyed by its
 //! docs-relative path. Parsing drops bad paths and invalid notes and keeps the file's key order;
 //! serializing writes the same pretty-printed bytes `JSON.stringify(store, null, 2)` writes.
-//! Rename, move and delete remap or drop keys, subtrees included.
-//!
-//! CDXC:Docs 2026-09-24 SEE-ALSO: apps/desktop/views/manage/annotation-store.tsx
-//! (`parseManageAnnotationStore`, `serializeManageAnnotationStore`), manage-app.tsx (load and
-//! 550 ms save) and file-tree-utils.ts (`remapManageAnnotationPathsForMove`,
-//! `removeManageAnnotationPathsForDeletedEntry`). The React page reads and writes the same file,
-//! so the format and key order must stay identical until that page is deleted.
+//! Rename, move and delete remap or drop keys, subtrees included. The format and key order are
+//! the ones the former React Docs page wrote, so existing sidecars round-trip unchanged.
 
 use std::borrow::Cow;
 use std::fmt;

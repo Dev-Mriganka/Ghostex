@@ -120,16 +120,7 @@ Source has strict readiness and mount-request contracts plus an app-owned shared
 
 ### Kanban workarea
 
-**Technology:** existing React Kanban/tasks page inside CEF.
-
-Main code:
-
-- `gpui/kanban.html`
-- `gpui/sidebar/kanban-main.tsx`
-- `gpui/sidebar/project-workarea-cef-bridge.ts`
-- `gpui/src/main.rs`
-
-Vite emits a self-contained `kanban.html` entry. Rust creates a project-scoped `CefSurface` for that bundled entry only when active project gates allow it. The TypeScript bridge maps existing WebKit-style message-handler calls to fixed CEF bridge functions.
+**Technology:** native GPUI views (`src/app/native_kanban/`, `src/app/native_automate/`). The React Kanban/tasks page and its `kanban.html` entry were deleted on 2026-09-30.
 
 ### Manage workarea
 
@@ -204,7 +195,6 @@ Build pieces:
 - `build.rs` compiles Objective-C shims and links Cocoa/Foundation/Metal/CoreText/UserNotifications/etc.
 - Vite builds and inlines the CEF HTML entries:
   - `index.html`
-  - `kanban.html`
   - `manage.html`
   - `modal-host.html`
 - The app packager creates a macOS `.app` bundle with CEF frameworks, helper apps, sidebar resources, sounds, CLI resources, Web resources, and optional remote gxserver packages.

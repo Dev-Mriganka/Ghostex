@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MANAGE_CONTENT_AUTOSAVE_DELAY_MS } from './constants';
-import { requestManageFiles } from './manage-app';
+import { requestManageFiles } from './files-bridge';
 import { ManageExcalidrawEditor } from './preview/excalidraw-editor';
 import { ManageHtmlRenderViewer } from './preview/html-viewer';
 import type { ManageWebKitWindow } from './types';

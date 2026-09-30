@@ -1,12 +1,8 @@
 //! Placing notes in a document. Notes store quote text, not offsets, so every render finds each
 //! quote again: the document is whitespace-normalized with a map back to the source, the
 //! normalized quote is searched for, and every occurrence is a highlighted range. All ranges are
-//! byte ranges into the Rust string; they cover the same characters the page's UTF-16 ranges do.
-//!
-//! CDXC:Docs 2026-09-24 SEE-ALSO: apps/desktop/views/manage/annotation-store.tsx
-//! (`findManageAnnotationTextMatches`, `buildManageNormalizedTextIndex`) and meo-toolbar.tsx
-//! (`collectManageAnnotationRanges`, `findManageAnnotationRangeAtPosition`). A quote must resolve
-//! to the same text on both sides while the React page still writes notes.
+//! byte ranges into the Rust string; they cover the same characters the former React Docs page's
+//! UTF-16 ranges did.
 
 use std::ops::Range;
 
