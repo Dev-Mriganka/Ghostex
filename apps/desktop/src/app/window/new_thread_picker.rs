@@ -7,7 +7,7 @@
 //!
 //! CDXC:AppModal 2026-09-16 DECISION:
 //! User: "please fix this modal, also please ensure that we use the gpui components that we created in the gpui app and we're not using the older modals": the picker takes its colours from the shared native modal kit palette in both appearances. It used dark-only white tints that vanished on the light theme (search border, key hints, divider, white agent logos) while the highlighted row stayed black.
-//! SEE-ALSO: apps/desktop/src/app/native_sidebar/agent_launcher_menu.rs (the dropdown this mirrors), apps/desktop/src/app/window/native_modal_kit.rs (the shared palette), apps/desktop/src/app/new_thread_picker_lifecycle.rs (open, close, preload, data), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
+//! SEE-ALSO: apps/desktop/src/app/native_sidebar/agent_launcher_menu.rs (the dropdown this mirrors), apps/desktop/src/app/window/native_modal_kit/ (the shared palette), apps/desktop/src/app/new_thread_picker_lifecycle.rs (open, close, preload, data), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
 //!
 //! This module depends only on the kit, gpui and gpui-component so the preview binary can include it with `#[path]`.
 use super::native_modal_kit::*;

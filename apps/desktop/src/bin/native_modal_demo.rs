@@ -20,7 +20,7 @@ mod assets;
 mod export_transcript_modal;
 #[path = "../hotkey_label.rs"]
 mod hotkey_label;
-#[path = "../app/window/native_modal_kit.rs"]
+#[path = "../app/window/native_modal_kit/mod.rs"]
 mod native_modal_kit;
 #[path = "../ui_fonts.rs"]
 mod ui_fonts;

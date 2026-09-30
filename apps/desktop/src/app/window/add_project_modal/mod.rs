@@ -10,7 +10,7 @@
 //! User: migrate every React modal to GPUI with GPUI-Kit components, looking and working exactly as now, so the app runs without CEF. Add Project keeps the command-palette dialog in its fixed 640x460 child window: the same steps, copy, colours (measured from the Storybook story in both appearances), key caps, scroll edge fades and gxserver round trips, which the app now answers by calling its request runner directly instead of posting `addProjectDialogRequest` bridge JSON.
 //! SEE-ALSO: packages/core-ui/add-project-modal/ (the React twin and its stories), packages/core-ui/remote-project-picker/remote-project-paths.ts (paths.rs), apps/desktop/src/app/add_project_modal_lifecycle.rs (open and host), apps/desktop/src/app/remote_conn/project_browse_and_add.rs (`run_gpui_add_project_dialog_operation`, the gxserver calls), apps/desktop/src/bin/native_modal_demo/add_project.rs (standalone preview).
 //!
-//! The view depends only on gpui, gpui-component, `native_modal_kit.rs` and the crate-root
+//! The view depends only on gpui, gpui-component, `native_modal_kit/` and the crate-root
 //! `hotkey_label` and `ui_fonts` modules, so the preview binary can include it with `#[path]`.
 mod copy;
 mod derive;

@@ -3,7 +3,7 @@
 //!
 //! CDXC:Release 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt in native GPUI one at a time, and the new gpui modal must be EXACTLY 1 to 1 matching the React one: layout, copy, colors, radii, spacing, fonts, states and keys in both appearances. The release notes are the `.ghostex-chat-markdown` prose the React card renders through react-markdown (headings, two-level bullet lists, inline code chips, bold, quotes, links as plain text, images dropped), so this module carries a small block renderer for exactly that subset instead of a generic markdown engine.
-//! SEE-ALSO: packages/core-ui/update-available-modal.tsx and the `.update-available-modal-*` rules in packages/core-ui/styles.css plus the `.ghostex-chat-markdown` rules in packages/core-ui/styles/chat.css (the React twin and the CSS mirrored below), apps/desktop/src/app/window/native_modal_kit.rs (shared chrome and controls), apps/desktop/src/app/update_available_modal_lifecycle.rs (open, close, Windows updater actions), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/update-available-modal.tsx and the `.update-available-modal-*` rules in packages/core-ui/styles.css plus the `.ghostex-chat-markdown` rules in packages/core-ui/styles/chat.css (the React twin and the CSS mirrored below), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/update_available_modal_lifecycle.rs (open, close, Windows updater actions), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
 use super::native_modal_kit::*;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{

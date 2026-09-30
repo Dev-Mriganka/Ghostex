@@ -7,7 +7,7 @@
 //! layout, with the app holding a single `NativeAppModal` so the "one app modal at a time" rule
 //! spans both hosts. Every native modal's window root is a gpui-component `Root` because its text
 //! inputs read the window root as one while painting.
-//! SEE-ALSO: apps/desktop/src/app/window/native_modal_kit.rs (chrome and controls), apps/desktop/src/app/modals/modal_window.rs (the React host launcher that closes a native modal when it opens).
+//! SEE-ALSO: apps/desktop/src/app/window/native_modal_kit/ (chrome and controls), apps/desktop/src/app/modals/modal_window.rs (the React host launcher that closes a native modal when it opens).
 use crate::app::helpers::*;
 use crate::app::window::*;
 use crate::*;

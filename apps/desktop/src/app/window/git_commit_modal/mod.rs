@@ -3,7 +3,7 @@
 //! (packages/core-ui/git-file-diff-modal.tsx). The decision record is on `window.rs`.
 //!
 //! This module depends only on gpui, gpui-component (with its gpui-base text selection) and
-//! `native_modal_kit.rs` (plus the shared prompt-text trim in `create_worktree_modal.rs`) so the
+//! `native_modal_kit/` (plus the shared prompt-text trim in `create_worktree_modal.rs`) so the
 //! preview binary can include it.
 mod diff;
 mod diff_select;

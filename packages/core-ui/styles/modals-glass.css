@@ -2,7 +2,7 @@
  * CDXC:Theming 2026-09-30 DECISION:
  * User, of the React app modals over a transparent window: they "look so dark when the whole app looks lighter", so give them "a lighter color", "without making them transparent", and the "bg shouldn't be gradient or fake glass or anything just lighter color"; then, of Settings: "let's please make the settings modal darker when the app is transparent and the app is dark because it's too light gray now". While window glass is showing and the page is dark, a modal's window is the theme's chrome colour lifted 6% toward white (about #1c1c1c on the default theme), and every surface keeps the steps above it that the native modals use over glass: +3% popups and panels, +6% raised, +8.5% hover, 10% hairlines. Solid colours only; glass off, light themes and the Onboarding stage are unchanged. Supersedes the 2026-09-26 lift of 12% (about #2a2a2a).
  * The page learns the glass state from the host (`data-window-glass`, set by `installWindowGlassFlag` from the same resolved state as the native modals), so Reduce Transparency turns this off too.
- * SEE-ALSO: apps/desktop/views/workarea-theme.ts, apps/desktop/src/app/window/modal_host.rs (`refresh_window_glass`), `ModalPalette::frosted` in apps/desktop/src/app/window/native_modal_kit.rs.
+ * SEE-ALSO: apps/desktop/views/workarea-theme.ts, apps/desktop/src/app/window/modal_host.rs (`refresh_window_glass`), `ModalPalette::frosted` in apps/desktop/src/app/window/native_modal_kit/.
  */
 :root[data-window-glass='true'][data-app-appearance='dark']:not(:has(.gx-onboarding)) {
   --gx-glass-surface: color-mix(in srgb, #ffffff 6%, #0e0e0e);
