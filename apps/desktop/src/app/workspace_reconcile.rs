@@ -157,208 +157,6 @@ impl GhostexGpuiApp {
         cx.notify();
     }
 
-    pub(crate) fn reconcile_local_app_shot_session_mappings(
-        &mut self,
-        focus_state: &GpuiGxserverPresentationFocusState,
-    ) {
-        self.local_app_shot_session_mappings
-            .retain(|_, shell_session_id| {
-                self.agents_workspace.session(*shell_session_id).is_some()
-            });
-
-        let local_visible_session_ids = focus_state
-            .visible_session_ids
-            .iter()
-            .filter(|session_id| {
-                gpui_sidebar_local_gxserver_session_id_allowed(session_id.as_str())
-            })
-            .collect::<Vec<_>>();
-        if local_visible_session_ids.len() == 1 {
-            if let Some(shell_session_id) = self.single_live_agents_shell_session_for_app_shot() {
-                self.local_app_shot_session_mappings
-                    .insert(local_visible_session_ids[0].to_string(), shell_session_id);
-            }
-        }
-
-        let focused_session_id = focus_state
-            .focused_session_id
-            .as_deref()
-            .filter(|session_id| gpui_sidebar_local_gxserver_session_id_allowed(*session_id));
-        if let Some(focused_session_id) = focused_session_id {
-            if let Some(shell_session_id) = self.focused_live_agents_shell_session_for_app_shot() {
-                self.local_app_shot_session_mappings
-                    .insert(focused_session_id.to_string(), shell_session_id);
-            }
-        }
-
-        if self.local_app_shot_session_mappings.len() > GPUI_LOCAL_APP_SHOT_SESSION_MAP_MAX {
-            let allowed_ids = focus_state
-                .visible_session_ids
-                .iter()
-                .chain(focus_state.focused_session_id.iter())
-                .filter(|session_id| {
-                    gpui_sidebar_local_gxserver_session_id_allowed(session_id.as_str())
-                })
-                .cloned()
-                .collect::<HashSet<_>>();
-            self.local_app_shot_session_mappings
-                .retain(|session_id, _| allowed_ids.contains(session_id));
-        }
-    }
-
-    pub(crate) fn single_live_agents_shell_session_for_app_shot(
-        &self,
-    ) -> Option<TerminalSessionId> {
-        let mut sessions = self.live_agents_shell_sessions_for_app_shot().into_iter();
-        let session_id = sessions.next()?;
-        sessions.next().is_none().then_some(session_id)
-    }
-
-    pub(crate) fn live_agents_shell_sessions_for_app_shot(&self) -> Vec<TerminalSessionId> {
-        #[cfg(target_os = "macos")]
-        {
-            self.agents_workspace
-                .rendered_terminal_body_mount_slots()
-                .into_iter()
-                .filter(|slot_id| self.agents_terminal_ghostty_surface_matches(*slot_id))
-                .map(|slot_id| slot_id.session_id)
-                .collect()
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            Vec::new()
-        }
-    }
-
-    pub(crate) fn focused_live_agents_shell_session_for_app_shot(
-        &self,
-    ) -> Option<TerminalSessionId> {
-        #[cfg(target_os = "macos")]
-        {
-            let slot_id = focused_agents_terminal_surface_mount_slot(
-                self.active_mode,
-                self.shell_focus,
-                &self.agents_workspace,
-            )?;
-            self.agents_terminal_ghostty_surface_matches(slot_id)
-                .then_some(slot_id.session_id)
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            None
-        }
-    }
-
-    /// Types an App Shot prompt into a local Agents tab (gx_store/app_shot.rs picks the session).
-    ///
-    /// CDXC:AppShots 2026-06-25-23:28:
-    /// Existing-session App Shot insertion takes a gxserver presentation session id plus the already formatted prompt string. Rust maps that id to a live Agents shell tab, selects it through normal workspace state if needed, writes into that tab's chat composer or terminal (`app_shot_write_into_agents_tab` in gx_store/app_shot.rs), and answers only whether it wrote.
-    ///
-    /// CDXC:AppShots 2026-06-26-04:27:
-    /// Remote App Shot insertion (`insert_native_app_shot_prompt_into_remote_agents_session`) may write only to an already-mounted remote attach Agents terminal in `remote_attach_sessions`; it must not wake, create, or materialize remote tabs, and it stores no prompt, path, SSH, title, URL, or terminal content.
-    pub(crate) fn insert_native_app_shot_prompt_into_local_agents_session(
-        &mut self,
-        session_id: &str,
-        prompt: &str,
-        cx: &mut gpui::Context<Self>,
-    ) -> bool {
-        #[cfg(target_os = "macos")]
-        {
-            if !gpui_sidebar_local_gxserver_session_id_allowed(session_id) || prompt.is_empty() {
-                return false;
-            }
-            let Some(shell_session_id) = self
-                .local_app_shot_session_mappings
-                .get(session_id)
-                .copied()
-            else {
-                return false;
-            };
-            if !self
-                .agents_workspace
-                .session(shell_session_id)
-                .is_some_and(|session| {
-                    session.presentation_state == TerminalSessionPresentationState::Running
-                })
-            {
-                self.local_app_shot_session_mappings.remove(session_id);
-                return false;
-            }
-            let Some(pane_id) = self.agents_workspace.pane_id_for_session(shell_session_id) else {
-                self.local_app_shot_session_mappings.remove(session_id);
-                return false;
-            };
-
-            self.change_active_mode_with_pane_state(TitlebarMode::Agents, cx);
-            self.agents_workspace.select_tab(pane_id, shell_session_id);
-            self.focus_shell_target(ShellFocusTarget::AgentsPane(pane_id), cx);
-            self.scroll_workspace_pane_active_tab(pane_id);
-
-            if !self.app_shot_write_into_agents_tab(shell_session_id, prompt, cx) {
-                return false;
-            }
-            self.persist_shell_layout_state();
-            cx.notify();
-            true
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = (session_id, prompt, cx);
-            false
-        }
-    }
-
-    pub(crate) fn insert_native_app_shot_prompt_into_remote_agents_session(
-        &mut self,
-        reference: &GpuiRemoteAttachSessionReference,
-        prompt: &str,
-        cx: &mut gpui::Context<Self>,
-    ) -> bool {
-        #[cfg(target_os = "macos")]
-        {
-            if prompt.is_empty() {
-                return false;
-            }
-            let key = GpuiRemoteAttachSessionKey::from(reference);
-            let Some(shell_session_id) = self.remote_attach_sessions.get(&key).copied() else {
-                return false;
-            };
-            let Some(session) = self.agents_workspace.session(shell_session_id) else {
-                self.remote_attach_sessions.remove(&key);
-                return false;
-            };
-            if session.presentation_state != TerminalSessionPresentationState::Running {
-                return false;
-            }
-            let Some(pane_id) = self.agents_workspace.pane_id_for_session(shell_session_id) else {
-                self.remote_attach_sessions.remove(&key);
-                return false;
-            };
-
-            self.change_active_mode_with_pane_state(TitlebarMode::Agents, cx);
-            self.agents_workspace.select_tab(pane_id, shell_session_id);
-            self.focus_shell_target(ShellFocusTarget::AgentsPane(pane_id), cx);
-            self.scroll_workspace_pane_active_tab(pane_id);
-
-            if !self.app_shot_write_into_agents_tab(shell_session_id, prompt, cx) {
-                return false;
-            }
-            self.persist_shell_layout_state();
-            self.set_sidebar_gxserver_remote_attach_focus_state(&key, cx);
-            cx.notify();
-            true
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = (reference, prompt, cx);
-            false
-        }
-    }
-
     pub(crate) fn set_sidebar_gxserver_remote_attach_focus_state(
         &mut self,
         key: &GpuiRemoteAttachSessionKey,
@@ -968,7 +766,6 @@ impl GhostexGpuiApp {
         self.local_workspace_attach_pending.clear();
         self.local_workspace_lifecycle_requests.clear();
         self.local_workspace_latest_focus_key = None;
-        self.local_app_shot_session_mappings.clear();
         self.agents_chat_mode_sessions = chat_mode_sessions;
         self.terminal_agent_bar_sessions.clear();
         self.agents_terminal_startup_coordinator = AgentsTerminalStartupCoordinator::new();
@@ -2191,6 +1988,9 @@ impl GhostexGpuiApp {
         {
             return false;
         }
+        // The placeholder keeps its id, and with it whatever place an older tab of that id had in
+        // the strip (often the start), so loading it is a new tab for the strip's order too.
+        self.reveal_new_browser_tab(tab_id);
         self.browser_url = default_url;
         true
     }

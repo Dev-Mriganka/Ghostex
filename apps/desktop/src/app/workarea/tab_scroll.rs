@@ -65,6 +65,28 @@ impl GhostexGpuiApp {
             self.scroll_command_group_active_tab_without_ensure(group_id);
         }
         self.scroll_command_collapsed_active_tab_without_ensure();
+        self.scroll_view_strip_to_shown_tab();
+    }
+
+    /// CDXC:Workarea 2026-09-30 DECISION:
+    /// User: a new tab in the view tabs bar always goes to the right end, and the bar scrolls to it
+    /// when it is out of view. Every mode switch ends here, so a view tab that just opened (and was
+    /// appended by `record_open_view_tab`) is revealed the same way a new browser tab is.
+    fn scroll_view_strip_to_shown_tab(&self) {
+        let key = match self.active_mode {
+            TitlebarMode::Agents => return,
+            TitlebarMode::Browser => match self
+                .browser_tabs
+                .active_tab_id_for_pane(self.browser_tabs.focused_pane)
+            {
+                Some(tab_id) => ViewStripTabKey::Browser(tab_id),
+                None => return,
+            },
+            mode => ViewStripTabKey::View(mode),
+        };
+        if let Some(position) = self.view_strip_tab_position(key) {
+            self.view_tab_scroll_handle.scroll_to_item(position);
+        }
     }
 
     pub(crate) fn scroll_workspace_pane_active_tab(&mut self, pane_id: WorkspacePaneId) {
@@ -147,9 +169,11 @@ impl GhostexGpuiApp {
             handle.scroll_to_item(active_index);
         }
         // The view panel's strip is one scroller across every pane and every view, so the same
-        // reveal reads the tab's place in that row rather than its place inside its own pane.
-        if let Some(position) = active_tab_id
-            .and_then(|tab_id| self.view_strip_tab_position(ViewStripTabKey::Browser(tab_id)))
+        // reveal reads the tab's place in that row rather than its place inside its own pane. While
+        // another view is on screen the strip belongs to that view's tab instead.
+        if self.active_mode == TitlebarMode::Browser
+            && let Some(position) = active_tab_id
+                .and_then(|tab_id| self.view_strip_tab_position(ViewStripTabKey::Browser(tab_id)))
         {
             self.view_tab_scroll_handle.scroll_to_item(position);
         }
