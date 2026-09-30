@@ -29,11 +29,15 @@ const config: StorybookConfig = {
    * Storybook config lives under packages/core-ui/.storybook so the repo root has fewer folders while config ownership stays with the sidebar UI surface.
    * Paths must resolve from this config directory because package scripts pass `-c packages/core-ui/.storybook` instead of relying on the default root .storybook folder.
    */
-  stories: ['../**/*.stories.@(ts|tsx)'],
+  // The phone's Find page lives in the apps/mobile/app submodule (views/find) and keeps its story there;
+  // the glob matches nothing when the submodule is not checked out.
+  stories: ['../**/*.stories.@(ts|tsx)', '../../../apps/mobile/app/views/**/*.stories.@(ts|tsx)'],
   viteFinal: async (config) => {
     const existingPlugins = config.plugins ?? [];
     config.resolve = {
       ...config.resolve,
+      // Stories under apps/mobile/app would otherwise pick up React Native's React from that app's node_modules.
+      dedupe: [...(config.resolve?.dedupe ?? []), 'react', 'react-dom'],
       alias: {
         ...(Array.isArray(config.resolve?.alias) ? {} : config.resolve?.alias),
         '@': path.resolve(storybookDir, '../../..'),

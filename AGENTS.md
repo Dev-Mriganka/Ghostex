@@ -46,8 +46,7 @@ Ghostex/
 │   │   └── views/     # embedded pages: modal-host, manage, kanban, meo
 │   ├── gpui-web/      # the desktop's GPUI UI compiled to wasm and served by `ghostex web`
 │   ├── mobile/
-│   │   ├── app/       # React Native / Expo submodule
-│   │   └── views/     # find/ view bundle embedded by the RN app
+│   │   └── app/       # React Native / Expo submodule (its views/find/ is the embedded Find page)
 │   ├── editor/        # GhostexEditor daemon (Monaco prompt editor)
 │   └── history-cli/   # `ghostex-history` CLI crate
 ├── server/            # gxserver crate (binaries: gxserver, ghostex)
@@ -96,15 +95,15 @@ Where to look first, by task:
 - **Desktop app shell** (window lifecycle, startup, terminals/panes, titlebar, session restore/fork launch plans, terminal host integration): `apps/desktop/src/`, `apps/desktop/sidebar/`, `apps/desktop/native/macos/`, `apps/desktop/scripts/`, `packages/core-ui/`, `packages/shared/`, `tooling/`.
 - **Frontend UI** (React components, settings, project/sidebar interactions, Storybook stories): `packages/core-ui/`, `packages/components/` (+ `ui/`), `packages/shared/`, `apps/desktop/sidebar/`, `apps/desktop/views/` (modal host, Docs/manage, Kanban, `meo`).
 - **Web app**: `apps/gpui-web/` (the desktop's GPUI source compiled to wasm; see its README), then the desktop files it symlinks.
-- **Session grid, prompts, agent metadata, workspace/project state, contracts, shared tests**: `packages/shared/`, then the consuming surface in `packages/core-ui/`, `apps/desktop/sidebar/`, `apps/desktop/views/`, `apps/mobile/views/`, or `server/src/`.
+- **Session grid, prompts, agent metadata, workspace/project state, contracts, shared tests**: `packages/shared/`, then the consuming surface in `packages/core-ui/`, `apps/desktop/sidebar/`, `apps/desktop/views/`, `apps/mobile/app/`, or `server/src/`.
 - **Server, remote protocol, hooks, authentication, remote setup**: `server/src/`, `packages/shared/`, `tooling/`. The crate (`gxserver`; binaries `gxserver` and `ghostex`) is heavily modularized: `server/src/server/` (HTTP/WS core plus per-concern submodules), `agents/`, the flat `session_chat_*.rs` family, `domain/`, `zmx/`, `typed_operations/`, `portless/`, `agent_hooks/`.
 - **Extensions**: the folders in the Extensions section above. Search `/Users/madda/dev/_active/Ghostex-extensions` only for manifests, authoring/publishing tooling, or example-extension code.
 - **zmx behaviour**: `.dependencies/zmx/src/` + `.dependencies/zmx/test/`, the deliberate exception to the `.dependencies/**` exclusion because Ghostex edits it. The canonical contract for the Ghostex private OSCs (`ZMX_REFRESH`, `ZMX_VISIBLE=<rows>,<cols>`, `ZMX_CHAT=<rows>,<cols>`, `ZMX_HIDDEN=<rows>,<cols>`) is `appendClientInputMessages` in `.dependencies/zmx/src/loop.zig`; the three emitters (`apps/desktop/src/terminal_model.rs`, which the GPUI web build compiles too, `server/src/terminal_ws.rs`, `apps/mobile/app/src/terminal/zmxDisplay.ts`) must keep byte-identical sequences and a 200-column constant equal to `RESTING_GRID_COLS` in `.dependencies/zmx/src/ipc.zig`.
-- **Prompt-history search** (`ghostex f`, the Find surface): `packages/find/` engine, `server/src/agent_prompt_search.rs` API, `packages/core-ui/find/` shared UI.
-- **Mobile**: `apps/mobile/` is the only active mobile app (Android, via the React Native/Expo submodule `apps/mobile/app`). Its chat is native React Native views on the Rust chat core (`apps/mobile/app/src/chat/`, `packages/gx-chat-mobile`); its one embedded page, `apps/mobile/views/find/`, is bundled by `bun run build:mobile-find`, and `bun run generate:mobile-chat-agents` writes the phone's list of chat-capable agents from `packages/shared/session-chat-agents.ts`. The retired iOS and Termux-fork Android repos under `/Users/madda/dev/_active/ghostex-deprecated/` must not be restored as release inputs.
+- **Prompt-history search** (`ghostex f`, the Find surface): `packages/find/` engine, `server/src/agent_prompt_search.rs` API, `apps/mobile/app/views/find/` (in the phone submodule) the React Find page.
+- **Mobile**: `apps/mobile/` is the only active mobile app (Android, via the React Native/Expo submodule `apps/mobile/app`). Its chat is native React Native views on the Rust chat core (`apps/mobile/app/src/chat/`, `packages/gx-chat-mobile`); its one embedded page, the Find page in the submodule's `views/find/` (it still imports shared UI from this repo), is bundled by `bun run build:mobile-find`, and `bun run generate:mobile-chat-agents` writes the phone's list of chat-capable agents from `packages/shared/session-chat-agents.ts`; both run scripts that live in `apps/mobile/app/scripts/`. The retired iOS and Termux-fork Android repos under `/Users/madda/dev/_active/ghostex-deprecated/` must not be restored as release inputs.
 - **Assets, sounds, icons, release tooling**: `media/`, `apps/desktop/assets/`, `packages/core-ui/assets/`, `tooling/`, `tooling/release-gpui/`.
 
-Preferred first-pass `rg` shape (add `apps/desktop/views`, `packages/components`, or `apps/mobile/views` only when the task is about those):
+Preferred first-pass `rg` shape (add `apps/desktop/views`, `packages/components`, or `apps/mobile/app/views` only when the task is about those):
 
 ```bash
 rg -n "pattern" apps/desktop/src apps/desktop/sidebar packages/core-ui packages/shared \
@@ -115,7 +114,7 @@ rg -n "pattern" apps/desktop/src apps/desktop/sidebar packages/core-ui packages/
 
 ### Prompt-history search is Rust; the old Zig Zehn source is gone
 
-`ghostex f` runs the picker **in-process** from the `packages/find/` Rust crate (`ghostex-find`), compiled into gxserver and the `ghostex` CLI. There is no `bin/zehn` to stage, no `GHOSTEX_ZEHN_BIN`, and no `ZEHN_ZIG` (releases still need Zig 0.16 for ghostty and zmx, and 0.16 is the repo's only Zig toolchain). The Zig `zehn` submodule was removed: never restore, build, or bundle it, or treat it as the spec for new work; change `packages/find/` instead. The terminal picker and the GUI (`packages/core-ui/find/`) share one key map (agents `^g`, projects `^j`, moved from `^t`/`^r` because browsers reserve Ctrl+T and Ctrl+R) and the same scanner, matcher, Codex cache, and favorites file, so a prompt starred in one is starred in the other. Anything that makes them rank or star differently is a bug.
+`ghostex f` runs the picker **in-process** from the `packages/find/` Rust crate (`ghostex-find`), compiled into gxserver and the `ghostex` CLI. There is no `bin/zehn` to stage, no `GHOSTEX_ZEHN_BIN`, and no `ZEHN_ZIG` (releases still need Zig 0.16 for ghostty and zmx, and 0.16 is the repo's only Zig toolchain). The Zig `zehn` submodule was removed: never restore, build, or bundle it, or treat it as the spec for new work; change `packages/find/` instead. The terminal picker and the GUI (the native Search by Prompt window, and the phone's Find page in `apps/mobile/app/views/find/`) share one key map (agents `^g`, projects `^j`, moved from `^t`/`^r` because browsers reserve Ctrl+T and Ctrl+R) and the same scanner, matcher, Codex cache, and favorites file, so a prompt starred in one is starred in the other. Anything that makes them rank or star differently is a bug.
 
 ### Session daemons: zmx (POSIX, including WSL) and wmx (native Windows)
 
@@ -204,7 +203,7 @@ Files you touched earlier in your session, or read a while ago, may have been ch
 
 ### Rules for running commands
 
-- TypeScript is gated by two configs, not one: `bun run typecheck` (root: `packages/shared`, `packages/core-ui`, `packages/components`, `apps/desktop/views`, `apps/mobile/views`) and `bun run desktop:typecheck` (`apps/desktop/tsconfig.json`, covering `apps/desktop/sidebar/` and `apps/desktop/views/`). A change under `apps/desktop/sidebar/` is only checked by `desktop:typecheck`.
+- TypeScript is gated by two configs, not one: `bun run typecheck` (root: `packages/shared`, `packages/core-ui`, `packages/components`, `apps/desktop/views`, plus the phone's Find page through `apps/mobile/app/views/find/tsconfig.json` when the submodule is checked out) and `bun run desktop:typecheck` (`apps/desktop/tsconfig.json`, covering `apps/desktop/sidebar/` and `apps/desktop/views/`). A change under `apps/desktop/sidebar/` is only checked by `desktop:typecheck`.
 - Run desktop-crate cargo commands **from inside `apps/desktop/`**, never with `--manifest-path` from the repo root: the crate pins its toolchain in `apps/desktop/rust-toolchain.toml` (1.95.0), and `--manifest-path` from the root resolves the root toolchain and fails on dependency code that needs the pin.
 - Local Rust builds of `apps/desktop/` and `server/` require `sccache` on PATH (`rustc-wrapper = "sccache"` in each crate's `.cargo/config.toml`, which cargo reads only when run from inside the crate directory). If cargo fails with `could not execute process 'sccache'`, run `brew install sccache`; never delete the config or build with `--manifest-path` from the root. Setup details: README.md, "Building from source".
 

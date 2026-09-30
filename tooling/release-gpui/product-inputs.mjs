@@ -85,10 +85,6 @@ export const IGNORED_FOR_RELEASE = Object.freeze([
     why: 'GPUI web build; built from a checkout with `bun run web:build`, never part of a GPUI release artifact.',
   },
   {
-    path: 'apps/mobile/views/find',
-    why: 'Mobile Find Prompts bundle source; consumed by the mobile submodule build, not by release jobs.',
-  },
-  {
     path: 'vitest.config.ts',
     why: 'Test runner configuration; release:test uses tooling/release-gpui/vitest.release.config.ts.',
   },
