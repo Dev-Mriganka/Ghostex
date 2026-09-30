@@ -24,7 +24,8 @@ function initialTools(): ManagedToolState[] {
     {
       id: 'uv',
       label: 'uv',
-      description: 'Installs Claude Swap and the Python it needs.',
+      description:
+        'Python package installer from Astral. Ghostex uses it to install Claude Swap for switching Claude accounts, and it downloads the Python Claude Swap needs. uv and uvx also work in your terminals.',
       supported: true,
       installed: false,
       installPlan:

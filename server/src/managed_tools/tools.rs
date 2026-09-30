@@ -61,8 +61,12 @@ impl ToolId {
     pub(crate) fn description(self) -> &'static str {
         match self {
             ToolId::Node => "Runs agent CLIs that install with npm, such as Gemini, Pi and Qoder.",
-            ToolId::Uv => "Installs Claude Swap and the Python it needs.",
-            ToolId::Homebrew => "The Mac package manager. Ghostex installs it when an install you choose runs through Homebrew.",
+            ToolId::Uv => {
+                "Python package installer from Astral. Ghostex uses it to install Claude Swap for switching Claude accounts, and it downloads the Python Claude Swap needs. uv and uvx also work in your terminals."
+            }
+            ToolId::Homebrew => {
+                "The Mac package manager. Ghostex installs it when an install you choose runs through Homebrew."
+            }
             ToolId::SystemTools => {
                 "curl, certificates, unzip and git, which agent installers need on Linux."
             }
