@@ -151,7 +151,7 @@ pub enum MediaKind {
 
 /// CDXC:SessionChat 2026-09-24 DECISION:
 /// User: a pasted video reads "Video #1" instead of "File #1", its menu names what it is, and clicking it never opens the code editor. Audio and PDFs follow the same rule. Where the click lands is the host's call: since 2026-09-27 the desktop plays video and audio in its Files view or opens them in the system app, as its "Videos / Audio open in" settings say (CDXC:SessionChat 2026-09-27).
-/// SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat.rs` routes the click.
+/// SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat/file_open.rs` routes the click.
 pub fn media_kind(path: &str) -> Option<MediaKind> {
     let lowered = crate::transcript::jsstr::ascii_lower(without_position(path));
     let has = |extensions: &[&str]| {

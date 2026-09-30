@@ -67,7 +67,7 @@ const READ_RETRY_SLOW: Duration = Duration::from_secs(30);
 ///
 /// CDXC:Sessions 2026-09-21 WHY:
 /// A process-wide count, not this document's own, and named for what it really measures: the
-/// handler in `session_chat.rs` is shared by every `ghostexNativeHost` message and needs a window,
+/// handler in `session_chat/host_actions.rs` is shared by every `ghostexNativeHost` message and needs a window,
 /// so a message can vanish there with nothing else to say so. It is not specific to this document
 /// and is not reported as if it were.
 static NATIVE_HOST_MESSAGES_DROPPED: AtomicU64 = AtomicU64::new(0);

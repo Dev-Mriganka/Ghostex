@@ -205,7 +205,7 @@ pub(super) const UNROUTED: &str = "unrouted";
 ///
 /// CDXC:SessionChat 2026-09-30 WHY:
 /// `switchToTerminal` is forwarded from here unchanged as a `sessionChatHostAction`; the app shell's
-/// `receive_session_chat_host_action` (session_chat.rs) switches the view. Supersedes the 2026-09-22
+/// `receive_session_chat_host_action` (session_chat/host_actions.rs) switches the view. Supersedes the 2026-09-22
 /// note that the shell dropped it.
 fn host_action(action: String, params: Value) -> Routed {
     if let Some(name) = SWALLOWED_HOST_ACTIONS

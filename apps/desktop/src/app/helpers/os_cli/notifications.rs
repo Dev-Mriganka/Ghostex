@@ -213,7 +213,7 @@ pub(crate) const GPUI_COPY_SOUND_FILE_NAME: &str = "copy.mp3";
 /// User: "I want this copy sound to actually play everywhere in the app when we copy something."
 /// Every user-initiated copy in the desktop app funnels through this one function: the native GPUI copy sites, terminal copy on select and Cmd+C in both terminal engines, and every React page through the `playCopySound` bridge message.
 /// It owns the bundled `copy.mp3` asset and the `copySound` setting (Settings > Notifications > Sounds), so no call site carries its own gate or audio element.
-/// SEE-ALSO: packages/core-ui/copy-sound.ts (React entry point), apps/desktop/src/app/remote_conn/app_modal_bridge.rs, apps/desktop/src/app/session_chat.rs, apps/desktop/src/app/workspace_events.rs (bridge arms), apps/desktop/scripts/build-macos-app.sh (asset list).
+/// SEE-ALSO: packages/core-ui/copy-sound.ts (React entry point), apps/desktop/src/app/remote_conn/app_modal_bridge.rs, apps/desktop/src/app/session_chat/, apps/desktop/src/app/workspace_events.rs (bridge arms), apps/desktop/scripts/build-macos-app.sh (asset list).
 pub(crate) fn gpui_play_copy_sound() {
     let settings_snapshot = shared_settings::shared_sidebar_settings_snapshot();
     let enabled = settings_snapshot

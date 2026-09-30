@@ -28,7 +28,7 @@ export type SessionChatMediaKind = 'audio' | 'pdf' | 'video';
 /**
  * CDXC:SessionChat 2026-09-24 DECISION:
  * User: a pasted video reads "Video #1" instead of "File #1", its menu names what it is, and clicking it opens it normally with the OS default app on macOS, Windows, and Linux instead of the code editor. Audio and PDFs follow the same rule.
- * SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat.rs` keeps the same extension list for the click.
+ * SEE-ALSO: `open_session_chat_file_for_session` in `apps/desktop/src/app/session_chat/file_open.rs` keeps the same extension list for the click.
  */
 export function sessionChatMediaKind(path: string): SessionChatMediaKind | null {
   if (VIDEO_PATH_PATTERN.test(path)) return 'video';
