@@ -308,7 +308,7 @@ impl GhostexGpuiApp {
                     picker.glass = window_glass_active();
                     picker.frosted_fill = picker
                         .glass
-                        .then(|| crate::app::helpers::frosted_menu_fill(picker.surface_color()));
+                        .then(|| crate::app::helpers::frosted_modal_fill(picker.surface_color()));
                     picker
                 });
                 *picker_out.borrow_mut() = Some(picker.clone());

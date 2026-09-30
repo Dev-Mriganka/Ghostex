@@ -166,7 +166,7 @@ pub(crate) fn source_code_server_runtime_availability(
         Ok(Some(store)) => store,
         Ok(None) => {
             return SourceCodeServerRuntimeAvailability::Failed(
-                SourceCodeServerRuntimeFailure::Launch,
+                SourceCodeServerRuntimeFailure::EditorMissing,
             );
         }
         Err(_) => {

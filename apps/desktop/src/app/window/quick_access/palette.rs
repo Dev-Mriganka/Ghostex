@@ -164,7 +164,7 @@ impl QuickAccessPalette {
         if !glass {
             return palette;
         }
-        let fill = crate::app::helpers::frosted_menu_fill(hsla(palette.window));
+        let fill = crate::app::helpers::frosted_modal_fill(hsla(palette.window));
         palette.frosted(light, fill.into())
     }
 

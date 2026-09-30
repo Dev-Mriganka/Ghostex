@@ -328,6 +328,9 @@ pub(crate) fn gpui_is_probably_ghostex_command(path: &Path, command: &str) -> bo
         .unwrap_or(false)
 }
 
+/// CDXC:SessionChat 2026-09-30 DECISION:
+/// User: when neither the Default Agent View nor the agent's own override is set, treat it as Chat automatically. A settings file that never saved `preferredAgentInterface` therefore means Chat, the shared default in `packages/shared/ghostex-settings/defaults.ts` that the Settings modal and onboarding already show; falling back to the enum's Terminal default made a fresh Linux install display Chat while every new session opened in Terminal.
+/// SEE-ALSO: `PreferredInterfaceSettings::resolve` in packages/gx-core/src/sidebar_actions/remote_focus.rs.
 pub(crate) fn gpui_preferred_agent_interface_from_settings(
     settings: &serde_json::Map<String, serde_json::Value>,
 ) -> GpuiPreferredAgentInterface {
@@ -335,7 +338,7 @@ pub(crate) fn gpui_preferred_agent_interface_from_settings(
         .get("preferredAgentInterface")
         .and_then(serde_json::Value::as_str)
         .and_then(GpuiPreferredAgentInterface::from_str)
-        .unwrap_or_default()
+        .unwrap_or(GpuiPreferredAgentInterface::Chat)
 }
 
 /// Per-agent override of the Default Agent View, read straight off the shared

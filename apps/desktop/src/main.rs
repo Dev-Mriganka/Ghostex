@@ -18,6 +18,8 @@ mod ghostty_vt;
 mod hotkey_label;
 #[cfg(target_os = "linux")]
 mod linux_updater;
+#[cfg(target_os = "linux")]
+mod linux_x11_scale;
 mod navigation_history;
 mod notification_feed;
 mod plugins_modal;
@@ -584,6 +586,8 @@ fn main() {
         defensive parity if a platform closes every child before this observer.
         */
         cx.on_window_closed(move |cx, window_id| {
+            #[cfg(target_os = "linux")]
+            cef::detach_native_views_of_closing_window(window_id);
             persist_gpui_window_frame_state();
             if window_id == main_window_id || cx.windows().is_empty() {
                 GPUI_APP_QUIT_IN_PROGRESS.store(true, Ordering::Release);
@@ -645,6 +649,8 @@ fn force_gpui_x11_backend_for_windowed_cef() {
     // SAFETY: called before GPUI starts background threads or framework-owned
     // environment readers, so no concurrent environment access is possible.
     unsafe { env::remove_var("WAYLAND_DISPLAY") };
+
+    linux_x11_scale::pin_gpui_x11_scale_factor();
 }
 
 fn gpui_platform_window_app_id() -> Option<String> {

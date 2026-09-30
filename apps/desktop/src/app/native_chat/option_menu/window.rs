@@ -86,6 +86,7 @@ pub(super) struct ChatOptionMenuPanel {
     pub(super) model_menu: Option<super::model_menu::ModelMenuState>,
     was_active: bool,
     _activation: Subscription,
+    _press: Subscription,
     _chat_subscription: Option<Subscription>,
 }
 
@@ -185,6 +186,14 @@ impl ChatOptionMenu {
             return;
         }
         if self.retake_key(cx) {
+            return;
+        }
+        self.dismiss(cx);
+    }
+
+    /// Closes the menu the user clicked away from, leaving focus where the click put it.
+    fn dismiss(&mut self, cx: &mut Context<Self>) {
+        if self.closed {
             return;
         }
         // The press that took the window away is the one a trigger is about to report as a
@@ -408,13 +417,33 @@ impl ChatOptionMenu {
                                     if window.is_window_active() {
                                         panel.was_active = true;
                                     } else if panel.was_active {
-                                        let menu = panel.menu.clone();
-                                        cx.defer(move |cx| {
-                                            menu.update(cx, |menu, cx| menu.check_active(cx))
-                                        });
+                                        crate::app::window::popup_dismissal::dismiss_on_focus_loss(
+                                            panel,
+                                            window,
+                                            cx,
+                                            |panel, _, cx| {
+                                                let menu = panel.menu.clone();
+                                                cx.defer(move |cx| {
+                                                    menu.update(cx, |menu, cx| {
+                                                        menu.check_active(cx)
+                                                    })
+                                                });
+                                            },
+                                        );
                                     }
                                 },
                             );
+                            let press =
+                                crate::app::window::popup_dismissal::observe_main_window_press(
+                                    window,
+                                    cx,
+                                    |panel: &mut ChatOptionMenuPanel, _, cx| {
+                                        let menu = panel.menu.clone();
+                                        cx.defer(move |cx| {
+                                            menu.update(cx, |menu, cx| menu.dismiss(cx))
+                                        });
+                                    },
+                                );
                             let chat_subscription = if rows
                                 .first()
                                 .is_some_and(|row| row["accounts"].is_object())
@@ -518,6 +547,7 @@ impl ChatOptionMenu {
                                 model_menu,
                                 was_active: window.is_window_active(),
                                 _activation: activation,
+                                _press: press,
                                 _chat_subscription: chat_subscription,
                             }
                         });

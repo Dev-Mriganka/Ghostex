@@ -38,7 +38,7 @@ impl GhostexGpuiApp {
         if !window_glass_active() {
             return palette;
         }
-        palette.frosted(frosted_menu_fill(palette.surface.into()).into())
+        palette.frosted(frosted_modal_fill(palette.surface.into()).into())
     }
 
     /// Opens `kind` as a native window whose content is built by `build`.

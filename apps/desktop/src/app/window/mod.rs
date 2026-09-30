@@ -27,6 +27,7 @@ pub(crate) mod modal_window_frame;
 pub(crate) mod native_modal_kit;
 pub(crate) mod new_thread_picker;
 pub(crate) mod onboarding;
+pub(crate) mod popup_dismissal;
 pub(crate) mod popup_frame;
 pub(crate) mod portless_setup_modal;
 pub(crate) mod quick_access;

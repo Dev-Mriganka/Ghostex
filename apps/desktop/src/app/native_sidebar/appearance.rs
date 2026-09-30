@@ -24,13 +24,14 @@ pub(crate) struct SidebarAppearance {
 }
 
 impl SidebarAppearance {
+    /// CDXC:Sidebar 2026-09-30 DECISION:
+    /// User: the sidebar text and the chat's main text must be the same size. The sidebar scales only by its own zoom on top of GPUI's window scale, like the chat, and no longer shrinks to Chromium's display scale on Linux (that 2026-09-18 workaround made it smaller than the chat whenever GPUI's scale and Chromium's differed); Linux window scale is fixed once for every surface in `linux_x11_scale::pin_gpui_x11_scale_factor`.
     pub(crate) fn from_hud(hud: &Value, window: &Window) -> Self {
         let scale = hud
             .get("agentManagerZoomPercent")
             .and_then(Value::as_f64)
             .unwrap_or(100.0) as f32
-            / 100.0
-            * sidebar_content_scale(window);
+            / 100.0;
         let light = hud["settings"]
             .as_object()
             .is_some_and(sidebar_uses_light_theme);
@@ -117,45 +118,5 @@ impl crate::GhostexGpuiApp {
             Some(snapshot) => tooltip_delay_from_hud(&snapshot.hud),
             None => tooltip_delay_from_hud(&Value::Null),
         }
-    }
-}
-
-/// CDXC:Sidebar 2026-09-18 WHY:
-/// Linux GPUI can infer 133% scaling from monitor dimensions while Chromium uses 100%, making the same sidebar and menu metrics one-third larger after native rendering.
-/// Convert Chromium display units to GPUI units so fonts, rows, menus, and drag previews retain the embedded sidebar's physical size while preserving the user's zoom setting.
-fn sidebar_content_scale(window: &Window) -> f32 {
-    #[cfg(target_os = "linux")]
-    {
-        use ::cef::ImplDisplay;
-
-        // CEF is optional and starts only for web views (CDXC:CefRuntime 2026-09-28 in
-        // app/helpers/web_runtime.rs); until it runs there is no Chromium scale to match.
-        if !crate::cef::context_initialized() {
-            return 1.0;
-        }
-        let scale = window.scale_factor();
-        let bounds = window.bounds();
-        let bounds = ::cef::Rect {
-            x: (bounds.origin.x.as_f32() * scale).round() as i32,
-            y: (bounds.origin.y.as_f32() * scale).round() as i32,
-            width: (bounds.size.width.as_f32() * scale).round() as i32,
-            height: (bounds.size.height.as_f32() * scale).round() as i32,
-        };
-        // A missing display (CEF not initialised yet, or a window off every known screen) falls back to
-        // GPUI's own scale: a panic here would take the whole render pass down with it.
-        let Some(display) = ::cef::display_get_matching_bounds(Some(&bounds), 1) else {
-            return 1.0;
-        };
-        let content_scale = display.device_scale_factor() / scale;
-        if content_scale.is_finite() && content_scale > 0.0 {
-            content_scale
-        } else {
-            1.0
-        }
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = window;
-        1.0
     }
 }

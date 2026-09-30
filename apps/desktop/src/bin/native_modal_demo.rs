@@ -65,6 +65,8 @@ mod new_thread_picker_demo;
 mod onboarding;
 #[path = "native_modal_demo/onboarding.rs"]
 mod onboarding_demo;
+#[path = "../app/window/popup_dismissal.rs"]
+mod popup_dismissal;
 #[path = "native_modal_demo/portless_setup.rs"]
 mod portless_setup_demo;
 #[path = "../app/window/portless_setup_modal.rs"]

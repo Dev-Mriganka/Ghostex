@@ -769,6 +769,9 @@ pub(crate) enum SourceCodeServerRuntimeFailure {
     InstallOther,
     #[cfg(windows)]
     NativeEditorMissing,
+    /// CDXC:CodeEditor 2026-09-30 WHY:
+    /// A Linux dev build with no sealed manifest and an unbuilt `.dependencies/code-server` has nothing to launch or install; reporting that as a launch timeout sent debugging after a startup problem that did not exist.
+    EditorMissing,
     Launch,
 }
 
@@ -786,6 +789,7 @@ impl SourceCodeServerRuntimeFailure {
             Self::NativeEditorMissing => {
                 "The native Windows editor is missing from this build. Install a build that includes the Windows editor."
             }
+            Self::EditorMissing => "This Ghostex build doesn’t include the VS Code IDE component.",
             Self::Launch => "VS Code didn’t start in time.",
         }
     }

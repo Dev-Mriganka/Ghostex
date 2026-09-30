@@ -210,14 +210,20 @@ impl GpuiAppModalKind {
             CDXC:AppModal 2026-07-26-07:20:
             Settings, Hotkeys, Configure Agents, Configure Actions, and Open Targets all render the one tabbed Settings dialog in the modal host, so they must keep the full Settings frame even though their legacy standalone stylesheets are narrower.
             */
+            /*
+            CDXC:AppModal 2026-09-30 DECISION:
+            User: Settings and Search by Prompt "open way too big. they should open centered in the page like the size that the quick access modal opens, not biggger". The Settings dialog (every entry above) and Search by Prompt open centered on the Quick Access frame.
+            */
             Self::Settings
             | Self::Hotkeys
             | Self::FindPrompts
-            | Self::AgentsHub
             | Self::ConfigureAgents
             | Self::ConfigureActions
-            | Self::OpenTargets
-            | Self::GitFileDiff => size(
+            | Self::OpenTargets => size(
+                px(APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH),
+                px(APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT),
+            ),
+            Self::AgentsHub | Self::GitFileDiff => size(
                 px(APP_MODAL_HOST_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_WINDOW_HEIGHT),
             ),

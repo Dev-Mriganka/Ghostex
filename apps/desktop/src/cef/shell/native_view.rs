@@ -29,6 +29,31 @@ pub(crate) fn receive_native_pointer_focus(native_view: *mut c_void) {
 }
 
 #[cfg(target_os = "linux")]
+thread_local! {
+    static NATIVE_PARENT_BY_GPUI_WINDOW: RefCell<HashMap<gpui::WindowId, usize>> = RefCell::new(HashMap::new());
+}
+
+/// Records the X11 window that CEF children of `window_id` are parented on, so
+/// `detach_native_views_of_closing_window` can find them once GPUI no longer can.
+#[cfg(target_os = "linux")]
+pub(crate) fn note_gpui_window_native_parent(window_id: gpui::WindowId, native_view: *mut c_void) {
+    NATIVE_PARENT_BY_GPUI_WINDOW.with(|parents| {
+        parents.borrow_mut().insert(window_id, native_view as usize);
+    });
+}
+
+/// CDXC:CefRuntime 2026-09-30 WHY:
+/// GPUI destroys a removed window's X11 window (and with it every embed host and Chromium child inside it) before it releases the window's entities, so `CefBrowser::drop` detaches the embed host too late: opening Settings on Linux dropped the React modal window while Chromium's GPU process was still creating that page's surface, and ANGLE's WindowSurfaceGLX crashed on the vanished window. GPUI's `on_window_closed` observers run while the X11 window still exists, so the embed hosts leave it there and the browser then closes through the same path as a browser dropped from a live window.
+#[cfg(target_os = "linux")]
+pub(crate) fn detach_native_views_of_closing_window(window_id: gpui::WindowId) {
+    let parent =
+        NATIVE_PARENT_BY_GPUI_WINDOW.with(|parents| parents.borrow_mut().remove(&window_id));
+    if let Some(parent) = parent {
+        platform::detach_native_views_from_parent(parent as *mut c_void);
+    }
+}
+
+#[cfg(target_os = "linux")]
 pub(crate) fn remove_pointer_focus_handler(native_view: *mut c_void) {
     POINTER_FOCUS_HANDLERS.with(|handlers| handlers.borrow_mut().remove(&(native_view as usize)));
 }

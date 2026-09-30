@@ -36,6 +36,7 @@ pub(super) fn install(cx: &gpui::App) {
             }
         })
         .expect("CEF pointer event thread");
+    let app = cx.to_async();
     cx.foreground_executor()
         .spawn(async move {
             while let Some((owner, child, time)) = rx.next().await {
@@ -45,6 +46,9 @@ pub(super) fn install(cx: &gpui::App) {
                 {
                     continue;
                 }
+                // A click in a page never reaches GPUI's own mouse-down, so it clicks away from
+                // open popups here (popup_dismissal.rs).
+                app.update(crate::app::window::popup_dismissal::note_main_window_pointer_press);
                 let (connection, _) = x11_connection();
                 let _ = connection.set_input_focus(InputFocus::PARENT, child, time);
                 let _ = connection.flush();
