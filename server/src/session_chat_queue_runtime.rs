@@ -713,7 +713,7 @@ CDXC:SessionChat 2026-08-21:
 THE internal chat-message send. `/api/sendSessionChatMessage` is one caller;
 the prompt queue ("Send now" and the scheduler) is the other, which is why it
 lives here instead of inside the HTTP handler. Everything a chat send needs
-travels with it — the per-session send mutex in session_chat_send.rs, the
+travels with it — the per-session send mutex in session_chat_send/queue.rs, the
 answerable-picker refusal, the terminal-input clear, the delivery watchdog and
 the option re-detect — so a queued prompt is indistinguishable from one the user
 typed and can never interleave with a Delayed Send.

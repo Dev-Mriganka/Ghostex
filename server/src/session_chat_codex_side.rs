@@ -3,7 +3,7 @@
 //!
 //! CDXC:SessionChat 2026-09-30 DECISION:
 //! User: in Codex chats a Side chat message switches to the terminal and the user deals with the side conversation there. A later chat message leaves the side conversation before it is sent, and switching back to the chat view leaves it too, so chat reads and types into the main thread again.
-//! SEE-ALSO: packages/gx-chat-core/src/composer/side_chat.rs, server/src/session_chat_composer.rs (readiness), server/src/session_chat_send.rs (`DismissClaudePanel`, `handle_handoff_session_chat_draft_http`).
+//! SEE-ALSO: packages/gx-chat-core/src/composer/side_chat.rs, server/src/session_chat_composer.rs (readiness), server/src/session_chat_send/ (`DismissClaudePanel`, `handle_handoff_session_chat_draft_http`).
 
 use crate::session_chat_options::strip_ansi_sgr;
 

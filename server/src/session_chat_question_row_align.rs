@@ -371,7 +371,7 @@ pub fn read_omp_custom_prompt(screen: &str) -> Option<bool> {
 
 /// CDXC:SessionChat 2026-09-25 DECISION:
 /// User: "make gxserver move the highlight back before answering", and later the same day: when the user already typed text into the free-text field in the terminal, clear it before typing, and "Space toggles options", so set each row to exactly the chat's selection instead of toggling. Cursor, pi and omp lists are driven with arrows, so every row these plans act on is reached through this step, which reads the list when the step runs and moves by the exact difference, never across the wrap. Multi-select plans tick only rows that are not ticked and untick rows the terminal ticked that the chat did not pick. Leftover free text is emptied first: Cursor's inline Other text and omp's custom-answer prompt (which reopens holding the earlier answer) are cleared with Ctrl+E then Ctrl+U until the screen shows them empty, and omp's Other row is unticked by submitting that prompt empty. A note the terminal left on an omp row the chat picks is dropped too (unticking a multi-select row drops its note; single-select submits the note prompt empty, which omp still reports as an empty note). Cursor has no key that unticks its Other row, so an emptied Other stays ticked there. A screen it cannot read stops the answer instead of typing blind.
-/// SEE-ALSO: build_cursor_ask_answer_keys, build_pi_ask_answer_keys and build_omp_ask_answer_keys in server/src/session_chat_send.rs.
+/// SEE-ALSO: build_cursor_ask_answer_keys, build_pi_ask_answer_keys and build_omp_ask_answer_keys in server/src/session_chat_send/ask_answer_keys.rs.
 pub(crate) async fn align_question_row(
     project_id: &str,
     session_id: &str,

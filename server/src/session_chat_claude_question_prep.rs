@@ -138,7 +138,7 @@ pub fn next_claude_question_prep_keys(
 }
 
 /// CDXC:SessionChat 2026-09-25 WHY: Claude Code 2.1.280 keeps text typed into "Type something" when the highlight leaves the field, shows it in place of the placeholder, and puts the caret back at the start when the field is highlighted again, so a chat answer typed there landed in front of the leftover text. Ctrl+E then Ctrl+U empties one wrapped line of the field (Ctrl+U alone does nothing with the caret at the start, and a burst of Ups inside wrapped text moves the caret instead of the highlight), so the step repeats it until the screen shows the placeholder. Emptying a multi-select field also unticks it; a digit ticks the field row even when it is empty.
-/// SEE-ALSO: CDXC:SessionChat DECISION in session_chat_question_liveness.rs; build_claude_ask_answer_keys in server/src/session_chat_send.rs.
+/// SEE-ALSO: CDXC:SessionChat DECISION in session_chat_question_liveness.rs; build_claude_ask_answer_keys in server/src/session_chat_send/ask_answer_keys.rs.
 pub(crate) async fn prepare_claude_question(
     project_id: &str,
     session_id: &str,

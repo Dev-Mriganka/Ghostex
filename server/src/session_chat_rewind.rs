@@ -106,7 +106,7 @@ const REWIND_POLL_MS: u64 = 40;
 const REWIND_STEP_TIMEOUT_MS: u64 = 6_000;
 /// Settle between typing the command and submitting it, so the two writes reach
 /// the TUI in separate stdin chunks (the same chunk-separation rule the clear
-/// burst follows in session_chat_send.rs).
+/// burst follows in session_chat_send/input_bytes.rs).
 const REWIND_COMMAND_SETTLE_MS: u64 = 300;
 /// Ceiling on Down presses inside the confirmation menu. The longest measured
 /// menu has five options and starts on the first.

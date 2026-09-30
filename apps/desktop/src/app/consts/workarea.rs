@@ -194,7 +194,7 @@ pub(crate) const WORKSPACE_RENAME_COMMAND_SUBMIT_DELAY: Duration = Duration::fro
 /*
 CDXC:SessionTitles 2026-08-26:
 gxserver's measured clear-burst law, mirrored for the local rename command
-(`build_agent_tui_clear_input` in server/src/session_chat_send.rs): kill toward
+(`build_agent_tui_clear_input` in server/src/session_chat_send/input_bytes.rs): kill toward
 the start (Ctrl+U) 2 * (lines + slack) - 1 times, then the same count toward the
 end (Ctrl+K). One Ctrl+U kills exactly ONE logical line, which is why the single
 kill this path used to send left a multi-line draft in the composer with the
