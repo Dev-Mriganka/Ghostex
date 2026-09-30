@@ -208,7 +208,7 @@ pub fn plan_space_sleep(
 }
 
 /// A project group's workspace project id, once. A user-made group parses to nothing.
-fn push_project(project_ids: &mut Vec<String>, group_id: &str) {
+pub(super) fn push_project(project_ids: &mut Vec<String>, group_id: &str) {
     let Some(project) = ProjectKey::parse_sidebar_group_id(group_id) else {
         return;
     };

@@ -14,7 +14,7 @@
 //! SEE-ALSO: packages/gx-core/src/sidebar_view/space_switch.rs (the rows it picks from, and the
 //! one declared difference).
 
-use ghostex_gx_core::{SpaceSwitchFocus, plan_space_switch_restore};
+use ghostex_gx_core::{SpaceSwitchFocus, plan_space_switch_restore, space_landing_project_ids};
 use serde_json::{Value, json};
 
 use crate::GhostexGpuiApp;
@@ -150,6 +150,19 @@ impl GhostexGpuiApp {
             .diagnostics
             .space_switch_ran(outcome, self.gx_store.space_switch);
         self.dispatch_native_sidebar_command(message, cx);
+    }
+
+    /// The project each background Space would open on, whose page stays awake
+    /// (`web_page_sleep.rs`). A Space switch that keeps the view opens nothing, so there are none.
+    pub(crate) fn gx_store_space_landing_project_ids(&self) -> Vec<String> {
+        if !space_switch_restores() {
+            return Vec::new();
+        }
+        space_landing_project_ids(
+            &self.gx_store.core,
+            &self.gx_store.sidebar_list.last_inputs,
+            super::host::now_ms(),
+        )
     }
 }
 

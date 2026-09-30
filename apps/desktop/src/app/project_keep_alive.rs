@@ -12,6 +12,17 @@ pub(crate) struct ParkedProjectWorkareaSurface {
     pub(crate) owned: ProjectWorkareaRuntimeCefSurface,
     pub(crate) slot_key: ProjectWorkareaCefSurfaceSlotKey,
     pub(crate) parked_at: Instant,
+    /// The project that was left, when the page was parked on a project switch.
+    pub(crate) project_id: Option<String>,
+    /// The page a background Space opens on, which outlives the keep-alive window
+    /// (`refresh_space_kept_parked_workarea_surfaces`).
+    pub(crate) space_kept: bool,
+}
+
+impl ParkedProjectWorkareaSurface {
+    fn kept(&self, keep: Option<Duration>) -> bool {
+        self.space_kept || project_keep_alive_active(Some(self.parked_at), keep)
+    }
 }
 
 /// True while `parked_at` is still inside the keep-alive window; `None` for either means no keep-alive.
@@ -72,14 +83,16 @@ impl GhostexGpuiApp {
                 owned,
                 slot_key,
                 parked_at: Instant::now(),
+                project_id: self.agents_workspace_project_id.clone(),
+                space_kept: false,
             });
         self.ensure_project_keep_alive_expiry_scheduled(cx);
     }
 
     /// CDXC:Workarea 2026-09-27 WHY:
     /// The page on screen is parked here, before the incoming project's view state is applied. The ordinary prune runs after that swap, when `active_mode` already belongs to the incoming project, so it asked the incoming project whether the page was visible: the page the user left was closed whenever the other project showed a different view, and coming back rebuilt it behind its skeleton. With keep-alive off the prune keeps its old rules.
-    /// CDXC:Workarea 2026-09-27 DECISION:
-    /// User: the keep-alive slider stays the limit for every parked page, the side panel's active view included; that view is kept awake (CDXC:Workarea 2026-09-26) but its page still closes when the slider's minutes run out.
+    /// CDXC:Workarea 2026-09-30 DECISION:
+    /// User: the page a background Space opens on is not slept, so swiping between Spaces shows it instantly (CDXC:Spaces 2026-09-30). It stays past the keep-alive slider for as long as that Space opens on it; every other parked page, the side panel's active view included, still closes when the slider's minutes run out, and 0 minutes parks nothing. Supersedes the 2026-09-27 rule that the slider was the limit for every parked page.
     pub(crate) fn park_visible_project_workarea_surfaces_before_switch(
         &mut self,
         cx: &mut gpui::Context<Self>,
@@ -115,8 +128,7 @@ impl GhostexGpuiApp {
             .parked_project_workarea_surfaces
             .iter()
             .position(|parked| {
-                parked.owned.matches_runtime_url(runtime_url)
-                    && project_keep_alive_active(Some(parked.parked_at), keep)
+                parked.owned.matches_runtime_url(runtime_url) && parked.kept(keep)
             })?;
         Some(self.parked_project_workarea_surfaces.remove(index).owned)
     }
@@ -125,7 +137,26 @@ impl GhostexGpuiApp {
         let keep = self.project_switch_keep_alive();
         // Dropping the entity closes the page, exactly as the prune did before keep-alive.
         self.parked_project_workarea_surfaces
-            .retain(|parked| project_keep_alive_active(Some(parked.parked_at), keep));
+            .retain(|parked| parked.kept(keep));
+    }
+
+    /// Marks the parked pages the background Spaces open on, and closes the ones that were held only
+    /// for a Space that no longer opens on them and are past the keep-alive window.
+    pub(crate) fn refresh_space_kept_parked_workarea_surfaces(
+        &mut self,
+        space_kept: &crate::app::web_page_sleep::SpaceKeptWebPages,
+    ) {
+        let mut released = false;
+        for parked in &mut self.parked_project_workarea_surfaces {
+            let kept = parked.project_id.as_deref().is_some_and(|project_id| {
+                space_kept.keeps_view(project_id, parked.slot_key.titlebar_mode())
+            });
+            released |= parked.space_kept && !kept;
+            parked.space_kept = kept;
+        }
+        if released {
+            self.expire_parked_project_workarea_surfaces();
+        }
     }
 
     fn next_project_keep_alive_expiry(&self) -> Option<Duration> {
@@ -133,6 +164,7 @@ impl GhostexGpuiApp {
         let workarea = self
             .parked_project_workarea_surfaces
             .iter()
+            .filter(|parked| !parked.space_kept)
             .filter_map(|parked| keep_alive_remaining(Some(parked.parked_at), keep));
         let terminals = self
             .parked_agents_terminal_runtimes_by_project

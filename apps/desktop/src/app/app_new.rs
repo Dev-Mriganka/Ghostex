@@ -291,7 +291,6 @@ impl GhostexGpuiApp {
                 session_chat_queued_count_refresh_in_flight: false,
                 local_workspace_lifecycle_requests: HashMap::new(),
                 next_local_workspace_lifecycle_request_id: 1,
-                local_app_shot_session_mappings: HashMap::new(),
                 sidebar_command_pane_sessions_snapshot: String::new(),
                 sidebar_agents_delayed_sends_snapshot: String::new(),
                 sidebar_primary_agent_launcher_id:
@@ -443,8 +442,6 @@ impl GhostexGpuiApp {
                 app_modal_window_id: app_modal_window_id_for_app,
                 app_modal_open_attempt_id: 0,
                 app_modal_ready_retry_used: false,
-                app_modal_spare: None,
-                app_modal_spare_preload_generation: 0,
                 app_modal_gxserver_hydrate: None,
                 app_modal_gxserver_hydrate_refreshing: false,
                 app_modal_command_return_focus_target: None,
@@ -540,8 +537,6 @@ impl GhostexGpuiApp {
             })
             .detach();
             #[cfg(target_os = "macos")]
-            register_gpui_app_shots_callback_target(cx.weak_entity(), cx.to_async());
-            #[cfg(target_os = "macos")]
             register_gpui_menu_bar_status_callback_target(cx.weak_entity(), cx.to_async());
             #[cfg(target_os = "macos")]
             register_gpui_sidebar_pointer_callback_target(cx.weak_entity(), cx.to_async());
@@ -608,6 +603,7 @@ impl GhostexGpuiApp {
             }
             this.schedule_project_editor_auto_sleep_for_inactive_modes(cx);
             this.start_project_editor_auto_sleep_policy_polling(cx);
+            this.start_web_page_sleep_sweep(cx);
             this.start_sidebar_hover_reveal_polling(window, cx);
             this.start_command_action_status_polling(cx);
             this.start_command_pane_auto_minimize_polling(window, cx);

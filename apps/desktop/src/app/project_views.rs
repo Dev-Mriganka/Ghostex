@@ -20,6 +20,34 @@ struct Entry {
     started: bool,
     parked: Option<ProjectWorkareaRuntimeCefSurface>,
 }
+
+impl ProjectViews {
+    /// Every parked website or extension page, as its entry key, project, view and page, for the
+    /// idle sweep (`web_page_sleep.rs`).
+    pub(crate) fn parked_views(
+        &self,
+    ) -> impl Iterator<Item = (&str, &str, TitlebarMode, &Entity<CefSurface>)> {
+        self.entries.iter().filter_map(|(key, entry)| {
+            let parked = entry.parked.as_ref()?;
+            let view_id = ExtensionId::new(key.rsplit('\n').next()?)?;
+            Some((
+                key.as_str(),
+                entry.project_id.as_str(),
+                TitlebarMode::Extension(view_id),
+                &parked.surface,
+            ))
+        })
+    }
+
+    /// Closes one parked page. The view keeps its entry and loads again when it is next opened.
+    pub(crate) fn close_parked_view(&mut self, key: &str) -> bool {
+        self.entries
+            .get_mut(key)
+            .and_then(|entry| entry.parked.take())
+            .is_some()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Action)]
 #[action(namespace=ghostex_gpui,no_json)]
 pub(crate) struct ProjectViewCommand {

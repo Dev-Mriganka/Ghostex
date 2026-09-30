@@ -14,7 +14,6 @@
 //!   the revision.
 
 mod active_project_context;
-pub mod app_shot;
 mod attention;
 pub mod bot_feed;
 mod change;
@@ -181,17 +180,17 @@ pub use crate::sidebar_view::{
     armed_actions_by_session, close_project_group_is_active, close_project_successor_candidates,
     close_project_successor_group_order, first_awake_successor_session_id, is_awake_successor_row,
     plan_space_sleep, plan_space_switch_restore, project_slot_plan, rendered_session_ids,
-    reveal_plan, session_is_snoozed, session_slot_plan, space_for_focused_row, ArmedAction,
-    BrowserTabInput, CloseAfterDoneInput, Collection, CollectionView, CollectionsState,
-    DelayedSendInput, DelayedSendView, EmptyState, FocusedRowSpace, GroupCore, GroupSummary,
-    GroupView, LabelDeadline, MachineSummary, MachineTabInput, MachineTabView, OrderItem,
-    OrderKind, ProjectContextView, ProjectDiffStats, ProjectSlotPlan, RemoteMachineView,
-    SectionCollapse, SectionId, SectionView, SessionMenuFacts, SessionRow, SessionSlotPlan,
-    SessionSortMode, SessionTiming, SessionView, SidebarCollapseState, SidebarHiddenItems,
-    SidebarHostInputs, SidebarInputs, SidebarMode, SidebarRevealPlan, SidebarSettings,
-    SidebarUiState, SidebarUpdateWork, SidebarView, SidebarViewModel, Space, SpaceSleepPlan,
-    SpaceSleepPlans, SpaceSleepScope, SpaceSwitchFocus, SpaceView, SpacesState, TagListItem,
-    TagListItemKind, TagPresentation, UnavailableState, WorktreeView,
+    reveal_plan, session_is_snoozed, session_slot_plan, space_for_focused_row,
+    space_landing_project_ids, ArmedAction, BrowserTabInput, CloseAfterDoneInput, Collection,
+    CollectionView, CollectionsState, DelayedSendInput, DelayedSendView, EmptyState,
+    FocusedRowSpace, GroupCore, GroupSummary, GroupView, LabelDeadline, MachineSummary,
+    MachineTabInput, MachineTabView, OrderItem, OrderKind, ProjectContextView, ProjectDiffStats,
+    ProjectSlotPlan, RemoteMachineView, SectionCollapse, SectionId, SectionView, SessionMenuFacts,
+    SessionRow, SessionSlotPlan, SessionSortMode, SessionTiming, SessionView, SidebarCollapseState,
+    SidebarHiddenItems, SidebarHostInputs, SidebarInputs, SidebarMode, SidebarRevealPlan,
+    SidebarSettings, SidebarUiState, SidebarUpdateWork, SidebarView, SidebarViewModel, Space,
+    SpaceSleepPlan, SpaceSleepPlans, SpaceSleepScope, SpaceSwitchFocus, SpaceView, SpacesState,
+    TagListItem, TagListItemKind, TagPresentation, UnavailableState, WorktreeView,
     ARMED_ACTION_CLOSE_AFTER_DONE, ARMED_ACTION_DELAYED_SEND, LOCAL_MACHINE_ID,
     MACHINE_STATE_CONNECTED, OTHER_SPACE_ID, UNTAGGED_TAG_FILTER,
 };

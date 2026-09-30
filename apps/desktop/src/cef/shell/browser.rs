@@ -335,6 +335,7 @@ impl CefBrowser {
                 apply_page_color_scheme(&browser, BrowserPageAppearance::System);
             }
         }
+        install_page_input_tracker(&browser);
         if uses_system_page_appearance {
             apply_browser_page_appearance(&browser);
             if let Some(frame) = browser.main_frame() {
@@ -596,54 +597,6 @@ impl CefBrowser {
         select_all_in_browser(&browser);
     }
 
-    /*
-    CDXC:Onboarding 2026-08-18:
-    The tutorial modal loads the YouTube watch page as its own top-level CEF
-    document, so the app cannot put its player in fullscreen from injected
-    JavaScript: Chromium's Fullscreen API requires a transient user
-    activation, and app-owned `execute_java_script` runs without one (the
-    `requestFullscreen()` promise is rejected outright). Sending the key
-    through the browser host instead feeds Chromium's real input pipeline, so
-    the page sees a trusted keydown with user activation and runs its own "f"
-    shortcut. "f" toggles, so callers must send this exactly once per loaded
-    page. This carries no page data and does not persist or log anything.
-    */
-    pub fn send_fullscreen_toggle_key(&self) {
-        // Windows virtual key code for F; Chromium derives DOM `code`/`key`
-        // from this plus the platform-native code below.
-        const VK_F: c_int = 0x46;
-        #[cfg(target_os = "macos")]
-        const NATIVE_F_KEY_CODE: c_int = 3; // kVK_ANSI_F
-        #[cfg(target_os = "linux")]
-        const NATIVE_F_KEY_CODE: c_int = 41; // X11 keycode for F
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-        const NATIVE_F_KEY_CODE: c_int = 0;
-
-        let browser = self.browser.borrow();
-        let Some(host) = browser.host() else {
-            return;
-        };
-        let mut event = cef::KeyEvent {
-            size: std::mem::size_of::<cef::sys::cef_key_event_t>(),
-            type_: cef::KeyEventType::RAWKEYDOWN,
-            modifiers: 0,
-            windows_key_code: VK_F,
-            native_key_code: NATIVE_F_KEY_CODE,
-            is_system_key: 0,
-            character: b'f' as u16,
-            unmodified_character: b'f' as u16,
-            focus_on_editable_field: 0,
-        };
-        host.send_key_event(Some(&event));
-        // CEF's char event carries the produced character in the key code.
-        event.type_ = cef::KeyEventType::CHAR;
-        event.windows_key_code = b'f' as c_int;
-        host.send_key_event(Some(&event));
-        event.type_ = cef::KeyEventType::KEYUP;
-        event.windows_key_code = VK_F;
-        host.send_key_event(Some(&event));
-    }
-
     pub fn load_url(&self, url: &str) {
         let browser = self.browser.borrow();
         if let Some(frame) = browser.main_frame() {
@@ -824,6 +777,7 @@ impl CefBrowser {
 impl Drop for CefBrowser {
     fn drop(&mut self) {
         self.app_initiated_close.set(true);
+        forget_page_keep_awake_probe(self.identifier());
         #[cfg(target_os = "macos")]
         if let Some(view) = self.native_view() {
             platform::dispose_sidebar_hover_reveal(view);

@@ -11,6 +11,8 @@ pub(crate) struct CefSurface {
     pub(crate) focus_handle: FocusHandle,
     id: String,
     visible: bool,
+    /// When the page last went off screen, for the idle sweep (`app/web_page_sleep.rs`).
+    hidden_since: Option<std::time::Instant>,
     workarea_theme: Option<(bool, u32, u32, bool)>,
 }
 
@@ -142,6 +144,7 @@ impl CefSurface {
             focus_handle: cx.focus_handle().tab_stop(false),
             id,
             visible,
+            hidden_since: (!visible).then(std::time::Instant::now),
             workarea_theme: None,
         }
     }
@@ -251,13 +254,6 @@ impl CefSurface {
         self.browser.focus();
     }
 
-    /// CDXC:Onboarding 2026-08-18: forwards one host-side "f"
-    /// key press (see the CEF backend for why injected JavaScript cannot put
-    /// the tutorial player in fullscreen).
-    pub(crate) fn send_fullscreen_toggle_key(&self) {
-        self.browser.send_fullscreen_toggle_key();
-    }
-
     pub(crate) fn is_loading(&self) -> bool {
         self.browser.is_loading()
     }
@@ -333,8 +329,26 @@ impl CefSurface {
             self.browser
                 .set_motion_hidden(true, std::time::Duration::ZERO);
         }
+        if visible {
+            self.hidden_since = None;
+        } else if self.visible || self.hidden_since.is_none() {
+            self.hidden_since = Some(std::time::Instant::now());
+        }
         self.visible = visible;
         self.browser.set_visible(visible);
+    }
+
+    /// How long the page has been off screen, `None` while it is shown.
+    pub(crate) fn hidden_for(&self) -> Option<std::time::Duration> {
+        self.hidden_since.map(|since| since.elapsed())
+    }
+
+    pub(crate) fn page_keep_awake(&self) -> crate::cef::PageKeepAwake {
+        self.browser.page_keep_awake()
+    }
+
+    pub(crate) fn ask_page_keep_awake(&self) {
+        self.browser.ask_page_keep_awake();
     }
 
     #[cfg(target_os = "macos")]

@@ -108,6 +108,14 @@ pub type ProjectWorkareaBridgeEventHandler = Rc<dyn Fn(ProjectWorkareaBridgeEven
 /// `app/helpers/manage_docs_resources.rs`.
 pub use crate::app::helpers::manage_docs_resources::ManageDocsResourceScope;
 
+/// API mirror of `shell::PageKeepAwake`; without a runtime there is no page to keep.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PageKeepAwake {
+    Unknown,
+    Keep,
+    Release,
+}
+
 pub struct CefBrowser;
 
 impl CefBrowser {
@@ -160,18 +168,15 @@ impl CefBrowser {
         false
     }
 
+    pub fn page_keep_awake(&self) -> PageKeepAwake {
+        PageKeepAwake::Release
+    }
+
+    pub fn ask_page_keep_awake(&self) {}
+
     pub fn load_url(&self, _url: &str) {}
 
     pub fn select_all(&self) {}
-
-    pub fn send_fullscreen_toggle_key(&self) {
-        /*
-        CDXC:Onboarding 2026-08-18:
-        API mirror of the macOS/Windows/Linux host-side "f" key press that puts
-        the tutorial video player in fullscreen. This no-op must not synthesize
-        input, inject JavaScript, or pretend a CEF renderer exists.
-        */
-    }
 
     pub fn execute_java_script_in_main_frame(&self, _script: &str) -> bool {
         false
