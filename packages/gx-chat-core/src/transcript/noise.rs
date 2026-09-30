@@ -379,6 +379,8 @@ struct ModelDefaultOutput {
     note: Option<String>,
     /// Display label of the effort a session-only pick set in the same sentence.
     effort: Option<String>,
+    /// Where "and saved as your default…" or "for this session only" ends in the normalized body.
+    scope_end: usize,
 }
 
 /*
@@ -414,6 +416,7 @@ fn model_set_by_command_output(text: &str) -> Option<ModelDefaultOutput> {
         return None;
     }
     let model = model.to_string();
+    let scope_end = HEAD.len() + space + at + length;
     let mut rest = &tail[at + length..];
 
     // `(?:\s+with\s+`?([^\s`]+)`?\s+effort)?`
@@ -468,10 +471,47 @@ fn model_set_by_command_output(text: &str) -> Option<ModelDefaultOutput> {
     Some(ModelDefaultOutput {
         model,
         note: if note.is_empty() { None } else { Some(note) },
-        // A session-only pick that moved the effort rail reports it in the same sentence; it reads
-        // as the effort pill a separate `/effort` would have produced.
+        // A session-only pick that moved the effort rail reports it in the same sentence.
         effort: effort.map(|value| effort_label(&value)),
+        scope_end,
     })
+}
+
+/// CDXC:SessionChat 2026-10-01 DECISION:
+/// User: "i dont like seeing these 2 like this, please combine the 2 where it makes sense" about a "Set model to Sonnet 5.5" pill followed by a "Set effort level to Low" pill. A model pick saved as the default runs `/model` then `/effort`, and Claude records each output as its own turn; an `/effort` output that comes straight after a `/model` output that named no effort folds into it, so the pair reads as the one sentence a session-only pick prints ("Set model to Sonnet 5.5 with Low effort"). Supersedes the 2026-09-09 decision's separate effort pill beside the model change; `/effort` on its own keeps its own pill.
+pub fn fold_model_effort_pairs(messages: &[ChatMessage]) -> Vec<ChatMessage> {
+    let output_text = |message: &ChatMessage| {
+        let text = js_trim(&joined_text(&message.blocks)).to_string();
+        (harness_injected_turn_label(&text).as_deref() == Some("Local command output"))
+            .then_some(text)
+    };
+    let mut folded: Vec<ChatMessage> = Vec::with_capacity(messages.len());
+    for message in messages {
+        let effort = output_text(message)
+            .as_deref()
+            .and_then(effort_set_by_command_output);
+        let previous = folded.last().and_then(|previous| {
+            let text = output_text(previous)?;
+            let model = model_set_by_command_output(&text)?;
+            (previous.role == message.role && model.effort.is_none()).then_some((text, model))
+        });
+        let (Some(effort), Some((text, model))) = (effort, previous) else {
+            folded.push(message.clone());
+            continue;
+        };
+        let body = normalized_suppressed_turn_body(&text);
+        let (said, rest) = body.split_at(model.scope_end);
+        let sentence = format!("{said} with `{effort}` effort{rest}");
+        if let Some(previous) = folded.last_mut() {
+            previous.blocks = vec![ChatBlock::Text {
+                text: crate::session::app_commands::escaped_marker(
+                    "local-command-stdout",
+                    &sentence,
+                ),
+            }];
+        }
+    }
+    folded
 }
 
 /// `^set effort level to\s+`?([^\s`]+)`?` case-insensitively.
@@ -750,16 +790,21 @@ pub fn classify_suppressed_turn(message: &ChatMessage) -> Option<SuppressedTurn>
             return Some(result);
         }
         if let Some(model) = model_set_by_command_output(&text) {
+            let name = model.model.replace('`', "");
             return Some(SuppressedTurn::Status {
-                label: format!("Set model to {}", model.model.replace('`', "")),
+                label: match &model.effort {
+                    Some(effort) => format!("Set model to {name} with {effort} effort"),
+                    None => format!("Set model to {name}"),
+                },
                 tone: None,
             });
         }
         if let Some(effort) = effort_set_by_command_output(&text) {
-            // CDXC:SessionChat 2026-09-09 DECISION: User: show successful `/effort` and `/fast`
-            // changes as their own completed-action pills beside the separately recorded model
-            // change, and render the effort with the same display capitalization used everywhere
-            // else in chat.
+            // CDXC:SessionChat 2026-10-01 DECISION: User: show a successful `/effort` or `/fast` as
+            // its own completed-action pill, with the effort in the same display capitalization
+            // used everywhere else in chat; an `/effort` right after a `/model` folds into the
+            // model's pill instead (`fold_model_effort_pairs`), superseding the 2026-09-09 pill
+            // beside the model change.
             return Some(SuppressedTurn::Status {
                 label: format!("Set effort level to {}", effort_label(&effort)),
                 tone: None,
@@ -895,27 +940,21 @@ pub fn suppressed_turn_presentation(message: &ChatMessage) -> Value {
         text = command.expect("a matched name implies an envelope").name;
     } else if let Some(model) = &model {
         text = normalized_suppressed_turn_body(&raw_text);
-        if model.note.is_some() || model.effort.is_some() {
+        if let Some(note) = &model.note {
             // The pin warning is a second fact about the same action, not chrome to drop: it gets
-            // its own neutral row under the model result. An effort set by the same pick is a
-            // completed action like the model row above it.
-            let mut statuses = vec![status_row_value(&StatusRow {
-                label: label.clone(),
-                tone: if kind == "status" {
-                    tone.unwrap_or("ok")
-                } else {
-                    "ok"
-                },
-                detail: None,
-            })];
-            if let Some(effort) = &model.effort {
-                statuses.push(
-                    json!({ "label": format!("Set effort level to {effort}"), "tone": "ok" }),
-                );
-            }
-            if let Some(note) = &model.note {
-                statuses.push(json!({ "label": note, "tone": "neutral" }));
-            }
+            // its own neutral row under the model result.
+            let statuses = vec![
+                status_row_value(&StatusRow {
+                    label: label.clone(),
+                    tone: if kind == "status" {
+                        tone.unwrap_or("ok")
+                    } else {
+                        "ok"
+                    },
+                    detail: None,
+                }),
+                json!({ "label": note, "tone": "neutral" }),
+            ];
             return json!({
                 "kind": "status",
                 "label": label,
