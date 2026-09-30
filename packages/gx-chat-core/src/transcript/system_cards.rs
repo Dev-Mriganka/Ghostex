@@ -16,7 +16,9 @@ const APP_COMMAND_OUTPUT_ID_PREFIX: &str = "app-command-output:";
 /// The id it writes for a command Ghostex ran on the session's behalf, of which the rename is the
 /// one with its own card.
 const APP_COMMAND_ID_PREFIX: &str = "app-command:";
-const AUTO_NAMED_TITLE_LEAD: &str = "Ghostex auto named this session";
+pub(crate) const AUTO_NAMED_TITLE_LEAD: &str = "Ghostex auto named this session";
+/// CDXC:SessionTitles 2026-09-30 WHY: a name the user typed (sidebar Rename, rename modal) reaches the agent as the same `/rename` Ghostex sends for its own titles, so gxserver marks it `userRename` and the card says so instead of claiming Ghostex named the session.
+pub(crate) const USER_RENAMED_TITLE_LEAD: &str = "Session renamed";
 
 fn block_text(message: &ChatMessage, index: usize) -> &str {
     match message.blocks.get(index) {
@@ -33,15 +35,22 @@ pub fn classify_system_card(message: &ChatMessage, markdown: &str) -> Value {
     if message.role != ChatRole::System {
         return Value::Null;
     }
-    let auto_named_title = if message.id.starts_with(APP_COMMAND_ID_PREFIX)
-        && block_text(message, 0) == AUTO_NAMED_TITLE_LEAD
+    let lead = block_text(message, 0);
+    let user_renamed = lead == USER_RENAMED_TITLE_LEAD;
+    let renamed_title = if message.id.starts_with(APP_COMMAND_ID_PREFIX)
+        && (lead == AUTO_NAMED_TITLE_LEAD || user_renamed)
     {
         js_trim(block_text(message, 1))
     } else {
         ""
     };
-    if !auto_named_title.is_empty() {
-        return json!({ "kind": "auto-named", "title": auto_named_title });
+    if !renamed_title.is_empty() {
+        return json!({
+            "kind": "auto-named",
+            "title": renamed_title,
+            "lead": lead,
+            "userRenamed": user_renamed,
+        });
     }
     if message.id.starts_with(FORK_BOUNDARY_ID_PREFIX) {
         return json!({ "kind": "fork-boundary", "text": markdown });

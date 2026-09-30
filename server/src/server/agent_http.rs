@@ -310,7 +310,7 @@ pub(crate) fn dispatch_agent_http_blocking(
                     ) {
                         return zmx_error_response(endpoint_path, request_id, error);
                     }
-                    crate::session_chat_app_command::record_session_chat_app_command(
+                    crate::session_chat_app_command::record_session_chat_user_rename_command(
                         &project_id,
                         &session_id,
                         &command,

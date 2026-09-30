@@ -74,6 +74,8 @@ pub struct SessionChatAppCommand {
     the archived id travels with it so the settled output lands on the same row.
     */
     pub local_command: bool,
+    /// CDXC:SessionTitles 2026-09-30 WHY: a `/rename` carrying a name the user typed (sidebar context menu Rename, the rename modal) must not read "Ghostex auto named this session" in chat; only the generated and fork renames are Ghostex's own naming.
+    pub user_rename: bool,
     durable_id: Option<String>,
     /// Whose screen the baseline was captured from, for the output diff.
     screen_agent: Option<String>,
@@ -102,6 +104,9 @@ impl SessionChatAppCommand {
         if self.local_command {
             map.insert("archiveId".to_string(), json!(self.durable_id));
             map.insert("localCommand".to_string(), json!(true));
+        }
+        if self.user_rename {
+            map.insert("userRename".to_string(), json!(true));
         }
         map.insert("sentAt".to_string(), json!(self.sent_at));
         Value::Object(map)
@@ -156,7 +161,12 @@ draft-kill bytes and bare `\r` submits through that same path, and none of those
 are commands the user needs told about.
 */
 pub fn record_session_chat_app_command(project_id: &str, session_id: &str, command: &str) {
-    record_session_chat_app_command_inner(project_id, session_id, command, None, false);
+    record_session_chat_app_command_inner(project_id, session_id, command, None, false, false);
+}
+
+/// Record a rename whose title the user typed, so chat does not call it an auto name.
+pub fn record_session_chat_user_rename_command(project_id: &str, session_id: &str, command: &str) {
+    record_session_chat_app_command_inner(project_id, session_id, command, None, false, true);
 }
 
 /// Record a bare rename together with the title record visible before dispatch.
@@ -172,6 +182,7 @@ pub fn record_session_chat_app_command_with_title_metadata_baseline(
         command,
         title_metadata_baseline,
         true,
+        false,
     );
 }
 
@@ -181,6 +192,7 @@ fn record_session_chat_app_command_inner(
     command: &str,
     title_metadata_baseline: Option<(String, String)>,
     title_metadata_baseline_captured: bool,
+    user_rename: bool,
 ) {
     let command = command.trim();
     if command.is_empty() {
@@ -201,6 +213,7 @@ fn record_session_chat_app_command_inner(
         output: None,
         goal: None,
         local_command: false,
+        user_rename,
         durable_id: None,
         screen_agent: None,
         screen_baseline: None,
@@ -264,6 +277,7 @@ pub(crate) fn begin_local_command_output(
         output: Some(String::new()),
         goal: None,
         local_command: durable_id.is_some(),
+        user_rename: false,
         durable_id,
         screen_agent: agent.map(str::to_string),
         screen_baseline: Some(screen),
@@ -299,6 +313,7 @@ pub(crate) fn commit_local_command(
             output: None,
             goal: None,
             local_command: true,
+            user_rename: false,
             durable_id: Some(command.id.clone()),
             screen_agent: None,
             screen_baseline: None,

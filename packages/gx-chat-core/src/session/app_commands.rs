@@ -308,10 +308,15 @@ pub fn app_commands_as_messages(
             // Wait for that metadata instead of showing an implementation command with no
             // user-facing result.
             let Some(title) = title else { continue };
+            let lead = if flag(entry, "userRename") {
+                crate::transcript::system_cards::USER_RENAMED_TITLE_LEAD
+            } else {
+                crate::transcript::system_cards::AUTO_NAMED_TITLE_LEAD
+            };
             rows.push(row(
                 format!("app-command:{id}"),
                 ChatRole::System,
-                vec!["Ghostex auto named this session", &title],
+                vec![lead, &title],
                 sent_at_or_null(entry),
             ));
             continue;

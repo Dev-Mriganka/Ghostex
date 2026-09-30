@@ -64,7 +64,11 @@ impl NativeChatView {
                     .bg(p.input.opacity(0.4))
                     .child(
                         gpui::svg()
-                            .path("titlebar/sparkles.svg")
+                            .path(if card["userRenamed"].as_bool() == Some(true) {
+                                "titlebar/pencil.svg"
+                            } else {
+                                "titlebar/sparkles.svg"
+                            })
                             .size(px(16.0 * s))
                             .mt(px(2.0 * s))
                             .flex_shrink_0()
@@ -81,7 +85,7 @@ impl NativeChatView {
                                     .text_size(px(14.0 * s))
                                     .font_weight(FontWeight::MEDIUM)
                                     .text_color(p.foreground)
-                                    .child("Ghostex auto named this session"),
+                                    .child(text(card, "lead")),
                             )
                             .child(
                                 div()
