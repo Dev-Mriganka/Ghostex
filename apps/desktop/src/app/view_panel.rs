@@ -114,6 +114,23 @@ impl GhostexGpuiApp {
         );
     }
 
+    /// CDXC:Workarea 2026-10-01 WHY:
+    /// Each view focused itself from a bubbling mouse-down on its host, so a press on anything inside that stops propagation (a Kanban card, a Docs editor, a button) left the Agents pane focused, and session hotkeys such as Cmd+W then acted on the session instead of the view. The panel claims focus in the capture phase for every press. Browser and the Terminal view keep their own per-pane focus.
+    pub(crate) fn focus_view_panel_on_press(
+        &mut self,
+        mode: TitlebarMode,
+        window: &mut Window,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        if matches!(mode, TitlebarMode::Browser | TitlebarMode::Terminal)
+            || mode != self.active_mode
+            || self.shell_focus == ShellFocusTarget::ProjectEditorSurface(mode)
+        {
+            return;
+        }
+        self.focus_project_editor_surface(mode, window, cx);
+    }
+
     /// CDXC:Workarea 2026-09-20 WHY:
     /// The tab strip is the open-views list filtered by what this project can actually show, not a
     /// second list: a view whose scope the user narrowed, or whose feature this project does not

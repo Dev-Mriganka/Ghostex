@@ -186,6 +186,13 @@ impl GhostexGpuiApp {
                             // Opening, the panel's frame slides in empty and its view fades in near
                             // the end, so it is never seen half revealed (panel_motion.rs).
                             .opacity(panel_frame.opening_content_opacity())
+                            .when_some(mode, |this, mode| {
+                                this.capture_any_mouse_down(cx.listener(
+                                    move |this, _: &MouseDownEvent, window, cx| {
+                                        this.focus_view_panel_on_press(mode, window, cx);
+                                    },
+                                ))
+                            })
                             .when(strip_mode != TitlebarMode::Browser, |this| {
                                 rail_aware_pane_border(
                                     this,
@@ -338,6 +345,13 @@ impl GhostexGpuiApp {
                     .min_w_0()
                     .min_h_0()
                     .overflow_hidden()
+                    .when_some(mode, |this, mode| {
+                        this.capture_any_mouse_down(cx.listener(
+                            move |this, _: &MouseDownEvent, window, cx| {
+                                this.focus_view_panel_on_press(mode, window, cx);
+                            },
+                        ))
+                    })
                     .when(draws_top_line, |this| {
                         rail_aware_pane_border(
                             this,

@@ -24,6 +24,8 @@ pub(crate) enum FocusedSurfaceCloseDecision {
     InterceptNoOp,
     CloseAgentsActiveTab,
     CloseBrowserActiveTab,
+    CloseViewTab(TitlebarMode),
+    CloseViewPanel,
     NoOp,
 }
 
@@ -84,6 +86,18 @@ pub(crate) fn focused_surface_close_decision(
     }
 
     match shell_focus {
+        /*
+        CDXC:Workarea 2026-10-01 DECISION:
+        User: the close hotkey while a view in the side panel is focused closes that view, not the current session. The picker (the panel with no view) closes the panel. This supersedes the 2026-06-22 and 2026-06-27 notes that Cmd-W never closes a project-editor surface.
+        */
+        ShellFocusTarget::ProjectEditorSurface(TitlebarMode::Agents)
+            if active_mode == TitlebarMode::Agents =>
+        {
+            FocusedSurfaceCloseDecision::CloseViewPanel
+        }
+        ShellFocusTarget::ProjectEditorSurface(mode) if mode == active_mode => {
+            FocusedSurfaceCloseDecision::CloseViewTab(mode)
+        }
         ShellFocusTarget::ProjectEditorSurface(mode) if mode.is_project_editor_mode() => {
             FocusedSurfaceCloseDecision::NoOp
         }

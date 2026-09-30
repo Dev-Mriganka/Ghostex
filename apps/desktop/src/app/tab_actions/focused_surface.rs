@@ -305,7 +305,7 @@ impl GhostexGpuiApp {
     ) {
         /*
         CDXC:FocusRouting 2026-06-22-06:02:
-        Cmd-W is surface-aware in the GPUI placeholder shell. Command focus closes the active command placeholder, Browser surface focus closes the active browser tab, Agents mode closes the active workspace tab, and Source/Kanban/Automate/Docs never close the project-editor surface itself.
+        Cmd-W is surface-aware in the GPUI placeholder shell. Command focus closes the active command placeholder, Browser surface focus closes the active browser tab, Agents mode closes the active workspace tab, and a focused side-panel view closes its own tab (CDXC:Workarea 2026-10-01 in model/focus_close_targets.rs).
 
         CDXC:Terminal 2026-06-26-23:59:
         Cmd-W in Agents delegates to the same close helper as pane-tab close. Mapped workspace sessions bypass Ghostty close-confirm and go through the store's lifecycle (formerly SidebarApp's), while unmapped exact mounted Running surfaces can still request `ghostty_surface_request_close` before shell removal.
@@ -317,7 +317,7 @@ impl GhostexGpuiApp {
         Cmd-W over command-pane focus must use the same clicked command-tab close path as hover, middle-click, scoped menus, and Close After Done. That shared helper owns mounted close requests, timer cleanup, final-panel focus restore, shell persistence, and sidebar refresh.
 
         CDXC:FocusMode 2026-06-27-02:58:
-        Keep the executable Cmd-W route aligned with the pure focused-close decision helper so native parity stays testable without a GPUI window: command focus wins first, BrowserSurface or exact BrowserPane focus closes Browser tabs, and main project-editor surface focus no-ops.
+        Keep the executable Cmd-W route aligned with the pure focused-close decision helper so native parity stays testable without a GPUI window: command focus wins first, BrowserSurface or exact BrowserPane focus closes Browser tabs, and focus on the open view closes that view's tab.
 
         CDXC:Workarea 2026-09-20 WHY:
         An Agents pane owns Cmd-W whatever the view panel shows, because it is on screen either way. This supersedes the 2026-07-29 rule that gave the chord to a focused companion session.
@@ -339,6 +339,14 @@ impl GhostexGpuiApp {
                     .and_then(|leaf| leaf.tab_group.active_session_id())
                 {
                     self.close_agents_tab(pane_id, session_id, cx);
+                }
+            }
+            FocusedSurfaceCloseDecision::CloseViewTab(mode) => {
+                self.close_view_tab(mode, window, cx);
+            }
+            FocusedSurfaceCloseDecision::CloseViewPanel => {
+                if self.view_picker_open() {
+                    self.close_view_panel(window, cx);
                 }
             }
             FocusedSurfaceCloseDecision::CloseBrowserActiveTab => {
