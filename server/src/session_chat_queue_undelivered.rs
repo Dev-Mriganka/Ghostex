@@ -17,7 +17,7 @@ use crate::{
 
 /// CDXC:SessionChat 2026-09-24 DECISION:
 /// User: a queued message must not fail because the agent's input box was off screen for a moment (a repaint, a redraw, a CLI still booting). The scheduler puts the row back and retries every few seconds; it is marked failed only when the input box stays missing for two minutes.
-/// SEE-ALSO: session_chat_queue_runtime.rs already holds without an attempt when the cached screen shows no input box; this covers the fresh screen the send itself reads.
+/// SEE-ALSO: session_chat_queue_runtime/scheduler.rs already holds without an attempt when the cached screen shows no input box; this covers the fresh screen the send itself reads.
 pub(crate) const SESSION_CHAT_QUEUE_COMPOSER_HOLD_MS: i64 = 120_000;
 const SESSION_CHAT_QUEUE_COMPOSER_RETRY_MS: i64 = 5_000;
 

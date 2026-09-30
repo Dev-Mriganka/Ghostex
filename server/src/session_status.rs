@@ -41,7 +41,7 @@ prompt queue delivers into the first and must never deliver into the second,
 and a passive idle title must not end the first: Claude paints its idle title
 about a second after its Stop hook, which otherwise settled the fresh attention
 straight back to idle. SEE-ALSO: server/src/agents/activity.rs (sets it),
-server/src/session_chat_queue_runtime.rs (reads it).
+server/src/session_chat_queue_runtime/scheduler.rs (reads it).
 */
 pub const TURN_COMPLETE_ATTENTION_SOURCE: &str = "turnComplete";
 

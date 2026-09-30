@@ -1,0 +1,621 @@
+use super::*;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SessionChatMessageSource {
+    Composer,
+    AutomaticQueue,
+    AutomaticRecovery,
+    AccountSwitch(uuid::Uuid),
+    ManualQueue,
+}
+
+/*
+CDXC:SessionChat 2026-08-21:
+THE internal chat-message send. `/api/sendSessionChatMessage` is one caller;
+the prompt queue ("Send now" and the scheduler) is the other, which is why it
+lives here instead of inside the HTTP handler. Everything a chat send needs
+travels with it — the per-session send mutex in session_chat_send/queue.rs, the
+answerable-picker refusal, the terminal-input clear, the delivery watchdog and
+the option re-detect — so a queued prompt is indistinguishable from one the user
+typed and can never interleave with a Delayed Send.
+Returns the number of text bytes handed to zmx.
+*/
+pub(crate) async fn send_session_chat_message_internal(
+    state: &AppState,
+    project_id: &str,
+    session_id: &str,
+    text: &str,
+    image_paths: &[String],
+    source: SessionChatMessageSource,
+) -> std::result::Result<usize, DomainStateError> {
+    send_session_chat_message_with_draft(
+        state,
+        project_id,
+        session_id,
+        text,
+        image_paths,
+        source,
+        None,
+    )
+    .await
+}
+
+pub(crate) async fn send_session_chat_message_with_draft(
+    state: &AppState,
+    project_id: &str,
+    session_id: &str,
+    text: &str,
+    image_paths: &[String],
+    source: SessionChatMessageSource,
+    draft_version: Option<&crate::session_chat_draft_versions::DraftVersion>,
+) -> std::result::Result<usize, DomainStateError> {
+    if let Some(version) = draft_version {
+        let db = open_gxserver_database(&state.paths).map_err(|error| DomainStateError {
+            code: "internalError",
+            message: error.to_string(),
+        })?;
+        crate::session_chat_draft_versions::require_saved(
+            &db, project_id, session_id, text, version,
+        )?;
+    }
+    let mut params = Map::new();
+    params.insert("projectId".to_string(), json!(project_id));
+    params.insert("sessionId".to_string(), json!(session_id));
+    let target = resolve_session_chat_send_target(state, &params, "sendSessionChatMessage")?;
+    let draft_before_send = if source == SessionChatMessageSource::Composer {
+        open_gxserver_database(&state.paths).ok().and_then(|db| {
+            read_session_chat_queue_snapshot_with(&db, &target.project_id, &target.session_id).draft
+        })
+    } else {
+        None
+    };
+    if source == SessionChatMessageSource::Composer {
+        crate::accounts::recovery::user_action(state, project_id, session_id, false)?;
+    }
+    let agent = session_chat_agent_for_session(&target.session);
+    let terminal_agent =
+        crate::session_chat_composer::session_chat_composer_agent_id(&target.session)
+            .or_else(|| agent.clone());
+    if agent.as_deref() == Some("opencode") {
+        let id = crate::session_chat_opencode::session_id(&target.session)?;
+        let send_id = id.clone();
+        let message = text.to_string();
+        let images = image_paths.to_vec();
+        let session = target.session.clone();
+        let message_id = draft_version.map(|version| {
+            use sha2::{Digest, Sha256};
+            let identity =
+                json!([project_id, session_id, version.draft_id, version.revision]).to_string();
+            format!("msg_gx_{:x}", Sha256::digest(identity.as_bytes()))
+        });
+        let archive = tokio::task::spawn_blocking(move || {
+            let mut archive =
+                crate::session_chat_local_command::prepare_session_chat_local_command(&message);
+            if let Some(command) = archive.as_mut() {
+                crate::session_chat_local_command::anchor_session_chat_local_command(
+                    command, &session,
+                );
+            }
+            crate::session_chat_opencode::Client::discover()?.send(
+                &send_id,
+                &message,
+                &images,
+                message_id.as_deref(),
+            )?;
+            Ok::<_, DomainStateError>(archive)
+        })
+        .await
+        .map_err(|_| crate::session_chat_opencode::error("OpenCode delivery task failed."))??;
+        if let Some(command) = archive {
+            crate::session_chat_local_command::persist_session_chat_local_command(
+                project_id, session_id, &command,
+            );
+        }
+        crate::session_chat_opencode::invalidate(&id);
+        promote_draft_session_after_send(state, project_id, session_id);
+        unpark_session_after_send(state, project_id, session_id);
+        crate::session_chat_returned_prompt::record_session_chat_send_submitted(
+            project_id, session_id,
+        );
+        if let Some(version) = draft_version {
+            let db = open_gxserver_database(&state.paths)
+                .map_err(|e| crate::session_chat_opencode::error(e.to_string()))?;
+            crate::session_chat_draft_versions::consume(&db, project_id, session_id, version)?;
+            broadcast_session_chat_queue_state(state, project_id, session_id);
+        } else if source == SessionChatMessageSource::Composer {
+            retire_sent_session_chat_draft(
+                state,
+                project_id,
+                session_id,
+                text,
+                draft_before_send.as_ref(),
+            );
+        }
+        schedule_session_chat_option_redetect(state, project_id, session_id, Some("opencode"));
+        return Ok(text.len());
+    }
+    // The draft was checked against the text as written; the terminal, the delivery watchdog and
+    // the local-command archive see what the agent is actually handed (a Claude skill pill typed as
+    // its bare `/name`, a Hermes `/rename` as `/title`).
+    let drafted_text = text;
+    let agent_text =
+        crate::session_chat_skill_invocation::agent_skill_text(terminal_agent.as_deref(), text);
+    let agent_text = crate::server::title_generation::chat_rename_as_agent_title_command(
+        terminal_agent.as_deref(),
+        &agent_text,
+    )
+    .map_or(agent_text, std::borrow::Cow::Owned);
+    let text = agent_text.as_ref();
+    /*
+    CDXC:AgentScreenDetection 2026-08-19:
+    Sample where the transcript ends BEFORE the message is enqueued: everything
+    written past this offset is a candidate for "the agent recorded it". Sampling
+    afterwards would race the agent's own write. This is the only work the
+    watchdog puts in front of a send — a path resolve plus one `metadata()`, both
+    on a blocking thread — and it is skipped entirely for agents the watchdog
+    does not cover.
+    */
+    /*
+    CDXC:SessionChat 2026-08-21:
+    Claude Code's resume-usage picker owns the input line when a large session
+    is resumed. This send used to answer it automatically ("Resume full session
+    as-is") before typing, which was wrong twice over: the summary-vs-full
+    trade-off is the user's to make, and whenever the walk missed, the message's
+    own trailing Enter confirmed the HIGHLIGHTED row instead — silently
+    compacting the conversation the user was continuing, with nothing to show
+    for it but a delivery-failed banner.
+
+    So the send refuses instead. The same capture that proves the picker is up
+    caches the notice carrying its rows, and publishing it puts the answer
+    picker in front of the user on every subscribed client. Only an ANSWERABLE
+    state stops a send here: the catalog's other blocking dialogs still go
+    through to the delivery watchdog, which is the only thing that can explain
+    them.
+    */
+    /*
+    CDXC:SessionChat 2026-08-26:
+    Terminal capture must use the concrete CLI identity, not the normalized
+    transcript family. Omp shares Pi's transcript decoder but paints different
+    composer and statusline chrome, so folding it to Pi here loses both screen
+    readings. Agents without a concrete screen identity fall back to the
+    transcript family.
+    */
+    let detection = SessionChatOptionDetector::new(state)
+        .detect(
+            &target.project_id,
+            &target.session_id,
+            terminal_agent.as_deref(),
+            true,
+        )
+        .await;
+    let dismiss_claude_panel = detection.composer.should_dismiss();
+    if let Some(blocking) = detection.notice.as_ref().filter(|notice| {
+        notice.is_answerable() && !escape_closes_claude_panel(&detection.composer, notice)
+    }) {
+        session_chat_terminal_notice_publisher(state, &target.project_id, &target.session_id)();
+        return Err(DomainStateError {
+            code: "invalidState",
+            message: format!("{}. Answer it in chat before sending.", blocking.title),
+        });
+    }
+    if source == SessionChatMessageSource::Composer {
+        if let Some(starting) =
+            crate::session_chat_send_wake::starting_session_refusal(state, &target, &detection)
+                .await
+        {
+            return Err(starting);
+        }
+    }
+    // Recheck automatic delivery against the fresh capture: the scheduler's
+    // cached notice may predate a quota, authentication, or agent error.
+    // Explicit Send now is a retry.
+    if matches!(
+        source,
+        SessionChatMessageSource::AutomaticRecovery | SessionChatMessageSource::AccountSwitch(_)
+    ) {
+        let current = resolve_session_chat_send_target(state, &params, "automaticRecovery")?;
+        let armed = current
+            .session
+            .pointer("/runtimeSettings/accountRecovery/status")
+            .and_then(Value::as_str)
+            == Some("retrying")
+            && match source {
+                SessionChatMessageSource::AccountSwitch(claim) => {
+                    current
+                        .session
+                        .pointer("/runtimeSettings/accountRecovery/claim")
+                        .and_then(Value::as_str)
+                        == Some(claim.to_string().as_str())
+                }
+                _ => true,
+            };
+        let blocked = detection.notice.as_ref().is_some_and(|n| {
+            n.blocks_queued_delivery()
+                && !matches!(n.kind.as_str(), "streamError" | "usageLimit" | "agentError")
+        });
+        // CDXC:AgentProviders 2026-09-11 WHY:
+        // A resumed CLI repaints the finished turn, and the activity detector classifies its rows ("✻ Sautéed for 2s · done", the last ⏺ message) as activity. Taking that raw reading for "still working" held the continuation dot back for as long as those rows stayed on screen. Activity counts only while the session's hooks say it is working, or while the CLI compacts, the same rule the recovery pass uses.
+        let working = crate::presentation::presentation_activity(
+            &current.session,
+            &chrono::Utc::now().to_rfc3339(),
+        ) == "working";
+        let live_activity = detection.activity.as_ref().is_some_and(|activity| {
+            working
+                || activity.kind
+                    == crate::session_chat_terminal_activity::SESSION_CHAT_ACTIVITY_COMPACTING
+        });
+        if !armed
+            || !detection.captured
+            || detection.composer.state
+                != crate::session_chat_composer::SessionChatComposerState::Ready
+            || detection.prompt.is_some()
+            || crate::session_chat_send::transcript_pending_question_prompt(&current.session)
+                .is_some()
+            || live_activity
+            || blocked
+        {
+            return Err(DomainStateError {
+                code: "accountRecoveryNotReady",
+                message: "Automatic recovery is waiting for the session to be ready.".into(),
+            });
+        }
+    }
+    if source == SessionChatMessageSource::AutomaticQueue {
+        if let Some(notice) = detection.notice.as_ref().filter(|notice| {
+            notice.blocks_queued_delivery()
+                && !escape_closes_claude_panel(&detection.composer, notice)
+        }) {
+            return Err(DomainStateError {
+                code: "invalidState",
+                message: format!("{}. The queued message was not sent.", notice.title),
+            });
+        }
+    }
+    /*
+    CDXC:SessionChat 2026-08-26:
+    The positive gate. Everything above is "is a screen we RECOGNISE in the
+    way?"; this is "did the CLI paint an input box at all?". It catches the
+    states no notice rule covers — a CLI still booting, an auth screen shipped
+    after our catalog, a dialog we have never seen — which are exactly the ones
+    that used to eat a message and answer with a delivery-failed banner minutes
+    later.
+
+    `Unknown` FAILS OPEN and is by far the common case for unmeasured agents, so
+    this can only ever refuse a send it has positive evidence about. The screen
+    tail behind the verdict is not squeezed into the error (DomainStateError
+    carries a code and a message and nothing else, at 169 construction sites);
+    clients read it from /api/readSessionTerminalTail instead.
+    */
+    let redraw_claude_composer = detection.prompt.is_none()
+        && !detection
+            .notice
+            .as_ref()
+            .is_some_and(|notice| notice.blocks_input() || notice.is_answerable())
+        && crate::session_chat_send::claude_composer_needs_redraw(
+            terminal_agent.as_deref(),
+            &detection.composer,
+        );
+    if detection
+        .composer
+        .blocks_message_for(terminal_agent.as_deref())
+        && !dismiss_claude_panel
+        && !redraw_claude_composer
+    {
+        return Err(DomainStateError {
+            code: "composerNotReady",
+            message: detection
+                .composer
+                .reason
+                .clone()
+                .unwrap_or_else(|| "The agent's input box is not accepting input yet.".to_string()),
+        });
+    }
+    if dismiss_claude_panel {
+        crate::session_chat_send_diagnostics::record_send_recovery(
+            state,
+            "sessionChatSendClosingClaudePanel",
+            &target.project_id,
+            &target.session_id,
+            detection.composer.reason.as_deref().unwrap_or_default(),
+            &detection.composer.screen_tail,
+        );
+    }
+    let send_probe = crate::session_chat_watchdog::SessionChatSendProbe::sample(
+        &target.project_id,
+        &target.session_id,
+        &target.zmx_name,
+        agent.as_deref(),
+        read_runtime_text(&target.session, "agentSessionId").as_deref(),
+        read_runtime_text(&target.session, "agentSessionPath").as_deref(),
+        text,
+    )
+    .await;
+    /*
+    Chat owns the terminal composer when it sends. Discard anything already
+    sitting on that hidden input line instead of turning it into a user-facing
+    Saved Prompt: `build_session_chat_message_steps` starts with the measured
+    agent-specific clear, verifies it where supported, and only then pastes this message.
+    Terminal -> Chat view switching remains the separate, loss-safe draft
+    transfer path for text the user actually wants to carry between views.
+    */
+    let mut steps = crate::session_chat_send::build_session_chat_message_steps(
+        terminal_agent.as_deref(),
+        text,
+        image_paths,
+        dismiss_claude_panel,
+    );
+    /*
+    CDXC:SessionChat 2026-09-10 DECISION:
+    User: a slash command sent from chat must show up in chat for every agent,
+    with its output, and still be there after a reload.
+
+    Codex keeps its curated list because its commands print into a repainting
+    TUI and the list is what says which ones print at all. Every other agent
+    takes any line-leading slash command: Claude records a transcript envelope
+    for a handful of its own and nothing for the rest, so guessing which ones
+    print would just recreate the gap this closes. The archived row is written
+    after a successful send, even if the capture finds nothing; failed sends leave no history.
+    Commands whose result the transcript already records are left out: their
+    status pill (or compaction row) is the one result row they get.
+    */
+    let local_command = crate::session_chat_local_command::parse_session_chat_local_command(text)
+        .filter(|(command, _)| {
+            !crate::session_chat_local_command::transcript_records_command_result(command)
+        });
+    let capture_local_output = if terminal_agent.as_deref() == Some("codex") {
+        crate::session_chat_codex_dialog::command_has_local_output(text)
+    } else {
+        local_command.is_some()
+    };
+    let mut archive_command = local_command
+        .as_ref()
+        .and_then(|_| crate::session_chat_local_command::prepare_session_chat_local_command(text));
+    if let Some(mut command) = archive_command.take() {
+        let session = target.session.clone();
+        archive_command = tokio::task::spawn_blocking(move || {
+            crate::session_chat_local_command::anchor_session_chat_local_command(
+                &mut command,
+                &session,
+            );
+            command
+        })
+        .await
+        .ok();
+    }
+    let durable_id = archive_command.as_ref().map(|row| row.id.clone());
+    if capture_local_output {
+        steps.insert(
+            0,
+            crate::session_chat_send::SessionChatSendStep::BeginLocalCommandOutput {
+                agent: terminal_agent.clone(),
+                command: text.to_string(),
+                durable_id: durable_id.clone(),
+            },
+        );
+        steps.push(crate::session_chat_send::SessionChatSendStep::FinishLocalCommandOutput);
+    }
+    steps.insert(
+        0,
+        crate::session_chat_send::SessionChatSendStep::StopLocalCommandOutput,
+    );
+    crate::session_chat_returned_prompt::record_session_chat_send_started(
+        &target.project_id,
+        &target.session_id,
+        text,
+        image_paths,
+    );
+    if let Err(error) = crate::session_chat_send::execute_session_chat_send(
+        &target.project_id,
+        &target.session_id,
+        &target.zmx_name,
+        "session-chat-message",
+        steps,
+    )
+    .await
+    {
+        if let Some(id) = durable_id.as_deref() {
+            crate::session_chat_app_command::discard_local_command(
+                &target.project_id,
+                &target.session_id,
+                id,
+            );
+        }
+        /*
+        CDXC:AgentScreenDetection 2026-08-19:
+        The case this feature exists for — the agent CLI in this pane is dead —
+        fails HERE, not at the delivery watchdog: zmx refuses the clear or paste,
+        or the terminal screen proves that the paste never landed, so the user
+        would otherwise see only a generic toast. When the TERMINAL is what
+        refused the message (as opposed to the send being superseded or
+        cancelled), escalate once with the same one-capture verdict the watchdog
+        takes at its deadline. It runs as its own task so the error response is
+        not made to wait for the capture, it never retries the send, and the
+        response below is unchanged.
+        */
+        if error.terminal_refused() {
+            if let Some(send_probe) = send_probe {
+                crate::session_chat_watchdog::escalate_failed_session_chat_send(
+                    send_probe,
+                    session_chat_terminal_notice_publisher(
+                        state,
+                        &target.project_id,
+                        &target.session_id,
+                    ),
+                    session_chat_watchdog_state_reader(
+                        state,
+                        &target.project_id,
+                        &target.session_id,
+                    ),
+                );
+            }
+        }
+        // CDXC:SessionChat 2026-08-26: the in-worker wait raises
+        // the same code the pre-send gate does, so a client has one case to
+        // handle whichever of the two caught it.
+        if error.composer_not_ready() {
+            return Err(DomainStateError {
+                code: "composerNotReady",
+                message: error.message,
+            });
+        }
+        // The user's own Escape stopped this send before Enter: not a failure
+        // the composer should announce, and the text is still theirs.
+        if error.cancelled() {
+            return Err(DomainStateError {
+                code: "sendCancelled",
+                message: error.message,
+            });
+        }
+        if error.failure == crate::session_chat_send::SessionChatSendFailure::ComposerNotCleared {
+            return Err(DomainStateError {
+                code: "composerNotCleared",
+                message: error.message,
+            });
+        }
+        return Err(DomainStateError {
+            code: "dependencyUnavailable",
+            message: error.message,
+        });
+    }
+    if let Some(command) = archive_command {
+        let project_id = target.project_id.clone();
+        let session_id = target.session_id.clone();
+        let _ = tokio::task::spawn_blocking(move || {
+            crate::session_chat_app_command::commit_local_command(
+                &project_id,
+                &session_id,
+                command,
+            );
+        })
+        .await;
+    }
+    crate::session_chat_returned_prompt::record_session_chat_send_submitted(
+        &target.project_id,
+        &target.session_id,
+    );
+    /*
+    CDXC:AgentScreenDetection 2026-08-19:
+    The bytes reached zmx, which says nothing about the agent having received
+    them: a message typed into a login screen, a trust dialog or a shell where
+    the CLI already exited is accepted and lost. The watchdog verifies delivery
+    against the transcript and surfaces the terminal's own explanation when it
+    cannot. It never retries and never writes to the terminal.
+    */
+    if let Some(send_probe) = send_probe {
+        let returned_prompt_state = state.clone();
+        let returned_prompt_target = crate::session_chat_send::SessionChatSendTarget {
+            project_id: target.project_id.clone(),
+            session_id: target.session_id.clone(),
+            zmx_name: target.zmx_name.clone(),
+            session: target.session.clone(),
+        };
+        crate::session_chat_watchdog::start_session_chat_send_watchdog(
+            send_probe,
+            session_chat_terminal_notice_publisher(state, &target.project_id, &target.session_id),
+            session_chat_watchdog_state_reader(state, &target.project_id, &target.session_id),
+            std::sync::Arc::new(move || {
+                crate::session_chat_returned_prompt::schedule_session_chat_returned_prompt_detection(
+                    &returned_prompt_state,
+                    &returned_prompt_target,
+                    "session-chat-watchdog",
+                );
+            }),
+        );
+    }
+    /*
+    CDXC:Telemetry 2026-08-26:
+    Counted after the bytes reached zmx and only on the success path, so a
+    refused send is not reported as a prompt. The COUNT and the resolved agent
+    are all that leave; the prompt text is not in scope for the emitter and
+    cannot be.
+    */
+    crate::telemetry::prompt_sent(
+        &target.session,
+        match source {
+            SessionChatMessageSource::Composer => "chat",
+            SessionChatMessageSource::AutomaticQueue
+            | SessionChatMessageSource::AutomaticRecovery
+            | SessionChatMessageSource::AccountSwitch(_)
+            | SessionChatMessageSource::ManualQueue => "queue",
+        },
+    );
+    /*
+    An option command changes what the statusline reports: read it back. It is
+    also NOT a user prompt — Ghostex itself typed it on the user's behalf when
+    they picked a model or an effort level out of the composer's dropdown.
+    */
+    let is_option_readback_command =
+        crate::session_chat_options::is_session_chat_option_command_text(
+            terminal_agent.as_deref(),
+            text,
+        );
+    let is_activity_command = crate::session_chat_options::is_session_chat_activity_command_text(
+        terminal_agent.as_deref(),
+        text,
+    );
+    let is_option_command = is_option_readback_command || is_activity_command;
+    /*
+    CDXC:Drafts 2026-08-28:
+    THE chat half of the draft promotion choke point. Both callers reach the
+    agent through this one function — the user's composer and the prompt queue's
+    scheduler — so clearing the marker here covers every Ghostex-delivered first
+    prompt, and it happens only after the bytes were accepted: a send refused by
+    the composer gate or by zmx returns above and leaves the row a draft.
+    (The terminal-direct half lives in `agents/drafts.rs`.)
+
+    Option commands are carved out of BOTH halves. `/model` is delivered through
+    this same function, and the dropdown that sends it is the one that will host
+    the draft's own Agents section — so promoting on it would let a user destroy
+    their draft's agent switcher by picking a model in it. The carve-out has to
+    cover the terminal churn those bytes cause as well, which is why the
+    non-promoting branch re-arms the draft's launch suppression window instead
+    of doing nothing: the command's spinner is then folded back to idle exactly
+    like a startup spinner, and cannot promote the draft through the
+    activity-based half a second later.
+    */
+    if is_option_command {
+        suppress_draft_activity_after_app_command(state, &target.project_id, &target.session_id);
+    } else {
+        promote_draft_session_after_send(state, &target.project_id, &target.session_id);
+        unpark_session_after_send(state, &target.project_id, &target.session_id);
+    }
+    if let Some(version) = draft_version {
+        let db = open_gxserver_database(&state.paths).map_err(|error| DomainStateError {
+            code: "internalError",
+            message: error.to_string(),
+        })?;
+        crate::session_chat_draft_versions::consume(
+            &db,
+            &target.project_id,
+            &target.session_id,
+            version,
+        )?;
+        crate::session_chat_draft_diagnostics::log(
+            &state.logger,
+            "consumed",
+            &target.project_id,
+            &target.session_id,
+            json!({ "version": version }),
+        );
+        broadcast_session_chat_queue_state(state, &target.project_id, &target.session_id);
+    } else if source == SessionChatMessageSource::Composer {
+        retire_sent_session_chat_draft(
+            state,
+            &target.project_id,
+            &target.session_id,
+            drafted_text,
+            draft_before_send.as_ref(),
+        );
+    }
+    // Probe activity commands after sending too: Codex and Cursor need not
+    // record a command in their transcript before the compaction starts.
+    if is_option_readback_command || capture_local_output || is_activity_command {
+        schedule_session_chat_option_redetect(
+            state,
+            &target.project_id,
+            &target.session_id,
+            terminal_agent.as_deref(),
+        );
+    }
+    Ok(text.len())
+}

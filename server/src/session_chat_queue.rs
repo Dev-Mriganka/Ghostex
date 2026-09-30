@@ -7,7 +7,7 @@ field names, omission semantics, and reorder rules must match it verbatim.
 
 Ownership split:
   - THIS file owns storage, the seven endpoints, and the frame/read carriage.
-  - `session_chat_queue_runtime.rs` owns the scheduler that releases one row per
+  - `session_chat_queue_runtime/scheduler.rs` owns the scheduler that releases one row per
     idle window. It reuses `deliver_session_chat_queued_prompt` here so both the
     user's "Send now" and the scheduler travel the same claim → send → settle
     path and cannot double-claim a row.

@@ -31,7 +31,7 @@ here, so there is nothing to transfer, the burst is immediate where the
 handshake can hold for 16s, and it leaves no Saved Prompts residue.
 
 SEE-ALSO: session_chat_send/send_http.rs (interrupt endpoint, last-send registry calls),
-session_chat_queue_runtime.rs (registry, `sendCancelled`), session_chat_follower/
+session_chat_queue_runtime/send.rs (registry, `sendCancelled`), session_chat_follower/
 and session_chat_read.rs (row filter, `returnedPrompt` carriage),
 packages/gx-chat-core/src/composer/storage.rs (client apply-once).
 */
