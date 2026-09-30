@@ -604,8 +604,11 @@ pub(crate) fn frosted_menu_fill(color: Hsla) -> Hsla {
 }
 
 /// The frosted menu colour before its coverage: lifted a little toward white in dark mode.
+///
+/// CDXC:Theming 2026-10-01 DECISION:
+/// User, on Linux (Hyprland): "the ask ghostex dropdown is way too transparent", "the dropdown that has Ask Ghostex and Tips & Tricks needs to be same bg look as the one that's top of the sidebar" and "all dropdowns etc need to have better bgs please in the linux app ... on macos and windows they're perfect". On Linux every menu, dropdown and tooltip in a window of its own takes the sidebar menus' fill exactly (`titlebar_popup_menu_background`, opaque and not lifted toward white), because Linux draws the sidebar's menus inside the main window with that fill (`frosted_hosting_active`). macOS and Windows keep the lifted frost.
 fn frosted_lift(color: Hsla) -> Hsla {
-    if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
+    if cfg!(target_os = "linux") || CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
         color
     } else {
         color.blend(gpui::white().opacity(WINDOW_GLASS_MENU_LIFT_DARK))
