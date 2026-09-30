@@ -43,6 +43,9 @@ pub struct InterAgentMessage {
     /// Delivered by Claude's cross-session channel instead of typed into the session's terminal,
     /// so it is no prompt a rewind can return to.
     pub cross_session: bool,
+    /// Sent by one of this session's own background agents; `reply_to` is its agent id, and the
+    /// transcript names it (`sent_message::resolve_recipients`).
+    pub subagent: bool,
 }
 
 /// `^([A-Za-z ]+): (.*)$` against one line.
@@ -109,28 +112,34 @@ pub fn parse_inter_agent_message(text: &str) -> Option<InterAgentMessage> {
     Some(message)
 }
 
-const CROSS_SESSION_OPEN: &str = "<cross-session-message";
-const CROSS_SESSION_CLOSE: &str = "</cross-session-message>";
-
 /// CDXC:SessionChat 2026-09-25 DECISION:
 /// User: a message another Claude session sent renders with the chat's message-from-another-agent card, like one sent with `ghostex agents send`. Claude wraps it as `<cross-session-message from="…" from-name="…">`, so the card names Claude as the agent and the sender's session name as its session. A row holding several envelopes is left to the harness marker, since one card cannot show two senders.
-/// SEE-ALSO: server/src/session_chat_decode_claude.rs keeps only this envelope from the row Claude writes when the message reaches an idle session.
+/// CDXC:SessionChat 2026-09-30 DECISION:
+/// User: the `<agent-message from="…">` a session's own background agent sends it must "look correct and use our component", the same card, instead of a harness fold around a raw code block. Its `from` is only an agent id, so the card is named from the call that started that agent or the Subagents roster (`sent_message::resolve_recipients`).
+/// SEE-ALSO: server/src/session_chat_decode_claude.rs keeps only the envelope from the row Claude writes when the message reaches an idle session.
 pub fn parse_cross_session_message(text: &str) -> Option<InterAgentMessage> {
-    let rest = js_trim(text).strip_prefix(CROSS_SESSION_OPEN)?;
+    let text = js_trim(text);
+    let (open, close, subagent) = if text.starts_with("<agent-message") {
+        ("<agent-message", "</agent-message>", true)
+    } else {
+        ("<cross-session-message", "</cross-session-message>", false)
+    };
+    let rest = text.strip_prefix(open)?;
     let (attributes, rest) = rest.split_once('>')?;
     if !attributes.is_empty() && !attributes.starts_with(' ') {
         return None;
     }
-    let body = rest.strip_suffix(CROSS_SESSION_CLOSE)?;
-    if body.contains(CROSS_SESSION_CLOSE) {
+    let body = rest.strip_suffix(close)?;
+    if body.contains(close) {
         return None;
     }
     Some(InterAgentMessage {
-        agent_name: "Claude".to_string(),
+        agent_name: if subagent { "subagent" } else { "Claude" }.to_string(),
         session_title: envelope_attribute(attributes, "from-name").to_string(),
         reply_to: envelope_attribute(attributes, "from").to_string(),
         body: js_trim(body).to_string(),
         cross_session: true,
+        subagent,
         ..InterAgentMessage::default()
     })
 }

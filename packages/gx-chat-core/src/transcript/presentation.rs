@@ -195,6 +195,7 @@ pub fn project_message(
                 "agentId": inter.agent_id,
                 "agentSessionId": inter.agent_session_id,
                 "replyTo": inter.reply_to,
+                "subagent": inter.subagent,
                 "body": agent_line_breaks(&inter.body, line_breaks),
             }),
             None => Value::Null,
@@ -339,6 +340,8 @@ pub struct ProjectionScope<'a> {
     pub line_breaks: AgentLineBreaks,
     /// The side question whose card is open above the composer; its row waits for Close.
     pub live_side_question: Option<String>,
+    /// The Subagents roster, which names the background agents whose messages the session gets.
+    pub agent_fleet: Option<&'a Value>,
 }
 
 /// The session's line-break rule, which the subagent viewer shares: a child runs the same agent.
@@ -360,6 +363,7 @@ pub fn scope<'a>(state: &'a ChatState, view: &'a TranscriptViewState) -> Project
         working_directory: view.working_directory.as_deref(),
         line_breaks: line_breaks(state),
         live_side_question: crate::transcript::side_question::live_side_question(state),
+        agent_fleet: state.session.agent_fleet.as_ref(),
     }
 }
 
@@ -669,7 +673,7 @@ pub fn build_scope(
             .collect()
     };
 
-    resolve_recipients(&mut items);
+    resolve_recipients(&mut items, scope.agent_fleet);
 
     // `itemIndex`: the first row that draws a given id, which is what a dash jumps to.
     let mut item_index: Vec<(String, usize)> = Vec::with_capacity(items.len());

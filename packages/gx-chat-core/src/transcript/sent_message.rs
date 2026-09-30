@@ -315,10 +315,23 @@ fn text<'a>(value: &'a Value, key: &str) -> &'a str {
 
 fn learn(directory: &mut Directory, message: &Value) {
     let inter = &message["interAgentMessage"];
-    if inter.is_object() {
+    if inter.is_object() && inter["subagent"] != true {
         let (agent, title) = (text(inter, "agentName"), text(inter, "sessionTitle"));
         remember(directory, text(inter, "replyTo"), agent, title);
         remember(directory, text(inter, "sessionId"), agent, title);
+    }
+    // The call that started a background agent: its id, type and task.
+    for tool in message["tools"].as_array().into_iter().flatten() {
+        let subagent = &tool["subagent"];
+        if subagent.is_object() && subagent["self"] != true {
+            let agent = text(subagent, "agentType");
+            remember(
+                directory,
+                text(subagent, "selector"),
+                if agent.is_empty() { "subagent" } else { agent },
+                text(subagent, "name"),
+            );
+        }
     }
     for sent in message["sentMessages"].as_array().into_iter().flatten() {
         let (agent, title) = (text(sent, "agentName"), text(sent, "sessionTitle"));
@@ -326,6 +339,32 @@ fn learn(directory: &mut Directory, message: &Value) {
             remember(directory, text(sent, "globalRef"), agent, title);
             remember(directory, text(sent, "target"), agent, title);
         }
+    }
+}
+
+/// The background agents on the Subagents roster (`{agents: [{id, name, task}]}`).
+fn learn_fleet(directory: &mut Directory, fleet: Option<&Value>) {
+    let agents = fleet.and_then(|fleet| fleet["agents"].as_array());
+    for agent in agents.into_iter().flatten() {
+        let kind = text(agent, "name");
+        remember(
+            directory,
+            text(agent, "id"),
+            if kind.is_empty() { "subagent" } else { kind },
+            text(agent, "task"),
+        );
+    }
+}
+
+/// A background agent's message names its sender by id only; the directory knows its type and task.
+fn complete_received(directory: &Directory, message: &mut Value) {
+    let inter = &mut message["interAgentMessage"];
+    if inter["subagent"] != true {
+        return;
+    }
+    if let Some((agent, title)) = directory.get(&directory_key(text(inter, "replyTo"))) {
+        inter["agentName"] = agent.clone().into();
+        inter["sessionTitle"] = title.clone().into();
     }
 }
 
@@ -391,8 +430,9 @@ fn messages_mut(item: &mut TranscriptItem) -> Vec<&mut Value> {
 /// Names every sent-message card by what the whole transcript knows about its recipient: an agent
 /// that filtered away its send's result, or addressed a session by reference only, still gets the
 /// name and title that session's own messages carried.
-pub fn resolve_recipients(items: &mut [TranscriptItem]) {
+pub fn resolve_recipients(items: &mut [TranscriptItem], agent_fleet: Option<&Value>) {
     let mut directory = Directory::new();
+    learn_fleet(&mut directory, agent_fleet);
     for item in items.iter_mut() {
         for message in messages_mut(item) {
             learn(&mut directory, message);
@@ -400,6 +440,7 @@ pub fn resolve_recipients(items: &mut [TranscriptItem]) {
     }
     for item in items.iter_mut() {
         for message in messages_mut(item) {
+            complete_received(&directory, message);
             if let Some(cards) = message
                 .get_mut("sentMessages")
                 .and_then(Value::as_array_mut)

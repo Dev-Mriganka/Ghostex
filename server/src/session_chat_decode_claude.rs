@@ -284,15 +284,14 @@ fn queued_prompt_key(text: &str) -> String {
 /// CDXC:SessionChat 2026-09-25 WHY:
 /// Claude writes a peer message's `hop-chain` attribute on its enqueue row only; the removal row and the delivered row drop it. Keyed by its opening tag, the queued copy never matched its release and stayed on screen next to the delivered message, so a `<cross-session-message>` envelope is keyed by its body.
 fn cross_session_queue_key(text: &str) -> Option<String> {
-    let rest = text.trim().strip_prefix(CLAUDE_CROSS_SESSION_OPEN)?;
-    if !rest.starts_with([' ', '>']) {
-        return None;
-    }
-    let body = rest
-        .split_once('>')?
-        .1
-        .strip_suffix(CLAUDE_CROSS_SESSION_CLOSE)?;
-    Some(format!("{CLAUDE_CROSS_SESSION_OPEN}>{body}"))
+    CLAUDE_AGENT_ENVELOPES.iter().find_map(|(open, close)| {
+        let rest = text.trim().strip_prefix(open)?;
+        if !rest.starts_with([' ', '>']) {
+            return None;
+        }
+        let body = rest.split_once('>')?.1.strip_suffix(close)?;
+        Some(format!("{open}>{body}"))
+    })
 }
 
 /// CDXC:SessionChat 2026-09-08 DECISION:
@@ -425,11 +424,15 @@ fn decode_claude_queued_prompt(
     })
 }
 
-const CLAUDE_CROSS_SESSION_OPEN: &str = "<cross-session-message";
-const CLAUDE_CROSS_SESSION_CLOSE: &str = "</cross-session-message>";
+/// The envelopes Claude delivers another agent's message in: a peer session's, and one of the session's own background agents'.
+const CLAUDE_AGENT_ENVELOPES: [(&str, &str); 2] = [
+    ("<cross-session-message", "</cross-session-message>"),
+    ("<agent-message", "</agent-message>"),
+];
 
 /// CDXC:SessionChat 2026-09-25 WHY:
 /// A message another Claude session sent renders as chat's message-from-another-agent card. When it reaches an idle session Claude writes a meta user row: a one-line preamble ("Another Claude session sent a message:"), the `<cross-session-message>` envelope, then trust instructions meant for the model. The meta filter dropped the whole row, so chat never showed the message. Only the envelope is kept, the same text a mid-turn delivery's `queued_command` carries, so both deliveries render alike. Anything longer than one line before the envelope (a compaction summary quoting one) is not a delivery.
+/// A background agent's `<agent-message>` arrives the same way and is kept the same way (2026-09-30).
 /// SEE-ALSO: packages/gx-chat-core/src/transcript/agent_message.rs parses the envelope into the card.
 fn claude_cross_session_envelope(blocks: &[SessionChatBlock]) -> Option<String> {
     let text = blocks
@@ -440,13 +443,14 @@ fn claude_cross_session_envelope(blocks: &[SessionChatBlock]) -> Option<String> 
         })
         .collect::<Vec<_>>()
         .join("");
-    let start = text.find(CLAUDE_CROSS_SESSION_OPEN)?;
-    if text[..start].trim().contains('\n')
-        || !text[start + CLAUDE_CROSS_SESSION_OPEN.len()..].starts_with([' ', '>'])
-    {
+    let (start, open, close) = CLAUDE_AGENT_ENVELOPES
+        .iter()
+        .filter_map(|(open, close)| Some((text.find(open)?, *open, *close)))
+        .min_by_key(|(start, _, _)| *start)?;
+    if text[..start].trim().contains('\n') || !text[start + open.len()..].starts_with([' ', '>']) {
         return None;
     }
-    let end = text.rfind(CLAUDE_CROSS_SESSION_CLOSE)? + CLAUDE_CROSS_SESSION_CLOSE.len();
+    let end = text.rfind(close)? + close.len();
     (end > start).then(|| text[start..end].to_string())
 }
 
