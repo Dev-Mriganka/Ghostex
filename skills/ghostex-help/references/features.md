@@ -961,7 +961,7 @@ only and leaves the saved default alone, so new sessions still start where they
 did before; waking the session later brings it back on the model you chose.
 Right-click session-only picks work for Claude, Codex (version 0.157 or newer)
 and OpenCode: other agents' own model pickers always save the choice as the
-default, except Hermes, whose picks never change a default (below).
+default, except Hermes, Pi, and OMP, whose picks never change a default (below).
 
 In a Hermes chat the picker has one tab, named after the bot (for example Harry):
 the bot's default model first, then the other models its sessions have used, most
@@ -973,12 +973,24 @@ refuses the model, the picker shows its reason. A new Hermes chat gets the
 picker once its first message is sent; until then the pill shows the model with
 Change it in the CLI, and you switch by typing `/model` in the terminal.
 
+In a Pi or OMP chat the picker lists every model that agent can use right now,
+from all the providers you are logged in to, with each model's provider and id
+under its name and only the reasoning levels that model supports. Log in to a
+provider inside Pi or OMP with `/login` (a ChatGPT Plus or Pro subscription shows
+up as `openai-codex`); new models appear in the picker within a couple of minutes.
+Picking a model or a level types Pi's own `/model <provider>/<id>` and
+`/thinking <level>`, or OMP's `/switch <provider>/<id>:<level>`, into the
+session. Every Pi and OMP pick applies to that session only and leaves the
+agent's default alone. If the agent refuses a level, the picker shows its reason.
+Until Ghostex has read the agent's model list, the pill shows the model with
+Change it in the CLI.
+
 On the phone, tapping the model pill opens the same picker as a sheet, without
 keyboard shortcuts. Tap a model to highlight it; its reasoning levels appear under
 it, and tapping one sets the level. Then tap Use in this session, or Save as
 default to also make it the agent's default for new sessions (agents other than
-Claude show a single Apply button, which saves the default; in a Hermes chat it
-applies to this session only).
+Claude show a single Apply button, which saves the default; in a Hermes, Pi, or
+OMP chat it applies to this session only).
 Tap the info icon on the highlighted model to read what it is for. The bottom
 buttons work as on the computer; long-press one (Claude only) to apply the change
 to this session alone. In a session that has started, the phone's picker shows

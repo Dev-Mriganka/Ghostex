@@ -658,6 +658,16 @@ pub(super) fn merge_session_chat_option_selections(
         if let Some(long) = claude_long_context_twin(&model.value, statusline_model.as_deref()) {
             model.value = long;
         }
+        // Pi and OMP footers name a model by id or name; the picker keys it `provider/id`.
+        if let Some(value) = merged.model_catalog.as_ref().and_then(|catalog| {
+            crate::session_chat_pi_models::pi_family_catalog_value(
+                catalog,
+                &model.value,
+                statusline_model.as_deref(),
+            )
+        }) {
+            model.value = value;
+        }
     }
     (merged.model.is_some()
         || merged.effort.is_some()
@@ -730,6 +740,11 @@ pub(super) fn read_session_chat_stored_selections(
         Some(SessionChatOptionAgent::Hermes) => {
             crate::session_chat_hermes_status::read_hermes_status_selection(
                 repository, project_id, session_id,
+            )
+        }
+        Some(agent @ (SessionChatOptionAgent::Pi | SessionChatOptionAgent::Omp)) => {
+            crate::session_chat_pi_models::read_pi_family_selection(
+                repository, project_id, session_id, agent,
             )
         }
         _ => None,

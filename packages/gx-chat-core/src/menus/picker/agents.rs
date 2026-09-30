@@ -28,6 +28,14 @@ pub fn picker_agent(provider: ModelPickerProvider) -> PickerAgent {
             name: "Hermes",
             icon: "hermes-agent",
         },
+        ModelPickerProvider::Pi => PickerAgent {
+            name: "Pi Agent",
+            icon: "pi",
+        },
+        ModelPickerProvider::Omp => PickerAgent {
+            name: "OMP",
+            icon: "omp",
+        },
         ModelPickerProvider::Codex => PickerAgent {
             name: "Codex",
             icon: "codex",

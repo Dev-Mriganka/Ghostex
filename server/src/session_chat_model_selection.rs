@@ -161,11 +161,19 @@ pub(crate) fn validate_selection(
             && value.len() <= 160
             && value
                 .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || b"-._[]():/".contains(&byte))
+                .all(|byte| byte.is_ascii_alphanumeric() || b"-._[]():/@+".contains(&byte))
     };
     if !matches!(
         provider,
-        "codex" | "claude" | "cursor" | "grok" | "antigravity" | "opencode" | "hermes"
+        "codex"
+            | "claude"
+            | "cursor"
+            | "grok"
+            | "antigravity"
+            | "opencode"
+            | "hermes"
+            | "pi"
+            | "omp"
     ) || !token(model)
         || (!effort.is_empty() && !token(effort))
     {

@@ -16,6 +16,8 @@ pub enum ModelPickerProvider {
     #[serde(rename = "opencode")]
     OpenCode,
     Hermes,
+    Pi,
+    Omp,
 }
 
 impl ModelPickerProvider {
@@ -29,6 +31,8 @@ impl ModelPickerProvider {
             Self::Antigravity => "antigravity",
             Self::OpenCode => "opencode",
             Self::Hermes => "hermes",
+            Self::Pi => "pi",
+            Self::Omp => "omp",
         }
     }
 
@@ -42,6 +46,8 @@ impl ModelPickerProvider {
             "antigravity" => Some(Self::Antigravity),
             "opencode" => Some(Self::OpenCode),
             "hermes" => Some(Self::Hermes),
+            "pi" => Some(Self::Pi),
+            "omp" => Some(Self::Omp),
             _ => None,
         }
     }
@@ -119,13 +125,16 @@ pub const MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON: &str =
     "This agent's model picker always saves the choice as its default.";
 
 /// Hermes is the other way round: `/model` without `--global` never saves a default, and the
-/// picker never sends `--global`, so every pick applies to this session alone.
+/// picker never sends `--global`, so every pick applies to this session alone. Pi's `/model` and
+/// `/thinking` and OMP's `/switch` are session-only the same way.
 pub const MODEL_PICKER_SESSION_SCOPE_ONLY_REASON: &str = "Every pick applies to this session only.";
 
 /// Why an agent's picker has one scope, for every agent without the session-only choice.
 pub fn model_picker_scope_reason(provider: ModelPickerProvider) -> &'static str {
     match provider {
-        ModelPickerProvider::Hermes => MODEL_PICKER_SESSION_SCOPE_ONLY_REASON,
+        ModelPickerProvider::Hermes | ModelPickerProvider::Pi | ModelPickerProvider::Omp => {
+            MODEL_PICKER_SESSION_SCOPE_ONLY_REASON
+        }
         _ => MODEL_PICKER_DEFAULT_SCOPE_ONLY_REASON,
     }
 }
@@ -140,6 +149,8 @@ pub fn model_picker_provider(icon: Option<&str>) -> Option<ModelPickerProvider> 
         "antigravity-cli" | "antigravity" => Some(ModelPickerProvider::Antigravity),
         "opencode" => Some(ModelPickerProvider::OpenCode),
         "hermes-agent" => Some(ModelPickerProvider::Hermes),
+        "pi" => Some(ModelPickerProvider::Pi),
+        "omp" => Some(ModelPickerProvider::Omp),
         _ => None,
     }
 }

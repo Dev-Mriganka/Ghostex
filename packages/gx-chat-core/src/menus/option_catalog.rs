@@ -320,6 +320,11 @@ enum CatalogOptions {
         agent: Box<CatalogAgent>,
         catalog: Box<AgentModelCatalog>,
     },
+    /// Pi and OMP: the lineup their own CLI lists, which gxserver sends with the session.
+    PiFamily {
+        agent: Box<CatalogAgent>,
+        catalog: Box<AgentModelCatalog>,
+    },
     /// Read-only mirrors: the same list whatever the model is.
     Fixed(Vec<OptionDescriptor>),
 }
@@ -411,6 +416,15 @@ impl SessionOptionCatalog {
                 effort.default_value = agent.default_effort.clone();
                 vec![effort]
             }
+            CatalogOptions::PiFamily { agent, catalog } => {
+                // A model without reasoning has no level to pick.
+                let efforts = agent.efforts_for_model(model_value);
+                if efforts.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![reasoning_effort_picker(catalog, &efforts)]
+                }
+            }
             CatalogOptions::Fixed(descriptors) => descriptors.clone(),
         }
     }
@@ -452,8 +466,15 @@ impl SessionOptionCatalog {
     /// no effort rather than the model's first level: falling back to the first level sent
     /// `/effort low` on the way back from Haiku to Sonnet and overwrote the Medium the user had
     /// picked. Codex's picker needs an effort with every model, so it keeps the fallback.
+    ///
+    /// Pi and OMP clamp their current level to the nearest one the new model supports, so a model
+    /// pick whose level the new model lacks sends none and lets the CLI clamp, instead of falling
+    /// to the model's lowest level (`off`).
     pub fn agent_keeps_effort(&self) -> bool {
-        matches!(self.options, CatalogOptions::Claude { .. })
+        matches!(
+            self.options,
+            CatalogOptions::Claude { .. } | CatalogOptions::PiFamily { .. }
+        )
     }
 }
 
@@ -859,8 +880,39 @@ fn hermes_catalog() -> SessionOptionCatalog {
     }
 }
 
-/// Pi reports both values in its terminal statusline. Its model list is provider-dependent, and
-/// model and effort changes belong to the CLI, so these are read-only mirrors.
+/// CDXC:AgentProviders 2026-09-30 DECISION:
+/// User: "set up for me the model selector for these 3 in chat view" (OpenCode, Pi and OMP, each
+/// logged in with their Codex subscription). Pi and OMP list every model their own CLI can reach
+/// (`session_chat_pi_models.rs` asks the CLI), grouped by provider, with the reasoning levels each
+/// model supports. A pick types Pi's `/model <provider>/<id>` and `/thinking <level>`, or OMP's
+/// `/switch <provider>/<id>:<level>`, which both apply to the session alone.
+/// SEE-ALSO: server/src/session_chat_pi_models.rs builds the lineup,
+/// server/src/session_chat_provider_model_picker.rs types the pick.
+fn build_pi_family_catalog(
+    catalog: &AgentModelCatalog,
+    agent: &CatalogAgent,
+    icon: &str,
+) -> SessionOptionCatalog {
+    let mut model = OptionDescriptor::new(
+        "model",
+        "Model",
+        OptionCategory::Model,
+        OptionDispatch::ModelPicker,
+    );
+    model.choices = Some(model_choices(agent));
+    model.choice_groups = model_choice_groups(agent);
+    SessionOptionCatalog {
+        model,
+        model_icon: icon.to_string(),
+        options: CatalogOptions::PiFamily {
+            agent: Box::new(agent.clone()),
+            catalog: Box::new(catalog.clone()),
+        },
+    }
+}
+
+/// Until gxserver has read the CLI's lineup, Pi's pills mirror the model and level its statusline
+/// reports and hand the change to the terminal.
 fn pi_catalog() -> SessionOptionCatalog {
     SessionOptionCatalog {
         model: handoff("model", "Model", OptionCategory::Model, None),
@@ -916,8 +968,18 @@ pub fn session_option_catalog(
                 None => hermes_catalog(),
             });
         }
-        "omp" => return Some(omp_catalog()),
-        "pi" => return Some(pi_catalog()),
+        "omp" => {
+            return Some(match catalog.agents.get("omp") {
+                Some(agent) => build_pi_family_catalog(catalog, agent, "omp"),
+                None => omp_catalog(),
+            });
+        }
+        "pi" => {
+            return Some(match catalog.agents.get("pi") {
+                Some(agent) => build_pi_family_catalog(catalog, agent, "pi"),
+                None => pi_catalog(),
+            });
+        }
         _ => return None,
     };
     let agent = catalog.agents.get(builder_id)?;

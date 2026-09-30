@@ -601,13 +601,16 @@ pub(super) fn match_antigravity_statusline(line: &str) -> Option<SessionChatDete
 // ---------------------------------------------------------------------------
 // Pi grammar
 //   0.0%/300k (auto)              claude-fable-5@300k • medium
+//   0.0%/256k (auto)          (openai-codex) gpt-5.5 • thinking off
 //
 // Pi's statusline is configurable, so require both pieces from the measured
-// default layout: a context meter and the model/effort suffix. This keeps a
-// prose line that happens to mention `model • medium` from becoming state.
+// default layout: a context meter on the left and the model, right-aligned
+// after at least two spaces. This keeps a prose line that happens to mention
+// `model • medium` from becoming state.
 // ---------------------------------------------------------------------------
 
-const PI_FAMILY_EFFORTS: &[&str] = &["off", "minimal", "low", "medium", "high", "xhigh"];
+/// Pi's thinking levels (`EXTENDED_THINKING_LEVELS`), which OMP's statusline shares.
+const PI_FAMILY_EFFORTS: &[&str] = &["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 const OMP_MIN_HEADER_RULE_CHARS: usize = 20;
 
 fn is_pi_context_meter(token: &str) -> bool {
@@ -632,45 +635,61 @@ fn is_pi_family_model_id(token: &str) -> bool {
         })
 }
 
-pub(super) fn match_pi_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
-    let tokens = line.split_whitespace().collect::<Vec<_>>();
-    let bullet = tokens.iter().rposition(|token| *token == "•")?;
-    if bullet < 2 || bullet + 2 != tokens.len() {
-        return None;
-    }
-    if !tokens[..bullet - 1]
-        .iter()
-        .any(|token| is_pi_context_meter(token))
-    {
-        return None;
-    }
-    let model = tokens[bullet - 1];
-    let effort = tokens[bullet + 1].to_ascii_lowercase();
-    if !is_pi_family_model_id(model) || !PI_FAMILY_EFFORTS.contains(&effort.as_str()) {
-        return None;
-    }
-    Some(SessionChatDetectedSelection {
+fn pi_family_selection(
+    model: String,
+    label: String,
+    effort: Option<String>,
+) -> SessionChatDetectedSelection {
+    SessionChatDetectedSelection {
         model: Some(SessionChatDetectedChoice {
-            value: model.to_string(),
-            label: model.to_string(),
+            value: model,
+            label,
             source: SessionChatOptionEvidence::Terminal,
         }),
-        effort: Some(SessionChatDetectedChoice {
+        effort: effort.map(|effort| SessionChatDetectedChoice {
             value: effort.clone(),
             label: effort,
             source: SessionChatOptionEvidence::Terminal,
         }),
-        mode: None,
-        context_window: None,
-        terminal_status_line: None,
-        fast: None,
-        context_usage: None,
-        claude_status: None,
-        codex_status: None,
-        cursor_status: None,
-        hermes_status: None,
-        model_catalog: None,
-    })
+        ..SessionChatDetectedSelection::default()
+    }
+}
+
+/// CDXC:AgentProviders 2026-09-30 WHY:
+/// Pi's footer prepends `(<provider>)` to the model once more than one provider is logged in (a Codex login next to the Cursor extension, for example), prints `• thinking off` for the off level and no level at all for a model without reasoning (`FooterComponent` in pi-coding-agent 0.87). The model is the part after the right-aligning padding, so Pi's own `(auto)` compaction marker on the left is never read as a provider. With the provider shown the model reads `provider/id`, the picker's own key.
+pub(super) fn match_pi_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
+    let (stats, right) = line.trim_end().rsplit_once("  ")?;
+    if !stats.split_whitespace().any(is_pi_context_meter) {
+        return None;
+    }
+    let tokens = right.split_whitespace().collect::<Vec<_>>();
+    let (head, effort) = match tokens.iter().position(|token| *token == "•") {
+        Some(bullet) => {
+            let effort = match &tokens[bullet + 1..] {
+                [level] => level.to_ascii_lowercase(),
+                ["thinking", "off"] => "off".to_string(),
+                _ => return None,
+            };
+            if !PI_FAMILY_EFFORTS.contains(&effort.as_str()) {
+                return None;
+            }
+            (&tokens[..bullet], Some(effort))
+        }
+        None => (&tokens[..], None),
+    };
+    let (provider, model) = match head {
+        [model] => (None, *model),
+        [provider, model] => {
+            let provider = provider.strip_prefix('(')?.strip_suffix(')')?;
+            (Some(provider), *model)
+        }
+        _ => return None,
+    };
+    if !is_pi_family_model_id(model) || provider.is_some_and(|p| !is_pi_family_model_id(p)) {
+        return None;
+    }
+    let value = provider.map_or_else(|| model.to_string(), |p| format!("{p}/{model}"));
+    Some(pi_family_selection(value, model.to_string(), effort))
 }
 
 // ---------------------------------------------------------------------------
@@ -681,6 +700,8 @@ pub(super) fn match_pi_statusline(line: &str) -> Option<SessionChatDetectedSelec
 // plus Omp's two glyph labels so ordinary terminal output cannot match.
 // ---------------------------------------------------------------------------
 
+/// CDXC:AgentProviders 2026-09-30 WHY:
+/// OMP's model segment is `⬢ <name>` then ` · <glyph> <level>`, where the glyph and label vary by level (`○ min`, `◔ low`, `◑ med`, `◒ high`, `◕ xhigh`, `◉ max`, `off` behind the disabled glyph, `auto` while its classifier decides; pi-tui's `thinking.*` symbols). Reading only `◒` detected nothing but High. The name can hold spaces and is followed by the fast and advisor icons, so the segment is cut at OMP's ` > ` separator and trailing icon tokens are dropped.
 pub(super) fn match_omp_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
     let trimmed = line.trim();
     if !trimmed.starts_with('\u{256d}')
@@ -689,39 +710,39 @@ pub(super) fn match_omp_statusline(line: &str) -> Option<SessionChatDetectedSele
     {
         return None;
     }
-    let tokens = trimmed.split_whitespace().collect::<Vec<_>>();
-    let model_marker = tokens.iter().position(|token| *token == "⬢")?;
-    let effort_marker = tokens.iter().position(|token| *token == "◒")?;
-    if model_marker >= effort_marker || !tokens[..model_marker].contains(&"π") {
+    let (before, after) = trimmed.split_once("\u{2b22} ")?;
+    if !before.split_whitespace().any(|token| token == "π") {
         return None;
     }
-    let model = *tokens.get(model_marker + 1)?;
-    let effort = tokens.get(effort_marker + 1)?.to_ascii_lowercase();
-    if !is_pi_family_model_id(model) || !PI_FAMILY_EFFORTS.contains(&effort.as_str()) {
+    let segment = after.split(" > ").next()?;
+    let (name, thinking) = match segment.rsplit_once(" \u{b7} ") {
+        Some((name, thinking)) => (name, Some(thinking)),
+        None => (segment, None),
+    };
+    let name_tokens = name.split_whitespace().collect::<Vec<_>>();
+    let keep = name_tokens
+        .iter()
+        .rposition(|token| token.chars().any(|ch| ch.is_ascii_alphanumeric()))?;
+    let name = name_tokens[..=keep].join(" ");
+    let effort = match thinking {
+        Some(thinking) => {
+            let level = thinking.split_whitespace().last()?.to_ascii_lowercase();
+            match level.as_str() {
+                "min" => Some("minimal".to_string()),
+                "med" => Some("medium".to_string()),
+                // The level its classifier resolves to shows once a turn has run.
+                "auto" => None,
+                level if PI_FAMILY_EFFORTS.contains(&level) => Some(level.to_string()),
+                _ => return None,
+            }
+        }
+        None => None,
+    };
+    // `no-model` is what OMP draws while no provider is logged in.
+    if name == "no-model" || !name.split(' ').all(is_pi_family_model_id) {
         return None;
     }
-    Some(SessionChatDetectedSelection {
-        model: Some(SessionChatDetectedChoice {
-            value: model.to_string(),
-            label: model.to_string(),
-            source: SessionChatOptionEvidence::Terminal,
-        }),
-        effort: Some(SessionChatDetectedChoice {
-            value: effort.clone(),
-            label: effort,
-            source: SessionChatOptionEvidence::Terminal,
-        }),
-        mode: None,
-        context_window: None,
-        terminal_status_line: None,
-        fast: None,
-        context_usage: None,
-        claude_status: None,
-        codex_status: None,
-        cursor_status: None,
-        hermes_status: None,
-        model_catalog: None,
-    })
+    Some(pi_family_selection(name.clone(), name, effort))
 }
 
 // ---------------------------------------------------------------------------

@@ -539,10 +539,21 @@ impl PickerDriver<'_> {
     async fn wait_for<T>(
         &self,
         step: &str,
+        accept: impl FnMut(&str) -> Option<T>,
+    ) -> Result<T, DomainStateError> {
+        self.wait_for_within(step, PICKER_STEP_TIMEOUT_MS, accept)
+            .await
+    }
+
+    /// [`Self::wait_for`] with its own deadline, for a step the agent itself may spend seconds on.
+    async fn wait_for_within<T>(
+        &self,
+        step: &str,
+        timeout_ms: u64,
         mut accept: impl FnMut(&str) -> Option<T>,
     ) -> Result<T, DomainStateError> {
         let started = std::time::Instant::now();
-        let deadline = started + Duration::from_millis(PICKER_STEP_TIMEOUT_MS);
+        let deadline = started + Duration::from_millis(timeout_ms);
         loop {
             if (self.cancelled)() {
                 return Err(agent_busy(
@@ -1241,9 +1252,16 @@ pub(crate) async fn select_session_chat_model(
         );
         return Ok(result);
     }
+    // OMP shares Pi's transcript family; its commands and footer are its own.
+    let agent = match agent.as_deref() {
+        Some("pi") => crate::session_chat_composer::session_chat_composer_agent_id(&target.session)
+            .filter(|display| display == "omp")
+            .or(agent),
+        _ => agent,
+    };
     if !matches!(
         agent.as_deref(),
-        Some("codex" | "claude" | "cursor" | "grok" | "antigravity" | "hermes")
+        Some("codex" | "claude" | "cursor" | "grok" | "antigravity" | "hermes" | "pi" | "omp")
     ) {
         return Err(DomainStateError {
             code: "unsupportedAgent",
