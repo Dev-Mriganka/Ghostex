@@ -459,6 +459,9 @@ pub struct GhostexGpuiApp {
     /// One-shot Chat launch requests waiting for a shell-session mapping. The
     /// mapped session enters Chat mode before any terminal focus handoff.
     pub(crate) pending_agents_chat_launch_intents: HashSet<GpuiWorkspaceTerminalSessionKey>,
+    /// The launch intents above that were armed without a view: they open Chat only when the
+    /// agent gxserver names for the session prefers it (`arm_default_view_chat_launch_intent`).
+    pub(crate) pending_agents_chat_launch_follow_view: HashSet<GpuiWorkspaceTerminalSessionKey>,
     /// CDXC:Navigation 2026-09-11 WHY:
     /// Remote session opens travel as a native project-path action and finish
     /// asynchronously through several attach helpers with many callers, so the

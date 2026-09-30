@@ -362,8 +362,12 @@ impl GhostexGpuiApp {
                     and it is owned by the navigation history controller
                     (navigation_history/controller.rs; the sidebar runtime until
                     2026-09-25): the keypress takes the exact same route as a
-                    click on the titlebar arrows.
+                    click on the titlebar arrows, unless a focused Browser pane
+                    takes it (navigate_focused_browser_history).
                     */
+                    if self.navigate_focused_browser_history(direction == "back", cx) {
+                        return;
+                    }
                     self.request_navigation_history_navigation(direction, cx);
                     return;
                 }
@@ -1449,6 +1453,16 @@ impl GhostexGpuiApp {
                                     directly here, using the currently focused Agents pane
                                     as the restore placement target.
                                     */
+                                    // The restored session opens in its agent's Default Agent View
+                                    // (`CDXC:SessionChat 2026-09-30 DECISION` in session_chat_launch.rs).
+                                    this.arm_default_view_chat_launch_intent(
+                                        GpuiWorkspaceTerminalSessionKey::Local(
+                                            GpuiLocalWorkspaceSessionKey {
+                                                project_id: project_id.clone(),
+                                                session_id: session_id.clone(),
+                                            },
+                                        ),
+                                    );
                                     if let Some(focus_id) =
                                         gpui_combined_presentation_session_focus_id(
                                             &project_id,
@@ -1521,6 +1535,22 @@ impl GhostexGpuiApp {
                                     session_id,
                                 } => {
                                     this.refresh_gpui_remote_gxserver_presentation_in_background(&remote_machine_id);
+                                    let scoped_session_id = gpui_remote_scoped_session_id(
+                                        remote_machine_id.as_str(),
+                                        project_id.as_str(),
+                                        session_id.as_str(),
+                                    );
+                                    if let Some(reference) =
+                                        gpui_remote_attach_session_reference_from_project_id(
+                                            scoped_session_id.as_str(),
+                                        )
+                                    {
+                                        this.arm_default_view_chat_launch_intent(
+                                            GpuiWorkspaceTerminalSessionKey::Remote(
+                                                GpuiRemoteAttachSessionKey::from(&reference),
+                                            ),
+                                        );
+                                    }
                                     this.handle_gpui_remote_session_native_action(
                                         GpuiSidebarNativeProjectPathActionMessage {
                                             action:

@@ -79,6 +79,13 @@ impl GhostexGpuiApp {
     ) {
     }
 
+    /// The same for an open that names no view: the page shows an agent session in Chat unless its terminal toggle is on.
+    pub(crate) fn arm_local_default_view_chat_launch_intent(
+        &mut self,
+        _key: crate::app::model::GpuiLocalWorkspaceSessionKey,
+    ) {
+    }
+
     /// The desktop drops its cached menu inputs after a write; the page builds its menu inputs on every update.
     pub(crate) fn gx_store_note_menu_host_write(&mut self, _command: &Value) {}
 }

@@ -121,6 +121,9 @@ impl GhostexGpuiApp {
             let title = title
                 .or_else(|| Some(name.clone()).filter(|name| !name.trim().is_empty()))
                 .unwrap_or_else(|| ghostex_gx_core::DEFAULT_TERMINAL_SESSION_TITLE.to_string());
+            // A command may start an agent (Find's resume, `ghostex://terminal claude`), whose view
+            // gxserver's metadata decides; a plain shell has none to follow.
+            let view = command.is_none().then_some("terminal");
             let created = match command {
                 Some(command) => {
                     gx_rpc(
@@ -148,7 +151,7 @@ impl GhostexGpuiApp {
                             created_project.as_deref().unwrap_or(&project_id),
                             &session_id,
                             false,
-                            None,
+                            view,
                             cx,
                         );
                     }

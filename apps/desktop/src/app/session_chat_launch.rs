@@ -79,6 +79,46 @@ impl GhostexGpuiApp {
             .insert(GpuiWorkspaceTerminalSessionKey::Local(key));
     }
 
+    /// CDXC:SessionChat 2026-09-30 DECISION:
+    /// User: when the Default Agent View is Chat, open chat right away wherever the app opens a session, not only for a sidebar agent launch ("check for other cases where we can open chat right away"). An open that names no view (Find's resume and fork, a Ghostex Capture send, a Project Board start or jump, reopening a stashed prompt's conversation, a `ghostex://terminal` command, a fork, a Previous Sessions restore) arms the Chat launch intent at once, so the chat is on screen while the terminal starts behind it instead of after the agent is recognised. Which agent the session runs is only known once gxserver's attach metadata or the attach plan names it, so the intent is dropped there when that agent's view is Terminal (`chat_launch_intent_declined_by_default_view`).
+    pub(crate) fn arm_default_view_chat_launch_intent(
+        &mut self,
+        key: GpuiWorkspaceTerminalSessionKey,
+    ) {
+        self.pending_agents_chat_launch_follow_view
+            .insert(key.clone());
+        self.pending_agents_chat_launch_intents.insert(key);
+    }
+
+    /// `arm_default_view_chat_launch_intent` for a local session the store opened (a create or a fork).
+    pub(crate) fn arm_local_default_view_chat_launch_intent(
+        &mut self,
+        key: GpuiLocalWorkspaceSessionKey,
+    ) {
+        self.arm_default_view_chat_launch_intent(GpuiWorkspaceTerminalSessionKey::Local(key));
+    }
+
+    /// Whether an intent armed by `arm_default_view_chat_launch_intent` gives way because the
+    /// agent behind `icon` opens in the terminal; the intent is dropped when it does. An intent
+    /// armed with an explicit view is never declined here.
+    pub(crate) fn chat_launch_intent_declined_by_default_view(
+        &mut self,
+        key: &GpuiWorkspaceTerminalSessionKey,
+        icon: Option<&str>,
+    ) -> bool {
+        if !self.pending_agents_chat_launch_follow_view.remove(key) {
+            return false;
+        }
+        let settings = shared_settings::shared_sidebar_settings_snapshot();
+        if gpui_effective_preferred_agent_interface_for_agent_icon(settings.object(), icon)
+            == GpuiPreferredAgentInterface::Chat
+        {
+            return false;
+        }
+        self.pending_agents_chat_launch_intents.remove(key);
+        true
+    }
+
     /// CDXC:SessionChat 2026-09-09 DECISION:
     /// User: chat opens immediately when creating an agent; terminal startup runs in the background and sending waits for the agent's input box.
     /// This tab owns chat before it has a terminal launch payload. The ordinary attach completion fills that same tab.
@@ -142,6 +182,9 @@ impl GhostexGpuiApp {
                     | "zcode"
             )
         ) {
+            return;
+        }
+        if self.chat_launch_intent_declined_by_default_view(&key, icon) {
             return;
         }
         let mapped = match &key {

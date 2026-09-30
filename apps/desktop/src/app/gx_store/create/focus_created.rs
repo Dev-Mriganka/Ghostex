@@ -82,7 +82,11 @@ impl GhostexGpuiApp {
             cx,
         );
         // The store's selection above already gave the session its tab (session_chat_launch.rs).
-        if message.preferred_interface == GpuiPreferredAgentInterface::Chat {
+        // A create that names no view follows its agent's Default Agent View
+        // (`CDXC:SessionChat 2026-09-30 DECISION` in session_chat_launch.rs).
+        if preferred_interface.is_none() {
+            self.arm_local_default_view_chat_launch_intent(key);
+        } else if message.preferred_interface == GpuiPreferredAgentInterface::Chat {
             self.arm_created_session_chat_launch_intent(key);
         }
         self.focus_local_workspace_terminal_from_message(&message, cx);

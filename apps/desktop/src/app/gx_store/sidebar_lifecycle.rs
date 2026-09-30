@@ -30,7 +30,10 @@ use serde_json::Value;
 use super::host::now_ms;
 use super::rpc::gxserver_rpc_result_task;
 use crate::GhostexGpuiApp;
-use crate::app::model::{GpuiPreferredAgentInterface, GpuiSidebarWorkspaceTerminalFocusMessage};
+use crate::app::model::{
+    GpuiLocalWorkspaceSessionKey, GpuiPreferredAgentInterface,
+    GpuiSidebarWorkspaceTerminalFocusMessage,
+};
 
 /// The same bound the app's other wake uses (`session_chat_fork_branches.rs`): a wake starts a
 /// provider and can take a while, and a call that times out must read as "no answer" rather than
@@ -519,6 +522,12 @@ impl GhostexGpuiApp {
         // The store's focus takes the fork (held until its row arrives), so no publish before the
         // attach returns pulls the workspace back to the source's project (focus_publish.rs).
         self.gx_store_select_opened_session(session, cx);
+        // The fork opens in its agent's Default Agent View (`CDXC:SessionChat 2026-09-30 DECISION`
+        // in session_chat_launch.rs).
+        self.arm_local_default_view_chat_launch_intent(GpuiLocalWorkspaceSessionKey {
+            project_id: session.project_id.clone(),
+            session_id: session.session_id.clone(),
+        });
         self.gx_store_select_local_workspace_session(
             session,
             placement_target,

@@ -265,6 +265,7 @@ impl GhostexGpuiApp {
                 agents_terminal_action_bar_account_submenu_open: false,
                 agents_chat_auto_switch_observed_sessions: HashMap::new(),
                 pending_agents_chat_launch_intents: HashSet::new(),
+                pending_agents_chat_launch_follow_view: HashSet::new(),
                 pending_keep_view_remote_focus: HashSet::new(),
                 agents_chat_page_states: HashMap::new(),
                 session_chat_diagnostics: Default::default(),

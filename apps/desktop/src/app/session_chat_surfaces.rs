@@ -585,6 +585,13 @@ impl GhostexGpuiApp {
             self.pending_agents_chat_launch_intents.remove(&key);
             return false;
         }
+        let icon = self
+            .agents_workspace
+            .session(session_id)
+            .and_then(|session| session.agent_icon);
+        if self.chat_launch_intent_declined_by_default_view(&key, icon) {
+            return false;
+        }
 
         self.pending_agents_chat_launch_intents.remove(&key);
         self.agents_chat_mode_sessions.insert(session_id);
@@ -626,6 +633,13 @@ impl GhostexGpuiApp {
                 .is_none()
             {
                 self.pending_agents_chat_launch_intents.remove(&key);
+                continue;
+            }
+            let icon = self
+                .agents_workspace
+                .session(shell_session_id)
+                .and_then(|session| session.agent_icon);
+            if self.chat_launch_intent_declined_by_default_view(&key, icon) {
                 continue;
             }
             if !self.agents_terminal_runtime_is_live_for_chat_launch(shell_session_id)
@@ -824,6 +838,7 @@ impl GhostexGpuiApp {
     ) -> ParkedAgentsChatRuntime {
         self.agents_chat_mode_sessions.clear();
         self.pending_agents_chat_launch_intents.clear();
+        self.pending_agents_chat_launch_follow_view.clear();
         self.pending_session_terminal_composer_insert.clear();
         self.pending_session_chat_draft_handoffs.clear();
         self.session_chat_draft_capture_in_flight.clear();

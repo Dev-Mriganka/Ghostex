@@ -109,11 +109,12 @@ impl GhostexGpuiApp {
                         );
                     }
                     if let Some(created_project) = created_project {
+                        // A plain shell has no agent view to follow.
                         this.gx_store_focus_created_session(
                             &created_project,
                             &session_id,
                             false,
-                            None,
+                            Some("terminal"),
                             cx,
                         );
                     }
