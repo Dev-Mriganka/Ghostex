@@ -84,6 +84,9 @@ impl PreferredInterfaceSettings {
     /// `sessionPreferredAgentInterface`: nothing at all for a row with no agent id, because the
     /// desktop drops the intent for such a row anyway and an unset value keeps the extra
     /// attach-metadata preview off the plain-terminal path.
+    ///
+    /// CDXC:SessionChat 2026-09-30 DECISION:
+    /// User: when neither the Default Agent View nor the agent's own override is set, treat it as Chat automatically. Only an explicit "terminal" opens a session in Terminal; an empty or unknown global value resolves to Chat.
     pub fn resolve(&self, agent_id: Option<&str>) -> Option<&str> {
         let agent_id = agent_id.map(str::trim).filter(|id| !id.is_empty())?;
         let override_value = self
@@ -92,7 +95,11 @@ impl PreferredInterfaceSettings {
             .find(|(id, _)| id == agent_id)
             .map(|(_, value)| value.as_str())
             .filter(|value| *value == "chat" || *value == "terminal");
-        Some(override_value.unwrap_or(self.default_interface.as_str()))
+        let default_interface = match self.default_interface.as_str() {
+            "terminal" => "terminal",
+            _ => "chat",
+        };
+        Some(override_value.unwrap_or(default_interface))
     }
 }
 

@@ -13,6 +13,8 @@ struct ClaudePopup {
     title: fn(&str) -> bool,
     /// Every numbered row, in order; a row matches when its label starts with this.
     rows: &'static [&'static str],
+    /// Drawn over the composer (which stays painted under it) instead of in its place.
+    above_composer: bool,
 }
 
 /// CDXC:SessionChat 2026-09-25 DECISION:
@@ -28,6 +30,7 @@ const CLAUDE_ESCAPE_SAFE_POPUPS: &[ClaudePopup] = &[
             "Never for this plugin",
             "Disable all LSP recommendations",
         ],
+        above_composer: false,
     },
     ClaudePopup {
         name: "plugin recommendation",
@@ -37,16 +40,27 @@ const CLAUDE_ESCAPE_SAFE_POPUPS: &[ClaudePopup] = &[
             "No",
             "No, and don't show plugin installation hints again",
         ],
+        above_composer: false,
     },
     ClaudePopup {
         name: "Remote Control offer",
         title: |line| line == "Remote Control",
         rows: &["Enable Remote Control", "Never mind"],
+        above_composer: false,
     },
     ClaudePopup {
         name: "API spending notice",
         title: |line| line.starts_with("You've spent $") && line.ends_with("this session."),
         rows: &["Got it, thanks!"],
+        above_composer: false,
+    },
+    /// CDXC:SessionChat 2026-09-30 WHY:
+    /// Claude Code 2.1.284 opens "Teach auto mode about your environment?" in auto mode after repeated denials and keeps its input box painted underneath, so the send saw a composer, pasted into the offer and failed with "The terminal did not accept the pasted message". Its Escape handler is `onCancel: () => choose("later")`, the same as "Not now" (a 7-day snooze, no settings change).
+    ClaudePopup {
+        name: "auto mode setup offer",
+        title: |line| line == "Teach auto mode about your environment?",
+        rows: &["Yes", "Not now", "Don't show again"],
+        above_composer: true,
     },
 ];
 
@@ -82,9 +96,20 @@ fn popup_is_live(popup: &ClaudePopup, lines: &[String]) -> bool {
             },
         )
         && rows.last().is_some_and(|(last, _, _)| {
-            lines.len() - 1 - last <= POPUP_TRAILING_LINES
-                && lines[last + 1..].iter().all(|line| !line.starts_with('❯'))
+            let after = &lines[last + 1..];
+            if popup.above_composer {
+                return composer_follows_guide(after);
+            }
+            after.len() <= POPUP_TRAILING_LINES && after.iter().all(|line| !line.starts_with('❯'))
         })
+}
+
+/// The popup's own "Enter to confirm · Esc to cancel" guide, then directly the composer's
+/// `─` rule and its `❯` line: nothing else was painted between the popup and the input box.
+fn composer_follows_guide(after: &[String]) -> bool {
+    let is_rule = |line: &String| line.chars().count() >= 20 && line.chars().all(|c| c == '─');
+    matches!(after, [guide, rule, input, ..]
+        if guide.starts_with("Enter to confirm") && is_rule(rule) && input.starts_with('❯'))
 }
 
 /// `❯ 2. No, not now` or `2. No, not now` → `(2, "No, not now")`, for rows numbered 1..=9.

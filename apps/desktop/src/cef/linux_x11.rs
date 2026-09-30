@@ -383,6 +383,14 @@ pub(super) fn append_platform_command_line_switches(command_line: &mut cef::Comm
         Some(&cef::CefString::from("ozone-platform")),
         Some(&cef::CefString::from("x11")),
     );
+    // Web pages draw at the scale the native UI picked under XWayland, so a page and the chat
+    // beside it show text at the same size (CDXC:PlatformSupport 2026-09-30 in linux_x11_scale.rs).
+    if let Some(scale) = crate::linux_x11_scale::pinned_scale_factor() {
+        command_line.append_switch_with_value(
+            Some(&cef::CefString::from("force-device-scale-factor")),
+            Some(&cef::CefString::from(scale.to_string().as_str())),
+        );
+    }
 }
 
 /*

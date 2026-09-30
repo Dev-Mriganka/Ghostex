@@ -601,27 +601,15 @@ pub(crate) fn popup_window_surface(color: Hsla) -> Hsla {
     }
 }
 
-/// Fill coverage of a frosted dialog on Linux in dark mode; see `frosted_modal_alpha`.
-#[cfg(target_os = "linux")]
-const WINDOW_GLASS_MODAL_ALPHA_LINUX: f32 = 0.94;
-
-/// `WINDOW_GLASS_MODAL_ALPHA_LINUX` in light mode.
-#[cfg(target_os = "linux")]
-const WINDOW_GLASS_MODAL_ALPHA_LINUX_LIGHT: f32 = 0.96;
-
 /// CDXC:AppModal 2026-09-30 DECISION:
-/// User, on Linux: "the open a project modal is too transparent by default. please fix. same for the cmd + n modal and probably others. please fix all those to be less transparent (more like the settings modal). same for the notification modal, it's way too light by default on linux right now." Every dialog that is frosted under window glass (the native app modals such as Add Project, the New Thread picker, Quick Access and Browser History, Search by Prompt, and the titlebar's Notifications, Tips, Resources and Dev servers panels) takes this fill. On Linux it covers 94% in dark mode and 96% in light mode; macOS and Windows keep the menus' coverage (`frosted_menu_alpha`). Menus and tooltips keep the thinner menu fill everywhere.
+/// User, on Linux: "the open a project modal is too transparent by default. please fix. same for the cmd + n modal and probably others. please fix all those to be less transparent (more like the settings modal). same for the notification modal, it's way too light by default on linux right now", then "the settings and the find by prompt and add a project are all very transparent now please fix" and "the quick access modal is very transparent on hyper land by default". Every dialog that is frosted under window glass (the native app modals such as Add Project and Settings, the New Thread picker, Quick Access and Browser History, Search by Prompt, and the titlebar's Notifications, Tips, Resources and Dev servers panels) takes this fill, which is fully opaque on Linux; macOS and Windows keep the menus' coverage (`frosted_menu_alpha`). Menus and tooltips keep the thinner menu fill everywhere.
 ///
 /// CDXC:AppModal 2026-09-30 WHY:
-/// A Linux window only asks the compositor for blur (`_KDE_NET_WM_BLUR_BEHIND_REGION` on X11, the blur protocol on Wayland); many compositors ignore the request or ship with blur off (Hyprland on Omarchy does both), so the 32% menu fill showed the desktop and the windows behind a dialog unblurred and its text could not be read.
+/// A Linux window only asks the compositor for blur (`_KDE_NET_WM_BLUR_BEHIND_REGION` on X11, the blur protocol on Wayland); many compositors ignore the request or ship with blur off (Hyprland on Omarchy does both), so any see-through dialog showed the desktop and the windows behind it unblurred and its text could not be read.
 pub(crate) fn frosted_modal_alpha() -> f32 {
     #[cfg(target_os = "linux")]
     {
-        if CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed) {
-            WINDOW_GLASS_MODAL_ALPHA_LINUX_LIGHT
-        } else {
-            WINDOW_GLASS_MODAL_ALPHA_LINUX
-        }
+        1.0
     }
     #[cfg(not(target_os = "linux"))]
     {

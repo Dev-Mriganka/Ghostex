@@ -20,8 +20,9 @@ impl GhostexGpuiApp {
         });
         self.open_native_app_modal(
             GpuiAppModalKind::FindPrompts,
-            APP_MODAL_HOST_WINDOW_WIDTH,
-            APP_MODAL_HOST_WINDOW_HEIGHT,
+            // The Quick Access frame (CDXC:AppModal 2026-09-30 in app/model/app_modal_kind.rs).
+            APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH,
+            APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT,
             move |window, cx| {
                 cx.new(|cx| {
                     GpuiFindPromptsModalWindow::new(host, light, glass, font_family, window, cx)

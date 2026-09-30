@@ -4,7 +4,9 @@ use gpui::{AppContext as _, Context};
 use serde_json::Value;
 
 use crate::GhostexGpuiApp;
-use crate::app::consts::{APP_MODAL_HOST_WINDOW_HEIGHT, APP_MODAL_HOST_WINDOW_WIDTH};
+use crate::app::consts::{
+    APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH, APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT,
+};
 use crate::app::model::GpuiAppModalKind;
 use crate::app::window::find_prompts::palette::find_prompts_font_family;
 use crate::app::window::{FindPromptsModalCommand, GpuiFindPromptsModalWindow};
@@ -25,8 +27,9 @@ impl GhostexGpuiApp {
         });
         self.open_native_app_modal(
             GpuiAppModalKind::FindPrompts,
-            APP_MODAL_HOST_WINDOW_WIDTH,
-            APP_MODAL_HOST_WINDOW_HEIGHT,
+            // The Quick Access frame (CDXC:AppModal 2026-09-30 in app/model/app_modal_kind.rs).
+            APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH,
+            APP_MODAL_HOST_PREVIOUS_SESSIONS_WINDOW_HEIGHT,
             move |window, cx| {
                 cx.new(|cx| {
                     GpuiFindPromptsModalWindow::new(host, light, false, font_family, window, cx)

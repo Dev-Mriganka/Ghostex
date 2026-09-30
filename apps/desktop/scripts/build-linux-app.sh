@@ -10,8 +10,9 @@
 # resources, portless admin runtime, updater integration, signing,
 # desktop-entry/icon install, and package formats (deb/rpm/AppImage/flatpak).
 # Source is an on-demand code-server component in relocatable packages. Dev
-# builds resolve the repository checkout through the baked CARGO_MANIFEST_DIR
-# candidate instead.
+# builds resolve a built repository checkout through the baked
+# CARGO_MANIFEST_DIR candidate, and otherwise install the published component
+# matching the checkout from the manifest staged in step 4.
 #
 # Development layouts keep CEF beside the executable. Release layouts stage a
 # CEF-free native bootstrap plus the internal runtime; the bootstrap installs
@@ -183,6 +184,16 @@ else
 		"$APP_DIR/libcef_dll" "$APP_DIR/archive.json"
 	# no_sandbox runtime: the SUID sandbox helper stays out of the layout.
 	rm -f "$APP_DIR/chrome-sandbox"
+	# The Code view installs the published code-server component that matches
+	# the checkout (tooling/release-gpui/linux-dev-code-server-manifest.mjs).
+	if ! node "$REPO_ROOT/tooling/release-gpui/linux-dev-code-server-manifest.mjs" \
+		--code-server-root "$REPO_ROOT/.dependencies/code-server" \
+		--platform "linux-$CEF_COMPONENT_ARCH" \
+		--version "$RELEASE_VERSION" \
+		--cache-dir "$REPO_ROOT/build/on-demand-components/linux-dev" \
+		--output "$APP_DIR/resources/on-demand-resources.json"; then
+		echo "warning: no published code-server component matches .dependencies/code-server; the Code view will be unavailable in this build" >&2
+	fi
 fi
 mkdir -p "$APP_DIR/dist"
 cp -R "$GPUI_DIR/dist/sidebar" "$APP_DIR/dist/sidebar"
