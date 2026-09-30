@@ -233,7 +233,8 @@ fn answer_prompt(state: &mut ChatState, answer: &Value) -> Vec<Effect> {
     // A picker answer hides the card at once: gxserver keeps reporting the detection until the
     // agent's screen catches up, and the user has already chosen.
     if kind == "terminalChoice"
-        || (kind == "terminalDialog" && answer.get("choiceIndex").is_some_and(Value::is_number))
+        || (kind == "terminalDialog"
+            && (answer.get("choiceIndex").is_some_and(Value::is_number) || closes_dialog(answer)))
     {
         state.questions.answered_notice_key = state.questions.active_notice_key.clone();
     }
@@ -250,6 +251,14 @@ fn answer_prompt(state: &mut ChatState, answer: &Value) -> Vec<Effect> {
         method: ChatRpcMethod::AnswerSessionChatPrompt,
         params: Box::new(with_identity(state, answer.clone())),
     }]
+}
+
+/// CDXC:SessionChat 2026-09-30 DECISION: User: clicking Close on a card like the side question card closes it instantly (optimistic), for every similar card in the chat. A dialog's Close and the side question's Fork both shut the dialog on the agent's screen, so they hide the card at once like a picked row; keys that only move inside a dialog keep it up.
+pub(crate) fn closes_dialog(answer: &Value) -> bool {
+    matches!(
+        answer.get("dialogAction").and_then(Value::as_str),
+        Some("cancel" | "fork")
+    )
 }
 
 /// Typing into the card's free-text row.

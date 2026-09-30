@@ -203,13 +203,10 @@ pub(super) const UNROUTED: &str = "unrouted";
 
 /// Where one [`Effect::HostAction`] goes: nowhere, back into the core, or to the app shell.
 ///
-/// CDXC:SessionChat 2026-09-22 WHY:
-/// `switchToTerminal` is forwarded from here unchanged, and the app shell drops it. That is
-/// deliberate: `native-host.ts` pushed the identical `{kind: 'host', method: 'switchToTerminal'}`
-/// and `receive_session_chat_host_action` has no arm for that spelling (it knows `terminalView`), so
-/// the QuickJS brain did exactly the same nothing. The missing arm is an app-shell gap that predates
-/// this port; fixing it belongs in `session_chat.rs`, not in host routing. Forwarding means that on
-/// the day the shell grows the arm, the chat starts switching with no change here.
+/// CDXC:SessionChat 2026-09-30 WHY:
+/// `switchToTerminal` is forwarded from here unchanged as a `sessionChatHostAction`; the app shell's
+/// `receive_session_chat_host_action` (session_chat.rs) switches the view. Supersedes the 2026-09-22
+/// note that the shell dropped it.
 fn host_action(action: String, params: Value) -> Routed {
     if let Some(name) = SWALLOWED_HOST_ACTIONS
         .iter()

@@ -182,10 +182,15 @@ impl SessionChatSendProbe {
             return None;
         }
         // CDXC:SessionChat 2026-09-27 WHY: Claude answers a `/btw` side question in a panel and writes nothing to its transcript, not even a `local_command` row, so this watchdog always found the send "never recorded" and replaced the side question card with a false "Claude Code is no longer running" notice. The panel itself is the delivery proof, and session_chat_claude_panel.rs reads it.
-        if session_chat_option_agent(agent)
-            == Some(crate::session_chat_options::SessionChatOptionAgent::Claude)
-            && InterceptedInput::detect(text)
-                == Some(InterceptedInput::SlashCommand("/btw".to_string()))
+        // Codex answers its `/btw` in a side conversation that its main transcript never records either.
+        if matches!(
+            session_chat_option_agent(agent),
+            Some(
+                crate::session_chat_options::SessionChatOptionAgent::Claude
+                    | crate::session_chat_options::SessionChatOptionAgent::Codex
+            )
+        ) && InterceptedInput::detect(text)
+            == Some(InterceptedInput::SlashCommand("/btw".to_string()))
         {
             return None;
         }

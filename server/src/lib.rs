@@ -73,6 +73,7 @@ pub mod session_chat_codex_lock;
 pub(crate) mod session_chat_codex_pager;
 pub mod session_chat_codex_picker;
 pub mod session_chat_codex_question_align;
+pub mod session_chat_codex_side;
 pub(crate) mod session_chat_codex_stats;
 pub mod session_chat_compacting;
 pub mod session_chat_composer;

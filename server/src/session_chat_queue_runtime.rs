@@ -471,7 +471,7 @@ impl SessionChatQueueRuntime {
             */
             if composer.blocks_message_for(
                 crate::session_chat_composer::session_chat_composer_agent_id(&session).as_deref(),
-            ) && !composer.should_dismiss_with_escape()
+            ) && !composer.should_dismiss()
             {
                 self.reset_gate(&key);
                 continue;
@@ -695,7 +695,7 @@ fn escape_closes_claude_panel(
     composer: &crate::session_chat_composer::SessionChatComposerReadiness,
     notice: &crate::session_chat_notice::SessionChatTerminalNotice,
 ) -> bool {
-    composer.should_dismiss_with_escape()
+    composer.should_dismiss()
         && notice.kind == crate::session_chat_notice::SESSION_CHAT_NOTICE_CLAUDE_INPUT_BLOCKED
 }
 
@@ -887,7 +887,7 @@ pub(crate) async fn send_session_chat_message_with_draft(
             true,
         )
         .await;
-    let dismiss_claude_panel = detection.composer.should_dismiss_with_escape();
+    let dismiss_claude_panel = detection.composer.should_dismiss();
     if let Some(blocking) = detection.notice.as_ref().filter(|notice| {
         notice.is_answerable() && !escape_closes_claude_panel(&detection.composer, notice)
     }) {

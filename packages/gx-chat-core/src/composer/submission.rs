@@ -101,7 +101,7 @@ pub fn submission_steps(
 
 /// The text to put back when a send did not leave.
 pub fn restore_undelivered_text(submitted: &str, current: &str) -> String {
-    // A kept Side Chat pill is the box's only content; the refused message already carries it.
+    // A lone Side Chat pill is the box's only content; the refused message already carries it.
     if current.is_empty()
         || current == submitted
         || current == crate::composer::side_chat::SIDE_CHAT_PREFIX

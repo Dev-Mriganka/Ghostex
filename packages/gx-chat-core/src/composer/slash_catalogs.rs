@@ -55,10 +55,11 @@ pub(crate) const CLAUDE_CODE: &[SlashCommand] = &[
         description: "Toggle brief-only mode",
         insert_text: None,
     },
+    // CDXC:SessionChat 2026-09-30 DECISION: User: writing /btw and hitting Enter in the chat only switches Side chat on, it is not sent to the agent. `/btw ` is the Side Chat pill (side_chat.rs), so Enter on a bare `/btw`, on `/btw` picked from the list, or on a lone pill completes to the pill instead of sending.
     SlashCommand {
         name: "btw",
         description: "Ask a side question without interrupting the main conversation",
-        insert_text: None,
+        insert_text: Some(crate::composer::side_chat::SIDE_CHAT_PREFIX),
     },
     SlashCommand {
         name: "bug",
@@ -516,7 +517,8 @@ pub(crate) const CODEX: &[SlashCommand] = &[
     SlashCommand {
         name: "btw",
         description: "Start a side conversation in an ephemeral fork",
-        insert_text: None,
+        // Enter on a bare `/btw` switches Side chat on, as in Claude's catalog above.
+        insert_text: Some(crate::composer::side_chat::SIDE_CHAT_PREFIX),
     },
     SlashCommand {
         name: "cd",

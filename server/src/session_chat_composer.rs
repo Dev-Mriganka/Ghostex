@@ -119,9 +119,10 @@ pub struct SessionChatComposerReadiness {
     /// Newest `SESSION_CHAT_COMPOSER_TAIL_LINES` non-blank screen lines,
     /// ANSI-stripped, oldest first — the evidence behind the verdict.
     pub screen_tail: Vec<String>,
-    /// This exact blocking screen is navigation chrome that Escape safely
-    /// closes, rather than a question or decision the user must answer.
-    dismiss_with_escape: bool,
+    /// This exact blocking screen is navigation chrome the send path safely
+    /// closes (Escape for Claude's panels, Ctrl+C for Codex's side
+    /// conversation), rather than a question or decision the user must answer.
+    dismissible: bool,
 }
 
 impl SessionChatComposerReadiness {
@@ -139,8 +140,8 @@ impl SessionChatComposerReadiness {
         self.state == SessionChatComposerState::NotReady
     }
 
-    pub fn should_dismiss_with_escape(&self) -> bool {
-        self.dismiss_with_escape
+    pub fn should_dismiss(&self) -> bool {
+        self.dismissible
     }
 
     fn unknown(screen_tail: Vec<String>) -> Self {
@@ -148,7 +149,7 @@ impl SessionChatComposerReadiness {
             state: SessionChatComposerState::Unknown,
             reason: None,
             screen_tail,
-            dismiss_with_escape: false,
+            dismissible: false,
         }
     }
 
@@ -157,7 +158,7 @@ impl SessionChatComposerReadiness {
             state: SessionChatComposerState::Ready,
             reason: None,
             screen_tail,
-            dismiss_with_escape: false,
+            dismissible: false,
         }
     }
 
@@ -166,16 +167,16 @@ impl SessionChatComposerReadiness {
             state: SessionChatComposerState::NotReady,
             reason: Some(reason),
             screen_tail,
-            dismiss_with_escape: false,
+            dismissible: false,
         }
     }
 
-    fn not_ready_dismiss_with_escape(reason: String, screen_tail: Vec<String>) -> Self {
+    fn not_ready_dismissible(reason: String, screen_tail: Vec<String>) -> Self {
         Self {
             state: SessionChatComposerState::NotReady,
             reason: Some(reason),
             screen_tail,
-            dismiss_with_escape: true,
+            dismissible: true,
         }
     }
 }
@@ -739,6 +740,14 @@ pub fn detect_session_chat_composer_ready(
     let Some(signature) = composer_signature(&agent) else {
         return SessionChatComposerReadiness::unknown(screen_tail);
     };
+    if agent == "codex"
+        && crate::session_chat_codex_side::codex_side_conversation_on_screen(screen_text)
+    {
+        return SessionChatComposerReadiness::not_ready_dismissible(
+            "Codex's side conversation is open instead of the main thread.".to_string(),
+            screen_tail,
+        );
+    }
     if agent == "codex" {
         let blocked = crate::session_chat_codex_dialog::detect_codex_dialog(screen_text)
             .map(|dialog| format!("Codex's {} dialog is open.", dialog.title))
@@ -751,7 +760,7 @@ pub fn detect_session_chat_composer_ready(
         }
     }
     if is_claude_code_settings_screen(agent_id, screen_text) {
-        return SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+        return SessionChatComposerReadiness::not_ready_dismissible(
             "Claude Code settings are open instead of the input box.".to_string(),
             screen_tail,
         );
@@ -760,7 +769,7 @@ pub fn detect_session_chat_composer_ready(
     if matches!(agent.as_str(), "claude" | "openclaude")
         && crate::session_chat_claude_panel::side_question_on_screen(screen_text)
     {
-        return SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+        return SessionChatComposerReadiness::not_ready_dismissible(
             "Claude Code's side question is open instead of the input box.".to_string(),
             screen_tail,
         );
@@ -769,14 +778,14 @@ pub fn detect_session_chat_composer_ready(
         if let Some(popup) =
             crate::session_chat_claude_popups::claude_escape_safe_popup(screen_text)
         {
-            return SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+            return SessionChatComposerReadiness::not_ready_dismissible(
                 format!("Claude Code's {popup} is open instead of the input box."),
                 screen_tail,
             );
         }
     }
     if agent == "claude" && is_claude_usage_limit_dialog(screen_text) {
-        return SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+        return SessionChatComposerReadiness::not_ready_dismissible(
             "Claude Code's usage-limit dialog is open instead of the input box.".to_string(),
             screen_tail,
         );
@@ -811,7 +820,7 @@ pub fn detect_session_chat_composer_ready(
         && matches!(agent.as_str(), "claude" | "openclaude")
         && crate::session_chat_claude_popups::claude_agents_list_focused(screen_text)
     {
-        SessionChatComposerReadiness::not_ready_dismiss_with_escape(
+        SessionChatComposerReadiness::not_ready_dismissible(
             "Claude Code's background-agents list has the keyboard instead of the input box."
                 .to_string(),
             screen_tail,
@@ -841,7 +850,7 @@ pub fn detect_session_chat_composer_readiness(
     let readiness = detect_session_chat_composer_ready(agent_id, screen_text);
     // A notice read off the same panel must not erase this verdict: the panel is the one Escape
     // closes, and the send path closes it instead of refusing.
-    if readiness.should_dismiss_with_escape() {
+    if readiness.should_dismiss() {
         return readiness;
     }
     match notice.filter(|notice| notice.blocks_input()) {

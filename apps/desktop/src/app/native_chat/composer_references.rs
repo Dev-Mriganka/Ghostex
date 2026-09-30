@@ -99,7 +99,7 @@ pub(super) fn replacements(
                     // points at, because the pill hides the markdown destination. React shows the
                     // same thing from `session-chat-lexical-input.tsx`.
                     .tooltip(if reference.kind == "sideChat" {
-                        "Side chat: sent to Claude as a side question (/btw). Click to remove."
+                        "Side chat: sent to the agent as a side question (/btw). Click to remove."
                             .to_string()
                     } else {
                         reference.path.clone()

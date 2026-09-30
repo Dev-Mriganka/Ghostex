@@ -39,7 +39,7 @@ pub(crate) async fn starting_session_refusal(
     }
     if detection.captured {
         let booting = detection.composer.is_not_ready()
-            && !detection.composer.should_dismiss_with_escape()
+            && !detection.composer.should_dismiss()
             && detection.notice.is_none()
             && detection
                 .composer

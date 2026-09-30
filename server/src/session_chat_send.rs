@@ -126,6 +126,10 @@ pub const SESSION_CHAT_COMPOSER_NOT_READY: &str =
     "The agent's input box is not on screen, so nothing was sent.";
 const SESSION_CHAT_CLAUDE_PANEL_NOT_DISMISSED: &str =
     "The Claude Code panel over the input box did not close, so nothing was sent.";
+const SESSION_CHAT_CODEX_SIDE_NOT_CLOSED: &str =
+    "Codex's side conversation did not close, so nothing was sent.";
+/// What closes Codex's side conversation (session_chat_codex_side.rs).
+const SESSION_CHAT_CODEX_CLOSE_SIDE: &str = "\u{3}";
 /// Escape presses one send spends on a panel that stays up.
 const SESSION_CHAT_CLAUDE_PANEL_ESCAPES: u64 = 3;
 /// CDXC:SessionChat 2026-09-23 WHY:
@@ -1017,8 +1021,8 @@ pub enum SessionChatSendStep {
         text: String,
     },
     /// Close a positively identified Claude Code panel whose Escape is safe (Settings, or
-    /// an offer listed in session_chat_claude_popups.rs), then require its real composer
-    /// to appear before any later input-line write can run.
+    /// an offer listed in session_chat_claude_popups.rs), or Codex's side conversation with
+    /// Ctrl+C, then require its real composer to appear before any later input-line write can run.
     DismissClaudePanel {
         agent: Option<String>,
         timeout_ms: u64,
@@ -2256,17 +2260,38 @@ async fn run_session_chat_send_worker(
                     // pressed again only while an Escape-safe panel is still what the screen
                     // shows; any other screen stops the presses, so no stray Escape reaches the
                     // input box.
+                    // Codex's side conversation closes on Ctrl+C (a first press clears a draft
+                    // typed there), and Ctrl+C anywhere else in Codex interrupts or quits, so each
+                    // press follows a fresh capture that still shows the side conversation.
+                    let codex = crate::agents::identity::normalize_agent_id(agent.as_deref())
+                        .as_deref()
+                        == Some("codex");
                     let attempt_ms = (timeout_ms / SESSION_CHAT_CLAUDE_PANEL_ESCAPES)
                         .max(crate::session_chat_composer::SESSION_CHAT_COMPOSER_POLL_MS);
                     let mut presses = 0;
                     let failure = loop {
+                        if codex
+                            && !capture_session_terminal_text_vt(&zmx_name).await.is_some_and(
+                                |screen| {
+                                    crate::session_chat_codex_side::codex_side_conversation_on_screen(
+                                        &screen,
+                                    )
+                                },
+                            )
+                        {
+                            break None;
+                        }
                         presses += 1;
                         if let Err(error) = write_session_chat_payload(
                             &project_id,
                             &session_id,
                             &zmx_name,
                             &source,
-                            SESSION_CHAT_INTERRUPT,
+                            if codex {
+                                SESSION_CHAT_CODEX_CLOSE_SIDE
+                            } else {
+                                SESSION_CHAT_INTERRUPT
+                            },
                         )
                         .await
                         {
@@ -2299,7 +2324,7 @@ async fn run_session_chat_send_worker(
                             }
                             crate::session_chat_composer::SessionChatComposerWait::NotReady(
                                 readiness,
-                            ) if readiness.should_dismiss_with_escape()
+                            ) if readiness.should_dismiss()
                                 && presses < SESSION_CHAT_CLAUDE_PANEL_ESCAPES =>
                             {
                                 continue;
@@ -2309,6 +2334,11 @@ async fn run_session_chat_send_worker(
                             ) => readiness
                                 .reason
                                 .unwrap_or_else(|| SESSION_CHAT_COMPOSER_NOT_READY.to_string()),
+                            crate::session_chat_composer::SessionChatComposerWait::Unknown
+                                if codex =>
+                            {
+                                SESSION_CHAT_CODEX_SIDE_NOT_CLOSED.to_string()
+                            }
                             crate::session_chat_composer::SessionChatComposerWait::Unknown => {
                                 SESSION_CHAT_CLAUDE_PANEL_NOT_DISMISSED.to_string()
                             }
@@ -2849,6 +2879,36 @@ pub async fn capture_session_chat_terminal_draft(
     draft_rx
         .await
         .map_err(|_| "The terminal draft capture reported no result.".to_string())
+}
+
+/// Close Codex's side conversation when one is on screen; the step itself checks the screen
+/// before every Ctrl+C, so this is a no-op anywhere else.
+pub fn queue_codex_side_conversation_close(project_id: &str, session_id: &str, zmx_name: &str) {
+    if let Err(error) = queue_session_chat_send(
+        project_id,
+        session_id,
+        zmx_name,
+        "session-chat-codex-side-close",
+        vec![SessionChatSendStep::DismissClaudePanel {
+            agent: Some("codex".to_string()),
+            timeout_ms: SESSION_CHAT_COMPOSER_WAIT_TIMEOUT_MS,
+        }],
+        None,
+        None,
+        None,
+    ) {
+        log_session_chat_paste_verification(
+            LogLevel::Error,
+            "sessionChatCodexSideCloseNotQueued",
+            project_id,
+            session_id,
+            zmx_name,
+            "session-chat-codex-side-close",
+            0,
+            SESSION_CHAT_COMPOSER_WAIT_TIMEOUT_MS,
+            &error,
+        );
+    }
 }
 
 async fn run_terminal_draft_capture(
@@ -4497,15 +4557,24 @@ pub(crate) async fn handle_handoff_session_chat_draft_http(
         );
     }
     let agent = session_chat_agent_for_session(&target.session);
-    let captured = match crate::session_chat_send::capture_session_chat_terminal_draft(
+    let captured = crate::session_chat_send::capture_session_chat_terminal_draft(
         &state.paths.app_state_dir,
         &target.project_id,
         &target.session_id,
         &target.zmx_name,
         agent.as_deref(),
     )
-    .await
-    {
+    .await;
+    // Back in Chat, Codex leaves its side conversation (session_chat_codex_side.rs). It runs
+    // after the capture so a draft typed there moves to Chat instead of being cleared.
+    if agent.as_deref() == Some("codex") {
+        queue_codex_side_conversation_close(
+            &target.project_id,
+            &target.session_id,
+            &target.zmx_name,
+        );
+    }
+    let captured = match captured {
         Ok(captured) => captured,
         Err(message) => {
             return domain_error_response(

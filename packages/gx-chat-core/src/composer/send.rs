@@ -586,6 +586,15 @@ fn finish(state: &mut ChatState) -> Vec<Effect> {
             "version": submission.version,
         })),
     }];
+    if submission.mode == SubmissionMode::Send
+        && !submission.handoff
+        && crate::composer::side_chat::sent_side_chat_opens_terminal(state, &submission.text)
+    {
+        effects.push(Effect::HostAction {
+            action: "switchToTerminal".to_string(),
+            params: Box::new(json!({})),
+        });
+    }
     if submission.handoff {
         effects.push(Effect::HostAction {
             action: "draftHandoffToTerminalComplete".to_string(),
@@ -829,6 +838,9 @@ pub fn interrupt(state: &mut ChatState, context: &ChatContext) -> Vec<Effect> {
     // no turn was interrupted. The dialog's cancel lane verifies the live screen and avoids the
     // stop lane's queue cancellation and activity reset.
     if let Some(dialog) = cancellable_dialog(state) {
+        // Closing is optimistic, like the card's Close button (questions/actions.rs `closes_dialog`).
+        state.questions.answered_notice_key = state.questions.active_notice_key.clone();
+        state.core.request_publish();
         let request_id = state.core.allocate_request_id();
         effects.push(Effect::SendRpc {
             request_id,

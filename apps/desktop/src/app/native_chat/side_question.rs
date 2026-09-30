@@ -18,6 +18,8 @@ const CAP_LINES: usize = 12;
 /// height from the same top, so their centres line up.
 const HEADER_LINE: f32 = 20.0;
 const LINE_HEIGHT: f32 = 22.75;
+/// The live card's footer note; the phone's card says the same (`SideQuestionCard.tsx`).
+const SIDE_CARD_NOTE: &str = "Can't reply to sidechat. Close it to message main agent.";
 
 impl NativeChatView {
     /// CDXC:SessionChat 2026-09-27 DECISION:
@@ -72,16 +74,19 @@ impl NativeChatView {
                 cx,
             ));
         }
+        // CDXC:SessionChat 2026-09-30 DECISION: User: the side chat card's bottom left says "Can't reply to sidechat. Close it to message main agent.", cut short when there is no room, with the whole line on hover.
         let mut actions: Vec<AnyElement> = vec![
             div()
+                .id("side-question-note")
                 .flex_1()
                 .min_w_0()
-                .flex()
-                .items_center()
-                .gap(px(6.0 * s))
                 .text_size(px(12.0 * s))
                 .text_color(p.muted)
-                .child("Not added to the conversation")
+                .truncate()
+                .tooltip(|window, cx| {
+                    gpui_component::tooltip::Tooltip::new(SIDE_CARD_NOTE).build(window, cx)
+                })
+                .child(SIDE_CARD_NOTE)
                 .into_any_element(),
         ];
         let answer = text(card, "answer");

@@ -88,11 +88,6 @@ impl NativeChatView {
         };
         self.close_maximized(cx);
         self.pending_send = true;
-        // The Side Chat pill stays in the box after a send until the user removes it.
-        let side_chat = self.snapshot["sideChat"]
-            .as_str()
-            .filter(|prefix| self.draft.starts_with(prefix))
-            .map(str::to_owned);
         let submission = json!({"type":mode,"text":self.draft,
             "draftVersion":{"draftId":self.draft_id,"revision":self.draft_revision.max(1)}});
         self.draft.clear();
@@ -103,9 +98,6 @@ impl NativeChatView {
         }
         cx.emit(super::state::NativeChatEvent::DraftState(true));
         self.invoke(submission, cx);
-        if let Some(prefix) = side_chat {
-            self.insert_prompt(&prefix, cx);
-        }
     }
 
     pub(crate) fn chat_button(
