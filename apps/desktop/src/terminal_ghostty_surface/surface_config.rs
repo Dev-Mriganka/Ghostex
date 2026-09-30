@@ -4,7 +4,6 @@ use std::{
     ptr::{self, NonNull},
 };
 
-#[cfg(target_os = "macos")]
 use crate::ghostty_kit::ffi;
 
 use super::*;
