@@ -505,7 +505,7 @@ export function normalizeWindowGlassWorkAreaTint(
   return clampWindowGlassWorkAreaTintPercent(migrateWindowGlassWorkAreaTintPercent(sidebar, extra), fallback);
 }
 
-/** SEE-ALSO: `terminal_background_mode` in apps/desktop/src/shared_settings.rs applies the same migration. */
+/** SEE-ALSO: `terminal_background_mode` in apps/desktop/src/shared_settings/normalize.rs applies the same migration. */
 export function normalizeTerminalBackgroundMode(source: Record<string, unknown>): TerminalBackgroundMode {
   const value = source.terminalBackgroundMode;
   if (value === 'pure' || value === 'theme' || value === 'custom') {

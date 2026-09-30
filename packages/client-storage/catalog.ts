@@ -374,7 +374,7 @@ export const storageCatalog = Object.freeze({
   nativeSettings: define(
     'nativeSettings',
     'Legacy native settings cache',
-    desktop + 'src/shared_settings.rs',
+    desktop + 'src/shared_settings/service.rs',
     'ghostex-native-settings',
     objectCodec,
     { policy: 'cache', maxAgeMs: null }
