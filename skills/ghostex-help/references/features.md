@@ -404,7 +404,8 @@ where they are while you open, change and close views.
   to the reverse action on an active row (Unpin, Wake, Unsnooze, Unpark,
   Cancel Close After Done). The enabled buttons also lead the session's
   right-click menu, top to bottom in the card's right-to-left order (Sleep,
-  Park, Tag As by default), with the other actions after them. Close is the
+  Park, Tag As by default), with the other actions after them; Note is under
+  the menu's Advanced submenu unless its hover button is on. Close is the
   exception: while it is on the card it is never in the menu, and turning it
   off puts Close back as the menu's last row. Hover buttons also in context
   menu (on by default) controls the rest; turn it off and every enabled

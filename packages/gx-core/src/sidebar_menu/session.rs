@@ -431,13 +431,16 @@ fn full_menu(
     } else {
         Vec::new()
     };
-    const PRIMARY_ORDER: [HoverAction; 7] = [
+    /*
+    CDXC:ContextMenus 2026-10-01 DECISION:
+    The user wants the session menu to match ChatGPT's conversation menu (Rename, Pin, Mark as unread, Archive, then Section), so below the mirrored hover buttons the rows run Rename, Pin, Snooze, Park, Sleep, Tag As. The user then moved Note into Advanced (first under Session), superseding its 2026-09-30 place before Tag As; a Note hover button that is on still mirrors at the top instead. The phone's menu (`apps/mobile/app/src/screens/sessions-screen/sidebar-menus.ts`) must match. The mirrored hover buttons stay on top, Close keeps its hover-strip rule, and Fork and Copy Details stay in Advanced.
+    */
+    const PRIMARY_ORDER: [HoverAction; 6] = [
         HoverAction::Rename,
-        HoverAction::Sleep,
         HoverAction::Pin,
-        HoverAction::Park,
         HoverAction::Snooze,
-        HoverAction::Note,
+        HoverAction::Park,
+        HoverAction::Sleep,
         HoverAction::Tag,
     ];
     let mut menu: Vec<MenuItem> = mirror
@@ -457,6 +460,11 @@ fn full_menu(
         .collect();
 
     let mut advanced: Vec<MenuItem> = vec![MenuItem::heading("Session")];
+    if !enabled.contains(&HoverAction::Note) {
+        if let Some(item) = &rows.note {
+            advanced.push(item.clone());
+        }
+    }
     if caps.can_delayed_send {
         advanced.push(MenuItem::row(
             "Delayed Send",
