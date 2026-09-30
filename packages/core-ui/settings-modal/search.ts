@@ -1,11 +1,7 @@
 import { formatSidebarHotkeyLabel } from '@/packages/core-ui/hotkey-label';
 import Fuse from 'fuse.js';
 import { Command } from '@/packages/components/ui/command';
-import {
-  APP_SHOTS_HOTKEY_OPTIONS,
-  DIAGNOSTIC_LOGGING_SCENARIOS,
-  SESSION_TITLE_GENERATION_AGENT_OPTIONS,
-} from '../../shared/ghostex-settings';
+import { DIAGNOSTIC_LOGGING_SCENARIOS, SESSION_TITLE_GENERATION_AGENT_OPTIONS } from '../../shared/ghostex-settings';
 import { BUILT_IN_WORKSPACE_OPEN_TARGETS } from '../../shared/workspace-open-targets';
 import { BUNDLED_GHOSTEX_AGENT_SKILLS } from '../../shared/ghostex-agent-skills';
 import { DEFAULT_SIDEBAR_AGENTS } from '../../shared/sidebar-agents';
@@ -437,6 +433,12 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
         id: 'integrations',
         settings: [
           {
+            key: 'ghostexCapture',
+            subtitle:
+              'A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; A, Space, F or T instead of S capture an area, the current app or the full screen, or write a prompt, right away.',
+            title: 'Floating Capture',
+          },
+          {
             key: 'ghostexCli',
             subtitle:
               'Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup.',
@@ -451,19 +453,6 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             subtitle:
               'Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.',
             title: 'Bundled Agent Skills',
-          },
-          {
-            key: 'appShots',
-            options: APP_SHOTS_HOTKEY_OPTIONS,
-            subtitle:
-              'Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.',
-            title: 'App Shots',
-          },
-          {
-            key: 'ghostexCapture',
-            subtitle:
-              'A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.',
-            title: 'Ghostex Capture',
           },
           {
             key: 'cuaPermissions',

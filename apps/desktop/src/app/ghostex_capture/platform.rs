@@ -44,6 +44,18 @@ unsafe extern "C" {
         height: f64,
     );
     fn GhostexGpuiCaptureFocusWindow(native_view: *mut std::ffi::c_void);
+    fn GhostexGpuiCaptureMakeResizable(
+        native_view: *mut std::ffi::c_void,
+        min_width: f64,
+        min_height: f64,
+    );
+    fn GhostexGpuiCaptureWindowFrame(
+        native_view: *mut std::ffi::c_void,
+        x: *mut f64,
+        y: *mut f64,
+        width: *mut f64,
+        height: *mut f64,
+    ) -> bool;
     fn GhostexGpuiCaptureFrontmostPid() -> i32;
     fn GhostexGpuiPointerScreenLocation(x: *mut f64, y: *mut f64) -> bool;
 }
@@ -81,6 +93,51 @@ pub(crate) fn set_window_frame(native: NativeWindow, frame: Bounds<Pixels>, scal
     windows::set_frame(native, frame, scale);
     #[cfg(target_os = "linux")]
     x11::set_frame(native, frame, scale);
+}
+
+/// Lets a window be resized from its edges, no smaller than `min`. GPUI gives a window with no
+/// title bar no resize edges on macOS, whatever `is_resizable` says; elsewhere that option does it.
+pub(crate) fn make_resizable(native: NativeWindow, min: gpui::Size<Pixels>) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        GhostexGpuiCaptureMakeResizable(
+            native as *mut std::ffi::c_void,
+            f32::from(min.width) as f64,
+            f32::from(min.height) as f64,
+        )
+    };
+    #[cfg(not(target_os = "macos"))]
+    let _ = (native, min);
+}
+
+/// Where a window is and how big, in the space `set_window_frame` places it in, read from the OS
+/// so it works from inside the window's own event handlers too. `None` where GPUI's own
+/// `Window::bounds` is used instead.
+pub(crate) fn window_frame(native: NativeWindow) -> Option<Bounds<Pixels>> {
+    #[cfg(target_os = "macos")]
+    {
+        let [mut x, mut y, mut width, mut height] = [0f64; 4];
+        unsafe {
+            GhostexGpuiCaptureWindowFrame(
+                native as *mut std::ffi::c_void,
+                &mut x,
+                &mut y,
+                &mut width,
+                &mut height,
+            )
+        }
+        .then(|| {
+            Bounds::new(
+                point(px(x as f32), px(y as f32)),
+                gpui::size(px(width as f32), px(height as f32)),
+            )
+        })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = native;
+        None
+    }
 }
 
 /// Gives a keyable window the keyboard again.

@@ -41,7 +41,6 @@ use ghostex_gx_core::git_menu::{
 };
 
 pub(crate) use export_transcript::{ExportTranscriptHost, HandoffTarget};
-pub(crate) use prompt_agent::PromptAgentLaunch;
 pub(crate) use worktree_list::TrustedWorktreeList;
 
 /// Everything this family keeps between calls.

@@ -172,11 +172,6 @@ How to use this file:
 #### Experimental
 
 - **Enable Experimental Features** `showBetaFeatures` (boolean, default false) [advanced]: Show experimental surfaces: OS Integration settings, Browser color scheme, and Keep Awake.
-### App Shots (beta)
-
-- **App Shots** `appShotsEnabled` (boolean, default false): Enable App Shots: press the App Shots hotkey to capture a window screenshot into the prompt.
-- **App Shots hotkey** `appShotsHotkey` (one of both-command | both-shift | both-option | double-left-shift | double-left-option; default both-command): Which modifier chord captures an App Shot. Option labels: both-command = Both ⌘ keys, both-shift = Both ⇧ keys, both-option = Both ⌥ keys, double-left-shift = Double-tap Left ⇧, double-left-option = Double-tap Left ⌥.
-- **App Shots metadata** `appShotsMetadataEnabled` (boolean, default false): Also paste window metadata with the App Shot image link.
 ### Settings window
 
 - **Show Advanced settings** `showAdvancedSettings` (boolean, default false): Show the rows marked Advanced in Settings.
@@ -184,7 +179,6 @@ How to use this file:
 
 - **gpuiTitlebarActionCommandByProject** `gpuiTitlebarActionCommandByProject` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **gpuiTitlebarOpenTargetByProject** `gpuiTitlebarOpenTargetByProject` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
-- **ghostexCaptureEnabled** `ghostexCaptureEnabled` (boolean, default false) [not agent-writable]: App-managed state saved with the settings; not a user preference.
 - **settingsModalNavigation** `settingsModalNavigation` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **projectWebsiteViews** `projectWebsiteViews` (structured value; change it in Settings, not with `ghostex settings set`): App-managed state saved with the settings; not a user preference.
 - **appIconSourceId** `appIconSourceId` (text, default (empty)) [advanced, not agent-writable]: App-managed state saved with the settings; not a user preference.
@@ -298,12 +292,15 @@ How to use this file:
 
 ### Integrations
 
+- **Floating Capture** `ghostexCapture` (Settings UI row without a settings key; use `ghostex settings open`): A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; A, Space, F or T instead of S capture an area, the current app or the full screen, or write a prompt, right away.
 - **Ghostex CLI** `ghostexCli` (Settings UI row without a settings key; use `ghostex settings open`): Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup.
 - **Bundled Agent Skills** `bundledAgentSkills` (Settings UI row without a settings key; use `ghostex settings open`): Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.
-- **App Shots** `appShots` (Settings UI row without a settings key; use `ghostex settings open`): Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.
-- **Ghostex Capture** `ghostexCapture` (Settings UI row without a settings key; use `ghostex settings open`): A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.
 - **Fast Computer Use Permissions** `cuaPermissions` (Settings UI row without a settings key; use `ghostex settings open`): Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.
 - **Tools** `managedTools` (Settings UI row without a settings key; use `ghostex settings open`): Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.
+### Floating Capture
+
+- **Show the floating button** `ghostexCaptureEnabled` (boolean, default false): Show the Floating Capture button over every app: agent counts, screenshots of an area, an app or the whole screen, and quick prompts without switching to Ghostex.
+- **Switch to the session after sending** `ghostexCaptureSwitchToSession` (boolean, default true): After a prompt is sent from Floating Capture, the Ghostex window shows the session it went to, without coming in front of the app you are in.
 ## Extensions (tab `extensions`)
 
 ### Views

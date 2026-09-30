@@ -289,8 +289,8 @@ fn ghostty_app_version(ghostty_dir: &Path) -> String {
 
 fn gpui_macos_objc_build() -> cc::Build {
     /*
-    CDXC:AppShots 2026-06-26-04:18:
-    GPUI Objective-C shims must compile against Ghostex's supported macOS 13.0 deployment target, matching the native Xcode project and GPUI package metadata. Do not inherit the current host OS as the minimum target because newer SDKs mark App Shots' real WindowServer capture API unavailable for future deployment targets.
+    CDXC:GhostexCapture 2026-09-30 WHY:
+    GPUI Objective-C shims must compile against Ghostex's supported macOS 13.0 deployment target, matching the native Xcode project and GPUI package metadata. Do not inherit the current host OS as the minimum target: newer SDKs mark the WindowServer capture API Ghostex Capture uses (`CGWindowListCreateImage` in GpuiGhostexCapture.m) unavailable for future deployment targets.
     */
     let mut build = cc::Build::new();
     build
@@ -549,7 +549,6 @@ fn main() {
         manifest_dir.join("native/macos/GpuiTerminalAppKitAdapter.m");
     let gpui_terminal_mouse_cursor = manifest_dir.join("native/macos/GpuiTerminalMouseCursor.m");
     let gpui_settings_notifications = manifest_dir.join("native/macos/GpuiSettingsNotifications.m");
-    let gpui_app_shots = manifest_dir.join("native/macos/GpuiAppShots.m");
     let gpui_ghostex_capture = manifest_dir.join("native/macos/GpuiGhostexCapture.m");
     let gpui_app_icon = manifest_dir.join("native/macos/GpuiAppIcon.m");
     let gpui_accessibility_display_options =
@@ -579,7 +578,6 @@ fn main() {
         "cargo:rerun-if-changed={}",
         gpui_settings_notifications.display()
     );
-    println!("cargo:rerun-if-changed={}", gpui_app_shots.display());
     println!("cargo:rerun-if-changed={}", gpui_app_icon.display());
     println!(
         "cargo:rerun-if-changed={}",
@@ -649,14 +647,6 @@ fn main() {
     gpui_macos_objc_build()
         .file(gpui_settings_notifications)
         .compile("ghostex_gpui_settings_notifications");
-
-    /*
-    CDXC:AppShots 2026-06-25-23:07:
-    Compile App Shots as a dedicated macOS shim because it owns only shared-settings hotkey monitoring, WindowServer capture, and the `~/.ghostex/i` PNG write path. Keep it separate from CEF, terminal AppKit, and notification shims so the feature does not add overlays, hit-test routing, persistent logging, or renderer-provided screenshot authority.
-    */
-    gpui_macos_objc_build()
-        .file(gpui_app_shots)
-        .compile("ghostex_gpui_app_shots");
 
     // Ghostex Capture's floating windows, system-wide hotkeys and screenshots (see the file's
     // CDXC:GhostexCapture note).

@@ -4,11 +4,10 @@
 //! (`installGhostexCli`, `install*Skill`, `*CuaDriver`, `uninstallBundledAgentSkill(s)`, ...) and
 //! the app answers each with a fresh `ghostexCliStatus`, which ends the page's checking state.
 use super::super::super::native_modal_kit::*;
-use super::super::catalog::{SettingOption, module, settings_catalog};
+use super::super::catalog::settings_catalog;
 use super::super::fields::{
-    ButtonVariant, FieldStates, ListItemStatus, RowSpec, SettingsPage, setting_row,
-    settings_button, settings_icon, settings_section, settings_select, switch_control,
-    tooltip_text,
+    ButtonVariant, FieldStates, ListItemStatus, SettingsPage, settings_button, settings_icon,
+    settings_section, switch_control, tooltip_text,
 };
 use super::super::model::SettingsTabId;
 use super::super::page::{PageBlock, settings_page};
@@ -1100,122 +1099,30 @@ impl IntegrationsTab {
             controls,
         )
     }
-
-    /// App Shots.
-    ///
-    /// CDXC:Settings 2026-09-09 DECISION:
-    /// User: App Shots is its own section on the Integrations page, separate from the CLI, skills, and Trycua card.
-    ///
-    /// CDXC:AppShots 2026-06-29 WHY:
-    /// App Shot prompt metadata is disabled by default and is a visible opt-in under the App Shots row, because routine captures should paste only the image link unless the user asks for window metadata. The dependent rows are hidden, not disabled, while App Shots is off.
-    fn app_shots_section(
-        &mut self,
-        p: &SettingsPalette,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
-        let values = self.store.read(cx).values();
-        let enabled = values.bool("appShotsEnabled");
-        let mut rows = vec![integration_row(
-            p,
-            "app-shots",
-            Some(if enabled {
-                ListItemStatus::Success
-            } else {
-                ListItemStatus::Neutral
-            }),
-            Some(ICON_DEVICE_DESKTOP),
-            RowTitle {
-                label: "App Shots".to_string(),
-                description: format!(
-                    "{}. Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.",
-                    if enabled { "Enabled" } else { "Disabled" }
-                ),
-                badge: Some("Beta"),
-                pill: None,
-            },
-            vec![switch_control(
-                p,
-                "app-shots-enabled",
-                enabled,
-                false,
-                None,
-                |page: &mut Self, checked, _window, cx| {
-                    save(page, "appShotsEnabled", json!(checked), cx)
-                },
-                cx,
-            )],
-        )];
-        if enabled {
-            let options: Vec<SettingOption> =
-                settings_catalog().options(module::SETTINGS, "APP_SHOTS_HOTKEY_OPTIONS");
-            let allowed: Vec<String> = options.iter().map(|option| option.value.clone()).collect();
-            let value = values.choice("appShotsHotkey", &allowed);
-            let select = settings_select(
-                self,
-                p,
-                "appShotsHotkey",
-                &options,
-                &value,
-                Some(super::super::fields::SELECT_WIDTH),
-                false,
-                None,
-                |page: &mut Self, next, _window, cx| save(page, "appShotsHotkey", json!(next), cx),
-                window,
-                cx,
-            );
-            rows.push(setting_row(
-                p,
-                "appShotsHotkey",
-                RowSpec::new("App Shots hotkey")
-                    .description("Which modifier-key gesture captures the frontmost app window.")
-                    .dependent(),
-                None,
-                select,
-                cx,
-            ));
-            let metadata = switch_control(
-                p,
-                "app-shots-metadata",
-                values.bool("appShotsMetadataEnabled"),
-                false,
-                None,
-                |page: &mut Self, checked, _window, cx| {
-                    save(page, "appShotsMetadataEnabled", json!(checked), cx)
-                },
-                cx,
-            );
-            rows.push(setting_row(
-                p,
-                "appShotsMetadataEnabled",
-                RowSpec::new("App Shots metadata")
-                    .description(
-                        "Paste the window title and app name together with the image link.",
-                    )
-                    .dependent(),
-                None,
-                metadata,
-                cx,
-            ));
-        }
-        settings_section(p, "App Shots", None, None, rows).map(IntoElement::into_any_element)
-    }
 }
 
 impl IntegrationsTab {
-    /// Ghostex Capture: the floating button, its hotkeys and its screenshot tools.
+    /// Floating Capture: the floating button, its hotkeys and its screenshot tools.
+    ///
+    /// CDXC:GhostexCapture 2026-09-30 DECISION:
+    /// User: call it "Floating Capture", put it at the very top of Integrations with text under it that explains what it does, and do not repeat the same name as both the section title and the toggle.
     fn ghostex_capture_section(
         &mut self,
         p: &SettingsPalette,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let enabled = self.store.read(cx).values().bool("ghostexCaptureEnabled");
+        let switch_to_session = self
+            .store
+            .read(cx)
+            .values()
+            .bool("ghostexCaptureSwitchToSession");
         let hotkey = if cfg!(target_os = "macos") {
             "Cmd+Ctrl+Shift+S"
         } else {
             "Alt+Ctrl+Shift+S"
         };
-        let rows = vec![integration_row(
+        let mut rows = vec![integration_row(
             p,
             "ghostex-capture",
             Some(if enabled {
@@ -1225,10 +1132,9 @@ impl IntegrationsTab {
             }),
             Some(ICON_DEVICE_DESKTOP),
             RowTitle {
-                label: "Ghostex Capture".to_string(),
+                label: "Show the floating button".to_string(),
                 description: format!(
-                    "{}. A floating button over every app with your working, waiting and question counts. Screenshot an area, the current app or the full screen, mark it up, and send a prompt without switching to Ghostex. {hotkey} opens it; A, Space, F or T instead of S run an action straight away.",
-                    if enabled { "Enabled" } else { "Disabled" }
+                    "{hotkey} opens the button's panel. With the same keys, A captures an area, Space the current app, F the full screen, and T writes a prompt, straight away."
                 ),
                 badge: Some("Beta"),
                 pill: None,
@@ -1245,7 +1151,44 @@ impl IntegrationsTab {
                 cx,
             )],
         )];
-        settings_section(p, "Ghostex Capture", None, None, rows).map(IntoElement::into_any_element)
+        rows.push(integration_row(
+            p,
+            "ghostex-capture-switch-to-session",
+            Some(if switch_to_session {
+                ListItemStatus::Success
+            } else {
+                ListItemStatus::Neutral
+            }),
+            Some(ICON_DEVICE_DESKTOP),
+            RowTitle {
+                label: "Switch to the session after sending".to_string(),
+                description: "After a prompt is sent, the Ghostex window shows the session it went to, without coming in front of the app you are in.".to_string(),
+                badge: None,
+                pill: None,
+            },
+            vec![switch_control(
+                p,
+                "ghostex-capture-switch-to-session",
+                switch_to_session,
+                false,
+                None,
+                |page: &mut Self, checked, _window, cx| {
+                    save(page, "ghostexCaptureSwitchToSession", json!(checked), cx)
+                },
+                cx,
+            )],
+        ));
+        settings_section(
+            p,
+            "Floating Capture",
+            Some(
+                "A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Use it to screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex."
+                    .into(),
+            ),
+            None,
+            rows,
+        )
+        .map(IntoElement::into_any_element)
     }
 }
 
@@ -1260,7 +1203,7 @@ fn save(
 }
 
 impl Render for IntegrationsTab {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let (p, search, matching, status) = {
             let store = self.store.read(cx);
             let matching: Vec<SettingsTabId> = if store.is_searching() {
@@ -1289,6 +1232,12 @@ impl Render for IntegrationsTab {
         }
         let section = "integrations";
         if search.section(section).has_visible() {
+            if search.row_visible(section, "ghostexCapture") {
+                blocks.extend(
+                    self.ghostex_capture_section(&p, cx)
+                        .map(|element| PageBlock::section("ghostexCapture", element)),
+                );
+            }
             if search.row_visible(section, "ghostexCli") {
                 blocks.extend(
                     self.cli_section(&p, status, checking, cx)
@@ -1312,18 +1261,6 @@ impl Render for IntegrationsTab {
                 blocks.extend(
                     self.skills_section(&p, status, checking, cx)
                         .map(|element| PageBlock::section("agentSkills", element)),
-                );
-            }
-            if search.row_visible(section, "appShots") {
-                blocks.extend(
-                    self.app_shots_section(&p, window, cx)
-                        .map(|element| PageBlock::section("appShots", element)),
-                );
-            }
-            if search.row_visible(section, "ghostexCapture") {
-                blocks.extend(
-                    self.ghostex_capture_section(&p, cx)
-                        .map(|element| PageBlock::section("ghostexCapture", element)),
                 );
             }
             // CDXC:Settings 2026-09-30 DECISION: User: "please move the tools list to the bottom of the integrations".

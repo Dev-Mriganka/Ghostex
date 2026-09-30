@@ -65,7 +65,6 @@ import {
   resolveLightChromeControls,
 } from './titlebar-color';
 import {
-  type AppShotsHotkey,
   type AutoSleepIdleMinutes,
   type ChatFileOpenView,
   type CommandsPanelSide,
@@ -239,15 +238,11 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
     ),
     gpuiTitlebarActionCommandByProject: normalizeTitlebarProjectSelectionMap(source.gpuiTitlebarActionCommandByProject),
     gpuiTitlebarOpenTargetByProject: normalizeTitlebarProjectSelectionMap(source.gpuiTitlebarOpenTargetByProject),
-    appShotsEnabled: readBoolean(source, 'appShotsEnabled', DEFAULT_ghostex_SETTINGS.appShotsEnabled),
     ghostexCaptureEnabled: readBoolean(source, 'ghostexCaptureEnabled', DEFAULT_ghostex_SETTINGS.ghostexCaptureEnabled),
-    appShotsHotkey: normalizeAppShotsHotkey(
-      readString(source, 'appShotsHotkey', DEFAULT_ghostex_SETTINGS.appShotsHotkey)
-    ),
-    appShotsMetadataEnabled: readBoolean(
+    ghostexCaptureSwitchToSession: readBoolean(
       source,
-      'appShotsMetadataEnabled',
-      DEFAULT_ghostex_SETTINGS.appShotsMetadataEnabled
+      'ghostexCaptureSwitchToSession',
+      DEFAULT_ghostex_SETTINGS.ghostexCaptureSwitchToSession
     ),
     agentAcceptAllEnabled: readBoolean(source, 'agentAcceptAllEnabled', DEFAULT_ghostex_SETTINGS.agentAcceptAllEnabled),
     agentManagerZoomPercent: clampAgentManagerZoomPercent(
@@ -1165,19 +1160,6 @@ function normalizeTerminalCursorStyle(value: string | undefined): TerminalCursor
 
 function normalizeWindowsWslDistribution(value: string | undefined): string {
   return (value ?? '').replace(/\0/gu, '').replace(/\r?\n/gu, '').trim().slice(0, 128);
-}
-
-function normalizeAppShotsHotkey(value: string | undefined): AppShotsHotkey {
-  /*
-   * CDXC:AppShots 2026-06-29-01:29:
-   * App Shots hotkeys must support both physical Shift keys and both physical Option keys in addition to both Command and left-key double-taps, because modifier-only capture should be usable without overloading one hand.
-   */
-  return value === 'both-shift' ||
-    value === 'both-option' ||
-    value === 'double-left-shift' ||
-    value === 'double-left-option'
-    ? value
-    : DEFAULT_ghostex_SETTINGS.appShotsHotkey;
 }
 
 function normalizeDefaultEditorCommand(value: string | undefined): DefaultEditorCommand {

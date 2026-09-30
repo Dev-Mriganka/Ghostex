@@ -1,27 +1,37 @@
 //! The screenshot editor: opening it on a fresh capture and what happens to the picture after.
 
 mod export;
+mod frame;
 pub(crate) mod model;
 mod view;
 
 use std::path::PathBuf;
 
 use gpui::{
-    App, AppContext as _, Bounds, Context, WindowBackgroundAppearance, WindowBounds, WindowHandle,
-    WindowKind, WindowOptions, point, px, size,
+    App, AppContext as _, Context, WindowBackgroundAppearance, WindowBounds, WindowHandle,
+    WindowKind, WindowOptions, px, size,
 };
 use image::RgbaImage;
 
-use super::placement::Screen;
+use super::placement::{self, Screen};
 use super::platform;
 use super::save;
 use crate::GhostexGpuiApp;
+pub(crate) use model::EditSource;
 pub(crate) use view::EditorView;
+
+/// The smallest the editor window can be made.
+const MIN_WIDTH: f32 = 520.0;
+const MIN_HEIGHT: f32 = 320.0;
 
 pub(crate) struct EditorWindow {
     pub(crate) handle: WindowHandle<EditorView>,
-    /// The capture as taken, already saved; sent as is when nothing was changed.
+    pub(crate) native: Option<platform::NativeWindow>,
+    /// The picture as it was when the editor opened, already saved; sent as is when nothing was
+    /// changed.
     pub(crate) original: PathBuf,
+    /// The prompt picture being edited again: Enter replaces it instead of adding a new one.
+    pub(crate) replacing: Option<u32>,
 }
 
 impl GhostexGpuiApp {
@@ -35,30 +45,55 @@ impl GhostexGpuiApp {
         screen: Screen,
         cx: &mut Context<Self>,
     ) {
+        let source = EditSource {
+            image: std::sync::Arc::new(image),
+            marks: Vec::new(),
+            px_per_pt,
+        };
+        self.open_ghostex_capture_editor_on(source, original, None, Some(screen), cx);
+    }
+
+    /// Opens the editor where it was last left, at the size it was left at; the first time,
+    /// sized to the picture in the middle of `screen` (else the screen under the pointer).
+    pub(super) fn open_ghostex_capture_editor_on(
+        &mut self,
+        source: EditSource,
+        original: PathBuf,
+        replacing: Option<u32>,
+        screen: Option<Screen>,
+        cx: &mut Context<Self>,
+    ) {
         self.close_ghostex_capture_editor(cx);
+        let Some(screen) =
+            screen.or_else(|| placement::pointer_screen(self.ghostex_capture_scale(), cx))
+        else {
+            return;
+        };
         let visible = screen.visible;
-        let shown_width = image.width() as f32 / px_per_pt;
-        let shown_height = image.height() as f32 / px_per_pt;
+        let shown_width = source.image.width() as f32 / source.px_per_pt;
+        let shown_height = source.image.height() as f32 / source.px_per_pt;
         let width = (shown_width + 36.0)
             .max(720.0)
             .min(f32::from(visible.size.width) * 0.86);
         let height = (shown_height + view::TOOLBAR_HEIGHT + 36.0)
             .max(420.0)
             .min(f32::from(visible.size.height) * 0.86);
-        let frame = Bounds::new(
-            point(
-                visible.center().x - px(width / 2.0),
-                visible.center().y - px(height / 2.0),
-            ),
-            size(px(width), px(height)),
-        );
+        let extent = size(px(width), px(height));
+        let frame = self
+            .ghostex_capture
+            .saved
+            .editor_frame
+            .as_ref()
+            .and_then(|saved| placement::restore_frame(saved, extent, cx))
+            .unwrap_or_else(|| placement::centered(&screen, extent));
+        let reopened = replacing.is_some();
         let app = cx.weak_entity();
         App::defer(cx, move |cx| {
             let owner = app.clone();
             let result = cx.open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(frame)),
-                    display_id: Some(screen.id),
+                    display_id: crate::app::window::popup_frame::display_at(frame.center(), cx),
                     titlebar: None,
                     focus: true,
                     show: true,
@@ -68,8 +103,8 @@ impl GhostexGpuiApp {
                         WindowKind::PopUp
                     },
                     window_decorations: crate::app::window::popup_frame::child_window_decorations(),
-                    is_movable: false,
-                    is_resizable: false,
+                    is_movable: true,
+                    is_resizable: true,
                     is_minimizable: false,
                     app_id: crate::gpui_platform_window_app_id(),
                     icon: crate::gpui_platform_window_icon(),
@@ -78,7 +113,7 @@ impl GhostexGpuiApp {
                 },
                 move |window, cx| {
                     window.set_background_corner_radius(px(12.0));
-                    let view = cx.new(|cx| EditorView::new(owner, image, px_per_pt, cx));
+                    let view = cx.new(|cx| EditorView::new(owner, source, reopened, cx));
                     let focus = view.read(cx).focus.clone();
                     focus.focus(window, cx);
                     view
@@ -100,9 +135,15 @@ impl GhostexGpuiApp {
                 .flatten();
             if let Some(native) = native {
                 platform::prepare_floating_window(native, true);
+                platform::make_resizable(native, size(px(MIN_WIDTH), px(MIN_HEIGHT)));
             }
             app.update(cx, |app, cx| {
-                app.ghostex_capture.editor = Some(EditorWindow { handle, original });
+                app.ghostex_capture.editor = Some(EditorWindow {
+                    handle,
+                    native,
+                    original,
+                    replacing,
+                });
                 cx.notify();
             });
         });
@@ -120,16 +161,18 @@ impl GhostexGpuiApp {
         };
         let app = cx.weak_entity();
         App::defer(cx, move |cx| {
-            let Ok((image, edited)) = handle.update(cx, |view, _, _| view.take_result()) else {
+            let Ok((image, edited, source)) = handle.update(cx, |view, _, _| view.take_result())
+            else {
                 return;
             };
             let _ = app.update(cx, |app, cx| {
-                app.ghostex_capture_editor_done(image, edited, cx)
+                app.ghostex_capture_editor_done(image, edited, source, cx)
             });
         });
     }
 
     pub(crate) fn close_ghostex_capture_editor(&mut self, cx: &mut Context<Self>) {
+        self.remember_ghostex_capture_editor_frame(cx);
         if let Some(editor) = self.ghostex_capture.editor.take() {
             let handle = editor.handle;
             App::defer(cx, move |cx| {
@@ -154,13 +197,24 @@ impl GhostexGpuiApp {
         &mut self,
         image: RgbaImage,
         edited: bool,
+        source: EditSource,
         cx: &mut Context<Self>,
     ) {
         let Some(path) = self.ghostex_capture_editor_file(&image, edited) else {
             return;
         };
+        let replacing = self
+            .ghostex_capture
+            .editor
+            .as_ref()
+            .and_then(|editor| editor.replacing);
         self.close_ghostex_capture_editor(cx);
-        self.add_ghostex_capture_attachment(path, image, cx);
+        match replacing {
+            Some(number) => {
+                self.replace_ghostex_capture_attachment(number, path, image, source, cx)
+            }
+            None => self.add_ghostex_capture_attachment(path, image, source, cx),
+        }
     }
 
     pub(super) fn ghostex_capture_editor_copy(

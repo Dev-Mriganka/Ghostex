@@ -66,6 +66,37 @@ void GhostexGpuiCaptureSetWindowFrame(void *native_view, double x, double y,
            animate:NO];
 }
 
+/// Lets a borderless Ghostex Capture window be resized from its edges, no smaller than
+/// `min_width` x `min_height` points. GPUI only adds the resizable style to windows with a title bar.
+void GhostexGpuiCaptureMakeResizable(void *native_view, double min_width,
+                                     double min_height) {
+  NSWindow *window = GhostexGpuiCaptureWindowOfView(native_view);
+  if (!window) {
+    return;
+  }
+  window.styleMask |= NSWindowStyleMaskResizable;
+  window.minSize = NSMakeSize(min_width, min_height);
+}
+
+/// Where a window is and how big, in the space `GhostexGpuiCaptureSetWindowFrame` places it in
+/// (top-left origin from the primary screen). GPUI's own bounds are measured from the window's
+/// screen, so a frame read from them and set here moved a window that was on another screen, and
+/// GPUI cannot read a window from inside that window's own event handlers at all.
+bool GhostexGpuiCaptureWindowFrame(void *native_view, double *x, double *y,
+                                   double *width, double *height) {
+  NSWindow *window = GhostexGpuiCaptureWindowOfView(native_view);
+  NSScreen *primary = NSScreen.screens.firstObject;
+  if (!window || !primary) {
+    return false;
+  }
+  NSRect frame = window.frame;
+  *x = NSMinX(frame);
+  *y = NSMaxY(primary.frame) - NSMaxY(frame);
+  *width = NSWidth(frame);
+  *height = NSHeight(frame);
+  return true;
+}
+
 /// Gives a keyable Ghostex Capture window the keyboard again (after a capture hid and re-showed it).
 void GhostexGpuiCaptureFocusWindow(void *native_view) {
   NSWindow *window = GhostexGpuiCaptureWindowOfView(native_view);
@@ -116,8 +147,14 @@ bool GhostexGpuiCaptureRectPng(double x, double y, double width, double height,
   return written;
 }
 
-/// Writes the front window of the app with `pid` to a PNG and reports its frame in GPUI's global
-/// space and the app's name.
+/// Writes the screen inside the front window of the app with `pid` to a PNG and reports that
+/// window's frame in GPUI's global space and the app's name.
+///
+/// CDXC:GhostexCapture 2026-09-30 DECISION:
+/// User: Capture App should "put the rectangle around that window's dimensions and capture instead
+/// of capturing using api", because the single-window image left out Ghostex's CEF panes (they
+/// are separate child windows). The pixels on screen inside the window's frame are read instead,
+/// the way Windows and X11 already do it.
 bool GhostexGpuiCaptureAppWindowPng(int32_t pid, const char *path,
                                     char *app_name, size_t app_name_capacity,
                                     double *frame) {
@@ -139,14 +176,14 @@ bool GhostexGpuiCaptureAppWindowPng(int32_t pid, const char *path,
     if (!boundsDictionary ||
         !CGRectMakeWithDictionaryRepresentation(
             (__bridge CFDictionaryRef)boundsDictionary, &bounds) ||
-        CGRectGetWidth(bounds) < 20.0 || CGRectGetHeight(bounds) < 20.0) {
+        CGRectGetWidth(bounds) < 160.0 || CGRectGetHeight(bounds) < 120.0) {
+      // An app's small helper windows (Ghostex's own pop-ups and hidden hosts among them) come
+      // before its real window in the list; the capture wants the window the user sees.
       continue;
     }
-    CGWindowID window_id =
-        [info[(__bridge NSString *)kCGWindowNumber] unsignedIntValue];
     CGImageRef image = CGWindowListCreateImage(
-        CGRectNull, kCGWindowListOptionIncludingWindow, window_id,
-        kCGWindowImageBoundsIgnoreFraming | kCGWindowImageBestResolution);
+        bounds, kCGWindowListOptionOnScreenOnly, kCGNullWindowID,
+        kCGWindowImageBestResolution);
     bool written = GhostexGpuiCaptureWritePng(image, path);
     if (image) {
       CFRelease(image);

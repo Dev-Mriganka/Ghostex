@@ -3,7 +3,7 @@
 use gpui::{App, Bounds, DisplayId, Pixels, Point, Size, point, px, size};
 
 use super::model::*;
-use super::persistence::SavedPlacement;
+use super::persistence::{SavedPlacement, SavedWindowFrame};
 
 /// One screen, keyed the way placements are saved.
 #[derive(Clone, Debug)]
@@ -59,34 +59,33 @@ fn digits(value: u64) -> usize {
     value.to_string().len()
 }
 
-/// The non-zero counts in drawing order, with their colors.
+/// The non-zero counts in drawing order (top to bottom), with their colors.
+///
+/// CDXC:GhostexCapture 2026-09-30 DECISION:
+/// User: the numbers sit in a narrow column beside the icon, the icon's height, "3 numbers centered
+/// inside it vertically on top of each other": Attention, Question, Working.
 pub(crate) fn shown_counts(counts: CaptureCounts) -> Vec<(u64, u32)> {
     [
-        (counts.working, 0xc68a06),
         (counts.attention, 0x0093fe),
         (counts.question, 0xf472b6),
+        (counts.working, 0xc68a06),
     ]
     .into_iter()
     .filter(|(value, _)| *value > 0)
     .collect()
 }
 
-pub(crate) const COUNT_CHAR_WIDTH: f32 = 8.4;
-pub(crate) const COUNT_GAP: f32 = 8.0;
-pub(crate) const TRAY_PAD: f32 = 10.0;
+pub(crate) const COUNT_CHAR_WIDTH: f32 = 7.0;
+pub(crate) const TRAY_PAD: f32 = 6.0;
 
-/// The tray's full width including the part under the icon; 0 without counts.
+/// The tray's full width including the part under the icon; 0 without counts. The numbers are
+/// stacked, so the widest one sets it.
 pub(crate) fn tray_width(counts: CaptureCounts) -> f32 {
     let shown = shown_counts(counts);
-    if shown.is_empty() {
+    let Some(widest) = shown.iter().map(|(value, _)| digits(*value)).max() else {
         return 0.0;
-    }
-    let characters: usize = shown.iter().map(|(value, _)| digits(*value)).sum();
-    TRAY_TUCK
-        + TRAY_PAD
-        + characters as f32 * COUNT_CHAR_WIDTH
-        + (shown.len() - 1) as f32 * COUNT_GAP
-        + TRAY_PAD
+    };
+    TRAY_TUCK + TRAY_PAD + widest as f32 * COUNT_CHAR_WIDTH + TRAY_PAD
 }
 
 fn tray_visible(counts: CaptureCounts) -> f32 {
@@ -98,9 +97,9 @@ pub(crate) const TAB_ROW: f32 = 16.0;
 fn tab_height(counts: CaptureCounts) -> f32 {
     let rows = shown_counts(counts).len();
     if rows == 0 {
-        32.0
+        36.0
     } else {
-        10.0 + rows as f32 * TAB_ROW
+        16.0 + rows as f32 * TAB_ROW
     }
 }
 
@@ -239,4 +238,95 @@ pub(crate) fn panel_frame(
     };
     let x = x.max(visible.left()).min(visible.right() - width);
     Bounds::new(point(x, y), size(width, height))
+}
+
+/// `frame` moved the least it takes to lie inside the screen's visible area.
+pub(crate) fn fit_on_screen(screen: &Screen, frame: Bounds<Pixels>) -> Bounds<Pixels> {
+    let visible = screen.visible;
+    let x = frame
+        .origin
+        .x
+        .min(visible.right() - frame.size.width)
+        .max(visible.left());
+    let y = frame
+        .origin
+        .y
+        .min(visible.bottom() - frame.size.height)
+        .max(visible.top());
+    Bounds::new(point(x, y), frame.size)
+}
+
+/// A saved window frame back on its screen, kept inside it: `extent` unless the save has its own
+/// size. `None` when that screen is not connected.
+pub(crate) fn restore_frame(
+    saved: &SavedWindowFrame,
+    extent: Size<Pixels>,
+    cx: &App,
+) -> Option<Bounds<Pixels>> {
+    let screen = screens(cx)
+        .into_iter()
+        .find(|screen| screen.key == saved.display)?;
+    let visible = screen.visible;
+    let extent = size(
+        saved
+            .width
+            .map(px)
+            .unwrap_or(extent.width)
+            .min(visible.size.width),
+        saved
+            .height
+            .map(px)
+            .unwrap_or(extent.height)
+            .min(visible.size.height),
+    );
+    let origin = point(
+        screen.bounds.left() + px(saved.x),
+        screen.bounds.top() + px(saved.y),
+    );
+    Some(fit_on_screen(&screen, Bounds::new(origin, extent)))
+}
+
+/// `frame` saved relative to the screen it is on, with its size when `with_size`. `None` when it
+/// is on no screen (a window a capture moved off screen, for example).
+pub(crate) fn save_frame(
+    frame: Bounds<Pixels>,
+    with_size: bool,
+    cx: &App,
+) -> Option<SavedWindowFrame> {
+    let screen = screen_at(frame.center(), cx).or_else(|| screen_at(frame.origin, cx))?;
+    Some(SavedWindowFrame {
+        x: f32::from(frame.origin.x - screen.bounds.left()),
+        y: f32::from(frame.origin.y - screen.bounds.top()),
+        width: with_size.then(|| f32::from(frame.size.width)),
+        height: with_size.then(|| f32::from(frame.size.height)),
+        display: screen.key,
+    })
+}
+
+/// The screen under the pointer, else the primary one.
+pub(crate) fn pointer_screen(scale: f32, cx: &App) -> Option<Screen> {
+    super::platform::pointer(scale)
+        .and_then(|pointer| screen_at(pointer, cx))
+        .or_else(|| home_screen(None, cx))
+}
+
+/// A window of `extent` in the middle of `screen`.
+pub(crate) fn centered(screen: &Screen, extent: Size<Pixels>) -> Bounds<Pixels> {
+    let center = screen.visible.center();
+    let origin = point(
+        center.x - extent.width / 2.0,
+        center.y - extent.height / 2.0,
+    );
+    fit_on_screen(screen, Bounds::new(origin, extent))
+}
+
+/// Where an open window is right now, in the space `platform::set_window_frame` places it in.
+pub(crate) fn live_frame<V: 'static>(
+    handle: gpui::WindowHandle<V>,
+    native: Option<super::platform::NativeWindow>,
+    cx: &mut App,
+) -> Option<Bounds<Pixels>> {
+    native
+        .and_then(super::platform::window_frame)
+        .or_else(|| handle.update(cx, |_, window, _| window.bounds()).ok())
 }

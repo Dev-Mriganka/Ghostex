@@ -190,8 +190,6 @@ pub(crate) struct GxStoreHost {
     pub(crate) create: super::create::CreateHost,
     /// The custom session tag catalog's debounced push to this computer's gxserver.
     pub(crate) custom_tags: super::custom_tags_sync::CustomTagsSyncHost,
-    /// The last session an App Shot went to (app_shot.rs).
-    pub(crate) app_shot: super::app_shot::AppShotHost,
     #[cfg(target_os = "windows")]
     pub(crate) terminal_title_settle:
         super::terminal_lifecycle::terminal_events::TerminalTitleSettle,

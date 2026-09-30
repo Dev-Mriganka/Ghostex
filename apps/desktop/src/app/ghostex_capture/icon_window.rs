@@ -76,6 +76,16 @@ impl GhostexGpuiApp {
         }
     }
 
+    /// The button's scale factor, for reading the pointer on the backends that report it in device
+    /// pixels.
+    pub(super) fn ghostex_capture_scale(&self) -> f32 {
+        self.ghostex_capture
+            .icon
+            .as_ref()
+            .map(|icon| icon.scale)
+            .unwrap_or(1.0)
+    }
+
     /// The screen the button lives on and its saved spot there.
     pub(super) fn ghostex_capture_home(
         &self,
@@ -143,7 +153,9 @@ impl GhostexGpuiApp {
                     ..Default::default()
                 },
                 move |window, cx| {
-                    let _ = window;
+                    // Without this macOS rounds the window's own corners, which turned the narrow
+                    // docked tab into a pointed lens.
+                    crate::app::window::popup_frame::strip_gpui_popup_window_frame(window);
                     cx.new(|cx| CaptureIconView {
                         _observe: match observed.upgrade() {
                             Some(app) => cx.observe(&app, |_, _, cx| cx.notify()),
@@ -350,7 +362,7 @@ impl GhostexGpuiApp {
     }
 }
 
-fn count_text(value: u64, color: u32, size: f32) -> impl IntoElement {
+fn count_text(value: u64, color: u32, size: f32) -> gpui::Div {
     div()
         .text_size(px(size))
         .font_weight(gpui::FontWeight::BOLD)
@@ -435,8 +447,8 @@ impl Render for CaptureIconView {
                 .border_1()
                 .border_color(rgba(0xffffff26));
             let tab = match edge {
-                DockEdge::Right => tab.rounded_l(px(8.0)).border_r_0(),
-                DockEdge::Left => tab.rounded_r(px(8.0)).border_l_0(),
+                DockEdge::Right => tab.rounded_l(px(10.0)).border_r_0(),
+                DockEdge::Left => tab.rounded_r(px(10.0)).border_l_0(),
             };
             let tab = if shown.is_empty() {
                 tab.child(match app_icon_image() {
@@ -460,15 +472,17 @@ impl Render for CaptureIconView {
         let tray_width = placement::tray_width(counts);
         let mut root = root;
         if tray_width > 0.0 {
-            let tray_top = ICON_PAD + (ICON_SIZE - TRAY_HEIGHT) / 2.0;
+            let rows = shown.len() as f32;
             let tray = div()
                 .absolute()
-                .top(px(tray_top))
-                .h(px(TRAY_HEIGHT))
+                .top(px(ICON_PAD))
+                .h(px(ICON_SIZE))
                 .w(px(tray_width))
                 .flex()
+                .flex_col()
+                .justify_center()
                 .items_center()
-                .gap(px(placement::COUNT_GAP))
+                .gap(px(if rows >= 3.0 { 0.0 } else { 2.0 }))
                 .bg(rgba(0x080a0ee0))
                 .border_1()
                 .border_color(if active {
@@ -476,20 +490,20 @@ impl Render for CaptureIconView {
                 } else {
                     rgba(0xffffff1a)
                 })
-                .children(
-                    shown
-                        .iter()
-                        .map(|(value, color)| count_text(*value, *color, 13.5).into_any_element()),
-                );
+                .children(shown.iter().map(|(value, color)| {
+                    count_text(*value, *color, if rows >= 3.0 { 11.0 } else { 12.5 })
+                        .line_height(px(if rows >= 3.0 { 13.0 } else { 15.0 }))
+                        .into_any_element()
+                }));
             let tray = if tray_left {
                 tray.left(offset.x + px(TRAY_TUCK) - px(tray_width))
-                    .pl(px(placement::TRAY_PAD))
-                    .rounded_l(px(9.0))
+                    .pr(px(TRAY_TUCK))
+                    .rounded_l(px(12.0))
                     .border_r_0()
             } else {
                 tray.left(offset.x + px(ICON_SIZE - TRAY_TUCK))
-                    .pl(px(TRAY_TUCK + placement::TRAY_PAD))
-                    .rounded_r(px(9.0))
+                    .pl(px(TRAY_TUCK))
+                    .rounded_r(px(12.0))
                     .border_l_0()
             };
             root = root.child(tray);

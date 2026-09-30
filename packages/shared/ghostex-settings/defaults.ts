@@ -58,24 +58,18 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
   gpuiTitlebarActionCommandByProject: {},
   gpuiTitlebarOpenTargetByProject: {},
   /**
-   * CDXC:AppShots 2026-06-13-19:51:
-   * App Shots are a beta workflow and should be opt-in for first-run Settings
-   * defaults and missing persisted settings. Keep the hotkey configured so
-   * enabling the beta feature is a single explicit toggle.
-   */
-  appShotsEnabled: false,
-  /**
    * CDXC:GhostexCapture 2026-09-30 WHY:
    * The floating button sits over every app, so it is opt-in: a new install or an update must not
    * put a window on top of someone's screen they never asked for.
    */
   ghostexCaptureEnabled: false,
-  appShotsHotkey: 'both-command',
-  /*
-   * CDXC:AppShots 2026-06-29-02:59:
-   * App Shot prompts should paste only the image link by default. Window metadata is useful for debugging and context-heavy cases, but it must be an explicit Settings opt-in so routine image prompts stay compact.
+  /**
+   * CDXC:GhostexCapture 2026-09-30 DECISION:
+   * User: "when we send a prompt to the app we have to switch the app to that session", with a
+   * toggle under Floating Capture to turn it off. On by default; Ghostex shows the session without
+   * coming in front of the app the user is in.
    */
-  appShotsMetadataEnabled: false,
+  ghostexCaptureSwitchToSession: true,
   /**
    * CDXC:AgentProviders 2026-09-04 DECISION:
    * User: new installs must start with Agent approvals set to Keep default. Running supported agents without approval is an explicit opt-in.

@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use super::editor::EditorWindow;
 use super::icon_window::CaptureIconView;
 use super::overlay::AreaSession;
-use super::panel_window::CapturePanelView;
 use super::persistence::SavedCaptureState;
 use super::platform::{FrontmostApp, NativeWindow};
 use super::prompt::PromptState;
@@ -19,9 +18,8 @@ pub(crate) const ICON_SIZE: f32 = 44.0;
 pub(crate) const ICON_PAD: f32 = 7.0;
 /// How far the counts tray tucks under the icon's edge.
 pub(crate) const TRAY_TUCK: f32 = 10.0;
-pub(crate) const TRAY_HEIGHT: f32 = 26.0;
 /// The docked tab's width: about a fifth of the button.
-pub(crate) const TAB_WIDTH: f32 = 20.0;
+pub(crate) const TAB_WIDTH: f32 = 24.0;
 /// How close to a screen edge a drop docks the button.
 pub(crate) const DOCK_SNAP: f32 = 28.0;
 /// A press that moves less than this is a click.
@@ -77,7 +75,10 @@ pub(crate) struct IconWindow {
 }
 
 pub(crate) struct PanelWindow {
-    pub(crate) handle: WindowHandle<CapturePanelView>,
+    pub(crate) handle: WindowHandle<gpui_component::Root>,
+    pub(crate) native: Option<NativeWindow>,
+    /// Where it opened, to tell whether the user moved it.
+    pub(crate) opened_at: Bounds<Pixels>,
 }
 
 /// A press on the button, until it is released.

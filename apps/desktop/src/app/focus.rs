@@ -1982,8 +1982,6 @@ impl GhostexGpuiApp {
             })
             .collect::<Vec<_>>();
         if removed_keys.is_empty() {
-            self.local_app_shot_session_mappings
-                .retain(|_, mapped_session_id| *mapped_session_id != shell_session_id);
             return;
         }
         self.local_workspace_session_mappings
@@ -1999,8 +1997,6 @@ impl GhostexGpuiApp {
         {
             self.local_workspace_latest_focus_key = None;
         }
-        self.local_app_shot_session_mappings
-            .retain(|_, mapped_session_id| *mapped_session_id != shell_session_id);
     }
 
     pub(crate) fn close_agents_tab(

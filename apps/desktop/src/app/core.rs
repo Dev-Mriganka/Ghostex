@@ -539,11 +539,6 @@ pub struct GhostexGpuiApp {
     pub(crate) session_attention_notification_rate_limiter:
         GpuiSessionAttentionNotificationRateLimiter,
     pub(crate) sidebar_pet_overlay: GpuiSidebarPetOverlayState,
-    /*
-    CDXC:AppShots 2026-06-25-23:28:
-    App Shot insertion needs a bounded runtime-only map from local gxserver presentation session ids to GPUI Agents shell tabs because those id spaces may differ. Populate it only from explicit sidebar focus-state handoffs and currently mounted Agents surfaces; store no prompts, app/window metadata, project paths, titles, command text, terminal output, or persistent state.
-    */
-    pub(crate) local_app_shot_session_mappings: HashMap<String, TerminalSessionId>,
     /// The last command-tab summary `refresh_sidebar_command_pane_sessions_if_changed` saw, so it
     /// reports only real changes.
     pub(crate) sidebar_command_pane_sessions_snapshot: String,
@@ -839,8 +834,6 @@ pub struct GhostexGpuiApp {
     pub(crate) app_modal_window_id: Rc<Cell<Option<gpui::WindowId>>>,
     pub(crate) app_modal_open_attempt_id: u64,
     pub(crate) app_modal_ready_retry_used: bool,
-    pub(crate) app_modal_spare: Option<crate::app::app_modal_spare::GpuiAppModalSpare>,
-    pub(crate) app_modal_spare_preload_generation: u64,
     pub(crate) app_modal_gxserver_hydrate: Option<GpuiAppModalGxserverHydrate>,
     pub(crate) app_modal_gxserver_hydrate_refreshing: bool,
     pub(crate) app_modal_command_return_focus_target: Option<CommandPaneAppModalReturnFocusTarget>,
@@ -991,8 +984,6 @@ impl Drop for GhostexGpuiApp {
         self.shut_down_ghostex_capture();
         #[cfg(target_os = "windows")]
         crate::navigation_history::windows_mouse::unregister(self.parent_ns_view);
-        #[cfg(target_os = "macos")]
-        unregister_gpui_app_shots_callback_target();
         #[cfg(target_os = "macos")]
         unregister_gpui_menu_bar_status_callback_target();
         #[cfg(target_os = "macos")]

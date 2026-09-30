@@ -1068,7 +1068,6 @@ impl GhostexGpuiApp {
                                 &mut this.agents_terminal_runtime_sessions,
                                 &mut this.agents_terminal_launch_payload_source,
                                 &this.local_workspace_session_mappings,
-                                &mut this.local_app_shot_session_mappings,
                                 requested_pane_id,
                                 &key,
                                 plan,

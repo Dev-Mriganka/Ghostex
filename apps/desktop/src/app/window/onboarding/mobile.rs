@@ -60,6 +60,15 @@ impl GpuiOnboardingWindow {
         self.update_settings(patch, cx);
     }
 
+    fn toggle_floating_capture(&mut self, cx: &mut Context<Self>) {
+        let mut patch = serde_json::Map::new();
+        patch.insert(
+            "ghostexCaptureEnabled".into(),
+            Value::Bool(!self.settings.floating_capture),
+        );
+        self.update_settings(patch, cx);
+    }
+
     pub(super) fn render_mobile(
         &mut self,
         s: S,
@@ -67,6 +76,7 @@ impl GpuiOnboardingWindow {
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
         let notify = self.settings.notify;
+        let floating_capture = self.settings.floating_capture;
         let phone_queued = self.flow.phone_queued;
         let mut out = Vec::new();
         out.push(eyebrow(s, 46.0, 146.0, None, "Optional · Mobile").into_any_element());
@@ -192,8 +202,66 @@ impl GpuiOnboardingWindow {
             )
             .into_any_element(),
         );
+        // CDXC:GhostexCapture 2026-09-30 DECISION:
+        // User: add Floating Capture to the setup toggles "so people know about it when they are onboarding onto the app".
+        let capture_thumb = self.thumb("mobile-capture", floating_capture, now);
+        let capture_toggle = self.control(
+            s,
+            toggle(
+                s,
+                "mobile-capture-toggle",
+                floating_capture,
+                capture_thumb,
+                ToggleSize::Lg,
+                false,
+            ),
+            "mobile-capture-toggle",
+            interact::Ring::new(17.0, 1.0),
+            interact::Keys::EnterSpace,
+            cx,
+            |this, _, cx| {
+                cx.stop_propagation();
+                this.toggle_floating_capture(cx);
+            },
+        );
+        let capture_row = switch_row(
+            s,
+            "mobile-capture-row",
+            526.0,
+            84.0,
+            (20.0, 30.0),
+            26.0,
+            None,
+        )
+        .left(s.px(46.0))
+        .w(s.px(660.0))
+        .child(icon(s, "capture", 22.0, 1.6, hex(0xd6dbe5)))
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .child(nm(s, 17.0, 500.0).child("Floating Capture"))
+                .child(ss(s, 12.5).child(if floating_capture {
+                    "A small button floats over every app with your agents' counts; screenshot anything and prompt without switching to Ghostex."
+                } else {
+                    "Turn on a floating button to see your agents and send screenshots and prompts from any app."
+                })),
+        )
+        .child(capture_toggle);
         out.push(
-            abs(s, 46.0, 534.0, None, None)
+            self.control(
+                s,
+                capture_row,
+                "mobile-capture-row",
+                interact::Ring::new(14.0, 1.0),
+                interact::Keys::EnterSpace,
+                cx,
+                |this, _, cx| this.toggle_floating_capture(cx),
+            )
+            .into_any_element(),
+        );
+        out.push(
+            abs(s, 46.0, 634.0, None, None)
                 .flex()
                 .child(
                     sans(s, 16.0, 400.0, hex(0xaeb6c4)).child("You can set this up anytime from "),

@@ -1,24 +1,14 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/packages/components/ui/button';
-import { SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/packages/components/ui/select';
 import { Switch } from '@/packages/components/ui/switch';
 import { AppTooltip } from '../../app-tooltip';
 import { IconDeviceDesktop, IconDownload, IconInfoCircle, IconRefresh, IconTerminal2 } from '@tabler/icons-react';
 import { type SidebarGhostexCliStatusMessage } from '../../../shared/session-grid-contract';
-import { APP_SHOTS_HOTKEY_OPTIONS, type AppShotsHotkey } from '../../../shared/ghostex-settings';
 import { type BundledGhostexAgentSkillId } from '../../../shared/ghostex-agent-skills';
 import { AgentSkillsSection, DesktopControlSection, IntegrationRowTitle } from './integration-skills';
 import { ManagedToolsSection } from './managed-tools-section';
 import type { ManagedToolId } from '../../../shared/managed-tools';
-import {
-  SettingButton,
-  SettingRow,
-  SettingsListItem,
-  SettingsNativeScrollArea,
-  SettingsSection,
-  SettingsSelect,
-  SettingsSelectContent,
-} from '../fields';
+import { SettingButton, SettingsListItem, SettingsNativeScrollArea, SettingsSection } from '../fields';
 import {
   SettingsTabSearch,
   hasVisibleSettingsSearchResult,
@@ -88,20 +78,19 @@ export function VersionInfoButton({ label, version }: { label: string; version: 
   );
 }
 
-/** The hotkey that opens Ghostex Capture, in this platform's modifier names. */
-const GHOSTEX_CAPTURE_HOTKEY = IS_MAC_HOST ? 'Cmd+Ctrl+Shift+S' : 'Alt+Ctrl+Shift+S';
+/** The hotkey that opens Floating Capture, in this platform's modifier names. */
+const FLOATING_CAPTURE_HOTKEY = IS_MAC_HOST ? 'Cmd+Ctrl+Shift+S' : 'Alt+Ctrl+Shift+S';
+
+const FLOATING_CAPTURE_DESCRIPTION =
+  'A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Use it to screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex.';
 
 export function IntegrationsSettingsTab({
-  appShotsEnabled,
-  appShotsHotkey,
-  appShotsMetadataEnabled,
   ghostexCaptureEnabled,
+  ghostexCaptureSwitchToSession,
   ghostexCliStatus,
   ghostexCliStatusLoading,
-  onAppShotsEnabledChange,
-  onAppShotsHotkeyChange,
-  onAppShotsMetadataEnabledChange,
   onGhostexCaptureEnabledChange,
+  onGhostexCaptureSwitchToSessionChange,
   onInstallCliSkill,
   onInstallBrowserControl,
   onInstallBrowserUseSkill,
@@ -125,16 +114,12 @@ export function IntegrationsSettingsTab({
   search,
   searchEmptyState,
 }: {
-  appShotsEnabled: boolean;
-  appShotsHotkey: AppShotsHotkey;
-  appShotsMetadataEnabled: boolean;
   ghostexCaptureEnabled: boolean;
+  ghostexCaptureSwitchToSession: boolean;
   ghostexCliStatus?: SidebarGhostexCliStatusMessage;
   ghostexCliStatusLoading: boolean;
-  onAppShotsEnabledChange: (checked: boolean) => void;
-  onAppShotsHotkeyChange: (hotkey: AppShotsHotkey) => void;
-  onAppShotsMetadataEnabledChange: (checked: boolean) => void;
   onGhostexCaptureEnabledChange: (checked: boolean) => void;
+  onGhostexCaptureSwitchToSessionChange: (checked: boolean) => void;
   onInstallCliSkill?: () => void;
   onInstallBrowserControl?: () => void;
   onInstallBrowserUseSkill?: () => void;
@@ -160,8 +145,6 @@ export function IntegrationsSettingsTab({
   searchEmptyState?: ReactNode;
 }) {
   const showIntegrationRow = (settingKey: string) => shouldShowSetting(search.sections.integrations, settingKey);
-  const appShotsHotkeyId = useId();
-  const appShotsMetadataId = useId();
   const ghostexCliStatusChecking = ghostexCliStatusLoading || !ghostexCliStatus;
   const cliReady = ghostexCliStatus?.installed === true;
   /**
@@ -199,6 +182,41 @@ export function IntegrationsSettingsTab({
          * action for unusual PATH states, not a cask reinstall flow.
          */}
         {search.tab.isSearching && !hasVisibleSettingsSearchResult(search.tab) ? searchEmptyState : null}
+        {/*
+         * CDXC:GhostexCapture 2026-09-30 DECISION:
+         * User: call it "Floating Capture", put it at the very top of Integrations with text under it that explains what it does, and do not repeat the same name as both the section title and the toggle.
+         */}
+        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('ghostexCapture') ? (
+          <SettingsSection description={FLOATING_CAPTURE_DESCRIPTION} title='Floating Capture'>
+            <IntegrationSettingsRow
+              badge='Beta'
+              description={`${FLOATING_CAPTURE_HOTKEY} opens the button's panel. With the same keys, A captures an area, Space the current app, F the full screen, and T writes a prompt, straight away.`}
+              icon={IconDeviceDesktop}
+              status={ghostexCaptureEnabled ? 'Enabled' : 'Disabled'}
+              tone={ghostexCaptureEnabled ? 'success' : 'neutral'}
+              title='Show the floating button'
+            >
+              <Switch
+                aria-label='Show the Floating Capture button'
+                checked={ghostexCaptureEnabled}
+                onCheckedChange={onGhostexCaptureEnabledChange}
+              />
+            </IntegrationSettingsRow>
+            <IntegrationSettingsRow
+              description='After a prompt is sent, the Ghostex window shows the session it went to, without coming in front of the app you are in.'
+              icon={IconDeviceDesktop}
+              status={ghostexCaptureSwitchToSession ? 'On' : 'Off'}
+              title='Switch to the session after sending'
+              tone={ghostexCaptureSwitchToSession ? 'success' : 'neutral'}
+            >
+              <Switch
+                aria-label='Switch to the session after sending'
+                checked={ghostexCaptureSwitchToSession}
+                onCheckedChange={onGhostexCaptureSwitchToSessionChange}
+              />
+            </IntegrationSettingsRow>
+          </SettingsSection>
+        ) : null}
         {shouldShowSettingsSection(search.sections.integrations) ? (
           <SettingsSection title='Ghostex CLI'>
             {showIntegrationRow('ghostexCli') ? (
@@ -279,95 +297,6 @@ export function IntegrationsSettingsTab({
             onUninstallAllSkills={onUninstallBundledAgentSkills}
             onUninstallSkill={onUninstallBundledAgentSkill}
           />
-        ) : null}
-        {/* CDXC:Settings 2026-09-09 DECISION: User: App Shots is its own section on the Integrations page, separate from the CLI, skills, and Trycua card. */}
-        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('appShots') ? (
-          <SettingsSection title='App Shots'>
-            {/*
-             * CDXC:AppShots 2026-06-12-11:12:
-             * Settings copy must describe App Shots as an agent-session feature because captured context now targets the focused or recent agent instead of Codex only.
-             *
-             * CDXC:AppShots 2026-06-15-02:01:
-             * App Shots should be instant screenshot capture. Settings copy must not promise OCR, Accessibility text extraction, or other app-content scraping.
-             *
-             * CDXC:AppShots 2026-06-29-02:59:
-             * App Shot prompt metadata is disabled by default and must be a visible opt-in under the App Shots row, because routine captures should paste only the image link unless the user asks for window metadata.
-             */}
-            <IntegrationSettingsRow
-              badge='Beta'
-              description='Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.'
-              icon={IconDeviceDesktop}
-              status={appShotsEnabled ? 'Enabled' : 'Disabled'}
-              tone={appShotsEnabled ? 'success' : 'neutral'}
-              title='App Shots'
-            >
-              <Switch
-                aria-label='Enable App Shots'
-                checked={appShotsEnabled}
-                onCheckedChange={onAppShotsEnabledChange}
-              />
-            </IntegrationSettingsRow>
-            {/* Hidden, not disabled, while App Shots is off: see the CDXC:Settings 2026-09-11 decision on the Space rows in settings-modal.tsx. */}
-            {appShotsEnabled ? (
-              <>
-                <SettingRow
-                  description='Which modifier-key gesture captures the frontmost app window.'
-                  htmlFor={appShotsHotkeyId}
-                  dependent
-                  label='App Shots hotkey'
-                >
-                  <SettingsSelect
-                    onValueChange={(value) => onAppShotsHotkeyChange(value as AppShotsHotkey)}
-                    value={appShotsHotkey}
-                  >
-                    <SelectTrigger aria-label='App Shots hotkey' id={appShotsHotkeyId}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SettingsSelectContent className='settings-list-select-content'>
-                      <SelectGroup>
-                        {APP_SHOTS_HOTKEY_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SettingsSelectContent>
-                  </SettingsSelect>
-                </SettingRow>
-                <SettingRow
-                  description='Paste the window title and app name together with the image link.'
-                  htmlFor={appShotsMetadataId}
-                  dependent
-                  label='App Shots metadata'
-                >
-                  <Switch
-                    aria-label='Include App Shots metadata'
-                    checked={appShotsMetadataEnabled}
-                    id={appShotsMetadataId}
-                    onCheckedChange={onAppShotsMetadataEnabledChange}
-                  />
-                </SettingRow>
-              </>
-            ) : null}
-          </SettingsSection>
-        ) : null}
-        {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('ghostexCapture') ? (
-          <SettingsSection title='Ghostex Capture'>
-            <IntegrationSettingsRow
-              badge='Beta'
-              description={`A floating button over every app with your working, waiting and question counts. Screenshot an area, the current app or the full screen, mark it up, and send a prompt without switching to Ghostex. ${GHOSTEX_CAPTURE_HOTKEY} opens it; A, Space, F or T instead of S run an action straight away.`}
-              icon={IconDeviceDesktop}
-              status={ghostexCaptureEnabled ? 'Enabled' : 'Disabled'}
-              tone={ghostexCaptureEnabled ? 'success' : 'neutral'}
-              title='Ghostex Capture'
-            >
-              <Switch
-                aria-label='Enable Ghostex Capture'
-                checked={ghostexCaptureEnabled}
-                onCheckedChange={onGhostexCaptureEnabledChange}
-              />
-            </IntegrationSettingsRow>
-          </SettingsSection>
         ) : null}
         {/* CDXC:Settings 2026-09-30 DECISION: User: "please move the tools list to the bottom of the integrations". */}
         {shouldShowSettingsSection(search.sections.integrations) && showIntegrationRow('managedTools') ? (

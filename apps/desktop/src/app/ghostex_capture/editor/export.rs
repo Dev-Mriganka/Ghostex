@@ -50,6 +50,46 @@ fn hex(color: u32) -> String {
     format!("#{color:06x}")
 }
 
+/// The SVG of one text label (all its lines).
+fn text_svg(at: &super::model::P, text: &str, color: u32, metrics: Metrics) -> String {
+    let size = metrics.text_size();
+    let mut svg = String::new();
+    for (line_index, line) in text.lines().enumerate() {
+        let _ = write!(
+            svg,
+            r#"<text x="{}" y="{}" font-family="Inter, Helvetica Neue, Segoe UI, Arial, sans-serif" font-weight="700" font-size="{size}" fill="{}" stroke="rgba(0,0,0,0.55)" stroke-width="{}" paint-order="stroke">{}</text>"#,
+            at.x + size * 0.2,
+            at.y + size * (1.0 + line_index as f32 * 1.25),
+            hex(color),
+            size * 0.12,
+            escape(line)
+        );
+    }
+    svg
+}
+
+/// Where a label's glyphs actually land, measured by laying it out alone.
+fn text_bounds(
+    width: u32,
+    height: u32,
+    at: &super::model::P,
+    text: &str,
+    color: u32,
+    metrics: Metrics,
+) -> Option<(f32, f32, f32, f32)> {
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">{}</svg>"#,
+        text_svg(at, text, color, metrics)
+    );
+    let options = resvg::usvg::Options {
+        fontdb: fontdb(),
+        ..Default::default()
+    };
+    let tree = resvg::usvg::Tree::from_str(&svg, &options).ok()?;
+    let bounds = tree.root().abs_bounding_box();
+    Some((bounds.x(), bounds.y(), bounds.width(), bounds.height()))
+}
+
 pub(crate) fn marks_svg(width: u32, height: u32, marks: &[Mark], metrics: Metrics) -> String {
     let mut svg = format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">"#
@@ -89,19 +129,30 @@ pub(crate) fn marks_svg(width: u32, height: u32, marks: &[Mark], metrics: Metric
                     stroke
                 );
             }
-            Mark::Text { at, text, color } => {
-                let size = metrics.text_size();
-                for (line_index, line) in text.lines().enumerate() {
+            Mark::Text {
+                at,
+                text,
+                color,
+                background,
+            } => {
+                if *background
+                    && let Some((x, y, w, h)) =
+                        text_bounds(width, height, at, text, *color, metrics)
+                {
+                    let pad = metrics.text_size() * 0.25;
+                    let [r, g, b, a] = super::view::TEXT_BACKGROUND.to_be_bytes();
                     let _ = write!(
                         svg,
-                        r#"<text x="{}" y="{}" font-family="Inter, Helvetica Neue, Segoe UI, Arial, sans-serif" font-weight="700" font-size="{size}" fill="{}" stroke="rgba(0,0,0,0.55)" stroke-width="{}" paint-order="stroke">{}</text>"#,
-                        at.x + size * 0.2,
-                        at.y + size * (1.0 + line_index as f32 * 1.25),
-                        hex(*color),
-                        size * 0.12,
-                        escape(line)
+                        r#"<rect x="{}" y="{}" width="{}" height="{}" rx="{}" fill="rgb({r},{g},{b})" fill-opacity="{}"/>"#,
+                        x - pad,
+                        y - pad * 0.6,
+                        w + pad * 2.0,
+                        h + pad * 1.2,
+                        metrics.text_size() * 0.22,
+                        a as f32 / 255.0
                     );
                 }
+                svg.push_str(&text_svg(at, text, *color, metrics));
             }
         }
     }

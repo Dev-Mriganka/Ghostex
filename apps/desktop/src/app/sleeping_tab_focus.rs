@@ -29,16 +29,9 @@ impl GhostexGpuiApp {
         }
         if keep_view {
             self.agents_workspace.select_tab(pane_id, shell_session_id);
-            self.finish_local_workspace_terminal_background_selection(
-                key,
-                pane_id,
-                shell_session_id,
-                cx,
-            );
+            self.finish_local_workspace_terminal_background_selection(key, pane_id, cx);
         } else {
             let pane_id = self.pull_workspace_session_into_focused_pane(pane_id, shell_session_id);
-            self.local_app_shot_session_mappings
-                .insert(key.session_id.clone(), shell_session_id);
             self.select_agents_tab(pane_id, shell_session_id, cx);
             self.set_sidebar_focus_border_handoff_target(shell_session_id);
             cx.notify();

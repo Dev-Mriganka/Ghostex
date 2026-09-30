@@ -2791,64 +2791,6 @@
       "agentWritable": true
     },
     {
-      "key": "appShotsEnabled",
-      "title": "App Shots",
-      "subtitle": "Enable App Shots: press the App Shots hotkey to capture a window screenshot into the prompt.",
-      "tab": "settings",
-      "tabTitle": "General",
-      "section": "appShots",
-      "sectionTitle": "App Shots (beta)",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
-      "key": "appShotsHotkey",
-      "title": "App Shots hotkey",
-      "subtitle": "Which modifier chord captures an App Shot.",
-      "tab": "settings",
-      "tabTitle": "General",
-      "section": "appShots",
-      "sectionTitle": "App Shots (beta)",
-      "type": "enum",
-      "default": "both-command",
-      "options": [
-        {
-          "label": "Both ⌘ keys",
-          "value": "both-command"
-        },
-        {
-          "label": "Both ⇧ keys",
-          "value": "both-shift"
-        },
-        {
-          "label": "Both ⌥ keys",
-          "value": "both-option"
-        },
-        {
-          "label": "Double-tap Left ⇧",
-          "value": "double-left-shift"
-        },
-        {
-          "label": "Double-tap Left ⌥",
-          "value": "double-left-option"
-        }
-      ],
-      "agentWritable": true
-    },
-    {
-      "key": "appShotsMetadataEnabled",
-      "title": "App Shots metadata",
-      "subtitle": "Also paste window metadata with the App Shot image link.",
-      "tab": "settings",
-      "tabTitle": "General",
-      "section": "appShots",
-      "sectionTitle": "App Shots (beta)",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
       "key": "showAdvancedSettings",
       "title": "Show Advanced settings",
       "subtitle": "Show the rows marked Advanced in Settings.",
@@ -2882,18 +2824,6 @@
       "sectionTitle": "Internal state (not user settings)",
       "type": "json",
       "default": {},
-      "agentWritable": false
-    },
-    {
-      "key": "ghostexCaptureEnabled",
-      "title": "ghostexCaptureEnabled",
-      "subtitle": "App-managed state saved with the settings; not a user preference.",
-      "tab": "settings",
-      "tabTitle": "General",
-      "section": "internalState",
-      "sectionTitle": "Internal state (not user settings)",
-      "type": "boolean",
-      "default": false,
       "agentWritable": false
     },
     {
@@ -8475,6 +8405,17 @@
       "agentWritable": false
     },
     {
+      "key": "ghostexCapture",
+      "title": "Floating Capture",
+      "subtitle": "A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; A, Space, F or T instead of S capture an area, the current app or the full screen, or write a prompt, right away.",
+      "tab": "integrations",
+      "tabTitle": "Integrations",
+      "section": "integrations",
+      "sectionTitle": "Integrations",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
       "key": "ghostexCli",
       "title": "Ghostex CLI",
       "subtitle": "Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup.",
@@ -8535,50 +8476,6 @@
       "agentWritable": false
     },
     {
-      "key": "appShots",
-      "title": "App Shots",
-      "subtitle": "Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.",
-      "tab": "integrations",
-      "tabTitle": "Integrations",
-      "section": "integrations",
-      "sectionTitle": "Integrations",
-      "type": "ui",
-      "options": [
-        {
-          "label": "Both ⌘ keys",
-          "value": "both-command"
-        },
-        {
-          "label": "Both ⇧ keys",
-          "value": "both-shift"
-        },
-        {
-          "label": "Both ⌥ keys",
-          "value": "both-option"
-        },
-        {
-          "label": "Double-tap Left ⇧",
-          "value": "double-left-shift"
-        },
-        {
-          "label": "Double-tap Left ⌥",
-          "value": "double-left-option"
-        }
-      ],
-      "agentWritable": false
-    },
-    {
-      "key": "ghostexCapture",
-      "title": "Ghostex Capture",
-      "subtitle": "A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away.",
-      "tab": "integrations",
-      "tabTitle": "Integrations",
-      "section": "integrations",
-      "sectionTitle": "Integrations",
-      "type": "ui",
-      "agentWritable": false
-    },
-    {
       "key": "cuaPermissions",
       "title": "Fast Computer Use Permissions",
       "subtitle": "Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.",
@@ -8629,6 +8526,30 @@
         }
       ],
       "agentWritable": false
+    },
+    {
+      "key": "ghostexCaptureEnabled",
+      "title": "Show the floating button",
+      "subtitle": "Show the Floating Capture button over every app: agent counts, screenshots of an area, an app or the whole screen, and quick prompts without switching to Ghostex.",
+      "tab": "integrations",
+      "tabTitle": "Integrations",
+      "section": "ghostexCapture",
+      "sectionTitle": "Floating Capture",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": true
+    },
+    {
+      "key": "ghostexCaptureSwitchToSession",
+      "title": "Switch to the session after sending",
+      "subtitle": "After a prompt is sent from Floating Capture, the Ghostex window shows the session it went to, without coming in front of the app you are in.",
+      "tab": "integrations",
+      "tabTitle": "Integrations",
+      "section": "ghostexCapture",
+      "sectionTitle": "Floating Capture",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true
     },
     {
       "key": "titlebarViewOrder",

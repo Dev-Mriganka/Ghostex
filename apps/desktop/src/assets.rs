@@ -18,6 +18,7 @@ mod onboarding;
 #[include = "modals/**/*.svg"]
 // CDXC:Docs 2026-09-28 WHY: the Files view's icons live in files-view/ (they were in docs/), because the root .gitignore ignores every folder named docs/ and the old assets/docs/ icons never reached git (a fresh checkout drew Files without icons).
 #[include = "files-view/**/*.svg"]
+#[include = "capture/**/*.svg"]
 struct GhostexEmbeddedAssets;
 
 #[derive(RustEmbed)]
@@ -55,6 +56,7 @@ impl AssetSource for GhostexAssets {
         if path.starts_with("titlebar/")
             || path.starts_with("modals/")
             || path.starts_with("files-view/")
+            || path.starts_with("capture/")
         {
             return GhostexEmbeddedAssets::get(path)
                 .map(|asset| Some(asset.data))

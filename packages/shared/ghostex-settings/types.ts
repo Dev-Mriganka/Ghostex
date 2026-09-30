@@ -171,7 +171,6 @@ export type PreferredAgentInterface = 'terminal' | 'chat';
 export type SidebarSettingsPresetId = 'codex' | 'minimal' | 'detailed' | 'recommended';
 export type PromptEditorBackend = 'inherit' | 'monaco';
 export type SessionTitleGenerationAgent = 'codex' | 'cursor' | 'claude' | 'grok' | 'pi' | 'antigravity' | 'custom';
-export type AppShotsHotkey = 'both-command' | 'both-shift' | 'both-option' | 'double-left-shift' | 'double-left-option';
 export type KeepAwakeDurationMinutes = 0 | 120 | 300;
 export type AutoSleepIdleMinutes = 0 | 5 | 10 | 15 | 30 | 60 | 120 | 300;
 export const DEFAULT_TERMINAL_PANE_HORIZONTAL_PADDING_PX = 0;
@@ -254,10 +253,9 @@ export type ghostexSettings = {
   /** GPUI titlebar choices, keyed by canonical main-project id. */
   gpuiTitlebarActionCommandByProject: Record<string, string>;
   gpuiTitlebarOpenTargetByProject: Record<string, string>;
-  appShotsEnabled: boolean;
   ghostexCaptureEnabled: boolean;
-  appShotsHotkey: AppShotsHotkey;
-  appShotsMetadataEnabled: boolean;
+  /** After Floating Capture sends a prompt, the Ghostex window shows the session it went to. */
+  ghostexCaptureSwitchToSession: boolean;
   /**
    * CDXC:AgentProviders 2026-06-02-22:23:
    * This field is the sidebar render cache for gxserver-owned global agent approval

@@ -358,7 +358,6 @@ pub extern "C" fn GhostexGpuiTerminalGetImePoint(
 
 #[cfg(target_os = "macos")]
 thread_local! {
-    pub(crate) static GPUI_APP_SHOTS_CALLBACK_TARGET: RefCell<Option<GpuiAppShotsCallbackTarget>> = const { RefCell::new(None) };
     pub(crate) static GPUI_MENU_BAR_STATUS_CALLBACK_TARGET: RefCell<Option<GpuiMenuBarStatusCallbackTarget>> = const { RefCell::new(None) };
     pub(crate) static GPUI_SIDEBAR_POINTER_CALLBACK_TARGET: RefCell<Option<GpuiSidebarPointerCallbackTarget>> = const { RefCell::new(None) };
     pub(crate) static GPUI_SESSION_ATTENTION_NOTIFICATION_CALLBACK_TARGET: RefCell<Option<GpuiSessionAttentionNotificationCallbackTarget>> = const { RefCell::new(None) };
@@ -375,13 +374,6 @@ thread_local! {
     // exists (macOS `pendingOSIntegrationCommands` parity); buffer them until
     // the callback target registers.
     pub(crate) static GPUI_PENDING_OS_INTEGRATION_URLS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
-}
-
-#[cfg(target_os = "macos")]
-#[derive(Clone)]
-pub(crate) struct GpuiAppShotsCallbackTarget {
-    pub(crate) app: gpui::WeakEntity<GhostexGpuiApp>,
-    pub(crate) async_app: gpui::AsyncApp,
 }
 
 #[cfg(target_os = "macos")]
@@ -457,77 +449,6 @@ pub(crate) struct GpuiKeyboardRouterCallbackTarget {
     pub(crate) owner_generation: u64,
     pub(crate) window_keyboard_id: u64,
     pub(crate) pressed_keys: HashMap<u32, GpuiCapturedKeyRoute>,
-}
-
-#[cfg(target_os = "macos")]
-#[derive(Clone, Debug)]
-pub(crate) struct GpuiAppShotCapture {
-    pub(crate) app_name: String,
-    pub(crate) bundle_identifier: Option<String>,
-    pub(crate) image_path: String,
-    pub(crate) window_title: Option<String>,
-    pub(crate) window_width: Option<i32>,
-    pub(crate) window_height: Option<i32>,
-    pub(crate) trigger: Option<String>,
-}
-
-#[cfg(target_os = "macos")]
-#[unsafe(no_mangle)]
-pub extern "C" fn GhostexGpuiAppShotsSettingsEnabled() -> std::ffi::c_int {
-    if shared_settings::shared_sidebar_settings_snapshot()
-        .app_shots_settings()
-        .enabled
-    {
-        1
-    } else {
-        0
-    }
-}
-
-#[cfg(target_os = "macos")]
-#[unsafe(no_mangle)]
-pub extern "C" fn GhostexGpuiAppShotsSettingsHotkey() -> std::ffi::c_int {
-    shared_settings::shared_sidebar_settings_snapshot()
-        .app_shots_settings()
-        .hotkey
-        .native_code()
-}
-
-#[cfg(target_os = "macos")]
-#[unsafe(no_mangle)]
-pub extern "C" fn GhostexGpuiAppShotsCaptureSucceeded(
-    app_name: *const std::ffi::c_char,
-    bundle_identifier: *const std::ffi::c_char,
-    image_path: *const std::ffi::c_char,
-    window_title: *const std::ffi::c_char,
-    window_width: i32,
-    window_height: i32,
-    trigger: *const std::ffi::c_char,
-) {
-    let Some(app_name) = gpui_app_shots_c_string(app_name) else {
-        queue_gpui_app_shot_status("App Shot failed.");
-        return;
-    };
-    let Some(image_path) = gpui_app_shots_c_string(image_path) else {
-        queue_gpui_app_shot_status("App Shot failed.");
-        return;
-    };
-    let capture = GpuiAppShotCapture {
-        app_name,
-        bundle_identifier: gpui_app_shots_c_string(bundle_identifier),
-        image_path,
-        window_title: gpui_app_shots_c_string(window_title),
-        window_width: (window_width > 0).then_some(window_width),
-        window_height: (window_height > 0).then_some(window_height),
-        trigger: gpui_app_shots_c_string(trigger),
-    };
-    queue_gpui_app_shot_capture(capture);
-}
-
-#[cfg(target_os = "macos")]
-#[unsafe(no_mangle)]
-pub extern "C" fn GhostexGpuiAppShotsCaptureFailed(_message: *const std::ffi::c_char) {
-    queue_gpui_app_shot_status("Could not capture an App Shot.");
 }
 
 #[cfg(target_os = "macos")]

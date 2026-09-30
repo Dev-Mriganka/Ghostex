@@ -20,9 +20,11 @@ mod panel_window;
 mod persistence;
 mod placement;
 mod platform;
+mod project_list;
 mod prompt;
 mod save;
 mod send;
 mod targets;
+mod tooltip;
 
 pub(crate) use model::GhostexCaptureState;

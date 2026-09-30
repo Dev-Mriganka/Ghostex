@@ -199,8 +199,6 @@ impl GhostexGpuiApp {
         };
         self.local_workspace_session_mappings
             .insert(key.clone(), placeholder.shell_session_id);
-        self.local_app_shot_session_mappings
-            .insert(key.session_id.clone(), placeholder.shell_session_id);
         // Bind the composer created by the click as soon as the server identity arrives.
         if self
             .agents_chat_mode_sessions

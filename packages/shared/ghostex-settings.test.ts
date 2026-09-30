@@ -6,7 +6,6 @@ import {
 } from './session-card-hover-actions';
 import {
   AUTO_SLEEP_IDLE_MINUTE_OPTIONS,
-  APP_SHOTS_HOTKEY_OPTIONS,
   COMMANDS_PANEL_SIDE_OPTIONS,
   DEFAULT_ghostex_SETTINGS,
   DEFAULT_EDITOR_COMMAND_OPTIONS,
@@ -191,38 +190,6 @@ describe('normalizeghostexSettings', () => {
         (key) => key.toLowerCase().includes('portless') && key.toLowerCase().includes('project')
       )
     ).toEqual([]);
-  });
-
-  test('normalizes App Shots settings', () => {
-    expect(DEFAULT_ghostex_SETTINGS.appShotsEnabled).toBe(false);
-    expect(DEFAULT_ghostex_SETTINGS.appShotsHotkey).toBe('both-command');
-    expect(DEFAULT_ghostex_SETTINGS.appShotsMetadataEnabled).toBe(false);
-    expect(normalizeghostexSettings({})).toMatchObject({
-      appShotsEnabled: false,
-      appShotsHotkey: 'both-command',
-      appShotsMetadataEnabled: false,
-    });
-    expect(
-      normalizeghostexSettings({
-        appShotsEnabled: true,
-        appShotsHotkey: 'both-option',
-        appShotsMetadataEnabled: true,
-      })
-    ).toMatchObject({
-      appShotsEnabled: true,
-      appShotsHotkey: 'both-option',
-      appShotsMetadataEnabled: true,
-    });
-    expect(normalizeghostexSettings({ appShotsHotkey: 'cmd+r' })).toMatchObject({
-      appShotsHotkey: 'both-command',
-    });
-    expect(APP_SHOTS_HOTKEY_OPTIONS.map((option) => option.value)).toEqual([
-      'both-command',
-      'both-shift',
-      'both-option',
-      'double-left-shift',
-      'double-left-option',
-    ]);
   });
 
   test('defaults experimental features off and normalizes the persisted gate', () => {

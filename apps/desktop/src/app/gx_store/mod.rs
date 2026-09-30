@@ -54,7 +54,6 @@
 
 mod activation_focus;
 mod added_project;
-mod app_shot;
 mod attention;
 mod burst;
 mod capture_targets;

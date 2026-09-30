@@ -4,22 +4,9 @@ use std::{
 };
 
 use anyhow::Result;
-use gpui_component::{WindowExt, notification::Notification};
 
 use crate::app::helpers::*;
 use crate::*;
-
-#[cfg(target_os = "macos")]
-pub(crate) fn gpui_app_shots_c_string(ptr: *const std::ffi::c_char) -> Option<String> {
-    if ptr.is_null() {
-        return None;
-    }
-    let text = unsafe { std::ffi::CStr::from_ptr(ptr) }
-        .to_string_lossy()
-        .trim()
-        .to_string();
-    (!text.is_empty()).then_some(text)
-}
 
 #[cfg(target_os = "macos")]
 pub(crate) fn gpui_menu_bar_status_action_c_string(ptr: *const std::ffi::c_char) -> Option<String> {
@@ -142,45 +129,6 @@ pub(crate) fn queue_gpui_sparkle_update_download_progress_changed(progress: Opti
 }
 
 #[cfg(target_os = "macos")]
-pub(crate) fn queue_gpui_app_shot_capture(capture: GpuiAppShotCapture) {
-    let Some(target) = gpui_app_shots_callback_target() else {
-        return;
-    };
-    let app = target.app.clone();
-    let mut async_app = target.async_app.clone();
-    let foreground = target.async_app.foreground_executor().clone();
-    foreground
-        .spawn(async move {
-            /*
-            CDXC:AppShots 2026-06-26-04:18:
-            Native App Shots callbacks must copy capture metadata at the FFI boundary and then enqueue a foreground GPUI update without borrowing `AsyncApp` across the returned future. This keeps the C callback non-blocking while preserving the existing Rust/sidebar capture contract.
-            */
-            let _ = app.update_in(&mut async_app, |this, window, cx| {
-                this.handle_gpui_native_app_shot_capture(capture, window, cx);
-            });
-        })
-        .detach();
-}
-
-#[cfg(target_os = "macos")]
-pub(crate) fn queue_gpui_app_shot_status(message: &'static str) {
-    let Some(target) = gpui_app_shots_callback_target() else {
-        return;
-    };
-    let app = target.app.clone();
-    let mut async_app = target.async_app.clone();
-    let foreground = target.async_app.foreground_executor().clone();
-    foreground
-        .spawn(async move {
-            let _ = app.update_in(&mut async_app, |this, window, cx| {
-                window.push_notification(Notification::warning(message), cx);
-                this.dispatch_gpui_app_modal_toast("warning", "App Shot Failed", message, cx);
-            });
-        })
-        .detach();
-}
-
-#[cfg(target_os = "macos")]
 pub(crate) fn gpui_spawn_completion_sound_player(path: &Path) -> Result<(), String> {
     std::process::Command::new("/usr/bin/afplay")
         .arg(path)
@@ -213,8 +161,6 @@ unsafe extern "C" {
         body: *const std::ffi::c_char,
         icon_data_url: *const std::ffi::c_char,
     ) -> i32;
-    pub(crate) fn GhostexGpuiInstallAppShotsEventMonitors(shots_directory: *const std::ffi::c_char);
-    pub(crate) fn GhostexGpuiRemoveAppShotsEventMonitors();
     pub(crate) fn GhostexGpuiSparkleUpdaterStart() -> i32;
     pub(crate) fn GhostexGpuiSparkleCheckForUpdates();
     pub(crate) fn GhostexGpuiSparkleProbeForUpdateInformation();

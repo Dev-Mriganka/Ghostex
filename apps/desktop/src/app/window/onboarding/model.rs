@@ -187,6 +187,8 @@ pub(crate) fn computer_use_state(
 pub(crate) struct OnboardingSettings {
     pub(crate) view_hidden: [bool; 5],
     pub(crate) notify: bool,
+    /// Floating Capture (`ghostexCaptureEnabled`).
+    pub(crate) floating_capture: bool,
     pub(crate) preferred_interface: String,
     pub(crate) default_prompt_agent_id: String,
     pub(crate) sidebar_theme: String,
@@ -327,6 +329,7 @@ impl OnboardingSettings {
         Self {
             view_hidden: VIEW_KEYS.map(|key| read_bool(object, key.hidden_key(), false)),
             notify: read_bool(object, "showMacOSAttentionNotifications", true),
+            floating_capture: read_bool(object, "ghostexCaptureEnabled", false),
             preferred_interface: match text("preferredAgentInterface") {
                 Some("terminal") => "terminal".to_string(),
                 _ => "chat".to_string(),
@@ -377,6 +380,9 @@ impl OnboardingSettings {
             .and_then(Value::as_bool)
         {
             self.notify = value;
+        }
+        if let Some(value) = patch.get("ghostexCaptureEnabled").and_then(Value::as_bool) {
+            self.floating_capture = value;
         }
         if let Some(value) = text("preferredAgentInterface") {
             self.preferred_interface = value;

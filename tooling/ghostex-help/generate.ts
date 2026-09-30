@@ -31,7 +31,6 @@ import {
 } from '../../packages/core-ui/settings-modal/types';
 import { DEFAULT_ghostex_SETTINGS } from '../../packages/shared/ghostex-settings/defaults';
 import {
-  APP_SHOTS_HOTKEY_OPTIONS,
   DEFAULT_EDITOR_COMMAND_OPTIONS,
   SESSION_TITLE_GENERATION_AGENT_OPTIONS,
 } from '../../packages/shared/ghostex-settings';
@@ -266,6 +265,7 @@ const AGENTS_TAB = { tab: 'agents', tabTitle: 'Agents' } as const;
 const PROJECTS_TAB = { tab: 'projects', tabTitle: 'Projects' } as const;
 const OPEN_TARGETS_TAB = { tab: 'openTargets', tabTitle: 'Open In' } as const;
 const HOTKEYS_TAB = { tab: 'hotkeys', tabTitle: 'Hotkeys' } as const;
+const INTEGRATIONS_TAB = { tab: 'integrations', tabTitle: 'Integrations' } as const;
 const viewRows = {
   ...EXTENSIONS_TAB,
   section: 'viewOrder',
@@ -307,27 +307,21 @@ const SUPPLEMENTAL_SETTING_ROWS: Record<string, SupplementalRow> = {
       'Custom command run with the title prompt on stdin when Title Generation Agent is custom. It should print only the title.',
     title: 'Custom Title Command',
   },
-  appShotsEnabled: {
-    ...GENERAL_TAB,
-    section: 'appShots',
-    sectionTitle: 'App Shots (beta)',
-    subtitle: 'Enable App Shots: press the App Shots hotkey to capture a window screenshot into the prompt.',
-    title: 'App Shots',
+  ghostexCaptureEnabled: {
+    ...INTEGRATIONS_TAB,
+    section: 'ghostexCapture',
+    sectionTitle: 'Floating Capture',
+    subtitle:
+      'Show the Floating Capture button over every app: agent counts, screenshots of an area, an app or the whole screen, and quick prompts without switching to Ghostex.',
+    title: 'Show the floating button',
   },
-  appShotsHotkey: {
-    ...GENERAL_TAB,
-    options: APP_SHOTS_HOTKEY_OPTIONS,
-    section: 'appShots',
-    sectionTitle: 'App Shots (beta)',
-    subtitle: 'Which modifier chord captures an App Shot.',
-    title: 'App Shots hotkey',
-  },
-  appShotsMetadataEnabled: {
-    ...GENERAL_TAB,
-    section: 'appShots',
-    sectionTitle: 'App Shots (beta)',
-    subtitle: 'Also paste window metadata with the App Shot image link.',
-    title: 'App Shots metadata',
+  ghostexCaptureSwitchToSession: {
+    ...INTEGRATIONS_TAB,
+    section: 'ghostexCapture',
+    sectionTitle: 'Floating Capture',
+    subtitle:
+      'After a prompt is sent from Floating Capture, the Ghostex window shows the session it went to, without coming in front of the app you are in.',
+    title: 'Switch to the session after sending',
   },
   showAdvancedSettings: {
     ...GENERAL_TAB,

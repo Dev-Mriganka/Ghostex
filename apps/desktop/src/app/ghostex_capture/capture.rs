@@ -54,7 +54,7 @@ impl GhostexGpuiApp {
         // A picture still in the editor goes to the prompt before the next one is taken.
         self.commit_open_ghostex_capture_editor(cx);
         self.ghostex_capture.capturing = true;
-        self.hide_ghostex_capture_windows();
+        self.hide_ghostex_capture_windows(cx);
         let scale = self
             .ghostex_capture
             .icon
@@ -159,7 +159,7 @@ impl GhostexGpuiApp {
 
     pub(super) fn ghostex_capture_failed(&mut self, message: &str, cx: &mut Context<Self>) {
         self.finish_ghostex_capture(cx);
-        self.dispatch_gpui_app_modal_toast("warning", "Ghostex Capture", message, cx);
+        self.dispatch_gpui_app_modal_toast("warning", "Floating Capture", message, cx);
     }
 
     /// Brings Ghostex Capture's windows back after a capture ends or is cancelled.
@@ -176,10 +176,10 @@ impl GhostexGpuiApp {
         self.show_ghostex_capture_prompt_window();
     }
 
-    fn hide_ghostex_capture_windows(&mut self) {
+    fn hide_ghostex_capture_windows(&mut self, cx: &mut gpui::App) {
         if let Some(icon) = self.ghostex_capture.icon.as_ref() {
             platform::set_window_frame(icon.native, off_screen(icon.frame), icon.scale);
         }
-        self.hide_ghostex_capture_prompt_window();
+        self.hide_ghostex_capture_prompt_window(cx);
     }
 }

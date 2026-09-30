@@ -471,8 +471,6 @@ pub(crate) const SIDEBAR_FOCUS_BORDER_HANDOFF_TIMEOUT: Duration = Duration::from
 
 pub(crate) const GPUI_PET_OVERLAY_IDLE_SPEED_MULTIPLIER: u64 = 6;
 
-pub(crate) const GPUI_LOCAL_APP_SHOT_SESSION_MAP_MAX: usize = 64;
-
 pub(crate) const GPUI_REMOTE_MACHINE_ID_MAX_CHARS: usize = 80;
 
 pub(crate) const TITLEBAR_ICON_INFO: &str = "titlebar/info-circle.svg";
@@ -685,20 +683,6 @@ pub(crate) const BROWSER_PROFILE_DEFAULT_CEF_ID: &str = "default";
 pub(crate) const APP_MODAL_HOST_CEF_PROFILE_ID: &str = "app-modal";
 
 pub(crate) const APP_MODAL_HOST_ID: &str = "ghostex-gpui-app-modal-host";
-
-/*
-CDXC:Onboarding 2026-08-13:
-YouTube rejects an iframe embedded by the file:// modal host because that
-request cannot carry the HTTP referrer identity required by the player. Keep
-the tutorial in the normal native child window, but load the watch page as its
-top-level CEF document so playback follows the same working path as Browser.
-*/
-pub(crate) const GHOSTEX_TUTORIAL_VIDEO_URL: &str = "https://www.youtube.com/watch?v=APdP-j5n4Mw";
-
-/// CDXC:Onboarding 2026-08-18: the watch page reports
-/// main-frame load-end before its player has installed keyboard shortcuts, so
-/// the host-side fullscreen key press waits this long after that edge.
-pub(crate) const GPUI_TUTORIAL_VIDEO_FULLSCREEN_KEY_DELAY: Duration = Duration::from_millis(1500);
 
 pub(crate) const APP_MODAL_HOST_WINDOW_WIDTH: f32 = 1080.0;
 

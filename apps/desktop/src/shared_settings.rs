@@ -39,9 +39,8 @@ pub const DEFAULT_KEEP_AWAKE_DEACTIVATE_ON_USER_SWITCH: bool = false;
 pub const DEFAULT_KEEP_AWAKE_PREVENT_LID_SLEEP: bool = false;
 pub const DEFAULT_KEEP_AWAKE_WHILE_WORKING_SESSIONS: bool = false;
 pub const DEFAULT_HIDE_KEEP_AWAKE_TITLEBAR_CONTROL: bool = false;
-pub const DEFAULT_APP_SHOTS_ENABLED: bool = false;
 pub const DEFAULT_GHOSTEX_CAPTURE_ENABLED: bool = false;
-pub const DEFAULT_APP_SHOTS_HOTKEY: SharedAppShotsHotkey = SharedAppShotsHotkey::BothCommand;
+pub const DEFAULT_GHOSTEX_CAPTURE_SWITCH_TO_SESSION: bool = true;
 const MIN_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 10.0;
 const MAX_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 90.0;
 const MAX_CUSTOM_DEFAULT_EDITOR_COMMAND_CHARS: usize = 240;
@@ -397,43 +396,6 @@ impl SharedGxserverAgentSettings {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SharedAppShotsHotkey {
-    BothCommand,
-    BothShift,
-    BothOption,
-    DoubleLeftShift,
-    DoubleLeftOption,
-}
-
-impl SharedAppShotsHotkey {
-    pub fn from_settings_value(value: Option<&str>) -> Self {
-        match value {
-            Some("both-shift") => Self::BothShift,
-            Some("both-option") => Self::BothOption,
-            Some("double-left-shift") => Self::DoubleLeftShift,
-            Some("double-left-option") => Self::DoubleLeftOption,
-            _ => DEFAULT_APP_SHOTS_HOTKEY,
-        }
-    }
-
-    pub fn native_code(self) -> i32 {
-        match self {
-            Self::BothCommand => 0,
-            Self::DoubleLeftShift => 1,
-            Self::DoubleLeftOption => 2,
-            Self::BothShift => 3,
-            Self::BothOption => 4,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SharedAppShotsSettings {
-    pub enabled: bool,
-    pub hotkey: SharedAppShotsHotkey,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SharedKeepAwakeDurationMinutes {
     UntilTurnedOff,
     TwoHours,
@@ -707,27 +669,16 @@ impl SharedSidebarSettingsSnapshot {
         }
     }
 
-    pub fn app_shots_settings(&self) -> SharedAppShotsSettings {
-        /*
-        CDXC:AppShots 2026-06-25-23:07:
-        GPUI App Shots is disabled unless the shared Settings toggle is explicitly true, and the native hotkey monitor must normalize unsupported saved values back to the macOS default `both-command`. Rust consumes only these two fields so screenshot capture and modifier handling stay native-owned while the React modal remains reused.
-
-        CDXC:AppShots 2026-06-29-01:29:
-        Shared App Shots hotkey parsing must forward both-Shift and both-Option values to the macOS monitor so GPUI honors the same expanded modifier-only capture choices as the reused Settings modal.
-        */
-        SharedAppShotsSettings {
-            enabled: strict_bool_field(&self.object, "appShotsEnabled")
-                .unwrap_or(DEFAULT_APP_SHOTS_ENABLED),
-            hotkey: SharedAppShotsHotkey::from_settings_value(
-                self.object.get("appShotsHotkey").and_then(Value::as_str),
-            ),
-        }
-    }
-
     /// Whether the floating Ghostex Capture button, its hotkeys and its capture tools are on.
     pub fn ghostex_capture_enabled(&self) -> bool {
         strict_bool_field(&self.object, "ghostexCaptureEnabled")
             .unwrap_or(DEFAULT_GHOSTEX_CAPTURE_ENABLED)
+    }
+
+    /// Whether a prompt sent from Ghostex Capture also shows its session in the Ghostex window.
+    pub fn ghostex_capture_switch_to_session(&self) -> bool {
+        strict_bool_field(&self.object, "ghostexCaptureSwitchToSession")
+            .unwrap_or(DEFAULT_GHOSTEX_CAPTURE_SWITCH_TO_SESSION)
     }
 
     pub fn external_editor_settings(&self) -> SharedDefaultEditorSettings {

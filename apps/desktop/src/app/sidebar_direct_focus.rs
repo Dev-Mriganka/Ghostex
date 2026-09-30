@@ -182,8 +182,6 @@ impl GhostexGpuiApp {
                 }
                 self.local_workspace_session_mappings
                     .insert(key.clone(), shell);
-                self.local_app_shot_session_mappings
-                    .insert(key.session_id.clone(), shell);
                 let has_transcript = row.is_draft
                     || row
                         .details

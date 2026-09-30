@@ -86,6 +86,21 @@ pub(crate) const BOX_HANDLES: [Handle; 8] = [
     Handle { x: -1, y: 0 },
 ];
 
+/// The handles at the middle of the picture's four sides that crop it from that side (top,
+/// right, bottom, left).
+///
+/// CDXC:GhostexCapture 2026-09-30 DECISION:
+/// User: "when i select the arrow i want to see 4 dots on the 4 sides centered on the image so i
+/// can drag from any side to crop that way", and "i dont need crop to allow cropping outside": a
+/// crop never reaches past the picture. This replaces the earlier decision that let the crop box
+/// grow past the picture's edges to add #161616 space around it.
+pub(crate) const EDGE_HANDLES: [Handle; 4] = [
+    Handle { x: 0, y: -1 },
+    Handle { x: 1, y: 0 },
+    Handle { x: 0, y: 1 },
+    Handle { x: -1, y: 0 },
+];
+
 pub(crate) fn handle_point(area: &Area, handle: Handle) -> P {
     let x = match handle.x {
         -1 => area.left,
@@ -128,9 +143,22 @@ pub(crate) const COLORS: [u32; 4] = [0xef4444, 0xfacc15, 0x3b82f6, 0xffffff];
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Mark {
-    Arrow { from: P, to: P, color: u32 },
-    Rect { area: Area, color: u32 },
-    Text { at: P, text: String, color: u32 },
+    Arrow {
+        from: P,
+        to: P,
+        color: u32,
+    },
+    Rect {
+        area: Area,
+        color: u32,
+    },
+    Text {
+        at: P,
+        text: String,
+        color: u32,
+        /// A dark rounded box behind the text.
+        background: bool,
+    },
 }
 
 impl Mark {
@@ -239,6 +267,10 @@ pub(crate) enum Drag {
         from: P,
         start: Area,
     },
+    /// One of the Pointer's side handles, cropping the picture from that side on release.
+    EdgeCrop {
+        handle: Handle,
+    },
     /// Drawing a new arrow or rectangle; the mark is already in the list at `index`.
     Draw {
         index: usize,
@@ -260,13 +292,26 @@ pub(crate) enum Drag {
     },
 }
 
+/// A picture as the editor left it: cropped, with its marks still separate, so it can be edited
+/// again from the prompt box.
+#[derive(Clone)]
+pub(crate) struct EditSource {
+    pub(crate) image: Arc<RgbaImage>,
+    pub(crate) marks: Vec<Mark>,
+    pub(crate) px_per_pt: f32,
+}
+
 /// The document one editor window works on.
 pub(crate) struct EditorDoc {
     pub(crate) image: Arc<RgbaImage>,
     pub(crate) metrics: Metrics,
     pub(crate) tool: Tool,
     pub(crate) color: u32,
+    /// Whether new text gets a background box.
+    pub(crate) text_background: bool,
     pub(crate) marks: Vec<Mark>,
+    /// The marks the picture had when the editor opened; changing them counts as an edit.
+    pub(crate) opened_marks: Vec<Mark>,
     pub(crate) selected: Option<usize>,
     pub(crate) crop: Option<Area>,
     pub(crate) drag: Option<Drag>,
@@ -287,7 +332,9 @@ impl EditorDoc {
             // second Enter adds the picture to the prompt.
             tool: Tool::Crop,
             color: COLORS[0],
+            text_background: false,
             marks: Vec::new(),
+            opened_marks: Vec::new(),
             selected: None,
             crop: None,
             drag: None,
@@ -298,6 +345,17 @@ impl EditorDoc {
 
     pub(crate) fn size(&self) -> (f32, f32) {
         (self.image.width() as f32, self.image.height() as f32)
+    }
+
+    /// The whole picture as a box.
+    pub(crate) fn full(&self) -> Area {
+        let (width, height) = self.size();
+        Area {
+            left: 0.0,
+            top: 0.0,
+            right: width,
+            bottom: height,
+        }
     }
 
     pub(crate) fn checkpoint(&mut self) {
@@ -323,21 +381,25 @@ impl EditorDoc {
         let Some(crop) = self.crop.take() else {
             return false;
         };
-        let (width, height) = self.size();
-        let crop = crop.clamp_to(width, height);
         if crop.width() < 2.0 || crop.height() < 2.0 {
             return false;
         }
+        let (width, height) = self.size();
+        let crop = crop.clamp_to(width, height);
+        if crop.width() < 2.0 || crop.height() < 2.0 || crop == self.full() {
+            return false;
+        }
         self.checkpoint();
-        let cropped = image::imageops::crop_imm(
-            self.image.as_ref(),
-            crop.left.round() as u32,
-            crop.top.round() as u32,
-            crop.width().round() as u32,
-            crop.height().round() as u32,
-        )
-        .to_image();
-        self.image = Arc::new(cropped);
+        self.image = Arc::new(
+            image::imageops::crop_imm(
+                self.image.as_ref(),
+                crop.left.round() as u32,
+                crop.top.round() as u32,
+                crop.width().round() as u32,
+                crop.height().round() as u32,
+            )
+            .to_image(),
+        );
         for mark in &mut self.marks {
             mark.translate(-crop.left.round(), -crop.top.round());
         }

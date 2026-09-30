@@ -592,8 +592,6 @@ impl GhostexGpuiApp {
         if let Some(key) = gxserver_key {
             self.local_workspace_session_mappings
                 .insert(key.clone(), inserted_session_id);
-            self.local_app_shot_session_mappings
-                .insert(key.session_id.clone(), inserted_session_id);
             self.agents_sessions_pending_surface_transfer
                 .insert(inserted_session_id);
             self.promote_transferred_gxserver_session_surface_in_background(

@@ -383,42 +383,6 @@ pub(crate) fn gpui_menu_bar_status_native_projects(
 }
 
 #[cfg(target_os = "macos")]
-pub(crate) fn register_gpui_app_shots_callback_target(
-    app: gpui::WeakEntity<GhostexGpuiApp>,
-    async_app: gpui::AsyncApp,
-) {
-    /*
-    CDXC:AppShots 2026-06-25-23:07:
-    The macOS App Shots monitor is process-global, but its callback target is the live GPUI root entity only. Register and remove it with the root lifecycle so native flags monitors cannot route captures to stale windows or fallback targets.
-    */
-    GPUI_APP_SHOTS_CALLBACK_TARGET.with(|target| {
-        *target.borrow_mut() = Some(GpuiAppShotsCallbackTarget { app, async_app });
-    });
-    let images_directory = shared_settings::ghostex_storage_paths().images_dir();
-    let Ok(images_directory) = std::ffi::CString::new(gpui_path_string(&images_directory)) else {
-        return;
-    };
-    unsafe {
-        GhostexGpuiInstallAppShotsEventMonitors(images_directory.as_ptr());
-    }
-}
-
-#[cfg(target_os = "macos")]
-pub(crate) fn unregister_gpui_app_shots_callback_target() {
-    unsafe {
-        GhostexGpuiRemoveAppShotsEventMonitors();
-    }
-    GPUI_APP_SHOTS_CALLBACK_TARGET.with(|target| {
-        *target.borrow_mut() = None;
-    });
-}
-
-#[cfg(target_os = "macos")]
-pub(crate) fn gpui_app_shots_callback_target() -> Option<GpuiAppShotsCallbackTarget> {
-    GPUI_APP_SHOTS_CALLBACK_TARGET.with(|target| target.borrow().clone())
-}
-
-#[cfg(target_os = "macos")]
 pub(crate) fn register_gpui_session_attention_notification_callback_target(
     app: gpui::WeakEntity<GhostexGpuiApp>,
     async_app: gpui::AsyncApp,

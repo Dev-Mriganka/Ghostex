@@ -287,7 +287,6 @@ impl GhostexGpuiApp {
         next_state: GpuiGxserverPresentationFocusState,
         cx: &mut gpui::Context<Self>,
     ) {
-        self.reconcile_local_app_shot_session_mappings(&next_state);
         if self.sidebar_gxserver_presentation_focus_state == next_state {
             self.attach_surfaced_local_workspace_terminals(&next_state, cx);
             return;
@@ -358,10 +357,6 @@ impl GhostexGpuiApp {
             &mut self.remote_attach_sessions,
         );
         if changed {
-            self.local_app_shot_session_mappings
-                .retain(|_, shell_session_id| {
-                    self.agents_workspace.session(*shell_session_id).is_some()
-                });
             self.agents_terminal_startup_body_slot_geometries
                 .retain(|slot_id, _| {
                     self.agents_workspace
@@ -840,8 +835,6 @@ impl GhostexGpuiApp {
             .collect::<HashSet<_>>();
         self.local_workspace_session_mappings
             .retain(|_, shell_session_id| current_shell_session_ids.contains(shell_session_id));
-        self.local_app_shot_session_mappings
-            .retain(|_, shell_session_id| current_shell_session_ids.contains(shell_session_id));
     }
 
     pub(crate) fn local_workspace_key_for_shell_session(
@@ -875,8 +868,6 @@ impl GhostexGpuiApp {
                     .is_none())
         {
             self.local_workspace_session_mappings.remove(key);
-            self.local_app_shot_session_mappings
-                .retain(|_, mapped_session_id| *mapped_session_id != shell_session_id);
         }
         target
     }
@@ -1505,8 +1496,6 @@ impl GhostexGpuiApp {
         };
         let Some(pane_id) = self.agents_workspace.pane_id_for_session(shell_session_id) else {
             self.local_workspace_session_mappings.remove(key);
-            self.local_app_shot_session_mappings
-                .retain(|_, mapped_session_id| *mapped_session_id != shell_session_id);
             return false;
         };
         if !self.local_workspace_terminal_can_focus_existing(pane_id, shell_session_id) {
@@ -1541,8 +1530,6 @@ impl GhostexGpuiApp {
             cx,
         );
         self.scroll_workspace_pane_active_tab(pane_id);
-        self.local_app_shot_session_mappings
-            .insert(key.session_id.clone(), shell_session_id);
         /*
         Sidebar-originated focus updates React optimistically before this
         native tab selection runs. Publish the post-selection workspace owners
@@ -1625,8 +1612,6 @@ impl GhostexGpuiApp {
         };
         let Some(pane_id) = self.agents_workspace.pane_id_for_session(shell_session_id) else {
             self.local_workspace_session_mappings.remove(key);
-            self.local_app_shot_session_mappings
-                .retain(|_, mapped_session_id| *mapped_session_id != shell_session_id);
             return false;
         };
         if !self.local_workspace_terminal_can_focus_existing(pane_id, shell_session_id) {
@@ -1640,12 +1625,7 @@ impl GhostexGpuiApp {
             shell_session_id,
         );
         self.activate_preferred_agents_chat_launch_intent(shell_session_id, cx);
-        self.finish_local_workspace_terminal_background_selection(
-            key,
-            pane_id,
-            shell_session_id,
-            cx,
-        );
+        self.finish_local_workspace_terminal_background_selection(key, pane_id, cx);
         true
     }
 
@@ -1655,12 +1635,9 @@ impl GhostexGpuiApp {
         &mut self,
         key: &GpuiLocalWorkspaceSessionKey,
         pane_id: WorkspacePaneId,
-        shell_session_id: TerminalSessionId,
         cx: &mut gpui::Context<Self>,
     ) {
         self.scroll_workspace_pane_active_tab(pane_id);
-        self.local_app_shot_session_mappings
-            .insert(key.session_id.clone(), shell_session_id);
         self.dispatch_gpui_workspace_tab_session_selected(
             key.project_id.as_str(),
             key.session_id.as_str(),
@@ -1691,7 +1668,6 @@ impl GhostexGpuiApp {
             &mut self.agents_terminal_runtime_sessions,
             &mut self.agents_terminal_launch_payload_source,
             &mut self.local_workspace_session_mappings,
-            &mut self.local_app_shot_session_mappings,
             requested_pane_id,
             false,
             key.clone(),
@@ -1713,7 +1689,7 @@ impl GhostexGpuiApp {
             }
         };
         self.activate_preferred_agents_chat_launch_intent(session_id, cx);
-        self.finish_local_workspace_terminal_background_selection(&key, pane_id, session_id, cx);
+        self.finish_local_workspace_terminal_background_selection(&key, pane_id, cx);
         true
     }
 
@@ -1742,7 +1718,6 @@ impl GhostexGpuiApp {
             &mut self.agents_terminal_runtime_sessions,
             &mut self.agents_terminal_launch_payload_source,
             &mut self.local_workspace_session_mappings,
-            &mut self.local_app_shot_session_mappings,
             requested_pane_id,
             force_requested_pane_placement,
             key,
@@ -1816,7 +1791,6 @@ impl GhostexGpuiApp {
             &mut self.agents_terminal_runtime_sessions,
             &mut self.agents_terminal_launch_payload_source,
             &mut self.local_workspace_session_mappings,
-            &mut self.local_app_shot_session_mappings,
             requested_pane_id,
             placement,
             key,

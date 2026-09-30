@@ -31,7 +31,6 @@ use gpui::prelude::FluentBuilder as _;
 use gpui::px;
 
 use crate::app::consts::*;
-use crate::app::ffi::*;
 use crate::app::helpers::*;
 use crate::app::model::*;
 use crate::app::render::resize_rail::*;
@@ -1299,17 +1298,6 @@ impl GhostexGpuiApp {
         Native GPUI workspace tab lifecycle: the request carries only request id, action, bounded gxserver project/session ids, and optional replacement ids; the store performs the gxserver half (gx_store/terminal_lifecycle/lifecycle_requests.rs) while the workspace keeps pane/tab ownership local.
         */
         self.gx_store_run_tab_lifecycle_request(&message, cx)
-    }
-
-    /// A capture from the App Shots monitor: staged in Rust (gx_store/app_shot.rs).
-    #[cfg(target_os = "macos")]
-    pub(crate) fn handle_gpui_native_app_shot_capture(
-        &mut self,
-        capture: GpuiAppShotCapture,
-        _window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        self.gx_store_stage_app_shot(capture, cx);
     }
 
     /// Called after every command-pane change; returns whether a tab's summary (status, focus,

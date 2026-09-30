@@ -1,10 +1,8 @@
-import { formatSidebarHotkeyLabel } from '../hotkey-label';
 import { type SidebarThemeSetting } from '../session-grid-contract-core';
 import { type SessionChatThemeSetting } from '../session-chat';
 import { GHOSTTY_THEME_OPTIONS } from '../ghostty-theme-options';
 import type { DarkThemePreset, LightThemePreset } from './titlebar-color';
 import {
-  type AppShotsHotkey,
   type AutoSleepIdleMinutes,
   type ChatFileOpenView,
   type MediaFileOpenTarget,
@@ -124,17 +122,6 @@ export const SESSION_CHAT_THEME_OPTIONS: ReadonlyArray<{
   { label: 'System', value: 'system' },
   { label: 'Light', value: 'light' },
   { label: 'Dark', value: 'dark' },
-];
-
-export const APP_SHOTS_HOTKEY_OPTIONS: ReadonlyArray<{
-  label: string;
-  value: AppShotsHotkey;
-}> = [
-  { label: `Both ${formatSidebarHotkeyLabel('cmd')} keys`, value: 'both-command' },
-  { label: `Both ${formatSidebarHotkeyLabel('shift')} keys`, value: 'both-shift' },
-  { label: `Both ${formatSidebarHotkeyLabel('alt')} keys`, value: 'both-option' },
-  { label: `Double-tap Left ${formatSidebarHotkeyLabel('shift')}`, value: 'double-left-shift' },
-  { label: `Double-tap Left ${formatSidebarHotkeyLabel('alt')}`, value: 'double-left-option' },
 ];
 
 export const DEFAULT_EDITOR_COMMAND_OPTIONS: ReadonlyArray<{

@@ -6514,6 +6514,11 @@
             "title": "Integrations",
             "settings": [
               {
+                "key": "ghostexCapture",
+                "title": "Floating Capture",
+                "subtitle": "A small button that floats over every app and shows how many agents are working, waiting for you, or asking a question. Screenshot an area, an app or the whole screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; A, Space, F or T instead of S capture an area, the current app or the full screen, or write a prompt, right away."
+              },
+              {
                 "key": "ghostexCli",
                 "title": "Ghostex CLI",
                 "subtitle": "Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup."
@@ -6560,38 +6565,6 @@
                     "value": "ghostex-move-codex-session"
                   }
                 ]
-              },
-              {
-                "key": "appShots",
-                "title": "App Shots",
-                "subtitle": "Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.",
-                "options": [
-                  {
-                    "label": "Both ⌘ keys",
-                    "value": "both-command"
-                  },
-                  {
-                    "label": "Both ⇧ keys",
-                    "value": "both-shift"
-                  },
-                  {
-                    "label": "Both ⌥ keys",
-                    "value": "both-option"
-                  },
-                  {
-                    "label": "Double-tap Left ⇧",
-                    "value": "double-left-shift"
-                  },
-                  {
-                    "label": "Double-tap Left ⌥",
-                    "value": "double-left-option"
-                  }
-                ]
-              },
-              {
-                "key": "ghostexCapture",
-                "title": "Ghostex Capture",
-                "subtitle": "A floating Ghostex button over every app that shows how many sessions are working, waiting for you, or asking a question. Take a screenshot of an area, the current app or the full screen, mark it up, and send a prompt to any project or session without switching to Ghostex. Cmd+Ctrl+Shift+S (Alt+Ctrl+Shift+S on Windows and Linux) opens it; add A, Space, F or T instead of S to capture an area, the current app or the full screen, or write a prompt, right away."
               },
               {
                 "key": "cuaPermissions",
@@ -10999,28 +10972,6 @@
         ]
       },
       "shared/ghostex-settings": {
-        "APP_SHOTS_HOTKEY_OPTIONS": [
-          {
-            "label": "Both ⌘ keys",
-            "value": "both-command"
-          },
-          {
-            "label": "Both ⇧ keys",
-            "value": "both-shift"
-          },
-          {
-            "label": "Both ⌥ keys",
-            "value": "both-option"
-          },
-          {
-            "label": "Double-tap Left ⇧",
-            "value": "double-left-shift"
-          },
-          {
-            "label": "Double-tap Left ⌥",
-            "value": "double-left-option"
-          }
-        ],
         "AUTO_SLEEP_IDLE_MINUTE_OPTIONS": [
           {
             "label": "Off",
@@ -11311,10 +11262,8 @@
           "actionCompletionSound": "shamisen",
           "gpuiTitlebarActionCommandByProject": {},
           "gpuiTitlebarOpenTargetByProject": {},
-          "appShotsEnabled": false,
           "ghostexCaptureEnabled": false,
-          "appShotsHotkey": "both-command",
-          "appShotsMetadataEnabled": false,
+          "ghostexCaptureSwitchToSession": true,
           "agentAcceptAllEnabled": false,
           "agentManagerZoomPercent": 100,
           "defaultPromptAgentId": "codex",
@@ -15994,76 +15943,6 @@
       [
         [
           "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          0,
-          "label"
-        ],
-        "Both Ctrl keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          1,
-          "label"
-        ],
-        "Both Shift keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          2,
-          "label"
-        ],
-        "Both Alt keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          3,
-          "label"
-        ],
-        "Double-tap Left Shift"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          4,
-          "label"
-        ],
-        "Double-tap Left Alt"
-      ],
-      [
-        [
-          "extraTabs",
           6,
           "sections",
           0,
@@ -16882,56 +16761,6 @@
       ],
       [
         [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          0,
-          "label"
-        ],
-        "Both Ctrl keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          1,
-          "label"
-        ],
-        "Both Shift keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          2,
-          "label"
-        ],
-        "Both Alt keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          3,
-          "label"
-        ],
-        "Double-tap Left Shift"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          4,
-          "label"
-        ],
-        "Double-tap Left Alt"
-      ],
-      [
-        [
           "labels",
           "cmd+shift+,"
         ],
@@ -17026,76 +16855,6 @@
           "subtitle"
         ],
         "Paste clipboard images as previewable Markdown links with Ctrl+V. Hold Ctrl over the linked path to preview it in the terminal, and see the same image preview in the Ctrl+G Rich Prompt Editor."
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          0,
-          "label"
-        ],
-        "Both Ctrl keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          1,
-          "label"
-        ],
-        "Both Shift keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          2,
-          "label"
-        ],
-        "Both Alt keys"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          3,
-          "label"
-        ],
-        "Double-tap Left Shift"
-      ],
-      [
-        [
-          "extraTabs",
-          5,
-          "sections",
-          0,
-          "settings",
-          2,
-          "options",
-          4,
-          "label"
-        ],
-        "Double-tap Left Alt"
       ],
       [
         [
@@ -17907,56 +17666,6 @@
           "PASTE_PREVIEWABLE_IMAGES_DESCRIPTION"
         ],
         "Paste clipboard images as previewable Markdown links with Ctrl+V. Hold Ctrl over the linked path to preview it in the terminal, and see the same image preview in the Ctrl+G Rich Prompt Editor."
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          0,
-          "label"
-        ],
-        "Both Ctrl keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          1,
-          "label"
-        ],
-        "Both Shift keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          2,
-          "label"
-        ],
-        "Both Alt keys"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          3,
-          "label"
-        ],
-        "Double-tap Left Shift"
-      ],
-      [
-        [
-          "modules",
-          "shared/ghostex-settings",
-          "APP_SHOTS_HOTKEY_OPTIONS",
-          4,
-          "label"
-        ],
-        "Double-tap Left Alt"
       ],
       [
         [

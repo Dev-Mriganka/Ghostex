@@ -3,21 +3,25 @@
 //!
 //! CDXC:GhostexCapture 2026-09-30 DECISION:
 //! User: clicking the button shows "the same dropdown we show from the status bar in macos (below
-//! it or above it depending on where this floating icon is shown)" plus the actions Screenshot an
-//! area (A), Screenshot current app (Space), Screenshot full screen (F) and Write a prompt (T).
+//! it or above it depending on where this floating icon is shown)" plus four actions, named "Capture
+//! Area / Capture App / Capture Screen / Write Prompt" (A, Space, F, T), Write Prompt with a chat
+//! icon.
 //! Idle sessions follow the menu bar rule (only if active in the past two hours, projects with
 //! working or waiting sessions first), and clicking a session opens it in Ghostex.
 
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, App, Context, FocusHandle, KeyDownEvent, MouseButton, SharedString, Subscription,
-    WeakEntity, Window, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions, div,
-    px, rgb, rgba,
+    AnyElement, App, Context, Entity, FocusHandle, Focusable as _, KeyDownEvent, MouseButton,
+    SharedString, Subscription, WeakEntity, Window, WindowBackgroundAppearance, WindowBounds,
+    WindowKind, WindowOptions, div, px, rgb, rgba,
 };
+use gpui_component::input::{Input, InputEvent, InputState};
 
 use super::model::*;
+use super::persistence;
 use super::placement;
 use super::platform;
+use super::project_list::{ListState, Shown};
 use crate::GhostexGpuiApp;
 use crate::app::helpers::{GpuiStatusIndicatorSessionState, GpuiStatusIndicatorStatus};
 
@@ -25,7 +29,7 @@ use crate::app::helpers::{GpuiStatusIndicatorSessionState, GpuiStatusIndicatorSt
 const IDLE_SESSION_MAX_AGE_MS: i64 = 2 * 60 * 60 * 1000;
 
 const PANEL_PAD: f32 = 10.0;
-const ACTIONS_HEIGHT: f32 = 78.0;
+const ACTIONS_HEIGHT: f32 = 80.0;
 const SEPARATOR_HEIGHT: f32 = 21.0;
 const HEADING_HEIGHT: f32 = 22.0;
 const PROJECT_TITLE_HEIGHT: f32 = 28.0;
@@ -33,7 +37,9 @@ const SESSION_ROW_HEIGHT: f32 = 30.0;
 const PROJECT_GAP: f32 = 6.0;
 const FOOTER_HEIGHT: f32 = 30.0;
 const EMPTY_HEIGHT: f32 = 44.0;
-const LIST_MAX_HEIGHT: f32 = 420.0;
+const FILTER_HEIGHT: f32 = 36.0;
+/// The list's height, whatever it holds: the panel keeps one size so it never moves while open.
+const LIST_HEIGHT: f32 = 280.0;
 
 #[derive(Clone)]
 pub(crate) struct PanelSession {
@@ -134,39 +140,35 @@ impl GhostexGpuiApp {
     }
 
     fn ghostex_capture_panel_height(&self) -> f32 {
-        let projects = self.ghostex_capture_panel_projects();
-        let rows = if projects.is_empty() {
-            EMPTY_HEIGHT
-        } else {
-            projects
-                .iter()
-                .map(|project| {
-                    PROJECT_TITLE_HEIGHT
-                        + project.sessions.len() as f32 * SESSION_ROW_HEIGHT
-                        + PROJECT_GAP
-                })
-                .sum::<f32>()
-                .min(LIST_MAX_HEIGHT)
-        };
         PANEL_PAD * 2.0
             + ACTIONS_HEIGHT
             + SEPARATOR_HEIGHT
             + HEADING_HEIGHT
-            + rows
+            + FILTER_HEIGHT
+            + LIST_HEIGHT
             + SEPARATOR_HEIGHT
             + FOOTER_HEIGHT
             + 2.0
     }
 
+    /// Where the panel opens: where the user last moved it, else next to the button.
     fn ghostex_capture_panel_target(&self, cx: &App) -> Option<gpui::Bounds<gpui::Pixels>> {
+        let height = self.ghostex_capture_panel_height();
+        if let Some(frame) = self
+            .ghostex_capture
+            .saved
+            .panel_position
+            .as_ref()
+            .and_then(|saved| {
+                placement::restore_frame(saved, gpui::size(px(PANEL_WIDTH), px(height)), cx)
+            })
+        {
+            return Some(frame);
+        }
         let icon = self.ghostex_capture.icon.as_ref()?;
         let screen = placement::screen_at(icon.frame.center(), cx)
             .or_else(|| self.ghostex_capture_home(cx).map(|(screen, _)| screen))?;
-        Some(placement::panel_frame(
-            &screen,
-            icon.frame,
-            self.ghostex_capture_panel_height(),
-        ))
+        Some(placement::panel_frame(&screen, icon.frame, height))
     }
 
     pub(super) fn open_ghostex_capture_panel(&mut self, cx: &mut Context<Self>) {
@@ -196,7 +198,8 @@ impl GhostexGpuiApp {
                         WindowKind::PopUp
                     },
                     window_decorations: crate::app::window::popup_frame::child_window_decorations(),
-                    is_movable: false,
+                    // Dragged by the empty part of its Running Agents heading.
+                    is_movable: true,
                     is_resizable: false,
                     is_minimizable: false,
                     app_id: crate::gpui_platform_window_app_id(),
@@ -205,8 +208,11 @@ impl GhostexGpuiApp {
                     ..Default::default()
                 },
                 move |window, cx| {
-                    window.set_background_corner_radius(px(12.0));
+                    window.set_background_corner_radius(px(14.0));
                     let focus = cx.focus_handle();
+                    let filter = cx.new(|cx| {
+                        InputState::new(window, cx).placeholder("Filter projects and sessions")
+                    });
                     let view = cx.new(|cx| {
                         let observe = match observed.upgrade() {
                             Some(app) => cx.observe(&app, |_, _, cx| cx.notify()),
@@ -222,15 +228,30 @@ impl GhostexGpuiApp {
                                 }
                             },
                         );
+                        let filtered = cx.subscribe(
+                            &filter,
+                            |view: &mut CapturePanelView, input, event: &InputEvent, cx| {
+                                if matches!(event, InputEvent::Change) {
+                                    view.list.filter = input.read(cx).value().to_string();
+                                    cx.notify();
+                                }
+                            },
+                        );
                         CapturePanelView {
                             app: observed.clone(),
                             focus: focus.clone(),
+                            filter: filter.clone(),
+                            list: ListState::default(),
                             _observe: observe,
                             _activation: activation,
+                            _filtered: filtered,
                         }
                     });
                     focus.focus(window, cx);
-                    view
+                    // Text fields need gpui-component's Root in their window.
+                    cx.new(|cx| {
+                        gpui_component::Root::new(view, window, cx).bg(gpui::transparent_black())
+                    })
                 },
             );
             let Some(app) = app.upgrade() else {
@@ -243,26 +264,31 @@ impl GhostexGpuiApp {
                 });
                 return;
             };
-            if let Some(native) = handle
+            let native = handle
                 .update(cx, |_, window, _| {
                     crate::app::helpers::cef_parent_native_view(window)
                         .ok()
                         .map(|view| view as usize)
                 })
                 .ok()
-                .flatten()
-            {
+                .flatten();
+            if let Some(native) = native {
                 platform::prepare_floating_window(native, true);
             }
             app.update(cx, |app, cx| {
                 app.ghostex_capture.panel_opening = false;
-                app.ghostex_capture.panel = Some(PanelWindow { handle });
+                app.ghostex_capture.panel = Some(PanelWindow {
+                    handle,
+                    native,
+                    opened_at: frame,
+                });
                 cx.notify();
             });
         });
     }
 
     pub(crate) fn close_ghostex_capture_panel(&mut self, cx: &mut Context<Self>) {
+        self.remember_ghostex_capture_panel_position(cx);
         let Some(panel) = self.ghostex_capture.panel.take() else {
             return;
         };
@@ -272,6 +298,30 @@ impl GhostexGpuiApp {
         });
         self.sync_ghostex_capture_icon(cx);
         cx.notify();
+    }
+
+    /// Saves where the panel is once the user moved it, so it opens there from then on.
+    fn remember_ghostex_capture_panel_position(&mut self, cx: &mut Context<Self>) {
+        let Some((handle, native, opened_at)) = self
+            .ghostex_capture
+            .panel
+            .as_ref()
+            .map(|panel| (panel.handle, panel.native, panel.opened_at))
+        else {
+            return;
+        };
+        let Some(frame) = placement::live_frame(handle, native, cx) else {
+            return;
+        };
+        let moved = (frame.origin.x - opened_at.origin.x).abs() > px(1.0)
+            || (frame.origin.y - opened_at.origin.y).abs() > px(1.0);
+        if !moved {
+            return;
+        }
+        if let Some(saved) = placement::save_frame(frame, false, cx) {
+            self.ghostex_capture.saved.panel_position = Some(saved);
+            persistence::save(&self.ghostex_capture.saved);
+        }
     }
 
     /// Keeps the open panel next to the button after the button moved.
@@ -319,8 +369,11 @@ impl GhostexGpuiApp {
 pub(crate) struct CapturePanelView {
     app: WeakEntity<GhostexGpuiApp>,
     focus: FocusHandle,
+    filter: Entity<InputState>,
+    list: ListState,
     _observe: Subscription,
     _activation: Subscription,
+    _filtered: Subscription,
 }
 
 impl CapturePanelView {
@@ -359,15 +412,91 @@ fn status_dot(session: &PanelSession) -> AnyElement {
     }
 }
 
+/// A project's row: a chevron, its name, and how many of its sessions are working, waiting for
+/// the user, or asking a question.
+fn project_header(
+    id: SharedString,
+    title: &str,
+    sessions: &[PanelSession],
+    open: bool,
+) -> gpui::Stateful<gpui::Div> {
+    let question = sessions.iter().filter(|session| session.question).count();
+    let count = |status: GpuiStatusIndicatorStatus| {
+        sessions
+            .iter()
+            .filter(|session| !session.question && session.status == status)
+            .count()
+    };
+    let badges = [
+        (count(GpuiStatusIndicatorStatus::Attention), 0x0093fe),
+        (question, 0xf472b6),
+        (count(GpuiStatusIndicatorStatus::Working), 0xc68a06),
+    ];
+    div()
+        .id(id)
+        .h(px(PROJECT_TITLE_HEIGHT))
+        .px(px(10.0))
+        .flex()
+        .items_center()
+        .gap(px(8.0))
+        .rounded(px(8.0))
+        .hover(|style| style.bg(rgb(0x202020)))
+        .cursor_pointer()
+        .child(
+            gpui::svg()
+                .path(if open {
+                    "titlebar/chevron-down.svg"
+                } else {
+                    "titlebar/chevron-right.svg"
+                })
+                .size(px(12.0))
+                .text_color(rgb(0x9a9a9a)),
+        )
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .text_ellipsis()
+                .text_size(px(12.0))
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_color(rgb(0xcfd2d8))
+                .child(SharedString::from(title.to_string())),
+        )
+        .children(
+            badges
+                .into_iter()
+                .filter(|(value, _)| *value > 0)
+                .map(|(value, color)| {
+                    div()
+                        .text_size(px(11.5))
+                        .font_weight(gpui::FontWeight::SEMIBOLD)
+                        .text_color(rgb(color))
+                        .child(value.to_string())
+                }),
+        )
+        .child(
+            div()
+                .text_size(px(11.5))
+                .text_color(rgb(0x6b6b6b))
+                .child(sessions.len().to_string()),
+        )
+}
+
 fn action_button(
     id: &'static str,
     label: &'static str,
     key: &'static str,
-    icon: AnyElement,
+    icon: &'static str,
 ) -> gpui::Stateful<gpui::Div> {
     div()
         .id(id)
+        // Equal shares of the row, whatever the label: a long label wraps instead of pushing the
+        // last button out of the panel.
         .flex_1()
+        .flex_basis(px(0.0))
+        .min_w_0()
         .flex()
         .flex_col()
         .items_center()
@@ -381,9 +510,15 @@ fn action_button(
         .border_color(rgba(0xffffff14))
         .hover(|style| style.bg(rgb(0x232323)).border_color(rgba(0xffffff29)))
         .cursor_pointer()
-        .child(icon)
+        .child(
+            gpui::svg()
+                .path(icon)
+                .size(px(22.0))
+                .text_color(rgb(0xb4b8c0)),
+        )
         .child(
             div()
+                .w_full()
                 .text_size(px(11.5))
                 .text_color(rgb(0xe8e8e8))
                 .text_center()
@@ -402,19 +537,6 @@ fn action_button(
                 .bg(rgb(0x222222))
                 .child(key),
         )
-}
-
-fn action_icon(dashed: bool, round: bool, wide: bool) -> AnyElement {
-    let mut icon = div()
-        .w(px(if wide { 28.0 } else { 24.0 }))
-        .h(px(18.0))
-        .border(px(if wide { 2.0 } else { 1.5 }))
-        .border_color(rgb(0x9a9a9a))
-        .rounded(px(if round { 9.0 } else { 3.0 }));
-    if dashed {
-        icon = icon.border_dashed();
-    }
-    icon.into_any_element()
 }
 
 fn footer_button(id: &'static str, label: &'static str) -> gpui::Stateful<gpui::Div> {
@@ -447,9 +569,9 @@ impl CapturePanelView {
     fn render_actions(&self, has_draft: bool, cx: &mut Context<Self>) -> AnyElement {
         let mut prompt_tile = action_button(
             "ghostex-capture-prompt",
-            "Write a prompt",
+            "Write Prompt",
             "T",
-            action_icon(false, true, false),
+            "titlebar/message.svg",
         )
         .relative()
         .on_click(cx.listener(|this, _, _, cx| this.run(CaptureAction::Prompt, cx)));
@@ -473,8 +595,7 @@ impl CapturePanelView {
                     .hover(|style| style.bg(rgb(0x33495a)))
                     .cursor_pointer()
                     .tooltip(|window, cx| {
-                        gpui_component::tooltip::Tooltip::new("Continue your draft")
-                            .build(window, cx)
+                        super::tooltip::solid_tooltip("Continue your draft", window, cx)
                     })
                     .child("↩")
                     .on_click(cx.listener(|this, _, _, cx| {
@@ -489,27 +610,27 @@ impl CapturePanelView {
             .child(
                 action_button(
                     "ghostex-capture-area",
-                    "Screenshot an area",
+                    "Capture Area",
                     "A",
-                    action_icon(true, false, false),
+                    "capture/area.svg",
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.run(CaptureAction::Area, cx))),
             )
             .child(
                 action_button(
                     "ghostex-capture-app",
-                    "Screenshot current app",
+                    "Capture App",
                     "Space",
-                    action_icon(false, false, false),
+                    "capture/app-window.svg",
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.run(CaptureAction::CurrentApp, cx))),
             )
             .child(
                 action_button(
                     "ghostex-capture-full-screen",
-                    "Screenshot full screen",
+                    "Capture Screen",
                     "F",
-                    action_icon(false, false, true),
+                    "titlebar/device-desktop.svg",
                 )
                 .on_click(cx.listener(|this, _, _, cx| this.run(CaptureAction::FullScreen, cx))),
             )
@@ -564,19 +685,35 @@ impl CapturePanelView {
     }
 
     fn render_list(&self, projects: Vec<PanelProject>, cx: &mut Context<Self>) -> AnyElement {
-        if projects.is_empty() {
-            return div()
-                .h(px(EMPTY_HEIGHT))
-                .flex()
-                .items_center()
-                .justify_center()
-                .text_size(px(13.0))
-                .text_color(rgb(0x6b6b6b))
-                .child("No running agents")
-                .into_any_element();
-        }
         let mut cards = Vec::new();
         for project in projects {
+            let titles: Vec<&str> = project
+                .sessions
+                .iter()
+                .map(|session| session.title.as_str())
+                .collect();
+            let open = match self
+                .list
+                .shown(&project.project_id, &project.title, &titles)
+            {
+                Shown::Hidden => continue,
+                Shown::Collapsed => None,
+                Shown::Open(indices) => Some(indices),
+            };
+            let project_id = project.project_id.clone();
+            let header = project_header(
+                SharedString::from(format!("ghostex-capture-project-{}", project.project_id)),
+                &project.title,
+                &project.sessions,
+                open.is_some(),
+            )
+            .on_click(cx.listener(move |this, _, window, cx| {
+                if this.list.toggle(&project_id) {
+                    this.filter
+                        .update(cx, |input, cx| input.set_value("", window, cx));
+                }
+                cx.notify();
+            }));
             let mut card = div()
                 .flex()
                 .flex_col()
@@ -584,30 +721,82 @@ impl CapturePanelView {
                 .border_1()
                 .border_color(rgba(0x3a3a3ab8))
                 .bg(rgb(0x161616))
-                .child(
-                    div()
-                        .h(px(PROJECT_TITLE_HEIGHT))
-                        .px(px(12.0))
-                        .flex()
-                        .items_center()
-                        .text_size(px(12.0))
-                        .font_weight(gpui::FontWeight::SEMIBOLD)
-                        .text_color(rgb(0xcfd2d8))
-                        .child(SharedString::from(project.title.clone())),
-                );
-            for session in project.sessions {
-                card = card.child(self.render_session_row(project.project_id.clone(), session, cx));
+                .child(header);
+            for index in open.unwrap_or_default() {
+                if let Some(session) = project.sessions.get(index) {
+                    card = card.child(self.render_session_row(
+                        project.project_id.clone(),
+                        session.clone(),
+                        cx,
+                    ));
+                }
             }
             cards.push(card);
         }
-        div()
+        let list = div()
             .id("ghostex-capture-agents")
-            .max_h(px(LIST_MAX_HEIGHT))
+            .h(px(LIST_HEIGHT))
             .overflow_y_scroll()
             .flex()
             .flex_col()
-            .gap(px(PROJECT_GAP))
-            .children(cards)
+            .gap(px(PROJECT_GAP));
+        if cards.is_empty() {
+            return list
+                .child(
+                    div()
+                        .h(px(EMPTY_HEIGHT))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_size(px(13.0))
+                        .text_color(rgb(0x6b6b6b))
+                        .child(if self.list.filtering() {
+                            "No matching projects or sessions"
+                        } else {
+                            "No running agents"
+                        }),
+                )
+                .into_any_element();
+        }
+        list.children(cards).into_any_element()
+    }
+
+    fn render_filter(&self) -> AnyElement {
+        div()
+            .h(px(FILTER_HEIGHT))
+            .flex()
+            .items_center()
+            .pb(px(6.0))
+            .child(
+                div()
+                    .flex_1()
+                    .h(px(28.0))
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .px(px(9.0))
+                    .rounded(px(7.0))
+                    .border_1()
+                    .border_color(rgba(0xffffff14))
+                    .bg(rgb(0x1b1b1b))
+                    .child(
+                        gpui::svg()
+                            .path("titlebar/search.svg")
+                            .size(px(13.0))
+                            .text_color(rgb(0x6b6b6b)),
+                    )
+                    .child(
+                        Input::new(&self.filter)
+                            .appearance(false)
+                            .bordered(false)
+                            .focus_bordered(false)
+                            .flex_1()
+                            .px(px(0.0))
+                            .py(px(0.0))
+                            .text_size(px(12.5))
+                            .text_color(rgb(0xe8e8e8)),
+                    ),
+            )
             .into_any_element()
     }
 
@@ -666,14 +855,26 @@ impl Render for CapturePanelView {
             .text_size(px(11.0))
             .text_color(rgb(0x9a9a9a))
             .child("RUNNING AGENTS")
+            .child(crate::app::render::window_drag_region::window_drag_region(
+                div().id("ghostex-capture-panel-drag").flex_1().h_full(),
+            ))
             .child("LOCAL + REMOTE");
         let actions = self.render_actions(has_draft, cx);
+        let filter = self.render_filter();
         let list = self.render_list(projects, cx);
         let footer = self.render_footer(cx);
         div()
             .id("ghostex-capture-panel")
             .track_focus(&self.focus)
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                // Typing in the filter is text, not the panel's one-key actions.
+                if this.filter.focus_handle(cx).is_focused(window) {
+                    if event.keystroke.key == "escape" {
+                        cx.stop_propagation();
+                        this.focus.focus(window, cx);
+                    }
+                    return;
+                }
                 let modifiers = event.keystroke.modifiers;
                 if modifiers.platform || modifiers.control || modifiers.alt {
                     return;
@@ -694,13 +895,15 @@ impl Render for CapturePanelView {
             .flex()
             .flex_col()
             .p(px(PANEL_PAD))
-            .rounded(px(12.0))
+            // The prompt box's radius: at 12 the window's own rounding cut the outline's corners.
+            .rounded(px(14.0))
             .bg(rgb(0x161616))
             .border_1()
             .border_color(rgb(0x3a3a3a))
             .child(actions)
             .child(separator())
             .child(heading)
+            .child(filter)
             .child(list)
             .child(separator())
             .child(footer)

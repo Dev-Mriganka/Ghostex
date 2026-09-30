@@ -2,7 +2,8 @@
 //! bringing Ghostex forward.
 //!
 //! A new session follows the Git workflows' prompt agent start (create, start the provider, queue
-//! the prompt with `startupSend`), minus the step that selects the new session in the main window.
+//! the prompt with `startupSend`). The session the prompt went to is shown in the main window only
+//! when `ghostexCaptureSwitchToSession` is on, and Ghostex still stays behind the user's app.
 //! An existing session gets a normal chat message. Screenshots travel as `[Image #N](path)`
 //! references in the text, the chat composer's format; a remote machine gets its own copy of each
 //! picture first, since it cannot read this computer's files.
@@ -19,6 +20,7 @@ use super::targets::{Target, now_ms};
 use crate::GhostexGpuiApp;
 use crate::app::gx_store::gx_rpc;
 use crate::app::model::GpuiRemoteGxserverRequestTarget;
+use crate::shared_settings;
 
 type Remote = Option<GpuiRemoteGxserverRequestTarget>;
 
@@ -198,6 +200,7 @@ impl GhostexGpuiApp {
                 return;
             }
         };
+        let created = matches!(plan, Plan::NewSession { .. });
         self.ghostex_capture.prompt.sending = true;
         cx.notify();
         cx.spawn(async move |this, cx| {
@@ -311,6 +314,7 @@ impl GhostexGpuiApp {
                         prompt.next_number = 0;
                         prompt.target = None;
                         app.close_ghostex_capture_prompt(cx);
+                        app.show_ghostex_capture_sent_session(&session, created, cx);
                         app.show_ghostex_capture_note(note, session, cx);
                     }
                     Err(message) => {
@@ -326,5 +330,41 @@ impl GhostexGpuiApp {
             });
         })
         .detach();
+    }
+
+    /// Selects the session a prompt went to in the Ghostex window, without bringing Ghostex in
+    /// front of the app the user is in.
+    fn show_ghostex_capture_sent_session(
+        &mut self,
+        session: &SessionKey,
+        created: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if !shared_settings::shared_sidebar_settings_snapshot().ghostex_capture_switch_to_session()
+        {
+            return;
+        }
+        if !created {
+            self.gx_store_focus_activated_session(&session.to_sidebar_session_id(), cx);
+            return;
+        }
+        match session.machine.remote_id() {
+            // The store holds the focus on a new session until its row arrives.
+            None => self.gx_store_focus_created_session(
+                &session.project_id,
+                &session.session_id,
+                false,
+                None,
+                cx,
+            ),
+            Some(_) => {
+                let payload = ghostex_gx_core::open_remote_session_terminal(
+                    &session.to_sidebar_session_id(),
+                    false,
+                    None,
+                );
+                self.receive_sidebar_native_project_path_action_payload(&payload.to_string(), cx);
+            }
+        }
     }
 }
