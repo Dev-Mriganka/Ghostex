@@ -1,7 +1,22 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
-const modalHostSource = readFileSync(new URL('./modal-host.tsx', import.meta.url), 'utf8');
+// modal-host.tsx keeps AppModalHost and the page mount; its state types, native bridge,
+// request helpers, message guards and useModalStateFromNative live in views/modal-host/.
+const modalHostSource = [
+  'modal-host.tsx',
+  'modal-host/modal-state.ts',
+  'modal-host/native-fit-height.ts',
+  'modal-host/host-messages.ts',
+  'modal-host/bridge.ts',
+  'modal-host/settings-routing.ts',
+  'modal-host/first-launch.ts',
+  'modal-host/add-project-requests.ts',
+  'modal-host/use-modal-state-from-native.ts',
+  'modal-host/message-guards.ts',
+]
+  .map((file) => readFileSync(new URL(`./${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 // session-grid-contract-sidebar.ts is a barrel over per-concern
 // session-grid-contract-sidebar-*.ts modules; check them as one text.
 const contractSource = [

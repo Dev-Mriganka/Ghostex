@@ -30,7 +30,7 @@ export type RemoteSetupModalProps = {
  * same level: get the Ghostex app (Android APK, iPhone via TestFlight), then
  * connect it to this computer (Easy Connect, recommended; Tailscale if you
  * already use it). Both connect paths hand off to Settings → Remote. Keep the
- * `remote-setup-modal` marker class: apps/desktop/views/modal-host.tsx measures
+ * `remote-setup-modal` marker class: apps/desktop/views/modal-host/native-fit-height.ts measures
  * it for the one-shot native fit-height pass, and `remote-setup-modal-body` is
  * the scroll container once the Android popover grows the content past the
  * fitted window.

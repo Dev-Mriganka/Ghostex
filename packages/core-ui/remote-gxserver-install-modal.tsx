@@ -42,7 +42,7 @@ export function RemoteGxserverInstallModal({
    * CDXC:AppModal 2026-08-26:
    * The prompt composes the shared AppModalShell; the install detail paragraph
    * (with its monospace path/binary chips) is one section card. Keep the
-   * `remote-gxserver-install-modal` marker class: apps/desktop/views/modal-host.tsx
+   * `remote-gxserver-install-modal` marker class: apps/desktop/views/modal-host/native-fit-height.ts
    * measures that selector for the one-shot native fit-height pass.
    */
   return (

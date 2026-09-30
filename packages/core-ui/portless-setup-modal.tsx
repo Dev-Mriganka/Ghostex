@@ -77,7 +77,7 @@ export function PortlessSetupModal({
    * CDXC:AppModal 2026-08-26:
    * Portless setup now composes the shared AppModalShell, so its chrome comes
    * from `.gx-app-modal`. Keep the `portless-setup-modal-shadcn` marker class:
-   * apps/desktop/views/modal-host.tsx measures that selector for the one-shot
+   * apps/desktop/views/modal-host/native-fit-height.ts measures that selector for the one-shot
    * native fit-height pass.
    */
   return (

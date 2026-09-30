@@ -9,7 +9,7 @@
  * its rendered dialog once and posts `contentHeightMeasured`, which the real app
  * clamps to 200..850 before resizing the child window
  * (apps/desktop/src/app/window/modal_host.rs:159 GpuiAppModalHost::receive_bridge_message). The table of
- * fit-height kinds is apps/desktop/views/modal-host.tsx:152
+ * fit-height kinds is apps/desktop/views/modal-host/native-fit-height.ts
  * ONE_SHOT_NATIVE_FIT_HEIGHT_MODAL_SELECTORS.
  */
 import type { SandboxModalKind } from '../state/types';

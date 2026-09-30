@@ -1,5 +1,5 @@
 //! The Add Project dialog's data: the shapes of packages/core-ui/add-project-modal/types.ts and
-//! the result readers of apps/desktop/views/modal-host.tsx (`readAddProject*`), which turn a
+//! the result readers of apps/desktop/views/modal-host/add-project-requests.ts (`readAddProject*`), which turn a
 //! gxserver answer into those shapes and refuse anything unexpected with the same messages.
 use serde_json::Value;
 

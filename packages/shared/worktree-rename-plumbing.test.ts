@@ -83,7 +83,22 @@ const gxCoreWorktreeSource = readFileSync(
   new URL('../../packages/gx-core/src/git_menu/worktree.rs', import.meta.url),
   'utf8'
 );
-const modalHostSource = readFileSync(new URL('../../apps/desktop/views/modal-host.tsx', import.meta.url), 'utf8');
+// modal-host.tsx keeps AppModalHost and the page mount; its state types, native bridge,
+// request helpers, message guards and useModalStateFromNative live in views/modal-host/.
+const modalHostSource = [
+  'modal-host.tsx',
+  'modal-host/modal-state.ts',
+  'modal-host/native-fit-height.ts',
+  'modal-host/host-messages.ts',
+  'modal-host/bridge.ts',
+  'modal-host/settings-routing.ts',
+  'modal-host/first-launch.ts',
+  'modal-host/add-project-requests.ts',
+  'modal-host/use-modal-state-from-native.ts',
+  'modal-host/message-guards.ts',
+]
+  .map((file) => readFileSync(new URL(`../../apps/desktop/views/${file}`, import.meta.url), 'utf8'))
+  .join('\n');
 
 function sourceBetweenIn(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -146,7 +161,11 @@ describe('gx_store/git rename handlers', () => {
      * Rollback for a failed move lives in gxserver, not here: a client that goes away mid-rename
      * must not be the only thing that can undo a half-applied branch rename.
      */
-    const confirm = sourceBetweenIn(gpuiWorktreeRenameSource, 'pub(crate) fn git_confirm_rename_worktree(', '\n    }\n}');
+    const confirm = sourceBetweenIn(
+      gpuiWorktreeRenameSource,
+      'pub(crate) fn git_confirm_rename_worktree(',
+      '\n    }\n}'
+    );
 
     expect(confirm).toContain('"/api/renameWorktreeProject"');
     expect(confirm).not.toContain('"move"');
@@ -160,7 +179,11 @@ describe('gx_store/git rename handlers', () => {
      * instead of `Branch 'feat/x' already exists.`
      */
     expect(gxCoreWorktreeSource).toContain('pub fn worktree_rename_user_visible_error(');
-    const confirm = sourceBetweenIn(gpuiWorktreeRenameSource, 'pub(crate) fn git_confirm_rename_worktree(', '\n    }\n}');
+    const confirm = sourceBetweenIn(
+      gpuiWorktreeRenameSource,
+      'pub(crate) fn git_confirm_rename_worktree(',
+      '\n    }\n}'
+    );
     expect(confirm).toContain('worktree_rename_user_visible_error(&error.message)');
     expect(confirm).not.toContain('worktree_user_visible_error(');
   });

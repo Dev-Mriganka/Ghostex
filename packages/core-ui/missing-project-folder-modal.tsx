@@ -23,7 +23,7 @@ export type MissingProjectFolderModalProps = {
 /**
  * CDXC:AppModal 2026-08-26:
  * Restyled onto AppModalShell. The `missing-project-folder-modal` class stays
- * on the shell root as a marker: apps/desktop/views/modal-host.tsx measures
+ * on the shell root as a marker: apps/desktop/views/modal-host/native-fit-height.ts measures
  * that selector to fit the native child window's height.
  */
 export function MissingProjectFolderModal({

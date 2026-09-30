@@ -803,7 +803,22 @@ describe('settings modal source', () => {
      * commands must also forward through native-sidebar to Swift so Select Image
      * can open the AppKit file picker from the modal-host surface.
      */
-    const modalHostSource = readFileSync(new URL('../../apps/desktop/views/modal-host.tsx', import.meta.url), 'utf8');
+    // modal-host.tsx keeps AppModalHost and the page mount; its state types, native bridge,
+    // request helpers, message guards and useModalStateFromNative live in views/modal-host/.
+    const modalHostSource = [
+      'modal-host.tsx',
+      'modal-host/modal-state.ts',
+      'modal-host/native-fit-height.ts',
+      'modal-host/host-messages.ts',
+      'modal-host/bridge.ts',
+      'modal-host/settings-routing.ts',
+      'modal-host/first-launch.ts',
+      'modal-host/add-project-requests.ts',
+      'modal-host/use-modal-state-from-native.ts',
+      'modal-host/message-guards.ts',
+    ]
+      .map((file) => readFileSync(new URL(`../../apps/desktop/views/${file}`, import.meta.url), 'utf8'))
+      .join('\n');
 
     // modal-host.tsx: route the relayed message into modal state and pass it on.
     expect(modalHostSource).toContain('isAppIconStateMessage(message.message)');

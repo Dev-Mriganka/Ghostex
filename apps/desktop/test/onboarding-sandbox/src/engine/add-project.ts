@@ -1,14 +1,14 @@
 /*
  * Add Project dialog round trips.
  *
- * The real chain is apps/desktop/views/modal-host.tsx:786
+ * The real chain is apps/desktop/views/modal-host/add-project-requests.ts
  * requestAddProjectDialogOperation → apps/desktop/src/app/remote_conn/project_browse_and_add.rs
  * handle_gpui_add_project_dialog_request_message → gxserver. The sandbox answers
  * the same `{type:"addProjectDialogResult", requestId, ok, result|error}`
  * envelope from the shared story mocks
  * (packages/core-ui/add-project-modal/add-project-modal-mocks.ts createAddProjectStoryMocks),
  * wrapped in the exact result containers the host's readers expect
- * (modal-host.tsx:828-920: `machines`, `project`, `discovery`, `repository`, `job`).
+ * (modal-host/add-project-requests.ts: `machines`, `project`, `discovery`, `repository`, `job`).
  */
 import type { SidebarAddProjectDialogOperation } from '@/packages/shared/session-grid-contract';
 import { createAddProjectStoryMocks } from '@/packages/core-ui/add-project-modal/add-project-modal-mocks';
