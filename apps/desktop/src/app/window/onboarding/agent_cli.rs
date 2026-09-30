@@ -31,6 +31,51 @@ pub(crate) struct CliMethod {
     pub(crate) label: String,
     pub(crate) command: String,
     pub(crate) unavailable_reason: Option<String>,
+    /// What one click does, including anything Ghostex installs first (absent from older gxservers).
+    pub(crate) plan: Option<String>,
+    /// "node", "homebrew" or "systemTools": a tool Ghostex installs before `command`.
+    pub(crate) prerequisite: Option<String>,
+    pub(crate) system_tools: Vec<String>,
+}
+
+impl CliMethod {
+    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts).
+    pub(crate) fn tooltip(&self) -> String {
+        self.unavailable_reason
+            .clone()
+            .or_else(|| self.plan.clone())
+            .unwrap_or_else(|| self.command.clone())
+    }
+
+    /// `agentCliMethodLabel`: the method's name with its prerequisite note.
+    pub(crate) fn display_label(&self) -> String {
+        let suffix = match self.prerequisite.as_deref() {
+            Some("node") => Some("installs Node.js first".to_string()),
+            Some("homebrew") => Some("installs Homebrew first".to_string()),
+            Some("systemTools") => {
+                let tools: Vec<&str> = if self.system_tools.is_empty() {
+                    vec!["curl"]
+                } else {
+                    self.system_tools
+                        .iter()
+                        .map(|tool| {
+                            if tool == "ca-certificates" {
+                                "certificates"
+                            } else {
+                                tool.as_str()
+                            }
+                        })
+                        .collect()
+                };
+                Some(format!("installs {} first", tools.join(", ")))
+            }
+            _ => None,
+        };
+        match suffix {
+            Some(suffix) => format!("{}, {suffix}", self.label),
+            None => self.label.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -80,6 +125,18 @@ impl CliState {
                                 label: text(method, "label").unwrap_or_default(),
                                 command: text(method, "command").unwrap_or_default(),
                                 unavailable_reason: text(method, "unavailableReason"),
+                                plan: text(method, "plan"),
+                                prerequisite: text(method, "prerequisite"),
+                                system_tools: method
+                                    .get("systemTools")
+                                    .and_then(Value::as_array)
+                                    .map(|tools| {
+                                        tools
+                                            .iter()
+                                            .filter_map(|tool| tool.as_str().map(str::to_string))
+                                            .collect()
+                                    })
+                                    .unwrap_or_default(),
                             })
                         })
                         .collect()

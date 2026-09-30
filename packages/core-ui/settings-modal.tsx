@@ -2958,6 +2958,11 @@ export function SettingsModal({
                       onOpenAccessibilityPreferences={onOpenAccessibilityPreferences}
                       onOpenScreenRecordingPreferences={onOpenScreenRecordingPreferences}
                       onRequestGhostexCliStatus={onRequestGhostexCliStatus}
+                      onRunManagedToolTerminalCommand={
+                        vscode
+                          ? (toolId) => vscode.postMessage({ toolId, type: 'runManagedToolTerminalCommand' })
+                          : undefined
+                      }
                       search={extraSettingsTabSearches.integrations}
                       searchEmptyState={settingsSearchEmptyState}
                     />

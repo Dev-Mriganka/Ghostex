@@ -1,7 +1,7 @@
 {
   "_readme": "Do not edit blind. docs/important/agent-model-catalog.md explains the schema, how every Ghostex client loads this file from GitHub (with the bundled copy as the offline source), how to publish a change, and how to re-collect models, efforts and fast mode from the agent CLIs' own /model pickers.",
   "schemaVersion": 1,
-  "updatedAt": "2026-09-28T21:10:44Z",
+  "updatedAt": "2026-09-29T20:54:25Z",
   "effortLabels": {
     "none": "None",
     "minimal": "Minimal",
@@ -60,7 +60,7 @@
     },
     "codex": {
       "name": "Codex CLI",
-      "cliVersion": "0.156.0",
+      "cliVersion": "0.159.1",
       "modelCommand": "/model",
       "effortCommand": null,
       "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
@@ -81,32 +81,41 @@
         {
           "value": "gpt-6-astra",
           "label": "GPT 6 Astra",
-          "description": "Our most capable model for complex, demanding work.",
+          "description": "Frontier intelligence for the most demanding work.",
           "default": true,
           "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
           "defaultEffort": "medium",
           "fastMode": true
         },
         {
-          "value": "gpt-6-sol",
-          "label": "GPT 6 Sol",
-          "description": "GPT-6 Sol Codex model.",
+          "value": "gpt-6.1-sol",
+          "label": "GPT 6.1 Sol",
+          "description": "Latest workhorse model for coding and everyday work.",
           "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
-          "defaultEffort": "medium",
+          "defaultEffort": "low",
           "fastMode": true
         },
         {
           "value": "gpt-6-luna",
           "label": "GPT 6 Luna",
-          "description": "GPT-6 Luna Codex model.",
+          "description": "Fast and affordable model for easier tasks.",
           "efforts": ["low", "medium", "high", "xhigh", "max"],
           "defaultEffort": "medium",
           "fastMode": true
         },
         {
+          "value": "gpt-6-sol",
+          "label": "GPT 6 Sol",
+          "description": "Previous generation workhorse model.",
+          "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
+          "defaultEffort": "medium",
+          "fastMode": true,
+          "group": "legacy"
+        },
+        {
           "value": "gpt-5.6-sol",
           "label": "GPT 5.6 Sol",
-          "description": "Reliable agentic workhorse for everyday tasks.",
+          "description": "Older generation workhorse model.",
           "efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
           "defaultEffort": "low",
           "fastMode": true,
@@ -115,7 +124,7 @@
         {
           "value": "gpt-5.6-luna",
           "label": "GPT 5.6 Luna",
-          "description": "Fast and affordable agentic coding model.",
+          "description": "Older fast and efficient model.",
           "efforts": ["low", "medium", "high", "xhigh", "max"],
           "defaultEffort": "medium",
           "fastMode": true,
@@ -124,14 +133,14 @@
         {
           "value": "gpt-5.5",
           "label": "GPT 5.5",
-          "description": "Proven previous-generation model for coding and general work.",
+          "description": "Legacy coding model.",
           "efforts": ["low", "medium", "high", "xhigh"],
           "defaultEffort": "medium",
           "fastMode": true,
           "group": "legacy"
         }
       ],
-      "notes": "Re-read from the 0.156.0 /model picker on 2026-09-23: GPT-6-Astra, GPT-6-Sol, GPT-6-Luna, GPT-5.6-Sol, GPT-5.6-Terra, GPT-5.6-Luna, GPT-5.5 (efforts, defaults and the Fast tier from ~/.codex/models_cache.json). The top level is Astra, Sol, Luna with GPT 6 Sol and Luna replacing their 5.6 rows, which move under Legacy with GPT 5.5. GPT 5.6 Terra is left out on purpose even though the picker still offers it: the user asked to remove it (\"Nobody is going to use that one\"). GPT 5.4, 5.4 Mini and 5.3 Codex Spark left the picker and are not listed."
+      "notes": "Re-read on 0.159.1 (2026-09-30). GPT-6.1 Sol (`gpt-6.1-sol`, efforts Low to Ultra, default Low, Fast tier) is in 0.159.1's built-in model list at the top of the picker, but the server had not yet offered it to the account used for the scan, whose /model still listed GPT-6-Astra, GPT-6-Sol, GPT-6-Luna, GPT-5.6-Sol, GPT-5.6-Terra, GPT-5.6-Luna, GPT-5.5. The user asked to show Sol 6.1 and move GPT 6 Sol under Legacy, so the top level is Astra, Sol 6.1, Luna and Legacy holds GPT 6 Sol, GPT 5.6 Sol, GPT 5.6 Luna and GPT 5.5. GPT 5.6 Terra is left out on purpose even though the picker still offers it: the user asked to remove it (\"Nobody is going to use that one\")."
     },
     "cursor": {
       "name": "Cursor CLI",

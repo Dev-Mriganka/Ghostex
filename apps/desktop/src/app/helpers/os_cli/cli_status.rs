@@ -247,7 +247,7 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
             parts.join(" ")
         });
 
-    serde_json::json!({
+    let mut payload = serde_json::json!({
         "cliSkillInstalled": cli_skill_installed,
         "cliSkillPath": probe.cli_skill_path,
         "browserSkillInstalled": browser_skill_installed,
@@ -291,5 +291,7 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
         "helpSkillInstalled": help_skill_installed,
         "helpSkillPath": probe.help_skill_path,
         "type": "ghostexCliStatus",
-    })
+    });
+    gpui_decorate_ghostex_cli_status(&mut payload);
+    payload
 }

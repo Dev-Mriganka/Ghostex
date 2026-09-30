@@ -49,7 +49,11 @@ pub(crate) fn gpui_window_frame_state_from_window(
     let display = window.display(cx)?;
     let display_origin = display.bounds().origin;
     let display_uuid = display.uuid().ok()?.to_string();
-    let (state, bounds) = match window.window_bounds() {
+    /*
+    CDXC:Workarea 2026-09-29 WHY:
+    On Linux the window draws its own frame inside a shadow inset (`_GTK_FRAME_EXTENTS`), and a window opened at saved bounds is given that inset around them, with its visible frame where the bounds say. Saving the outer bounds grew the window by twice the inset and moved it up and left by the inset on every launch. The inner bounds are the visible frame, which is what the next launch opens; on macOS and Windows they are the same as the window bounds.
+    */
+    let (state, bounds) = match window.inner_window_bounds() {
         WindowBounds::Windowed(bounds) => ("windowed", bounds),
         WindowBounds::Maximized(bounds) => ("maximized", bounds),
         WindowBounds::Fullscreen(bounds) => ("fullscreen", bounds),

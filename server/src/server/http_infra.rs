@@ -55,7 +55,7 @@ pub(crate) fn create_authenticated_health(state: &AppState) -> ServerHealthRespo
 /// The identity clients compare with the installed build. A daemon still running a replaced image
 /// must not claim the build that replaced it, or the app keeps it (see `running_image_superseded`).
 fn reported_build_identity(state: &AppState) -> String {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     if crate::platform::process::running_image_superseded() {
         return format!("{}:superseded", state.build_identity);
     }

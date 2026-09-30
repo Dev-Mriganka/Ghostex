@@ -136,6 +136,7 @@ impl NativeChatView {
             let result = cx.open_window(
                 WindowOptions {
                     kind: crate::app::window::popup_frame::child_window_kind(),
+                    window_decorations: crate::app::window::popup_frame::child_window_decorations(),
                     #[cfg(target_os = "linux")]
                     x11_parent: Some(owner),
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -166,7 +167,11 @@ impl NativeChatView {
                                 _subscription: subscription,
                             }
                         });
-                        cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
+                        cx.new(|cx| {
+                            Root::new(view, window, cx)
+                                .bordered(false)
+                                .bg(gpui::transparent_black())
+                        })
                     }
                 },
             );

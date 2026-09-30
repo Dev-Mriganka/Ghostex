@@ -167,6 +167,9 @@ pub enum SessionChatTerminalNoticeActionKind {
     /// Server-side: remember the session's folders as trusted, then accept
     /// the prompt on screen (session_chat_trust_memory.rs).
     TrustAndRemember,
+    /// Server-side: sleep and wake a session whose agent exited to the shell
+    /// (session_chat_agent_restart.rs).
+    RestartAgent,
 }
 
 impl SessionChatTerminalNoticeActionKind {
@@ -176,6 +179,7 @@ impl SessionChatTerminalNoticeActionKind {
             Self::SendKeys => "sendKeys",
             Self::RecoverCodexConversation => "recoverCodexConversation",
             Self::TrustAndRemember => "trustAndRemember",
+            Self::RestartAgent => "restartAgent",
         }
     }
 }
@@ -887,6 +891,13 @@ const OPEN_TERMINAL: NoticeActionSpec = NoticeActionSpec {
     send: None,
 };
 
+const RESTART_CODEX: NoticeActionSpec = NoticeActionSpec {
+    id: "restartAgent",
+    label: "Restart Codex",
+    kind: SessionChatTerminalNoticeActionKind::RestartAgent,
+    send: None,
+};
+
 struct NoticeRule {
     kind: &'static str,
     severity: SessionChatTerminalNoticeSeverity,
@@ -924,7 +935,8 @@ const CODEX_RULES: &[NoticeRule] = &[
         kind: SESSION_CHAT_NOTICE_LOGIN_EXPIRED,
         severity: SessionChatTerminalNoticeSeverity::Error,
         title: "Codex reported a sign-in error",
-        detail: "Codex could not authenticate a previous request. Open the terminal and run /login to sign in again, or retry if you have already fixed it. Automatic queued delivery is paused while this error applies.",
+        // Codex has no /login: /logout ends it, and a signed-out Codex asks to sign in when it starts.
+        detail: "Codex could not authenticate a previous request. Send /logout, then start Codex again and sign in, or retry if you have already fixed it. Automatic queued delivery is paused while this error applies.",
         blocks_input: false,
         signatures: &[
             NoticeSignature {
@@ -1013,11 +1025,26 @@ const CODEX_RULES: &[NoticeRule] = &[
                 parts: &[NoticePart::Text("Error: cannot launch detached daemon;")],
                 corroborators: &[],
             },
+            // "Update now" on Codex's update prompt installs the new version and exits to the shell.
             NoticeSignature {
                 scope: NoticeScope::Exit,
-                parts: &[NoticePart::Text(
-                    "To continue this session, run codex resume",
-                )],
+                parts: &[NoticePart::Text("Please restart Codex.")],
+                corroborators: &[],
+            },
+            // Ghostex's own restore script, when `codex resume` could not start the conversation.
+            NoticeSignature {
+                scope: NoticeScope::Exit,
+                parts: &[NoticePart::Text("Unable to restore Codex session")],
+                corroborators: &[],
+            },
+            // Codex 0.15x prints "To continue this session, run:" and the command on its own line.
+            NoticeSignature {
+                scope: NoticeScope::Exit,
+                parts: &[
+                    NoticePart::Text("To continue this session, run"),
+                    NoticePart::Gap(3),
+                    NoticePart::Text("codex resume"),
+                ],
                 corroborators: &[],
             },
             NoticeSignature {
@@ -1035,7 +1062,7 @@ const CODEX_RULES: &[NoticeRule] = &[
                 corroborators: &[],
             },
         ],
-        actions: &[OPEN_TERMINAL],
+        actions: &[RESTART_CODEX, OPEN_TERMINAL],
         quote_evidence: true,
     },
     NoticeRule {
@@ -1229,6 +1256,15 @@ const CLAUDE_RULES: &[NoticeRule] = &[
             NoticeSignature {
                 scope: NoticeScope::Banner,
                 parts: &[NoticePart::Text("API Error: 401")],
+                corroborators: &[],
+            },
+            // An account whose organization turned off Claude Code for subscriptions answers every
+            // prompt with this line; only another account or an API key gets past it.
+            NoticeSignature {
+                scope: NoticeScope::Banner,
+                parts: &[NoticePart::Text(
+                    "Your organization has disabled Claude subscription access",
+                )],
                 corroborators: &[],
             },
         ],

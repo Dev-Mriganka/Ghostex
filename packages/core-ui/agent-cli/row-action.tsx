@@ -2,10 +2,11 @@ import { IconDownload, IconRefresh } from '@tabler/icons-react';
 import { Button } from '@/packages/components/ui/button';
 import {
   AGENT_CLI_CATALOG,
+  agentCliMethodTooltip,
   type AgentCliConnection,
   type AgentCliState,
 } from '@/packages/shared/agent-cli-maintenance';
-import { useAgentCliJob } from './use-agent-cli-job';
+import { defaultAgentCliInstallMethod, useAgentCliJob } from './use-agent-cli-job';
 
 /**
  * CDXC:AgentProviders 2026-09-28 WHY:
@@ -55,7 +56,11 @@ export function AgentCliRowAction({
         className='shrink-0'
         onClick={() => void job.install()}
         size='sm'
-        title={error ?? `Install ${definition.binary} with its official installer`}
+        title={
+          error ??
+          agentCliMethodTooltip(defaultAgentCliInstallMethod(state)) ??
+          `Install ${definition.binary} with its official installer`
+        }
         type='button'
         variant='outline'
       >
@@ -86,7 +91,15 @@ export function AgentCliRowAction({
         className='shrink-0'
         onClick={() => void job.start('update', detected)}
         size='sm'
-        title={error ?? `Update ${definition.binary} to ${state.latestVersion}`}
+        title={
+          error ??
+          [
+            `Update ${definition.binary} to ${state.latestVersion}.`,
+            agentCliMethodTooltip(state.methods.find((method) => method.id === detected)),
+          ]
+            .filter(Boolean)
+            .join(' ')
+        }
         type='button'
         variant='outline'
       >

@@ -296,6 +296,7 @@ How to use this file:
 ### Integrations
 
 - **Ghostex CLI** `ghostexCli` (Settings UI row without a settings key; use `ghostex settings open`): Ghostex keeps the app-bundled ghostex command linked automatically for mobile apps and CLI-backed integration setup.
+- **Tools** `managedTools` (Settings UI row without a settings key; use `ghostex settings open`): Install, update, reinstall or uninstall the tools Ghostex sets up for you: Node.js and npm, uv, Homebrew, Linux system tools, Beads, and the GitHub and GitLab CLIs. Each Install button says how it installs; your own copies are used when you have them.
 - **Bundled Agent Skills** `bundledAgentSkills` (Settings UI row without a settings key; use `ghostex settings open`): Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Trycua installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.
 - **App Shots** `appShots` (Settings UI row without a settings key; use `ghostex settings open`): Capture the frontmost app window, then stage it in the focused or recent agent session as local image context.
 - **Trycua Permissions** `cuaPermissions` (Settings UI row without a settings key; use `ghostex settings open`): Trycua needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.

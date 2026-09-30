@@ -22,6 +22,7 @@ mod render;
 mod review;
 mod skin;
 mod steps;
+mod tool_install;
 mod window;
 
 pub(crate) use window::{

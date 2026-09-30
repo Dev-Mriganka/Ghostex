@@ -47,7 +47,13 @@ import { AccountConnectionGuide } from './connection-guide';
 import { useAccounts } from './use-accounts';
 import { AccountIdentity, AccountLogo } from './controls';
 import { PolicySettingRows } from './policy-setting-rows';
-import { AccountHelperToolRow, useAccountHelperTools } from './helper-tools';
+import {
+  AccountHelperInstallButton,
+  AccountHelperToolRow,
+  accountHelperOffersInstall,
+  useAccountHelperTools,
+  type AccountHelperTools,
+} from './helper-tools';
 type Mutation = (request: AgentAccountsRequest) => Promise<boolean>;
 const providerLabel = (provider: AccountProvider) => (provider === 'claude' ? 'Claude' : 'Codex');
 const helperLabel = (provider: AccountProvider) => (provider === 'claude' ? 'Claude Swap' : 'Codex Swap');
@@ -259,6 +265,7 @@ function AccountManager({
       <AccountConnectionGuide
         provider={guide}
         helpers={data.helpers}
+        helperTools={helperTools}
         machineId={machineId}
         busy={busy}
         onClose={() => setGuide(undefined)}
@@ -315,6 +322,7 @@ function AccountManager({
                 provider={provider}
                 machineId={machineId}
                 data={data}
+                helperTools={helperTools}
                 busy={busy}
                 request={request}
                 close={() => setAdding(undefined)}
@@ -484,6 +492,7 @@ function AccountManager({
             )}
             <AccountHelperToolRow
               checking={helperTools.checking}
+              helperTools={helperTools}
               onCheckForUpdates={() => void helperTools.checkForUpdates(provider)}
               onRun={(action) => void helperTools.run(provider, action)}
               tool={helperTools.tools.find((tool) => tool.provider === provider)}
@@ -743,6 +752,7 @@ function AccountSetup({
   provider,
   machineId,
   data,
+  helperTools,
   busy,
   request,
   close,
@@ -750,6 +760,7 @@ function AccountSetup({
   provider: AccountProvider;
   machineId: string;
   data: AgentAccountsState;
+  helperTools: AccountHelperTools;
   busy: boolean;
   request: Mutation;
   close: () => void;
@@ -769,7 +780,14 @@ function AccountSetup({
   const label = providerLabel(provider);
   let body: ReactNode;
   if (!helper?.installed) {
-    body = helper ? (
+    body = !helper ? null : accountHelperOffersInstall(helperTools, provider) ? (
+      <SettingsListItem
+        detail={`To connect your account for usage stats, Ghostex installs ${helperLabel(provider)} on this computer, then continues here. This setup is optional; you can keep using your current CLI login.`}
+        title={`Install ${helperLabel(provider)}`}
+      >
+        <AccountHelperInstallButton helperTools={helperTools} provider={provider} />
+      </SettingsListItem>
+    ) : (
       <>
         <SettingsListItem
           detail={`To connect your account for usage stats, install ${helperLabel(provider)} on this computer, then refresh accounts. This setup is optional; you can keep using your current CLI login.`}
@@ -779,7 +797,7 @@ function AccountSetup({
           <CopyCommand command={helper.installCommand} />
         </div>
       </>
-    ) : null;
+    );
   } else {
     body = (
       <>

@@ -14,6 +14,12 @@ pub(crate) fn child_window_kind() -> gpui::WindowKind {
     }
 }
 
+/// CDXC:PlatformSupport 2026-09-29 WHY:
+/// GPUI gives a Linux window server-side decorations unless it asks otherwise, so KWin drew a title bar with minimize and close buttons on the chat menus, the account popover and the app modals, which all draw their own panel. Child windows opened with `child_window_kind()` and no titlebar ask for client decorations, which on X11 means no window-manager frame, the borderless window they are on macOS and Windows. Their `Root` is built with `bordered(false)`: gpui-component otherwise wraps a client-decorated window in its Linux shadow and resize edges, which shrank the menus and pushed the account popover's Add account button out of its window.
+pub(crate) fn child_window_decorations() -> Option<gpui::WindowDecorations> {
+    cfg!(target_os = "linux").then_some(gpui::WindowDecorations::Client)
+}
+
 /// The display a popup at `point` belongs to, for `WindowOptions::display_id`.
 ///
 /// CDXC:PlatformSupport 2026-09-23 WHY:

@@ -121,6 +121,8 @@ export interface AddProjectProviderDiscovery {
   };
   /** e.g. "Install the GitHub CLI (gh) to clone GitHub repositories." */
   readonly installHint?: string | null;
+  /** The `/api/managedTools` tool (`gh`, `glab`) that installs a missing CLI with one click. */
+  readonly installTool?: string | null;
   readonly provider: AddProjectProviderId;
   readonly status: AddProjectProviderStatus;
   readonly version?: string | null;

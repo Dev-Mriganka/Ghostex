@@ -1,11 +1,12 @@
-//! Settings > Accounts keeps Claude Swap (cswap) and Codex Swap (xswap) current: installed and
-//! latest versions, and Update, Reinstall and Uninstall run here so every client (desktop, web,
-//! a remote computer's Settings) gets the same answer.
+//! Settings > Accounts keeps Claude Swap (cswap) and Codex Swap (xswap) installed and current:
+//! Install, installed and latest versions, and Update, Reinstall and Uninstall run here so every
+//! client (desktop, web, a remote computer's Settings) gets the same answer.
 
-use super::{helpers, model::Provider, store};
-use crate::{domain::DomainStateError, server::AppState};
+use super::{helpers, model::Provider};
+use crate::{domain::DomainStateError, managed_tools, server::AppState};
 use serde_json::{json, Map, Value};
 use std::{
+    collections::BTreeMap,
     collections::HashMap,
     path::{Path, PathBuf},
     process::Stdio,
@@ -15,11 +16,17 @@ use std::{
 
 const CODEX_SWAP_REPOSITORY: &str = "https://github.com/maddada/codex-swap";
 const CODEX_SWAP_FORMULA: &str = "maddada/tap/codex-swap";
+const CODEX_SWAP_INSTALL_SH: &str =
+    "https://github.com/maddada/codex-swap/releases/latest/download/install.sh";
+const CODEX_SWAP_INSTALL_PS1: &str =
+    "https://github.com/maddada/codex-swap/releases/latest/download/install.ps1";
+/// Written by codex-swap's `install.sh` beside the binary it installed.
+const XSWAP_RECEIPT: &str = ".xswap-install-receipt.json";
 const LATEST_TTL: Duration = Duration::from_secs(6 * 60 * 60);
-const OUTPUT_LIMIT: usize = 4000;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Action {
+    Install,
     Update,
     Reinstall,
     Uninstall,
@@ -27,6 +34,7 @@ enum Action {
 impl Action {
     fn parse(value: &str) -> Option<Self> {
         match value {
+            "install" => Some(Self::Install),
             "update" => Some(Self::Update),
             "reinstall" => Some(Self::Reinstall),
             "uninstall" => Some(Self::Uninstall),
@@ -35,6 +43,7 @@ impl Action {
     }
     fn id(self) -> &'static str {
         match self {
+            Self::Install => "install",
             Self::Update => "update",
             Self::Reinstall => "reinstall",
             Self::Uninstall => "uninstall",
@@ -42,12 +51,30 @@ impl Action {
     }
 }
 
+/// What a job runs: a program with arguments, or an official installer one-liner in the shell.
+enum Work {
+    Program(PathBuf, Vec<String>),
+    Script(String, BTreeMap<String, String>),
+    /// Remove these files (a script install has no uninstaller).
+    Remove(Vec<PathBuf>),
+    /// Ghostex installs uv first, then runs `uv tool install claude-swap`.
+    UvInstall,
+}
+
 /// How the helper on this computer was installed, read from where its executable lives.
 enum InstallMethod {
     Uv(PathBuf),
     Pipx(PathBuf),
     Homebrew(PathBuf),
-    Cargo { cargo: PathBuf, root: PathBuf },
+    Cargo {
+        cargo: PathBuf,
+        root: PathBuf,
+    },
+    /// codex-swap's `install.sh`, recognised by its receipt beside the binary.
+    Script {
+        xswap: PathBuf,
+        dir: PathBuf,
+    },
     WindowsInstaller(PathBuf),
     Unknown,
 }
@@ -58,45 +85,40 @@ impl InstallMethod {
             Self::Pipx(_) => "pipx",
             Self::Homebrew(_) => "homebrew",
             Self::Cargo { .. } => "cargo",
+            Self::Script { .. } => "script",
             Self::WindowsInstaller(_) => "windowsInstaller",
             Self::Unknown => "unknown",
         }
     }
-    /// The program and arguments that perform `action` with the tool that owns the install.
-    fn command(&self, action: Action) -> Option<(PathBuf, Vec<String>)> {
+    /// What performs `action` with the tool that owns the install.
+    fn work(&self, action: Action) -> Option<Work> {
         let args = |list: &[&str]| list.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
+        let verb = |action: Action| match action {
+            Action::Update => "upgrade",
+            Action::Reinstall => "reinstall",
+            _ => "uninstall",
+        };
         match (self, action) {
-            (Self::Uv(uv), Action::Update) => {
-                Some((uv.clone(), args(&["tool", "upgrade", "claude-swap"])))
-            }
-            (Self::Uv(uv), Action::Reinstall) => Some((
+            (_, Action::Install) => None,
+            (Self::Uv(uv), Action::Update) => Some(Work::Program(
+                uv.clone(),
+                args(&["tool", "upgrade", "claude-swap"]),
+            )),
+            (Self::Uv(uv), Action::Reinstall) => Some(Work::Program(
                 uv.clone(),
                 args(&["tool", "install", "--force", "--reinstall", "claude-swap"]),
             )),
-            (Self::Uv(uv), Action::Uninstall) => {
-                Some((uv.clone(), args(&["tool", "uninstall", "claude-swap"])))
-            }
-            (Self::Pipx(pipx), action) => Some((
-                pipx.clone(),
-                args(&[
-                    match action {
-                        Action::Update => "upgrade",
-                        Action::Reinstall => "reinstall",
-                        Action::Uninstall => "uninstall",
-                    },
-                    "claude-swap",
-                ]),
+            (Self::Uv(uv), Action::Uninstall) => Some(Work::Program(
+                uv.clone(),
+                args(&["tool", "uninstall", "claude-swap"]),
             )),
-            (Self::Homebrew(brew), action) => Some((
+            (Self::Pipx(pipx), action) => Some(Work::Program(
+                pipx.clone(),
+                args(&[verb(action), "claude-swap"]),
+            )),
+            (Self::Homebrew(brew), action) => Some(Work::Program(
                 brew.clone(),
-                args(&[
-                    match action {
-                        Action::Update => "upgrade",
-                        Action::Reinstall => "reinstall",
-                        Action::Uninstall => "uninstall",
-                    },
-                    CODEX_SWAP_FORMULA,
-                ]),
+                args(&[verb(action), CODEX_SWAP_FORMULA]),
             )),
             (Self::Cargo { cargo, root }, Action::Update | Action::Reinstall) => {
                 let mut list = args(&[
@@ -108,16 +130,26 @@ impl InstallMethod {
                     "--root",
                 ]);
                 list.push(root.to_string_lossy().into_owned());
-                Some((cargo.clone(), list))
+                Some(Work::Program(cargo.clone(), list))
             }
             (Self::Cargo { cargo, root }, Action::Uninstall) => {
                 let mut list = args(&["uninstall", "codex-swap", "--root"]);
                 list.push(root.to_string_lossy().into_owned());
-                Some((cargo.clone(), list))
+                Some(Work::Program(cargo.clone(), list))
+            }
+            (Self::Script { dir, .. }, Action::Update | Action::Reinstall) => Some(Work::Script(
+                format!("curl -fsSL {CODEX_SWAP_INSTALL_SH} | sh"),
+                BTreeMap::from([(
+                    "XSWAP_INSTALL_DIR".to_string(),
+                    dir.to_string_lossy().into_owned(),
+                )]),
+            )),
+            (Self::Script { xswap, dir }, Action::Uninstall) => {
+                Some(Work::Remove(vec![xswap.clone(), dir.join(XSWAP_RECEIPT)]))
             }
             // xswap's own upgrade runs the official Windows installer into the same folder.
             (Self::WindowsInstaller(xswap), Action::Update | Action::Reinstall) => {
-                Some((xswap.clone(), args(&["upgrade"])))
+                Some(Work::Program(xswap.clone(), args(&["upgrade"])))
             }
             (Self::WindowsInstaller(_), Action::Uninstall) | (Self::Unknown, _) => None,
         }
@@ -158,6 +190,12 @@ fn install_method(home: &Path, provider: Provider, executable: &Path) -> Install
             InstallMethod::Unknown
         }
         Provider::Codex => {
+            if let Some(dir) = script_install_dir(&resolved) {
+                return InstallMethod::Script {
+                    xswap: resolved,
+                    dir,
+                };
+            }
             let Some(root) = resolved
                 .parent()
                 .filter(|bin| bin.ends_with("bin"))
@@ -205,6 +243,20 @@ fn install_method(home: &Path, provider: Provider, executable: &Path) -> Install
     }
 }
 
+/// The folder of a script-installed xswap: its receipt sits beside the binary and records the
+/// binary's hash, so a copy another installer wrote there later is not mistaken for it (the same
+/// rule `xswap upgrade` applies).
+fn script_install_dir(xswap: &Path) -> Option<PathBuf> {
+    let dir = xswap.parent()?;
+    let receipt: Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join(XSWAP_RECEIPT)).ok()?).ok()?;
+    if receipt["method"] != "script" {
+        return None;
+    }
+    let recorded = receipt["sha256"].as_str()?.to_lowercase();
+    (managed_tools::download::sha256_file(xswap).ok()? == recorded).then(|| dir.to_path_buf())
+}
+
 fn windows_installer(xswap: &Path) -> InstallMethod {
     if cfg!(windows)
         && xswap.parent().is_some_and(|dir| {
@@ -217,6 +269,37 @@ fn windows_installer(xswap: &Path) -> InstallMethod {
     }
 }
 
+/// How Install sets up the helper on this computer: tooltip text, and why it cannot when so.
+fn install_plan(home: &Path, provider: Provider) -> (String, Option<String>) {
+    match provider {
+        Provider::Claude => {
+            if helpers::executable(home, "uv").is_some() {
+                ("Runs uv tool install claude-swap; uv downloads the Python it needs. No password needed.".into(), None)
+            } else {
+                (
+                    "Ghostex first downloads uv from Astral into its tools folder, then runs uv tool install claude-swap; uv downloads the Python it needs. No password needed.".into(),
+                    managed_tools::platform::arch()
+                        .is_none()
+                        .then(managed_tools::platform::unsupported_cpu_reason),
+                )
+            }
+        }
+        Provider::Codex if cfg!(windows) => (
+            format!("Runs codex-swap's official Windows installer (irm {CODEX_SWAP_INSTALL_PS1} | iex), which puts xswap in your user folder and on your PATH. No password needed."),
+            None,
+        ),
+        Provider::Codex => {
+            let plan = format!("Runs codex-swap's official installer (curl -fsSL {CODEX_SWAP_INSTALL_SH} | sh), which downloads the build for this computer, checks its checksum and puts xswap in ~/.local/bin. No password needed.");
+            let missing = managed_tools::system_tools::missing(home, &["curl", "ca-certificates"]);
+            if missing.is_empty() || managed_tools::system_tools::can_install_in_background() {
+                (plan, None)
+            } else {
+                (plan, Some("This installer needs curl and certificates. Use Install system tools in Settings > Integrations > Tools, then try again.".into()))
+            }
+        }
+    }
+}
+
 fn installed_version(executable: &Path) -> Option<String> {
     let output = crate::platform::process::background_command(executable)
         .arg("--version")
@@ -224,28 +307,14 @@ fn installed_version(executable: &Path) -> Option<String> {
         .output()
         .ok()
         .filter(|output| output.status.success())?;
-    version_in(&String::from_utf8_lossy(&output.stdout))
-}
-
-fn version_in(text: &str) -> Option<String> {
-    text.split_whitespace()
-        .map(|token| token.trim_start_matches('v'))
-        .find(|token| token.starts_with(|c: char| c.is_ascii_digit()) && token.contains('.'))
-        .map(str::to_string)
-}
-
-fn version_parts(version: &str) -> Vec<u64> {
-    version
-        .split(['.', '-', '+'])
-        .map_while(|part| part.parse::<u64>().ok())
-        .collect()
+    managed_tools::tools::version_in(&String::from_utf8_lossy(&output.stdout))
 }
 
 static LATEST: Mutex<Option<HashMap<&'static str, (Instant, Result<String, String>)>>> =
     Mutex::new(None);
 
-/// The newest published release: PyPI for claude-swap, GitHub releases for codex-swap. Cached for
-/// six hours; `fresh` is the Settings "check again" click.
+/// The newest published release: PyPI for claude-swap, the codex-swap `releases/latest` redirect
+/// for xswap. Cached for six hours; `fresh` is the Settings "check again" click.
 fn latest_version(provider: Provider, fresh: bool) -> Result<String, String> {
     let key = provider.helper();
     if !fresh {
@@ -256,34 +325,22 @@ fn latest_version(provider: Provider, fresh: bool) -> Result<String, String> {
             }
         }
     }
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(8))
-        .build();
     let answer = match provider {
-        Provider::Claude => agent
-            .get("https://pypi.org/pypi/claude-swap/json")
-            .call()
-            .ok()
-            .and_then(|response| response.into_json::<Value>().ok())
-            .and_then(|value| {
-                value
-                    .pointer("/info/version")
-                    .and_then(Value::as_str)
-                    .map(str::to_string)
-            }),
-        Provider::Codex => agent
-            .get("https://api.github.com/repos/maddada/codex-swap/releases/latest")
-            .set("Accept", "application/vnd.github+json")
-            .set("User-Agent", "Ghostex")
-            .call()
-            .ok()
-            .and_then(|response| response.into_json::<Value>().ok())
-            .and_then(|value| {
-                value
-                    .get("tag_name")
-                    .and_then(Value::as_str)
-                    .and_then(version_in)
-            }),
+        Provider::Claude => {
+            managed_tools::download::get_json("https://pypi.org/pypi/claude-swap/json")
+                .ok()
+                .and_then(|value| {
+                    value
+                        .pointer("/info/version")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                })
+        }
+        Provider::Codex => managed_tools::download::latest_release_tag(&format!(
+            "{CODEX_SWAP_REPOSITORY}/releases/latest"
+        ))
+        .ok()
+        .and_then(|tag| managed_tools::tools::version_in(&tag)),
     }
     .ok_or_else(|| {
         "Couldn't reach the release server. Check your connection and try again.".to_string()
@@ -296,42 +353,45 @@ fn latest_version(provider: Provider, fresh: bool) -> Result<String, String> {
     answer
 }
 
-struct Job {
-    action: Action,
-    status: &'static str,
-    output: String,
-    error: Option<String>,
-    finished_at: Option<String>,
+fn job_key(provider: Provider) -> String {
+    format!("accountHelper:{}", provider.helper())
 }
-static JOBS: Mutex<Option<HashMap<&'static str, Job>>> = Mutex::new(None);
 
+/// The job as the Accounts page reads it (`AccountHelperTool.job`).
 fn job_view(provider: Provider) -> Value {
-    JOBS.lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .as_ref()
-        .and_then(|jobs| jobs.get(provider.helper()))
-        .map_or(Value::Null, |job| {
-            json!({"action":job.action.id(),"status":job.status,"output":job.output,"error":job.error,"finishedAt":job.finished_at})
-        })
+    managed_tools::jobs::get(&job_key(provider)).map_or(Value::Null, |job| {
+        let status = match job.status {
+            "succeeded" => "complete",
+            "failed" => "failed",
+            _ => "running",
+        };
+        json!({"action":job.operation,"status":status,"output":job.output,"error":job.error,"finishedAt":job.finished_at})
+    })
 }
 
 fn tool_view(home: &Path, provider: Provider, fresh: bool) -> Value {
     let job = job_view(provider);
     let running = job.get("status").and_then(Value::as_str) == Some("running");
+    let (plan, blocker) = install_plan(home, provider);
     let Some(executable) = helpers::executable(home, provider.helper()) else {
-        return json!({"provider":provider,"installed":false,"actions":[],"job":job});
+        let actions: Vec<&str> = if blocker.is_none() {
+            vec!["install"]
+        } else {
+            Vec::new()
+        };
+        return json!({"provider":provider,"installed":false,"actions":actions,"installPlan":plan,"unavailableReason":blocker,"job":job});
     };
     let method = install_method(home, provider, &executable);
     let actions: Vec<&str> = [Action::Update, Action::Reinstall, Action::Uninstall]
         .into_iter()
-        .filter(|action| method.command(*action).is_some())
+        .filter(|action| method.work(*action).is_some())
         .map(Action::id)
         .collect();
     // A running update replaces the binary under us; its version is read again once it finishes.
     let version = (!running).then(|| installed_version(&executable)).flatten();
     let latest = latest_version(provider, fresh);
     let update_available = match (&version, &latest) {
-        (Some(current), Ok(latest)) => Some(version_parts(latest) > version_parts(current)),
+        (Some(current), Ok(latest)) => Some(managed_tools::tools::newer(latest, current)),
         _ => None,
     };
     json!({
@@ -340,6 +400,7 @@ fn tool_view(home: &Path, provider: Provider, fresh: bool) -> Value {
         "path": executable,
         "installMethod": method.id(),
         "actions": actions,
+        "installPlan": plan,
         "version": version,
         "latestVersion": latest.as_ref().ok(),
         "updateAvailable": update_available,
@@ -364,7 +425,10 @@ fn response(home: &Path, fresh: bool) -> Value {
 
 /// CDXC:AgentProviders 2026-09-28 DECISION:
 /// User: Settings > Accounts updates, reinstalls and uninstalls Claude Swap and Codex Swap with icon buttons and tooltips, and checks for their updates the way the Trycua row does.
-/// Each action runs through the tool that owns the install (uv or pipx for cswap; Homebrew, Cargo with its original `--root`, or the Windows installer for xswap), read from where the executable lives, so an update replaces the copy Ghostex actually runs instead of adding a second one. An install Ghostex cannot place offers no actions rather than guessing a command. Uninstall removes only the program: saved logins and shared conversations stay.
+/// Each action runs through the tool that owns the install (uv or pipx for cswap; Homebrew, Cargo with its original `--root`, codex-swap's `install.sh` or the Windows installer for xswap), read from where the executable lives, so an update replaces the copy Ghostex actually runs instead of adding a second one. An install Ghostex cannot place offers no actions rather than guessing a command. Uninstall removes only the program: saved logins and shared conversations stay.
+///
+/// CDXC:ManagedTools 2026-09-29 DECISION:
+/// User: one click installs a missing helper. cswap installs with uv (Ghostex installs uv first when missing, and uv fetches the Python it needs); xswap installs with codex-swap's official `install.sh` on macOS and Linux (user decision 4A) and its `install.ps1` on Windows. Supersedes the copyable install command the Accounts page showed.
 pub(crate) fn dispatch(
     state: &AppState,
     params: &Map<String, Value>,
@@ -386,95 +450,49 @@ pub(crate) fn dispatch(
                 .and_then(Value::as_str)
                 .and_then(Action::parse)
                 .ok_or_else(|| {
-                    DomainStateError::bad_request("Choose update, reinstall or uninstall.")
+                    DomainStateError::bad_request("Choose install, update, reinstall or uninstall.")
                 })?;
-            let executable = helpers::executable(&home, provider.helper())
-                .ok_or_else(|| DomainStateError::bad_request("This helper isn't installed."))?;
-            let (program, args) = install_method(&home, provider, &executable)
-                .command(action)
-                .ok_or_else(|| {
-                    DomainStateError::bad_request(
-                        "Ghostex can't manage this install. Use the tool you installed it with.",
-                    )
-                })?;
-            {
-                let mut jobs = JOBS.lock().unwrap_or_else(|e| e.into_inner());
-                let jobs = jobs.get_or_insert_with(HashMap::new);
-                if jobs
-                    .get(provider.helper())
-                    .is_some_and(|job| job.status == "running")
-                {
-                    return Err(DomainStateError::bad_request(
-                        "This helper is already being changed.",
-                    ));
+            let work = match (action, helpers::executable(&home, provider.helper())) {
+                (Action::Install, Some(_)) => {
+                    return Err(DomainStateError::bad_request("This helper is already installed."))
                 }
-                jobs.insert(
-                    provider.helper(),
-                    Job {
-                        action,
-                        status: "running",
-                        output: String::new(),
-                        error: None,
-                        finished_at: None,
-                    },
-                );
-            }
-            let path = std::env::join_paths(helpers::search_dirs(&home)).map_err(store::error)?;
-            std::thread::spawn(move || {
-                let result = crate::platform::process::background_command(&program)
-                    .args(&args)
-                    .env("PATH", path)
-                    .env("HOMEBREW_NO_ENV_HINTS", "1")
-                    .env("NONINTERACTIVE", "1")
-                    .stdin(Stdio::null())
-                    .output();
-                let (status, output, error) = match result {
-                    Ok(output) => {
-                        let mut text = String::from_utf8_lossy(&output.stdout).into_owned();
-                        text.push_str(&String::from_utf8_lossy(&output.stderr));
-                        let text = text.trim().to_string();
-                        let tail = text
-                            .char_indices()
-                            .rev()
-                            .nth(OUTPUT_LIMIT)
-                            .map_or(text.as_str(), |(index, _)| &text[index..])
-                            .to_string();
-                        if output.status.success() {
-                            ("complete", tail, None)
-                        } else {
-                            let last = tail
-                                .lines()
-                                .rev()
-                                .find(|line| !line.trim().is_empty())
-                                .unwrap_or_default()
-                                .to_string();
-                            (
-                                "failed",
-                                tail,
-                                Some(if last.is_empty() {
-                                    format!("The command exited with {}.", output.status)
-                                } else {
-                                    last
-                                }),
-                            )
-                        }
+                (Action::Install, None) => {
+                    if let (_, Some(reason)) = install_plan(&home, provider) {
+                        return Err(DomainStateError::bad_request(reason));
                     }
-                    Err(error) => (
-                        "failed",
-                        String::new(),
-                        Some(format!("Couldn't start {}: {error}", program.display())),
-                    ),
-                };
-                let mut jobs = JOBS.lock().unwrap_or_else(|e| e.into_inner());
-                if let Some(job) = jobs
-                    .get_or_insert_with(HashMap::new)
-                    .get_mut(provider.helper())
-                {
-                    job.status = status;
-                    job.output = output;
-                    job.error = error;
-                    job.finished_at = Some(chrono::Utc::now().to_rfc3339());
+                    match provider {
+                        Provider::Claude => Work::UvInstall,
+                        Provider::Codex if cfg!(windows) => Work::Script(
+                            format!("irm {CODEX_SWAP_INSTALL_PS1} | iex"),
+                            BTreeMap::new(),
+                        ),
+                        Provider::Codex => Work::Script(
+                            format!("curl -fsSL {CODEX_SWAP_INSTALL_SH} | sh"),
+                            BTreeMap::new(),
+                        ),
+                    }
                 }
+                (_, None) => return Err(DomainStateError::bad_request("This helper isn't installed.")),
+                (_, Some(executable)) => install_method(&home, provider, &executable)
+                    .work(action)
+                    .ok_or_else(|| {
+                        DomainStateError::bad_request(
+                            "Ghostex can't manage this install. Use the tool you installed it with.",
+                        )
+                    })?,
+            };
+            let key = job_key(provider);
+            managed_tools::jobs::begin(&key, action.id()).map_err(DomainStateError::bad_request)?;
+            let job_home = home.clone();
+            tokio::runtime::Handle::current().spawn(async move {
+                let _turn = managed_tools::INSTALL_LOCK.lock().await;
+                managed_tools::jobs::set_status(&key, "running");
+                let log = managed_tools::jobs::log_for(&key);
+                let result = run_work(work, provider, &job_home, &log).await;
+                if let Err(error) = &result {
+                    log.line(error);
+                }
+                managed_tools::jobs::finish(&key, &result);
             });
             Ok(response(&home, false))
         }
@@ -482,4 +500,75 @@ pub(crate) fn dispatch(
             "Unknown account helper operation.",
         )),
     }
+}
+
+async fn run_work(
+    work: Work,
+    provider: Provider,
+    home: &Path,
+    log: &managed_tools::Log,
+) -> Result<(), String> {
+    let timeout = Duration::from_secs(20 * 60);
+    let installs_into_local_bin = matches!(&work, Work::UvInstall)
+        || matches!(&work, Work::Script(script, env) if script.contains("install.sh") && !env.contains_key("XSWAP_INSTALL_DIR"));
+    match work {
+        Work::UvInstall => {
+            let uv = managed_tools::ensure_uv(home, log).await?;
+            let owned_log = log.clone();
+            tokio::task::spawn_blocking(move || {
+                managed_tools::run::run(
+                    &uv,
+                    &["tool", "install", "claude-swap"],
+                    &[],
+                    &[],
+                    &owned_log,
+                    timeout,
+                )
+            })
+            .await
+            .map_err(|error| error.to_string())??;
+        }
+        Work::Program(program, args) => {
+            let owned_log = log.clone();
+            tokio::task::spawn_blocking(move || {
+                let args: Vec<&str> = args.iter().map(String::as_str).collect();
+                managed_tools::run::run(
+                    &program,
+                    &args,
+                    &[
+                        ("HOMEBREW_NO_ENV_HINTS", "1".as_ref()),
+                        ("NONINTERACTIVE", "1".as_ref()),
+                    ],
+                    &[],
+                    &owned_log,
+                    timeout,
+                )
+            })
+            .await
+            .map_err(|error| error.to_string())??;
+        }
+        Work::Script(script, env) => {
+            if script.starts_with("curl ") {
+                managed_tools::ensure_system_tools(home, &["curl", "ca-certificates"], log).await?;
+            }
+            crate::agent_cli::process::run(&script, home, &env, timeout, log.sink()).await?;
+        }
+        Work::Remove(files) => {
+            for file in files {
+                if file.exists() {
+                    std::fs::remove_file(&file)
+                        .map_err(|error| format!("Could not remove {}: {error}", file.display()))?;
+                }
+            }
+            log.line(&format!("Removed {}.", provider.helper()));
+        }
+    }
+    if installs_into_local_bin {
+        let local_bin = home.join(".local").join("bin");
+        if let Ok(Some(message)) = crate::agent_cli::path_setup::ensure_on_path(&local_bin, home) {
+            log.line(&message);
+        }
+    }
+    crate::agent_hooks::probing::refresh_cli_environment(home);
+    Ok(())
 }

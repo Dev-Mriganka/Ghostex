@@ -996,7 +996,7 @@ impl GpuiOnboardingWindow {
         } else if installed {
             "Installed, press Rescan".to_string()
         } else if let Some(method) = &method {
-            format!("Not installed · {}", method.label)
+            format!("Not installed · {}", method.display_label())
         } else {
             "Not installed".to_string()
         };
@@ -1057,10 +1057,7 @@ impl GpuiOnboardingWindow {
             None
         } else if let (true, Some(method)) = (self.cli_available, method.clone()) {
             let disabled = method.unavailable_reason.is_some();
-            let title = method
-                .unavailable_reason
-                .clone()
-                .unwrap_or(method.command.clone());
+            let title = method.tooltip();
             let key = key.clone();
             let id = SharedString::from(format!("install-{agent_id}"));
             let button = install_button(

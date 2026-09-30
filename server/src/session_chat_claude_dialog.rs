@@ -223,8 +223,17 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         (None, Some(slot)) => slot,
         (None, None) => first_run_start(&lines)?,
     } + 1;
+    /*
+    CDXC:AgentScreenDetection 2026-09-29 WHY:
+    `/login` in a running session draws the same browser sign-in step inside its "Login" panel, so the sign-in code field was not read there: the card showed the panel's raw text, clipped the link the terminal wrapped at its width, and had no field for the code. That panel is read like the first-run step, with its "Login" heading skipped.
+    */
+    let login_panel = !first_run
+        && lines[start..]
+            .iter()
+            .any(|line| first_run_code_field(line).is_some());
+    let sign_in_screen = first_run || login_panel;
     let first_run_lines: Vec<String>;
-    let content: &[String] = if first_run {
+    let content: &[String] = if sign_in_screen {
         first_run_lines = first_run_content(&lines[start..]);
         &first_run_lines
     } else {
@@ -242,9 +251,14 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
             && !(first_run && line.trim() == "Let's get started.")
     };
     let heading = content.iter().position(is_heading)?;
+    let heading = if login_panel && content[heading].trim() == "Login" {
+        heading + 1 + content[heading + 1..].iter().position(is_heading)?
+    } else {
+        heading
+    };
     let mut title = content[heading].trim().to_string();
     let mut title_hint = None;
-    if first_run {
+    if sign_in_screen {
         // The card shows the link itself; "c" copies it only in the terminal.
         title = title.trim_end_matches("(c to copy)").trim_end().to_string();
         // "Login successful. Press Enter to continue…" is one line: the hint becomes the button.
@@ -325,7 +339,7 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         .iter()
         .find_map(|line| line.trim().strip_prefix("> "))
         .or_else(|| {
-            first_run
+            sign_in_screen
                 .then(|| remainder.iter().find_map(|line| first_run_code_field(line)))
                 .flatten()
         });
@@ -374,7 +388,7 @@ pub fn detect_claude_dialog(text: &str) -> Option<TerminalDialog> {
         .filter(|(index, line)| {
             !is_hint(line)
                 && (!numbered || !option_lines.contains(index))
-                && !(first_run && first_run_code_field(line).is_some())
+                && !(sign_in_screen && first_run_code_field(line).is_some())
         })
         .map(|(_, line)| line.clone())
         .collect::<Vec<_>>()

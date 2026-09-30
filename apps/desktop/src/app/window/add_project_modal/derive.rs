@@ -440,7 +440,14 @@ impl GpuiAddProjectModalWindow {
                 continue;
             }
             let readiness = &d.readiness[source.index()];
-            let description = if readiness.ready {
+            let install_status = self
+                .tool_install
+                .as_ref()
+                .filter(|install| install.source == source && install.machine_id == machine_id)
+                .and_then(|install| install.status_line());
+            let description = if let Some(status) = install_status {
+                status
+            } else if readiness.ready {
                 source_row_description(source)
             } else {
                 readiness
@@ -454,8 +461,13 @@ impl GpuiAddProjectModalWindow {
                 title,
                 description: Some(description),
                 disabled: !readiness.ready,
-                setup_required: (!readiness.ready)
-                    .then(|| (source, readiness.hint.clone().unwrap_or_default())),
+                setup_required: (!readiness.ready).then(|| {
+                    (
+                        source,
+                        readiness.hint.clone().unwrap_or_default(),
+                        readiness.install_tool.clone(),
+                    )
+                }),
                 action: RowAction::StartClone {
                     machine_id: machine_id.to_string(),
                     source,

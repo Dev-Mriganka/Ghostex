@@ -844,6 +844,9 @@ impl GhostexGpuiApp {
         ));
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),
+            window_decorations: (!modal.has_titlebar())
+                .then(crate::app::window::popup_frame::child_window_decorations)
+                .flatten(),
             #[cfg(target_os = "linux")]
             x11_parent: self.main_window_handle,
             window_bounds: Some(window_bounds),

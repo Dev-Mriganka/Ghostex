@@ -2,6 +2,7 @@ import type { AgentSyncApplyResult, AgentSyncPlan, AgentSyncReport } from './age
 import type { DelayedSendAgentReference } from '@/packages/shared/delayed-send';
 import type { CompletionSoundSetting } from './completion-sound';
 import type { BundledGhostexAgentSkillId } from './ghostex-agent-skills';
+import type { ManagedToolId } from './managed-tools';
 import type { AgentAcceptAllMode } from './sidebar-agent-accept-all';
 import type { SidebarAgentButton, SidebarAgentIcon } from './sidebar-agents';
 import type { SidebarCommandIcon } from './sidebar-command-icons';
@@ -236,6 +237,12 @@ export type SidebarGhostexCliStatusMessage = {
    * Trycua omit it, and those surfaces show no command block.
    */
   cuaDriverInstallCommand?: string;
+  /** Tooltip for Install and Reinstall Trycua: exactly what one click runs (CDXC:ManagedTools). */
+  cuaDriverInstallPlan?: string;
+  /** macOS: why Trycua cannot be installed (this account cannot write /Applications). */
+  cuaDriverApplicationsBlockedReason?: string | null;
+  /** The Trycua install, update, reinstall or uninstall the desktop app is running (or last ran) in the background. */
+  cuaDriverJob?: SidebarCuaDriverJob | null;
   /** True only when this host can install and update Cua Driver in-app. */
   cuaDriverManagedUpdatesSupported?: boolean;
   cuaDriverLatestVersion?: string;
@@ -253,6 +260,22 @@ export type SidebarGhostexCliStatusMessage = {
   installed: boolean;
   type: 'ghostexCliStatus';
 };
+
+export type SidebarCuaDriverJob = {
+  operation: 'install' | 'update' | 'reinstall' | 'uninstall';
+  status: 'running' | 'succeeded' | 'failed';
+  output: string;
+  error?: string | null;
+};
+
+/** The last non-empty line a running Trycua job printed, for a one-line progress label. */
+export function sidebarCuaDriverJobProgressLine(job: SidebarCuaDriverJob | null | undefined): string | undefined {
+  return job?.output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .at(-1);
+}
 
 export type SidebarOSIntegrationStatusTarget =
   'bundleRegistration' | 'editor' | 'platform' | 'scriptRunner' | 'terminalLinks';
@@ -1735,6 +1758,14 @@ export type SidebarToExtensionMessage =
         | 'reinstallCuaDriver'
         | 'uninstallCuaDriver'
         | 'checkCuaDriverUpdate';
+    }
+  | {
+      /**
+       * CDXC:ManagedTools 2026-09-29 WHY:
+       * Settings > Integrations > Tools asks the desktop to run a tool's install in a command-pane terminal where there is no password dialog (Linux system tools on WSL). Only the tool id crosses: the desktop reads the command from gxserver itself, never from the page.
+       */
+      toolId: ManagedToolId;
+      type: 'runManagedToolTerminalCommand';
     }
   | {
       /**

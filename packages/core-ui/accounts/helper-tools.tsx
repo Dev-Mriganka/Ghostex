@@ -3,6 +3,7 @@ import {
   IconCircleArrowUp,
   IconCircleCheck,
   IconCloudSearch,
+  IconDownload,
   IconLoader2,
   IconRefresh,
   IconTrash,
@@ -14,12 +15,14 @@ import { postAppModalHostMessage } from '../app-modal-host-bridge';
 import { Button } from '@/packages/components/ui/button';
 import { SettingButton, SettingsListItem } from '../settings-modal/fields';
 import { getAccountsConnections } from './transport';
+import { CopyCommand } from './copy-command';
 
 const HELPER_NAMES: Record<AccountProvider, { name: string; command: string }> = {
   claude: { name: 'Claude Swap', command: 'cswap' },
   codex: { name: 'Codex Swap', command: 'xswap' },
 };
 const ACTION_WORDS: Record<AccountHelperToolAction, { running: string; done: string; failed: string }> = {
+  install: { running: 'Installing', done: 'installed', failed: 'install failed' },
   update: { running: 'Updating', done: 'updated', failed: 'update failed' },
   reinstall: { running: 'Reinstalling', done: 'reinstalled', failed: 'reinstall failed' },
   uninstall: { running: 'Uninstalling', done: 'uninstalled', failed: 'uninstall failed' },
@@ -34,8 +37,8 @@ function toast(level: AppToastLevel, title: string, description: string) {
 
 /**
  * Claude Swap and Codex Swap as installed on `machineId`, read from gxserver's `helperStatus`.
- * Polls while an Update, Reinstall or Uninstall runs, toasts its result, then calls `onFinished`
- * so the page re-reads which helpers are installed.
+ * Polls while an Install, Update, Reinstall or Uninstall runs, toasts its result, then calls `onFinished`
+ * so the page re-reads which helpers are installed (an Add account flow then moves on to signing in).
  */
 export function useAccountHelperTools(machineId: string, onFinished: () => void) {
   const [tools, setTools] = useState<AccountHelperTool[]>([]);
@@ -131,6 +134,63 @@ export function useAccountHelperTools(machineId: string, onFinished: () => void)
   return { tools, checking, checkForUpdates, run };
 }
 
+export type AccountHelperTools = ReturnType<typeof useAccountHelperTools>;
+
+/** Whether gxserver can install the missing helper itself (a remote computer on an older gxserver cannot). */
+export function accountHelperOffersInstall(helperTools: AccountHelperTools, provider: AccountProvider): boolean {
+  return offersInstall(helperTools.tools.find((item) => item.provider === provider));
+}
+
+function offersInstall(tool: AccountHelperTool | undefined): boolean {
+  return Boolean(
+    tool &&
+    !tool.installed &&
+    (tool.actions.includes('install') || tool.unavailableReason || tool.job?.status === 'running')
+  );
+}
+
+/**
+ * CDXC:ManagedTools 2026-09-29 DECISION:
+ * User: "when they click on something, we help them install it on windows/macos/linux automatically (show a button with a tooltip explaining how we'll install) but 1 click installs it for them as much as possible". A missing Claude Swap or Codex Swap is one Install button whose tooltip is gxserver's `installPlan`; the job runs on the computer the accounts belong to. Supersedes the copyable install command the Accounts page, the Add account flow and the connection guide showed, which stays only for a computer whose gxserver cannot install helpers yet.
+ * SEE-ALSO: server/src/accounts/helper_tools.rs (`install_plan`, `Work::UvInstall`), apps/desktop/src/app/window/settings_modal/tabs/accounts/helper_tools.rs (the native twin).
+ */
+export function AccountHelperInstallButton({
+  provider,
+  fallbackCommand,
+  helperTools,
+}: {
+  provider: AccountProvider;
+  /** The copyable command shown when gxserver cannot install the helper itself. */
+  fallbackCommand?: string;
+  helperTools: AccountHelperTools;
+}) {
+  const tool = helperTools.tools.find((item) => item.provider === provider);
+  if (!offersInstall(tool)) {
+    return fallbackCommand ? <CopyCommand command={fallbackCommand} /> : null;
+  }
+  const { name } = HELPER_NAMES[provider];
+  const installing = tool?.job?.status === 'running' && tool.job.action === 'install';
+  return (
+    <AppTooltip content={tool?.unavailableReason ?? tool?.installPlan ?? `Install ${name}`}>
+      <SettingButton
+        disabled={installing || Boolean(tool?.unavailableReason) || tool?.job?.status === 'running'}
+        disabledReason={installing ? `Installing ${name}…` : (tool?.unavailableReason ?? `Installing ${name}…`)}
+        onClick={() => void helperTools.run(provider, 'install')}
+        size='sm'
+        type='button'
+        variant='outline'
+      >
+        {installing ? (
+          <IconLoader2 aria-hidden='true' className='animate-spin' data-icon='inline-start' />
+        ) : (
+          <IconDownload aria-hidden='true' data-icon='inline-start' />
+        )}
+        {installing ? `Installing ${name}…` : `Install ${name}`}
+      </SettingButton>
+    </AppTooltip>
+  );
+}
+
 /**
  * CDXC:AgentProviders 2026-09-28 DECISION:
  * User: each provider on the Accounts page gets icon buttons with tooltips to update, reinstall and uninstall its account helper (Claude Swap, Codex Swap), with update checking like the Trycua row: an Update button when a newer release exists, otherwise an "up to date, click to check again" button, and versions in the tooltips. Uninstall asks first.
@@ -139,15 +199,34 @@ export function useAccountHelperTools(machineId: string, onFinished: () => void)
 export function AccountHelperToolRow({
   tool,
   checking,
+  helperTools,
   onCheckForUpdates,
   onRun,
 }: {
   tool: AccountHelperTool | undefined;
   checking: boolean;
+  helperTools: AccountHelperTools;
   onCheckForUpdates: () => void;
   onRun: (action: AccountHelperToolAction) => void;
 }) {
   const [confirmUninstall, setConfirmUninstall] = useState(false);
+  if (tool && !tool.installed && offersInstall(tool)) {
+    const { name, command } = HELPER_NAMES[tool.provider];
+    const installing = tool.job?.status === 'running';
+    return (
+      <SettingsListItem
+        detail={
+          installing
+            ? `Installing ${name}…`
+            : `Not installed. Needed to add and switch ${tool.provider === 'claude' ? 'Claude' : 'Codex'} accounts.`
+        }
+        status='warning'
+        title={`${name} (${command})`}
+      >
+        <AccountHelperInstallButton helperTools={helperTools} provider={tool.provider} />
+      </SettingsListItem>
+    );
+  }
   if (!tool?.installed && tool?.job?.status !== 'running') return null;
   const { name, command } = HELPER_NAMES[tool.provider];
   const job = tool.job?.status === 'running' ? tool.job : undefined;

@@ -178,6 +178,7 @@ use crate::{
 
 pub(crate) mod accounts_http;
 pub(crate) mod agent_cli_http;
+pub(crate) mod managed_tools_http;
 pub mod agent_http;
 pub mod agent_prompt_search_http;
 pub mod background_tasks;
@@ -2398,6 +2399,9 @@ async fn route_http(
         ),
         "/api/agentCliMaintenance" => {
             agent_cli_http::handle(&state, endpoint.path, request_id, &body_json).await
+        }
+        "/api/managedTools" => {
+            managed_tools_http::handle(&state, endpoint.path, request_id, &body_json).await
         }
         "/api/agentAccounts" => {
             accounts_http::handle_accounts_http(&state, endpoint.path, request_id, &body_json).await

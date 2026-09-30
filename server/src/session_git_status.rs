@@ -679,6 +679,7 @@ fn run_gh_command(cwd: Option<&str>, args: &[&str]) -> Option<String> {
     let mut command = Command::new("gh");
     command
         .args(args)
+        .env("PATH", crate::managed_tools::run::job_path(&[]))
         .env("GH_NO_UPDATE_NOTIFIER", "1")
         .env("GH_PROMPT_DISABLED", "1")
         .env("NO_COLOR", "1")

@@ -29,6 +29,8 @@ pub fn terminal_dialog_copy(dialog: &TerminalDialog) -> Option<Value> {
         fast_mode_copy(&lines)?
     } else if let Some(left) = title.strip_prefix("Guest passes · ") {
         guest_passes_copy(left, &lines)?
+    } else if title == CODEX_WELCOME_TITLE {
+        codex_device_code_copy(&lines)?
     } else {
         return None;
     };
@@ -97,12 +99,61 @@ fn guest_passes_copy(left: &str, lines: &[&str]) -> Option<(String, Vec<String>)
     ))
 }
 
+/// The heading of Codex's sign-in screens, including its device-code step.
+pub const CODEX_WELCOME_TITLE: &str = "Welcome to Codex, OpenAI's command-line coding agent";
+
+/// The card title of Codex's device-code step, whose Previous and Next keys have nothing to move through.
+pub const CODEX_DEVICE_CODE_TITLE: &str = "Sign in to Codex";
+
+/// CDXC:Onboarding 2026-09-29 WHY: Sign in with Device Code is how Codex signs in on a computer you are not sitting at (a remote machine, a VM), and its painted terminal text left the link unclickable and the code buried in a text block.
+fn codex_device_code_copy(lines: &[&str]) -> Option<(String, Vec<String>)> {
+    let [intro, open, link, enter, code, rest @ ..] = lines else {
+        return None;
+    };
+    let expiry = enter
+        .strip_prefix("2. Enter this one-time code after you are signed in")?
+        .trim();
+    let code_ok = !code.is_empty() && code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    let link_ok = link.starts_with("https://") && !link.contains(char::is_whitespace);
+    let warning = match rest {
+        [] => None,
+        [warning] if warning.starts_with("Continue only if you started this login in Codex") => {
+            Some(warning.to_string())
+        }
+        _ => return None,
+    };
+    if *intro != "Finish signing in via your browser"
+        || *open != "1. Open this link in your browser and sign in"
+        || !code_ok
+        || !link_ok
+    {
+        return None;
+    }
+    let expiry = expiry
+        .strip_prefix('(')
+        .and_then(|value| value.strip_suffix(')'))
+        .map(|value| format!(" ({value})"))
+        .unwrap_or_default();
+    let mut paragraphs = vec![
+        format!("Open this link in any browser and sign in: {link}"),
+        format!("Then enter this one-time code: `{code}`{expiry}."),
+    ];
+    paragraphs.extend(warning);
+    Some((CODEX_DEVICE_CODE_TITLE.to_string(), paragraphs))
+}
+
 /// The title of Claude's first-run sign-in step, where its browser sign-in hands back a code.
 pub const CLAUDE_SIGN_IN_TITLE: &str = "Browser didn't open? Use the url below to sign in";
 
 /// CDXC:Onboarding 2026-09-28 WHY: a new Claude install signs in through this card, and its terminal wording ("Browser didn't open?", a bare link, a field) did not say what to do with the code the browser shows.
+/// Claude 2.1.27x adds "Hold Shift while selecting to use your terminal's native copy" under the link, a terminal-only key the card leaves out.
 fn claude_sign_in_copy(lines: &[&str]) -> Option<(String, Vec<String>)> {
-    let [link] = lines else {
+    let lines: Vec<&str> = lines
+        .iter()
+        .copied()
+        .filter(|line| !line.starts_with("Hold Shift while selecting"))
+        .collect();
+    let [link] = lines.as_slice() else {
         return None;
     };
     (link.starts_with("https://") && !link.contains(char::is_whitespace)).then(|| {

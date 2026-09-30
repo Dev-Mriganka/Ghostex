@@ -269,6 +269,7 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
                 .or(display_id),
             titlebar: None,
             kind: crate::app::window::popup_frame::child_window_kind(),
+            window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             focus: true,
             show: true,
             is_movable: false,
@@ -303,7 +304,11 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
                     },
                 ),
             });
-            cx.new(|cx| Root::new(view, window, cx).bg(gpui::transparent_black()))
+            cx.new(|cx| {
+                Root::new(view, window, cx)
+                    .bordered(false)
+                    .bg(gpui::transparent_black())
+            })
         },
     );
     match result {

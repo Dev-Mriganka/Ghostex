@@ -43,6 +43,8 @@ fn install_dirs(home: &Path) -> Vec<PathBuf> {
     if let Some(local) = std::env::var_os("LOCALAPPDATA").map(PathBuf::from) {
         dirs.push(local.join("Programs").join("codex-swap"));
     }
+    // uv installed by Ghostex, which installs and manages Claude Swap.
+    dirs.extend(crate::managed_tools::paths::path_dirs());
     dirs
 }
 

@@ -1,7 +1,3 @@
-use std::{path::Path, time::Duration};
-
-use anyhow::Result;
-
 use crate::app::helpers::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -219,7 +215,7 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
         GpuiGhostexCliSettingsAction::FinishTrycuaUninstall { succeeded: false } => {
             GpuiGhostexCliActionResult::failure(
                 action,
-                "The Trycua uninstaller did not finish successfully. Its terminal tab shows what happened; plugin status was refreshed."
+                "The Trycua uninstaller did not finish successfully. Settings shows its last output; plugin status was refreshed."
                     .to_string(),
             )
         }
@@ -247,85 +243,27 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct GpuiGteInstallActionResult {
-    pub(crate) available: bool,
-    pub(crate) message: &'static str,
-    pub(crate) toast_level: &'static str,
-    pub(crate) toast_title: &'static str,
-}
-
-pub(crate) fn gpui_gte_homebrew_install_command() -> (&'static str, [&'static str; 2], Duration) {
-    (
-        "/bin/zsh",
-        ["-lc", GPUI_GTE_HOMEBREW_INSTALL_SCRIPT],
-        Duration::from_secs(5 * 60),
-    )
-}
-
-pub(crate) fn gpui_install_gte_from_homebrew() -> GpuiGteInstallActionResult {
-    /*
-    CDXC:PromptEditor 2026-06-24-13:28:
-    GPUI Settings must use the same fixed Homebrew resolution order and `maddada/tap/gte` install operation as the macOS Settings button, bounded to five minutes with stdout/stderr suppressed. Installing the binary is separate from selecting the promptEditorBackend, and failures must report generic copy instead of raw Homebrew output, paths, command output, URLs, tokens, or environment.
-    */
-    let (command, args, timeout) = gpui_gte_homebrew_install_command();
-    let result = gpui_run_command_with_timeout(Path::new(command), &args, timeout);
-    gpui_gte_install_result_from_command_result(result)
-}
-
-pub(crate) fn gpui_gte_install_result_from_command_result(
-    result: Result<bool, String>,
-) -> GpuiGteInstallActionResult {
-    match result {
-        Ok(true) => GpuiGteInstallActionResult {
-            available: true,
-            message: GPUI_GTE_INSTALL_SUCCESS_MESSAGE,
-            toast_level: "success",
-            toast_title: GPUI_GTE_INSTALL_SUCCESS_MESSAGE,
-        },
-        Ok(false) | Err(_) => GpuiGteInstallActionResult {
-            available: false,
-            message: GPUI_GTE_INSTALL_FAILURE_MESSAGE,
-            toast_level: "warning",
-            toast_title: "gte install failed",
-        },
-    }
-}
-
-pub(crate) const GPUI_CUA_DRIVER_INSTALL_COMMAND_ID: &str = "ghostex.gpui.installCuaDriver";
-pub(crate) const GPUI_CUA_DRIVER_UPDATE_COMMAND_ID: &str = "ghostex.gpui.updateCuaDriver";
-pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_COMMAND_ID: &str = "ghostex.gpui.uninstallCuaDriver";
-pub(crate) const GPUI_CUA_DRIVER_INSTALL_TAB_TITLE: &str = "Install Trycua";
+pub(crate) const GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE: &str =
+    "The official Trycua installer is running in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE: &str = "The official Trycua installer is reinstalling the latest release in the background. Settings shows its progress.";
+pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE: &str =
+    "The official Trycua uninstaller is running in the background. Settings shows its progress.";
 #[cfg(target_os = "macos")]
-pub(crate) const GPUI_CUA_DRIVER_UPDATE_TAB_TITLE: &str = "Update Trycua";
-pub(crate) const GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE: &str = "The official Trycua installer is running in a command terminal tab. Plugin status updates when it finishes.";
-pub(crate) const GPUI_CUA_DRIVER_REINSTALL_TAB_TITLE: &str = "Reinstall Trycua";
-pub(crate) const GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE: &str = "The official Trycua installer is reinstalling the latest release in a command terminal tab. Plugin status updates when it finishes.";
-pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_TAB_TITLE: &str = "Uninstall Trycua";
-pub(crate) const GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE: &str = "The official Trycua uninstaller is running in a command terminal tab. Plugin status updates when it finishes.";
-#[cfg(target_os = "macos")]
-pub(crate) const GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE: &str = "Trycua is checking for and applying the latest official update in a command terminal tab. Plugin status updates when it finishes.";
+pub(crate) const GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE: &str = "Trycua is checking for and applying the latest official update in the background. Settings shows its progress.";
 
 /*
 CDXC:Extensions 2026-08-09:
 macOS owns the in-app Trycua lifecycle. A missing driver runs trycua's
 official installer; an existing driver performs a fresh update check and then
 uses its canonical self-updater.
-
-CDXC:Extensions 2026-08-24:
-Every desktop platform now runs the official Trycua installer in a command-pane
-tab instead of sending Windows and Linux to a downloads page, so Settings can
-show one exact command and one button that runs it. Windows Ghostex terminals
-are WSL shells, so the Windows command must cross the interop boundary through
-`powershell.exe`; Trycua installs on the Windows side and is not reachable as a
-Linux binary inside the distribution.
 */
+/// CDXC:ManagedTools 2026-09-29 DECISION:
+/// User: "1 click installs it for them as much as possible", with a tooltip explaining how Ghostex installs it; the agreed plan moves Trycua "out of its terminal tab into the same job runner". The official installer, updater and uninstaller now run as a background job of the desktop app with their output shown in Settings, instead of in a command-pane terminal tab. Supersedes CDXC:Extensions 2026-08-24, which ran them in a command-pane tab (and on Windows crossed from the WSL shell through `powershell.exe`): the desktop app itself is a native Windows process, so it runs Windows PowerShell directly. It stays in the desktop app rather than gxserver because Trycua controls the desktop it runs on, while gxserver may run inside WSL.
 #[cfg(not(target_os = "windows"))]
 pub(crate) const GPUI_TRYCUA_INSTALL_COMMAND: &str =
     "/bin/bash -c \"$(curl -fsSL https://cua.ai/driver/install.sh)\"";
 #[cfg(target_os = "windows")]
-pub(crate) const GPUI_TRYCUA_INSTALL_COMMAND: &str =
-    "powershell.exe -NoProfile -Command \"irm https://cua.ai/driver/install.ps1 | iex\"";
+pub(crate) const GPUI_TRYCUA_INSTALL_COMMAND: &str = "irm https://cua.ai/driver/install.ps1 | iex";
 /*
 CDXC:Extensions 2026-09-26 DECISION:
 Settings' Uninstall Trycua button runs the official uninstaller with `--keep-tcc`: the user chose to keep the Accessibility and Screen Recording grants (the uninstaller revokes them by default) so a later reinstall needs no new permission prompts. Windows has no such grants to keep.
@@ -335,16 +273,18 @@ pub(crate) const GPUI_TRYCUA_UNINSTALL_COMMAND: &str =
     "/bin/bash -c \"$(curl -fsSL https://cua.ai/driver/uninstall.sh)\" -- --keep-tcc";
 #[cfg(target_os = "windows")]
 pub(crate) const GPUI_TRYCUA_UNINSTALL_COMMAND: &str =
-    "powershell.exe -NoProfile -Command \"irm https://cua.ai/driver/uninstall.ps1 | iex\"";
+    "irm https://cua.ai/driver/uninstall.ps1 | iex";
 #[cfg(target_os = "macos")]
 pub(crate) const GPUI_CUA_DRIVER_START_COMMAND: &str =
     "/usr/bin/open -n -g -a CuaDriver --args serve";
 
+/// What a Trycua button runs: a script for the background job (bash, or Windows PowerShell), and
+/// how its completion is reported.
 pub(crate) struct GpuiCuaDriverCommandAction {
-    pub(crate) command: String,
-    pub(crate) command_id: &'static str,
+    pub(crate) script: String,
+    /// `install`, `update`, `reinstall` or `uninstall` (`cuaDriverJob.operation`).
+    pub(crate) operation: &'static str,
     pub(crate) running_message: &'static str,
-    pub(crate) tab_title: &'static str,
     pub(crate) toast_title: &'static str,
 }
 
@@ -353,12 +293,11 @@ pub(crate) fn gpui_cua_driver_command_action() -> GpuiCuaDriverCommandAction {
     if let Some(cua_driver_path) = gpui_cua_driver_executable_path() {
         let executable = gpui_shell_single_quote_path(&cua_driver_path);
         return GpuiCuaDriverCommandAction {
-            command: format!(
+            script: format!(
                 "{executable} check-update --no-cache && {executable} update --apply && {GPUI_CUA_DRIVER_START_COMMAND}"
             ),
-            command_id: GPUI_CUA_DRIVER_UPDATE_COMMAND_ID,
+            operation: "update",
             running_message: GPUI_CUA_DRIVER_UPDATE_RUNNING_MESSAGE,
-            tab_title: GPUI_CUA_DRIVER_UPDATE_TAB_TITLE,
             toast_title: "Updating Trycua",
         };
     }
@@ -370,8 +309,8 @@ pub(crate) fn gpui_cua_driver_command_action() -> GpuiCuaDriverCommandAction {
 /// exit finishes Desktop Control setup exactly like a first install.
 pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiCuaDriverCommandAction {
     GpuiCuaDriverCommandAction {
+        operation: "reinstall",
         running_message: GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE,
-        tab_title: GPUI_CUA_DRIVER_REINSTALL_TAB_TITLE,
         toast_title: "Reinstalling Trycua",
         ..gpui_cua_driver_installer_command_action()
     }
@@ -379,25 +318,23 @@ pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiCuaDriverCommand
 
 pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiCuaDriverCommandAction {
     GpuiCuaDriverCommandAction {
-        command: GPUI_TRYCUA_UNINSTALL_COMMAND.to_string(),
-        command_id: GPUI_CUA_DRIVER_UNINSTALL_COMMAND_ID,
+        script: GPUI_TRYCUA_UNINSTALL_COMMAND.to_string(),
+        operation: "uninstall",
         running_message: GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE,
-        tab_title: GPUI_CUA_DRIVER_UNINSTALL_TAB_TITLE,
         toast_title: "Uninstalling Trycua",
     }
 }
 
 fn gpui_cua_driver_installer_command_action() -> GpuiCuaDriverCommandAction {
     #[cfg(target_os = "macos")]
-    let command = format!("{GPUI_TRYCUA_INSTALL_COMMAND} && {GPUI_CUA_DRIVER_START_COMMAND}");
+    let script = format!("{GPUI_TRYCUA_INSTALL_COMMAND} && {GPUI_CUA_DRIVER_START_COMMAND}");
     #[cfg(not(target_os = "macos"))]
-    let command = GPUI_TRYCUA_INSTALL_COMMAND.to_string();
+    let script = GPUI_TRYCUA_INSTALL_COMMAND.to_string();
 
     GpuiCuaDriverCommandAction {
-        command,
-        command_id: GPUI_CUA_DRIVER_INSTALL_COMMAND_ID,
+        script,
+        operation: "install",
         running_message: GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE,
-        tab_title: GPUI_CUA_DRIVER_INSTALL_TAB_TITLE,
         toast_title: "Installing Trycua",
     }
 }

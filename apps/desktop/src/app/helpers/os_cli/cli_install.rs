@@ -37,7 +37,7 @@ pub(crate) fn gpui_finish_desktop_control_setup(
 ) -> Result<String, String> {
     /*
     CDXC:Extensions 2026-08-09:
-    The Cua Driver installer/updater runs in a visible command-pane terminal.
+    The Cua Driver installer/updater runs as a background job whose output Settings shows.
     This completion step installs the bundled Ghostex Computer Use skill through
     the fixed ownership-verified Ghostex CLI helper and reports command failure
     without claiming Desktop Control is ready.
@@ -45,9 +45,9 @@ pub(crate) fn gpui_finish_desktop_control_setup(
     if !driver_installed {
         return Err(
             if was_update {
-                "The Trycua update did not finish successfully. Its terminal tab shows what happened; plugin status was refreshed."
+                "The Trycua update did not finish successfully. Settings shows its last output; plugin status was refreshed."
             } else {
-                "The Trycua installer did not finish successfully. Its terminal tab shows what happened; plugin status was refreshed."
+                "The Trycua installer did not finish successfully. Settings shows its last output; plugin status was refreshed."
             }
             .to_string(),
         );

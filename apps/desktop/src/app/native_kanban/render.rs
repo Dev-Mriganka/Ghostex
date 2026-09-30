@@ -7,6 +7,7 @@ use gpui::{
     px,
 };
 
+use super::lane::{LANE_GAP, lane_row_min_width, lanes_in_view};
 use super::palette::KanbanPalette;
 use super::state::KanbanPanel;
 use crate::GhostexGpuiApp;
@@ -78,17 +79,32 @@ impl GhostexGpuiApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let p = self.native_kanban_palette(window);
-        let lanes = self.native_kanban_lane_elements(&p, cx);
+        let lane_count = self.native_kanban.columns.len();
+        let scroll = self.native_kanban.lanes_scroll.clone();
+        let in_view = lanes_in_view(
+            lane_count,
+            -f32::from(scroll.offset().x),
+            f32::from(window.viewport_size().width),
+        );
+        let lanes = self.native_kanban_lane_elements(in_view, &p, cx);
+        // GPUI measures a scroll container's content from its direct children only, so the row
+        // must be as wide as the lanes need; a row stretched to the viewport let the lanes spill
+        // past it with nothing to scroll to.
+        let row_min_width = lane_row_min_width(lane_count);
         div()
             .id("native-kanban-lanes")
             .size_full()
             .overflow_x_scroll()
+            // A vertical wheel over a lane scrolls its cards, not the board sideways.
+            .restrict_scroll_to_axis()
+            .track_scroll(&scroll)
             .child(
                 div()
                     .flex()
                     .h_full()
-                    .min_w(gpui::relative(1.0))
-                    .gap(px(10.0))
+                    .w_full()
+                    .min_w(px(row_min_width))
+                    .gap(px(LANE_GAP))
                     .children(lanes),
             )
             .into_any_element()
@@ -109,6 +125,8 @@ impl GhostexGpuiApp {
             let derived = self.native_kanban.derived();
             (derived.nothing_matches, derived.filter_count)
         };
+        // Before `state` borrows the board: the notice may ask gxserver about Install Beads.
+        let notice = self.render_native_kanban_notice(&p, cx);
         let state = &self.native_kanban;
         // The first load draws skeleton cards in the lanes instead of a status line.
         let status = (nothing_matches && !state.loading_first())
@@ -123,7 +141,6 @@ impl GhostexGpuiApp {
             None => None,
         };
         let toolbar = self.render_native_kanban_toolbar(&p, filter_count, window, cx);
-        let notice = self.render_native_kanban_notice(&p, cx);
         let display_name = state.display_name.clone();
         div()
             .id("native-kanban")

@@ -259,6 +259,7 @@ impl GhostexGpuiApp {
         );
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),
+            window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
             x11_parent: self.main_window_handle,
             window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(
@@ -318,7 +319,11 @@ impl GhostexGpuiApp {
                 inside one; the Root's own surface is cleared so the rounded
                 popup frame is the only thing painted.
                 */
-                cx.new(|cx| Root::new(shell, window, cx).bg(gpui::transparent_black()))
+                cx.new(|cx| {
+                    Root::new(shell, window, cx)
+                        .bordered(false)
+                        .bg(gpui::transparent_black())
+                })
             })
             .ok();
         self.new_thread_picker = picker_slot.borrow_mut().take();

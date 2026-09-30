@@ -425,7 +425,15 @@ pub(crate) fn quick_access_footer<V: 'static>(
                 .child(
                     h_flex()
                         .gap(px(3.0))
-                        .child(quick_access_keycap(&p, "⌘"))
+                        // Actions opens on `secondary()`: Cmd on macOS, Ctrl elsewhere.
+                        .child(quick_access_keycap(
+                            &p,
+                            if cfg!(target_os = "macos") {
+                                "⌘"
+                            } else {
+                                "Ctrl"
+                            },
+                        ))
                         .child(quick_access_keycap(&p, "K")),
                 ),
         )

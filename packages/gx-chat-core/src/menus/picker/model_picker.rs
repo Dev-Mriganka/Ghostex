@@ -100,7 +100,7 @@ pub fn model_picker_supports_session_scope(provider: ModelPickerProvider) -> boo
 /// apply that for that session." The Session-only model picks setting and the Also set as default
 /// switch are removed. This supersedes the 2026-09-19 decision that a setting and a per-session
 /// switch chose the scope. The big picker keeps the same split on the keyboard: Enter saves the
-/// default, Shift+Enter applies to the session alone.
+/// default, Option+Enter applies to the session alone (see the model pop-up's keys.rs DECISION).
 pub fn model_pick_scope(
     provider: Option<ModelPickerProvider>,
     secondary: bool,
