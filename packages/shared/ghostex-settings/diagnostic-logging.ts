@@ -17,7 +17,7 @@ export type DiagnosticLoggingScenarioDefinition = {
 /**
  * CDXC:Diagnostics 2026-09-26 DECISION:
  * User: the Debugging page had far too many log switches. Scenarios nothing writes any more are deleted, the rest are merged into one switch per feature area, all switches share one turn-off timer, and rows show no log file names. Desktop performance profiling has no switch: launching with --profile is its opt-in.
- * Each id is the one an area kept from before the merge, so the Rust writers in apps/desktop/src/support_logs.rs and server/src/logging.rs still read the same strings.
+ * Each id is the one an area kept from before the merge, so the Rust writers in apps/desktop/src/support_logs.rs and server/src/logging/logger.rs still read the same strings.
  */
 export const DIAGNOSTIC_LOGGING_SCENARIOS = [
   {

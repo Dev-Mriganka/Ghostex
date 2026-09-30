@@ -83,7 +83,7 @@ pub struct SessionLifecycleSweepOutcome {
 
 /*
 The configuration channel. gxserver already reads the shared sidebar settings
-file for `debuggingMode` (see `logging.rs`), and both `sidebarVersion` and
+file for `debuggingMode` (see `logging/logger.rs`), and both `sidebarVersion` and
 `sidebarAutoSettleAfterDays` ride the same settings pipeline the Sidebar V2
 toggle uses, so there is no new transport, no new endpoint, and no duplicated
 source of truth. One read serves both keys.
