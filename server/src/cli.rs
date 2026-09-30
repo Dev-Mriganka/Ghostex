@@ -117,6 +117,12 @@ pub async fn run(args: Vec<String>) -> Result<()> {
         Some("agent-hook-notify") => {
             run_notify_hook(args.iter().skip(1).cloned().collect())?;
         }
+        #[cfg(windows)]
+        Some("agent-statusline-native") => {
+            crate::agent_hooks::statusline::run_native_statusline_hook(
+                args.iter().skip(1).cloned().collect(),
+            )?;
+        }
         Some("agent-statusline") => {
             run_statusline_hook(args.iter().skip(1).cloned().collect())?;
         }

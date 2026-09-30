@@ -181,6 +181,7 @@ pub(crate) fn is_statusline_hook_current(hook_paths: &HookPaths, contents: &str)
         .any(|line| line == state_directory_assignment)
 }
 
+#[cfg(not(windows))]
 fn statusline_script_token(script: &Path) -> String {
     shell_quote(&path_string(script))
 }
@@ -192,12 +193,76 @@ pub(crate) fn statusline_command(hook_paths: &HookPaths, wrapped: Option<&str>) 
 
 /// The `statusLine.command` Ghostex writes: the script alone, or the script
 /// with the user's original command as its single argument.
+#[cfg(not(windows))]
 fn agent_statusline_command(script: &Path, wrapped: Option<&str>) -> String {
     let script = statusline_script_token(script);
     match wrapped {
         Some(wrapped) => format!("{script} {}", shell_quote(wrapped)),
         None => script,
     }
+}
+
+/// CDXC:AgentHooks 2026-09-30 WHY:
+/// On Windows the statusLine command was the quoted path of the bash script. Claude Code runs that through Git Bash when it is installed and through PowerShell when it is not, and PowerShell evaluates a quoted path as a string: on a computer without Git for Windows the status line printed the script's path and no payload ever reached gxserver, so the chat's model pill and status line stayed empty.
+/// The command now starts gxserver through powershell.exe, the form the Windows hook commands already use because both shells parse it. The script path stays in the command: it carries the hook state directory and is what marks the command as Ghostex's. A wrapped user command travels as base64 so its quotes survive both shells.
+/// SEE-ALSO: `windows::command` (the hook form), `run_native_statusline_hook` (the runtime), `windows_wrapped_statusline_command` (the parser).
+#[cfg(windows)]
+fn agent_statusline_command(script: &Path, wrapped: Option<&str>) -> String {
+    use base64::Engine as _;
+    let executable = std::env::current_exe().unwrap_or_default();
+    let quote = |text: &str| format!("'{}'", text.replace('\'', "''"));
+    let wrapped = wrapped
+        .map(|wrapped| {
+            format!(
+                " {}",
+                quote(&base64::engine::general_purpose::STANDARD.encode(wrapped))
+            )
+        })
+        .unwrap_or_default();
+    format!(
+        "powershell.exe -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& {} {WINDOWS_STATUSLINE_VERB} {}{wrapped}\"",
+        quote(&executable.to_string_lossy()),
+        quote(&path_string(script)),
+    )
+}
+
+/// The gxserver verb the Windows statusLine command runs.
+#[cfg(windows)]
+pub(crate) const WINDOWS_STATUSLINE_VERB: &str = "agent-statusline-native";
+
+/// The user command wrapped by a Windows statusLine command in the `agent-statusline-native` form: `None` when the command is not in that form, `Some(None)` when it wraps nothing.
+#[cfg(windows)]
+fn windows_wrapped_statusline_command(command: &str) -> Option<Option<String>> {
+    use base64::Engine as _;
+    let (_, arguments) = command.split_once(&format!(" {WINDOWS_STATUSLINE_VERB} "))?;
+    let arguments = arguments.trim().trim_end_matches('"').trim();
+    // `'<script>'` or `'<script>' '<base64>'`; a PowerShell literal doubles its quotes.
+    let after_script = arguments.strip_prefix('\'')?;
+    let mut script_end = None;
+    let bytes = after_script.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'\'' {
+            if bytes.get(index + 1) == Some(&b'\'') {
+                index += 2;
+                continue;
+            }
+            script_end = Some(index);
+            break;
+        }
+        index += 1;
+    }
+    let rest = after_script[script_end? + 1..].trim();
+    if rest.is_empty() {
+        return Some(None);
+    }
+    let encoded = rest.strip_prefix('\'')?.strip_suffix('\'')?;
+    let wrapped = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .filter(|wrapped| !wrapped.trim().is_empty());
+    Some(wrapped)
 }
 
 /// True for any command that runs Ghostex's statusline script, current path or
@@ -216,6 +281,10 @@ fn shell_unquote(value: &str) -> Option<String> {
 pub(crate) fn wrapped_statusline_command(command: &str) -> Option<String> {
     if !is_ghostex_statusline_command(command) {
         return None;
+    }
+    #[cfg(windows)]
+    if let Some(wrapped) = windows_wrapped_statusline_command(command) {
+        return wrapped;
     }
     // `'<script>' '<wrapped>'` — the script token is single-quoted, so the
     // argument starts at the first quote after it.
@@ -254,7 +323,20 @@ pub(crate) fn register_claude_statusline(data: &mut Value, hook_paths: &HookPath
     register_statusline(data, &hook_paths.statusline_hook_path)
 }
 
+/// `statusLine` runs `script` through this gxserver, bare or wrapping a user command. The bash-script form an earlier build wrote is not current, so the next install or repair rewrites it.
+#[cfg(windows)]
+pub(crate) fn statusline_is_current(data: &Value, script: &Path) -> bool {
+    statusline_entry(data)
+        .and_then(statusline_entry_command)
+        .is_some_and(|command| {
+            windows_wrapped_statusline_command(command).is_some_and(|wrapped| {
+                command == agent_statusline_command(script, wrapped.as_deref())
+            })
+        })
+}
+
 /// `statusLine` runs `script`, bare or wrapping a user command.
+#[cfg(not(windows))]
 pub(crate) fn statusline_is_current(data: &Value, script: &Path) -> bool {
     statusline_entry(data)
         .and_then(statusline_entry_command)
@@ -447,7 +529,87 @@ pub fn run_statusline_hook(args: Vec<String>) -> Result<(), DomainStateError> {
     );
     let mut input = String::new();
     let _ = std::io::stdin().read_to_string(&mut input);
-    let payload = serde_json::from_str::<Value>(&input)
+    store_and_render_statusline(&hook_state_dir, agent, render, &input)
+}
+
+/// Runtime of the Windows statusLine command: `gxserver agent-statusline-native <script> [<base64 user command>]`. It does what the bash script does on the other platforms: store the payload, then print Ghostex's line or run the wrapped user command with the same payload on its stdin.
+#[cfg(windows)]
+pub fn run_native_statusline_hook(args: Vec<String>) -> Result<(), DomainStateError> {
+    use base64::Engine as _;
+    use std::io::Write as _;
+    let script = PathBuf::from(args.first().map(String::as_str).unwrap_or_default());
+    let agent = if script
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("cursor-"))
+    {
+        StatuslineAgent::Cursor
+    } else {
+        StatuslineAgent::Claude
+    };
+    let hook_state_dir = std::env::var("GHOSTEX_AGENT_HOOK_STATE_DIR")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            super::install::notify_hook_state_directory(&super::probing::read_file_text(&script))
+        })
+        .ok_or_else(|| {
+            DomainStateError::corrupt_state(
+                "statusline script does not name a hook state directory".to_string(),
+            )
+        })?;
+    let wrapped = args
+        .get(1)
+        .and_then(|encoded| {
+            base64::engine::general_purpose::STANDARD
+                .decode(encoded.trim())
+                .ok()
+        })
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .filter(|wrapped| !wrapped.trim().is_empty());
+    let mut input = String::new();
+    let _ = std::io::stdin().read_to_string(&mut input);
+    let Some(wrapped) = wrapped else {
+        return store_and_render_statusline(&hook_state_dir, agent, true, &input);
+    };
+    let _ = store_and_render_statusline(&hook_state_dir, agent, false, &input);
+    // The user's command was written for the shell Claude Code runs it in: Git Bash when Git for Windows is installed, PowerShell otherwise.
+    let mut command = match crate::platform::live_path::find("git", &[])
+        .and_then(|git| Some(git.parent()?.parent()?.join("bin").join("bash.exe")))
+        .filter(|bash| bash.is_file())
+    {
+        Some(bash) => {
+            let mut command = std::process::Command::new(bash);
+            command.arg("-c").arg(&wrapped);
+            command
+        }
+        None => {
+            let mut command = std::process::Command::new("powershell.exe");
+            command
+                .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"])
+                .arg(&wrapped);
+            command
+        }
+    };
+    let mut child = command
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .map_err(io_error)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(input.as_bytes());
+    }
+    let _ = child.wait();
+    Ok(())
+}
+
+fn store_and_render_statusline(
+    hook_state_dir: &Path,
+    agent: StatuslineAgent,
+    render: bool,
+    input: &str,
+) -> Result<(), DomainStateError> {
+    let payload = serde_json::from_str::<Value>(input)
         .ok()
         .and_then(|value| value.as_object().cloned())
         .unwrap_or_default();
