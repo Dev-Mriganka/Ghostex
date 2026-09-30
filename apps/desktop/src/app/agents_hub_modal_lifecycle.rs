@@ -7,7 +7,7 @@
 //! background executor and hands their answers to the window as typed values, so nothing
 //! crosses a web bridge. The paths a command names are still validated against a fresh catalog
 //! before any read or write, exactly as the bridge did.
-//! SEE-ALSO: apps/desktop/src/app/window/agents_hub/ (the window), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (the React bridge arms, dead once the React Hub is deleted).
+//! SEE-ALSO: apps/desktop/src/app/window/agents_hub/ (the window), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), apps/desktop/src/app/delayed_send.rs (the React bridge arms, dead once the React Hub is deleted).
 use crate::app::helpers::*;
 use crate::app::window::*;
 use crate::*;

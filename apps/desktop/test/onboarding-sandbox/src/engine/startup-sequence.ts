@@ -28,7 +28,7 @@ export const CODE_REFS = {
     'apps/desktop/src/app/os_integration/toast_and_status_dispatch.rs:260 run_gpui_progressive_agent_hook_status_task',
   cliSettingsAction:
     'apps/desktop/src/app/os_integration/toast_and_status_dispatch.rs:323 run_gpui_ghostex_cli_settings_action',
-  sidebarCommand: 'apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs:13 handle_gpui_app_modal_sidebar_command',
+  sidebarCommand: 'apps/desktop/src/app/delayed_send.rs:1820 handle_gpui_app_modal_sidebar_command',
   tipsRuntimeStatus: 'apps/desktop/src/app/modals.rs:939 request_gpui_titlebar_tips_runtime_status',
   toast: 'apps/desktop/src/app/modals.rs:1987 show_gpui_gxserver_bootstrap_toast',
   firstLaunchSetup: 'apps/desktop/src/app/modals.rs:1361 open_gpui_first_launch_setup_with_sidebar_state',
