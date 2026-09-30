@@ -439,7 +439,7 @@ pub(crate) fn resolve_project_agent_config(
 
 /// CDXC:AgentProviders 2026-09-04 DECISION:
 /// User: Agent approvals defaults to Ask first, so interactive Claude and Codex launches must not force permission-bypass flags unless the global or per-agent policy explicitly selects Run without asking.
-/// SEE-ALSO: packages/shared/ghostex-settings/defaults.ts, packages/find/src/agent.rs, apps/history-cli/src/ui.rs.
+/// SEE-ALSO: packages/shared/ghostex-settings/defaults.ts, packages/find/src/agent.rs, apps/history-cli/src/ui/resume.rs.
 pub(crate) fn resolve_agent_launch_command(
     agent_id: &str,
     command: &str,
