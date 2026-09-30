@@ -502,7 +502,7 @@ fn session_lifecycle(candidate: &PromptLaunchSession) -> &str {
 ///
 /// CDXC:PromptSearch 2026-09-19 WHY:
 /// A session launched from a custom agent configuration stores that configuration's `custom-…` id as its agent, never the family the transcript belongs to, so the family resolved the way resume planning resolves it must count as a match too. Comparing the raw id alone made Find open a second `claude --resume` writer onto a conversation a running custom Claude session already owned.
-/// SEE-ALSO: `resolve_live_agent_session_owner` in server/src/ghostex_cli/wait.rs, the same rule for the `gx f` picker.
+/// SEE-ALSO: `resolve_live_agent_session_owner` in server/src/ghostex_cli/wait/lifecycle.rs, the same rule for the `gx f` picker.
 fn session_owns_agent_conversation(
     candidate: &PromptLaunchSession,
     agent_session_id: &str,
