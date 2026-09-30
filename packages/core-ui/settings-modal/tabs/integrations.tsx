@@ -274,7 +274,8 @@ export function IntegrationsSettingsTab({
             onOpenAccessibilityPreferences={onOpenAccessibilityPreferences}
             onOpenScreenRecordingPreferences={onOpenScreenRecordingPreferences}
             permissionStatus={cuaPermissionStatus}
-            showPermissions={showIntegrationRow('cuaPermissions')}
+            // Accessibility and Screen Recording are macOS grants; Fast Computer Use needs none on Windows or Linux.
+            showPermissions={IS_MAC_HOST && showIntegrationRow('cuaPermissions')}
             showTrycua={showIntegrationRow('bundledAgentSkills')}
           />
         ) : null}

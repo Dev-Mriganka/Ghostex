@@ -1245,7 +1245,9 @@ impl Render for IntegrationsTab {
                 );
             }
             let show_trycua = search.row_visible(section, "bundledAgentSkills");
-            let show_permissions = search.row_visible(section, "cuaPermissions");
+            // Accessibility and Screen Recording are macOS grants; Fast Computer Use needs none on Windows or Linux.
+            let show_permissions =
+                cfg!(target_os = "macos") && search.row_visible(section, "cuaPermissions");
             blocks.extend(
                 self.desktop_control_section(
                     &p,
