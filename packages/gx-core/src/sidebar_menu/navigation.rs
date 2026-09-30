@@ -3,6 +3,7 @@
 //! Ported from the TypeScript sidebar page (frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/navigation.ts`; see git history).
 
+use crate::app_lifecycle::APP_LIFECYCLE_ACTIONS;
 use crate::sidebar_view::tags::{
     normalize_tag_list_items, tag_list_item_filter, tag_list_item_label, tag_presentation,
     TagCatalog, TagListItemKind,
@@ -171,16 +172,25 @@ pub fn more_menu(input: &MoreMenuInput<'_>) -> Vec<MenuItem> {
         ));
     }
     /*
-    CDXC:Sidebar 2026-09-21 DECISION:
-    User: the sidebar menu has no Settings or Hotkeys entries; it ends at Join Discord. Settings is
-    the gear beside the Commands row, and Hotkeys is a page inside Settings. This supersedes the
-    2026-09-20 rule that kept both entries here as a deliberate duplicate of the gear.
+    CDXC:Sidebar 2026-09-30 DECISION:
+    User: "add the buttons that we have only in mac os menu bar under Ghostex to the dropdown in the sidebar (for example check for updates, quit ghostex, quit bg services, restart". The menu ends with those app rows, below Join Discord, wherever the host is the desktop app; Windows and Linux have no menu bar to find them in. This supersedes the 2026-09-21 rule that the menu ends at Join Discord. The rest of that rule stands: the menu has no Settings or Hotkeys entries, because Settings is the gear beside the Commands row and Hotkeys is a page inside Settings. About and the Hide rows stay in the macOS menu bar only.
     The frozen TypeScript twin of this menu (`tooling/gx-core/sidebar-page-frozen/navigation.ts`) is deleted; this is the only builder.
+    SEE-ALSO: packages/gx-core/src/app_lifecycle.rs (the rows, shared with Quick Access's Commands tab).
     */
     more.push(MenuItem::row(
         "Join Discord",
         "users-group",
         MenuCommand::command(message::open_external_url(DISCORD_URL)),
     ));
+    if input.host.app_lifecycle {
+        more.push(MenuItem::separator());
+        for action in APP_LIFECYCLE_ACTIONS {
+            more.push(MenuItem::row(
+                action.title,
+                action.icon,
+                MenuCommand::command(message::app_lifecycle(action.id)),
+            ));
+        }
+    }
     more
 }

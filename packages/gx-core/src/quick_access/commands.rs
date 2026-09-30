@@ -17,6 +17,7 @@ use super::text::{
     normalize_hotkey_text,
 };
 use super::wire::{QuickAccessGroup, QuickAccessIcon, QuickAccessRow};
+use crate::app_lifecycle::{AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE};
 use crate::sidebar_view::text::js_trim;
 
 const GHOSTEX_CHANGELOG_URL: &str = "https://github.com/maddada/ghostex/releases";
@@ -154,6 +155,8 @@ pub(crate) enum PaletteCommand {
         search_text: String,
         title: String,
     },
+    /// Check for Updates, Restart and the two Quits, where the host is the desktop app.
+    AppLifecycle(&'static AppLifecycleAction),
     Pet {
         search_text: String,
         title: &'static str,
@@ -175,6 +178,7 @@ impl PaletteCommand {
             Self::AppModal { search_text, .. } | Self::SidebarMessage { search_text, .. } => {
                 search_text
             }
+            Self::AppLifecycle(action) => action.search_text,
         }
     }
 
@@ -185,6 +189,7 @@ impl PaletteCommand {
             Self::AppModal { command_id, .. } => format!("appModal:{command_id}"),
             Self::SidebarMessage { command_id, .. } => format!("sidebarMessage:{command_id}"),
             Self::OpenTarget { command_id, .. } => format!("openTarget:{command_id}"),
+            Self::AppLifecycle(action) => format!("appLifecycle:{}", action.id),
             Self::Project { command, .. } => {
                 format!("project:{}", text(&command["commandId"]))
             }
@@ -424,6 +429,13 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
             ),
     );
     built_in.extend(open_target_commands(data));
+    if data.app_lifecycle {
+        built_in.extend(
+            APP_LIFECYCLE_ACTIONS
+                .iter()
+                .map(PaletteCommand::AppLifecycle),
+        );
+    }
     let pet_enabled = data.pet_overlay_enabled();
     let pet_title = if pet_enabled { "Sleep Pet" } else { "Wake Pet" };
     built_in.push(PaletteCommand::Pet {
@@ -524,6 +536,11 @@ fn command_row(command: &PaletteCommand, data: &QuickAccessData) -> QuickAccessR
         PaletteCommand::OpenTarget { title, .. } => {
             (title.clone(), "external-link".to_string(), String::new())
         }
+        PaletteCommand::AppLifecycle(action) => (
+            action.title.to_string(),
+            action.icon.to_string(),
+            String::new(),
+        ),
         PaletteCommand::Pet { title, .. } => (
             (*title).to_string(),
             if *title == "Sleep Pet" {
@@ -663,6 +680,10 @@ pub(crate) fn run_command_row(key: &str, data: &QuickAccessData) -> Vec<CommandR
                 CommandRun::Post(sidebar_message(command_id)),
             ]
         }
+        PaletteCommand::AppLifecycle(action) => vec![
+            CommandRun::Close,
+            CommandRun::Post(json!({ "action": action.id, "type": APP_LIFECYCLE_MESSAGE_TYPE })),
+        ],
         PaletteCommand::OpenTarget { target_id, .. } => vec![
             CommandRun::Close,
             CommandRun::Post(

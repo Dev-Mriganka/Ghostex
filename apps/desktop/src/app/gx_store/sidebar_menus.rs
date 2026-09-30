@@ -141,6 +141,7 @@ impl GhostexGpuiApp {
                 .map(|runtime| runtime.duration_minutes.minutes() as i64),
             machine_connected,
             open_targets: self.gx_store.menu_host.open_targets.clone(),
+            app_lifecycle: true,
         }
     }
 

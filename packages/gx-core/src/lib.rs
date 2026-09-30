@@ -14,6 +14,7 @@
 //!   the revision.
 
 mod active_project_context;
+mod app_lifecycle;
 mod attention;
 pub mod bot_feed;
 mod change;
@@ -49,6 +50,9 @@ pub use crate::active_project_context::{
     active_project_context_payload, project_context_payload, quick_automations_payload,
     quick_projectless_payload, ACTIVE_PROJECT_CONTEXT_MESSAGE_TYPE,
     ACTIVE_PROJECT_CONTEXT_MESSAGE_VERSION,
+};
+pub use crate::app_lifecycle::{
+    AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE,
 };
 pub use crate::attention::{
     AgentActivityReport, ATTENTION_PATCH_TTL_MS, ESCAPE_DONE_SUPPRESSION_MS,

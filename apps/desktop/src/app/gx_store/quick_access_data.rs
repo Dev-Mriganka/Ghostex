@@ -97,6 +97,8 @@ impl GhostexGpuiApp {
             } else {
                 HotkeyPlatformWire::Linux
             },
+            // The web build compiles this file too, and a page cannot update, restart or quit the app.
+            app_lifecycle: cfg!(not(target_family = "wasm")),
         }
     }
 }

@@ -465,4 +465,9 @@ pub(crate) mod message {
     pub(crate) fn open_external_url(url: &str) -> Value {
         json!({ "type": "openExternalUrl", "url": url })
     }
+
+    /// `action` is one of [`crate::APP_LIFECYCLE_ACTIONS`]'s ids.
+    pub(crate) fn app_lifecycle(action: &str) -> Value {
+        json!({ "type": crate::APP_LIFECYCLE_MESSAGE_TYPE, "action": action })
+    }
 }

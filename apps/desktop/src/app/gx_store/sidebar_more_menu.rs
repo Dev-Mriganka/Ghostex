@@ -1,4 +1,5 @@
-//! Two More menu rows whose whole answer already lives in Rust: Join Discord and Keep Awake.
+//! The More menu rows whose whole answer already lives in Rust: Join Discord, Keep Awake, and the
+//! app's own Check for Updates, Restart and Quit rows.
 //!
 //! CDXC:Sidebar 2026-09-25 WHY:
 //! Join Discord (`openExternalUrl`) used to leave Rust for the app runtime, which posted the same
@@ -39,8 +40,33 @@ impl GhostexGpuiApp {
                 self.run_sidebar_keep_awake_command(message, cx);
                 true
             }
+            Some(ghostex_gx_core::APP_LIFECYCLE_MESSAGE_TYPE) => {
+                if let Some(action) = message.get("action").and_then(Value::as_str) {
+                    self.run_app_lifecycle_action(action, cx);
+                }
+                true
+            }
             _ => false,
         }
+    }
+
+    /// Check for Updates, Restart and the two Quits, from the sidebar menu or a Quick Access
+    /// Commands row: the same actions the macOS menu bar's Ghostex menu dispatches, so each has
+    /// one handler (helpers/os_cli/main_menus.rs). Deferred because the click arrives inside a
+    /// window update, where dispatching into the active window is refused.
+    pub(crate) fn run_app_lifecycle_action(&mut self, action: &str, cx: &mut gpui::Context<Self>) {
+        use crate::app::actions::{
+            CheckForGhostexGpuiUpdates, QuitGhostexGpui, QuitGhostexGpuiAndBackgroundServices,
+            RestartGhostexGpui,
+        };
+        let action: Box<dyn gpui::Action> = match action {
+            "checkForUpdates" => Box::new(CheckForGhostexGpuiUpdates),
+            "restart" => Box::new(RestartGhostexGpui),
+            "quit" => Box::new(QuitGhostexGpui),
+            "quitWithBackgroundServices" => Box::new(QuitGhostexGpuiAndBackgroundServices),
+            _ => return,
+        };
+        cx.defer(move |cx| cx.dispatch_action(action.as_ref()));
     }
 
     /// `{action: 'start', durationMinutes}` starts a Keep Awake period with one of the three

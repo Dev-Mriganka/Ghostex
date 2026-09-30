@@ -82,6 +82,8 @@ pub struct QuickAccessData {
     pub remote_custom_tags: Vec<CustomSessionTagsState>,
     pub open_targets: Vec<QuickAccessOpenTarget>,
     pub platform: HotkeyPlatformWire,
+    /// The host is the desktop app, which can check for updates, restart and quit.
+    pub app_lifecycle: bool,
 }
 
 /// [`HotkeyPlatform`] as the replay files spell it.

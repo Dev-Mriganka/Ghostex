@@ -24,7 +24,8 @@ use crate::app::helpers::*;
 use crate::*;
 
 /// The `sidebarCommand` types this file answers.
-pub(crate) const QUICK_ACCESS_COMMAND_ROW_TYPES: [&str; 5] = [
+pub(crate) const QUICK_ACCESS_COMMAND_ROW_TYPES: [&str; 6] = [
+    ghostex_gx_core::APP_LIFECYCLE_MESSAGE_TYPE,
     "togglePetOverlay",
     "createChat",
     "openAutomationsPage",
@@ -44,6 +45,13 @@ impl GhostexGpuiApp {
     ) {
         match command_type {
             "togglePetOverlay" => self.toggle_pet_overlay_from_quick_access(cx),
+            // Never posted on the web build, which is not offered these rows.
+            #[cfg(not(target_family = "wasm"))]
+            ghostex_gx_core::APP_LIFECYCLE_MESSAGE_TYPE => {
+                if let Some(action) = command.get("action").and_then(Value::as_str) {
+                    self.run_app_lifecycle_action(action, cx);
+                }
+            }
             "createChat" | "openAutomationsPage" => {
                 self.dispatch_native_sidebar_command(json!({ "type": command_type }), cx);
             }

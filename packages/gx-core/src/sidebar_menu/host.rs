@@ -50,6 +50,9 @@ pub struct MenuHost {
     /// The visible Open In targets, in the header Open In button's order. Empty where the host
     /// cannot launch an app.
     pub open_targets: Vec<MenuOpenTarget>,
+    /// The host is the desktop app, which can check for updates, restart and quit. False for a
+    /// page in a browser.
+    pub app_lifecycle: bool,
 }
 
 impl MenuHost {
