@@ -758,6 +758,8 @@ export type ghostexSettings = {
   customSidebarTitlebarLightBackgroundColor: string;
   terminalCursorStyle: TerminalCursorStyle;
   terminalCursorStyleBlink: boolean;
+  /** macOS Metal terminal effect; ordinary rendering remains the default. */
+  terminalShadersEnabled: boolean;
   /**
    * Windows selects native PowerShell projects or a WSL2 workspace.
    * PowerShell is the default; an explicitly saved WSL selection is preserved.
