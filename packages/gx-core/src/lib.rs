@@ -14,6 +14,7 @@
 //!   the revision.
 
 mod active_project_context;
+mod agentbox;
 mod app_lifecycle;
 mod attention;
 pub mod bot_feed;
@@ -50,6 +51,11 @@ pub use crate::active_project_context::{
     active_project_context_payload, project_context_payload, quick_automations_payload,
     quick_projectless_payload, ACTIVE_PROJECT_CONTEXT_MESSAGE_TYPE,
     ACTIVE_PROJECT_CONTEXT_MESSAGE_VERSION,
+};
+pub use crate::agentbox::{
+    agentbox_agent_family, agentbox_location_label, agentbox_locations_from_status,
+    is_agentbox_run_location, session_chat_view_unavailable, AgentboxLocation, AgentboxLocations,
+    SessionAgentbox, LOCAL_RUN_LOCATION,
 };
 pub use crate::app_lifecycle::{
     AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE,

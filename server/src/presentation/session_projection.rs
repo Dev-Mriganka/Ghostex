@@ -205,6 +205,10 @@ pub(crate) fn project_presentation_session(
     {
         output.insert("switchableAgents".to_string(), switchable_agents);
     }
+    // CDXC:AgentBox 2026-10-01 SEE-ALSO: `PresentationSession.agentbox` in packages/gx-protocol/src/presentation.rs and `GxserverPresentationSession.agentbox` in packages/shared/gxserver-protocol-presentation.ts; absent for a session that runs on this computer.
+    if let Some(agentbox) = crate::agentbox::presentation_agentbox_value(session) {
+        output.insert("agentbox".to_string(), agentbox);
+    }
     if activity == "attention" {
         output.insert(
             "attention".to_string(),

@@ -281,6 +281,8 @@ pub struct SessionRow {
     pub coordinator_parent: Option<SessionKey>,
     /// A thread's state: `waiting`, `working`, `finished`, `sleeping`, `closed` or `done`.
     pub thread_state: Option<String>,
+    /// The agentbox box the session's agent runs in, when it does not run on its machine.
+    pub agentbox: Option<crate::agentbox::SessionAgentbox>,
 }
 
 /// What a row's context menu, hover actions and Copy Details need beyond what it draws.

@@ -307,6 +307,10 @@ pub(crate) fn get_provider_restart_startup_text_for_session(
     session: &Value,
     agent_settings: &Map<String, Value>,
 ) -> Option<String> {
+    // A box session, draft or not, always comes back by reattaching to its box (agentbox/restore.rs).
+    if crate::agentbox::is_agentbox_session(session) {
+        return get_agent_startup_text_for_session(project, session, agent_settings);
+    }
     if crate::agents::session_is_draft(session) {
         return get_agent_launch_startup_text_for_session(session);
     }

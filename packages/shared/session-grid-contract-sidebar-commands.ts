@@ -181,6 +181,23 @@ export type SidebarToExtensionMessage =
     }
   | {
       /**
+       * CDXC:AgentBox 2026-10-01 WHY:
+       * Settings > Cloud Boxes runs one agentbox setup step in a command-pane terminal. Only the step name and its arguments cross; the desktop asks gxserver's `/api/agentbox` for the command text, never the page.
+       */
+      agent?: string;
+      alias?: string;
+      command: string;
+      host?: string;
+      provider?: string;
+      ssh?: string;
+      type: 'runAgentboxTerminalCommand';
+    }
+  | {
+      /** Settings > Cloud Boxes "Set it up for me": an agent session that sets agentbox up. */
+      type: 'setUpAgentboxWithAgent';
+    }
+  | {
+      /**
        * CDXC:AgentSkills 2026-07-29:
        * Per-row uninstall identifies one catalog-owned bundled skill. Native
        * maps this closed ID to a fixed directory instead of accepting a path.

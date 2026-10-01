@@ -492,6 +492,7 @@ pub(crate) fn select(
     id: Option<&str>,
     source: SwitchSource,
 ) -> Result<(), DomainStateError> {
+    crate::agentbox::refuse_for_agentbox_session(session, "Switching the account")?;
     let provider = launch::provider(project, session)
         .ok_or_else(|| DomainStateError::bad_request("Unsupported account provider."))?;
     let current = session

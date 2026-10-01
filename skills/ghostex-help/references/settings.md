@@ -302,6 +302,32 @@ How to use this file:
 
 - **Show the floating button** `ghostexCaptureEnabled` (boolean, default false): Show the Floating Capture button over every app: agent counts, screenshots of an area, an app or the whole screen, and quick prompts without switching to Ghostex.
 - **Switch to the session after sending** `ghostexCaptureSwitchToSession` (boolean, default true): After a prompt is sent from Floating Capture, the Ghostex window shows the session it went to, without coming in front of the app you are in.
+## Cloud Boxes (tab `cloudBoxes`)
+
+### Cloud Boxes
+
+- **agentbox** `agentboxStatus` (Settings UI row without a settings key; use `ghostex settings open`): Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check.
+- **Set it up for me** `agentboxSetUpForMe` (Settings UI row without a settings key; use `ghostex settings open`): Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes.
+- **What is a box?** `agentboxWhatIsABox` (Settings UI row without a settings key; use `ghostex settings open`): A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer.
+### Where boxes run
+
+- **Where boxes run** `agentboxProviders` (Settings UI row without a settings key; use `ghostex settings open`): Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist.
+- **Your own server (SSH)** `agentboxRemoteDocker` (Settings UI row without a settings key; use `ghostex settings open`): Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there.
+### Agent sign-in
+
+- **Claude in boxes** `agentboxClaudeSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it.
+- **Codex in boxes** `agentboxCodexSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in.
+### New threads
+
+- **Default location** `agentboxDefaultLocation` (one of local | agentbox:docker | agentbox:hetzner | agentbox:vercel | agentbox:daytona | agentbox:e2b | agentbox:digitalocean; default local): Where new threads run unless you pick another location. Option labels: local = This computer, agentbox:docker = Docker on this computer, agentbox:hetzner = Hetzner, agentbox:vercel = Vercel, agentbox:daytona = Daytona, agentbox:e2b = E2B, agentbox:digitalocean = DigitalOcean.
+### Your boxes
+
+- **Your boxes** `agentboxBoxes` (Settings UI row without a settings key; use `ghostex settings open`): See every box, open a box's web app, stop a box, or destroy it to delete it for good.
+### How it works
+
+- **Start a thread in a box** `agentboxStartThread` (Settings UI row without a settings key; use `ghostex settings open`): Open New Thread and pick where it runs under Run on. Boxes open in the terminal view.
+- **Open a box's web app** `agentboxWebApp` (Settings UI row without a settings key; use `ghostex settings open`): Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically.
+- **Cloud boxes bill until stopped** `agentboxBilling` (Settings UI row without a settings key; use `ghostex settings open`): Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box.
 ## Extensions (tab `extensions`)
 
 ### Views

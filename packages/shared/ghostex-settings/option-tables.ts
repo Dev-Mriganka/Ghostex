@@ -407,3 +407,18 @@ export function getGhosttyThemeSettingOptions(selectedTheme: string) {
   }
   return [{ label: selectedTheme, value: selectedTheme }, ...GHOSTTY_THEME_SETTING_OPTIONS];
 }
+
+/** The agentbox providers a box location may name, in the order Settings and the New Thread picker list them. */
+export const AGENTBOX_PROVIDER_IDS = ['docker', 'hetzner', 'vercel', 'daytona', 'e2b', 'digitalocean'] as const;
+export type AgentboxProviderId = (typeof AGENTBOX_PROVIDER_IDS)[number];
+
+/** `agentboxDefaultLocation` choices before any remote Docker server is registered. */
+export const AGENTBOX_DEFAULT_LOCATION_OPTIONS: ReadonlyArray<{ label: string; value: string }> = [
+  { label: 'This computer', value: 'local' },
+  { label: 'Docker on this computer', value: 'agentbox:docker' },
+  { label: 'Hetzner', value: 'agentbox:hetzner' },
+  { label: 'Vercel', value: 'agentbox:vercel' },
+  { label: 'Daytona', value: 'agentbox:daytona' },
+  { label: 'E2B', value: 'agentbox:e2b' },
+  { label: 'DigitalOcean', value: 'agentbox:digitalocean' },
+];

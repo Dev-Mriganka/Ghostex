@@ -2,6 +2,7 @@ mod account_login;
 pub mod actions;
 pub mod agent_sync;
 mod agent_cli;
+mod agentbox_cli;
 mod agents;
 mod coordinator;
 pub mod args;
@@ -77,6 +78,7 @@ pub fn run() -> i32 {
 const HELP_GATE_EXCLUDED: &[&str] = &[
     "account-login",
     "agent-cli",
+    "agentbox",
     "agents",
     "coordinator",
     "automations",
@@ -173,6 +175,7 @@ fn is_known_command(name: &str) -> bool {
     const NAMES: &[&str] = &[
         "account-login",
         "agent-cli",
+        "agentbox",
         "agents",
         "coordinator",
         "sessions",
@@ -355,6 +358,7 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
     match name {
         "account-login" => account_login::run(args),
         "agent-cli" => agent_cli::run(args),
+        "agentbox" => agentbox_cli::run(args),
         "agents" => agents::run(args),
         "coordinator" => coordinator::run(args),
         "sessions" | "s" | "list-sessions" | "ls" => sessions::sessions_command(args),

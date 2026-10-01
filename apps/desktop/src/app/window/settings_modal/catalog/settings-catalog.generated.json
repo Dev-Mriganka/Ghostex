@@ -6616,6 +6616,164 @@
         ]
       },
       {
+        "id": "cloudBoxes",
+        "title": "Cloud Boxes",
+        "sections": [
+          {
+            "id": "overview",
+            "title": "Cloud Boxes",
+            "settings": [
+              {
+                "key": "agentboxStatus",
+                "title": "agentbox",
+                "subtitle": "Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check."
+              },
+              {
+                "key": "agentboxSetUpForMe",
+                "title": "Set it up for me",
+                "subtitle": "Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes."
+              },
+              {
+                "key": "agentboxWhatIsABox",
+                "title": "What is a box?",
+                "subtitle": "A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer."
+              }
+            ]
+          },
+          {
+            "id": "providers",
+            "title": "Where boxes run",
+            "settings": [
+              {
+                "key": "agentboxProviders",
+                "title": "Where boxes run",
+                "subtitle": "Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist.",
+                "options": [
+                  {
+                    "label": "Docker on this computer",
+                    "value": "docker"
+                  },
+                  {
+                    "label": "Hetzner",
+                    "value": "hetzner"
+                  },
+                  {
+                    "label": "Vercel",
+                    "value": "vercel"
+                  },
+                  {
+                    "label": "Daytona",
+                    "value": "daytona"
+                  },
+                  {
+                    "label": "E2B",
+                    "value": "e2b"
+                  },
+                  {
+                    "label": "DigitalOcean",
+                    "value": "digitalocean"
+                  }
+                ]
+              },
+              {
+                "key": "agentboxRemoteDocker",
+                "title": "Your own server (SSH)",
+                "subtitle": "Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there."
+              }
+            ]
+          },
+          {
+            "id": "agentSignIn",
+            "title": "Agent sign-in",
+            "settings": [
+              {
+                "key": "agentboxClaudeSignIn",
+                "title": "Claude in boxes",
+                "subtitle": "Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it."
+              },
+              {
+                "key": "agentboxCodexSignIn",
+                "title": "Codex in boxes",
+                "subtitle": "Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in."
+              }
+            ]
+          },
+          {
+            "id": "newThreads",
+            "title": "New threads",
+            "settings": [
+              {
+                "key": "agentboxDefaultLocation",
+                "title": "Default location",
+                "subtitle": "Where new threads run unless you pick another location.",
+                "options": [
+                  {
+                    "label": "This computer",
+                    "value": "local"
+                  },
+                  {
+                    "label": "Docker on this computer",
+                    "value": "agentbox:docker"
+                  },
+                  {
+                    "label": "Hetzner",
+                    "value": "agentbox:hetzner"
+                  },
+                  {
+                    "label": "Vercel",
+                    "value": "agentbox:vercel"
+                  },
+                  {
+                    "label": "Daytona",
+                    "value": "agentbox:daytona"
+                  },
+                  {
+                    "label": "E2B",
+                    "value": "agentbox:e2b"
+                  },
+                  {
+                    "label": "DigitalOcean",
+                    "value": "agentbox:digitalocean"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "boxes",
+            "title": "Your boxes",
+            "settings": [
+              {
+                "key": "agentboxBoxes",
+                "title": "Your boxes",
+                "subtitle": "See every box, open a box's web app, stop a box, or destroy it to delete it for good."
+              }
+            ]
+          },
+          {
+            "id": "howTo",
+            "title": "How it works",
+            "settings": [
+              {
+                "key": "agentboxStartThread",
+                "title": "Start a thread in a box",
+                "subtitle": "Open New Thread and pick where it runs under Run on. Boxes open in the terminal view."
+              },
+              {
+                "key": "agentboxWebApp",
+                "title": "Open a box's web app",
+                "subtitle": "Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically."
+              },
+              {
+                "key": "agentboxBilling",
+                "title": "Cloud boxes bill until stopped",
+                "subtitle": "Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box."
+              }
+            ]
+          }
+        ]
+      },
+      {
         "id": "extensions",
         "title": "Extensions",
         "sections": [
@@ -10979,6 +11137,44 @@
         ]
       },
       "shared/ghostex-settings": {
+        "AGENTBOX_DEFAULT_LOCATION_OPTIONS": [
+          {
+            "label": "This computer",
+            "value": "local"
+          },
+          {
+            "label": "Docker on this computer",
+            "value": "agentbox:docker"
+          },
+          {
+            "label": "Hetzner",
+            "value": "agentbox:hetzner"
+          },
+          {
+            "label": "Vercel",
+            "value": "agentbox:vercel"
+          },
+          {
+            "label": "Daytona",
+            "value": "agentbox:daytona"
+          },
+          {
+            "label": "E2B",
+            "value": "agentbox:e2b"
+          },
+          {
+            "label": "DigitalOcean",
+            "value": "agentbox:digitalocean"
+          }
+        ],
+        "AGENTBOX_PROVIDER_IDS": [
+          "docker",
+          "hetzner",
+          "vercel",
+          "daytona",
+          "e2b",
+          "digitalocean"
+        ],
         "AUTO_SLEEP_IDLE_MINUTE_OPTIONS": [
           {
             "label": "Off",
@@ -11271,6 +11467,7 @@
           "gpuiTitlebarOpenTargetByProject": {},
           "ghostexCaptureEnabled": false,
           "ghostexCaptureSwitchToSession": true,
+          "agentboxDefaultLocation": "local",
           "agentAcceptAllEnabled": false,
           "agentManagerZoomPercent": 100,
           "defaultPromptAgentId": "codex",
@@ -14105,6 +14302,7 @@
           "settings",
           "theme",
           "integrations",
+          "cloudBoxes",
           "extensions",
           "osIntegration",
           "remote",
@@ -15951,7 +16149,7 @@
       [
         [
           "extraTabs",
-          6,
+          7,
           "sections",
           0,
           "settings",
@@ -16867,7 +17065,7 @@
       [
         [
           "extraTabs",
-          6,
+          7,
           "sections",
           0,
           "settings",

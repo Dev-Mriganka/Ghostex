@@ -70,6 +70,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
    * coming in front of the app the user is in.
    */
   ghostexCaptureSwitchToSession: true,
+  agentboxDefaultLocation: 'local',
   /**
    * CDXC:AgentProviders 2026-09-04 DECISION:
    * User: new installs must start with Agent approvals set to Keep default. Running supported agents without approval is an explicit opt-in.

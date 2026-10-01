@@ -191,11 +191,19 @@ impl GhostexGpuiApp {
                 timeout,
                 reply,
             } => {
+                // A Cloud Boxes status read also refreshes the app's own agentbox cache, so a
+                // provider set up there shows in the next launcher and picker (gx_store/agentbox.rs).
+                let agentbox_status = path == "/api/agentbox" && params["action"] == "status";
                 let background = cx.background_executor().clone();
-                cx.spawn(async move |_, cx| {
+                cx.spawn(async move |this, cx| {
                     let result = background
                         .spawn(async move { gpui_gxserver_rpc_result(&path, &params, timeout) })
                         .await;
+                    if agentbox_status && let Ok(status) = &result {
+                        let _ = this.update(cx, |this, cx| {
+                            this.note_agentbox_status_answer(status, cx);
+                        });
+                    }
                     let _ = cx.update(|cx| reply(result, cx));
                 })
                 .detach();

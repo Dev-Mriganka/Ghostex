@@ -3,6 +3,7 @@
 use super::native_chat::state::NativeChatView;
 use super::new_thread_picker_lifecycle::order_new_thread_picker_agents;
 use crate::app::helpers::*;
+use crate::app::window::NewThreadPickerAgent;
 use crate::*;
 use serde_json::json;
 
@@ -32,17 +33,75 @@ impl GhostexGpuiApp {
     /// New Agent Session: the New Thread picker's first row (the last-used agent) without the
     /// picker. Before any agent is known the picker opens instead, so the key still does something.
     pub(crate) fn start_new_agent_session(&mut self, cx: &mut gpui::Context<Self>) {
-        let Some(agent_id) = self.last_used_agent_id() else {
+        let Some(agent) = self.last_used_agent() else {
             self.open_gpui_new_thread_picker(cx);
             return;
         };
-        if self.focus_untouched_agent_chat(&agent_id, cx) {
-            return;
+        match self.new_agent_session_box_default(&agent, cx) {
+            // No status has been answered yet (just after start): decide once the read finishes.
+            Some(default) if crate::app::gx_store::cached_agentbox_locations().is_none() => {
+                self.with_agentbox_locations(
+                    move |this, _, cx| this.start_new_agent_session_at(agent, Some(default), cx),
+                    cx,
+                );
+            }
+            default => self.start_new_agent_session_at(agent, default, cx),
         }
-        self.launch_agent_in_active_project(agent_id, None, cx);
     }
 
-    fn last_used_agent_id(&self) -> Option<String> {
+    /// CDXC:AgentBox 2026-10-01 WHY:
+    /// The Cloud Boxes default reads "Where new threads run unless you pick another location", so New Agent Session starts where the New Thread picker would, in that default location. A box default that this agent cannot use (agentbox runs only Claude, Codex, OpenCode and Pi) or that the status did not report ready starts on this computer with a toast saying why; before the first status answer the start waits for it rather than guessing. A project on another machine always starts there, because this computer's status says nothing about its boxes.
+    fn new_agent_session_box_default(
+        &mut self,
+        agent: &NewThreadPickerAgent,
+        cx: &mut gpui::Context<Self>,
+    ) -> Option<String> {
+        let default =
+            shared_settings::shared_sidebar_settings_snapshot().agentbox_default_location();
+        if !ghostex_gx_core::is_agentbox_run_location(Some(&default))
+            || self.gx_store_active_project_is_remote()
+        {
+            return None;
+        }
+        if !crate::app::window::runs_in_box(agent) {
+            let title = format!(
+                "{} can't run in a box, so it started on this computer",
+                agent.name
+            );
+            self.dispatch_gpui_workspace_action_toast("info", &title, "", cx);
+            return None;
+        }
+        Some(default)
+    }
+
+    /// Starts `agent` in `box_default` when the status reports it ready, otherwise on this computer.
+    fn start_new_agent_session_at(
+        &mut self,
+        agent: NewThreadPickerAgent,
+        box_default: Option<String>,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let run_location = box_default.filter(|default| {
+            let ready = crate::app::gx_store::cached_agentbox_locations()
+                .is_some_and(|locations| locations.find(default).is_some());
+            if !ready {
+                let title = format!(
+                    "{} isn't ready, so it started on this computer",
+                    ghostex_gx_core::agentbox_location_label(default)
+                );
+                self.dispatch_gpui_workspace_action_toast("info", &title, "", cx);
+            }
+            ready
+        });
+        // An empty chat left by a launcher is a session on this computer, so only a local start
+        // goes back to it.
+        if run_location.is_none() && self.focus_untouched_agent_chat(&agent.agent_id, cx) {
+            return;
+        }
+        self.launch_agent_in_active_project(agent.agent_id, None, run_location, cx);
+    }
+
+    fn last_used_agent(&self) -> Option<NewThreadPickerAgent> {
         let hud_agents = self.new_thread_picker_agents.clone().or_else(|| {
             self.native_sidebar
                 .snapshot
@@ -55,15 +114,16 @@ impl GhostexGpuiApp {
         )
         .into_iter()
         .next()
-        .map(|agent| agent.agent_id)
     }
 
     /// Starts an agent in the active project the way a New Thread picker row does: the tab opens
-    /// at once and gxserver creates the session behind it.
+    /// at once and gxserver creates the session behind it, on this computer or in the agentbox box
+    /// `run_location` names.
     pub(crate) fn launch_agent_in_active_project(
         &mut self,
         agent_id: String,
         account_id: Option<String>,
+        run_location: Option<String>,
         cx: &mut gpui::Context<Self>,
     ) {
         let mut message = json!({
@@ -72,6 +132,9 @@ impl GhostexGpuiApp {
         });
         if let Some(account_id) = account_id {
             message["accountId"] = json!(account_id);
+        }
+        if let Some(run_location) = run_location {
+            message["runLocation"] = json!(run_location);
         }
         self.sidebar_primary_agent_launcher_id = Some(agent_id);
         self.stage_agent_launch_placeholder(&message, cx);

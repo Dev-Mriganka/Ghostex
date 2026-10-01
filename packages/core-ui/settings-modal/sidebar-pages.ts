@@ -6,6 +6,7 @@
  */
 import { type Dispatch, type SetStateAction } from 'react';
 import {
+  IconBox,
   IconBug,
   IconCloud,
   IconCodeDots,
@@ -148,6 +149,7 @@ export function createSettingsSidebarPages({
     { icon: IconCodeDots, id: 'agents', title: 'Agents' },
     { icon: IconUsers, id: 'accounts', title: 'Accounts' },
     { icon: IconTools, id: 'integrations', title: 'Integrations' },
+    { icon: IconBox, id: 'cloudBoxes', title: 'Cloud Boxes' },
     { icon: IconPuzzle, id: 'extensions', title: 'Extensions' },
     { icon: IconCloud, id: 'remote', title: 'Remote' },
     { icon: IconFolderOpen, id: 'projects', title: 'Projects' },

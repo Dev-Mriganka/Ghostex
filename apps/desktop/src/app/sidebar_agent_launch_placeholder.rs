@@ -117,7 +117,11 @@ impl GhostexGpuiApp {
                 .unwrap_or_else(|| {
                     gpui_effective_preferred_agent_interface_for_agent_icon(settings.object(), icon)
                 });
+        // A box session has no transcript on this computer for Chat View to read; it opens in the
+        // terminal (CDXC:AgentBox in gx-core agentbox.rs).
+        let box_launch = ghostex_gx_core::is_agentbox_run_location(command["runLocation"].as_str());
         if interface == GpuiPreferredAgentInterface::Chat
+            && !box_launch
             && self
                 .agents_session_chat_transcript_agent(shell_session_id)
                 .is_some()

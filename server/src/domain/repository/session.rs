@@ -28,7 +28,37 @@ impl<'a> DomainRepository<'a> {
             params.get("restoredFromSessionId").and_then(Value::as_str),
         ) {
             let source = self.get_session(project_id, source_id)?;
-            if let Some(source) = source.filter(|s| {
+            let box_source = source
+                .as_ref()
+                .filter(|s| crate::agentbox::is_agentbox_session(s))
+                .cloned();
+            if let Some(source) = box_source {
+                /*
+                CDXC:AgentBox 2026-10-01 WHY:
+                Reopening a closed box session from Previous Sessions creates a new row and then deletes the old one. Without the old row's box record the new row started a plain shell (or a local agent) and the delete stopped the box it should have reopened, so the new row takes the box record, agent and launch settings and reattaches to the same box.
+                */
+                restored_params = params.clone();
+                for key in ["agentId", "cwd", "kind", "launchSettings"] {
+                    if let Some(value) = source.get(key) {
+                        restored_params.insert(key.to_string(), value.clone());
+                    }
+                }
+                let mut runtime_settings = restored_params
+                    .get("runtimeSettings")
+                    .and_then(Value::as_object)
+                    .cloned()
+                    .unwrap_or_default();
+                for key in ["agentbox", "agentCommand", "agentName", "launchAgentId"] {
+                    if let Some(value) = source.pointer(&format!("/runtimeSettings/{key}")) {
+                        runtime_settings.insert(key.to_string(), value.clone());
+                    }
+                }
+                restored_params.insert(
+                    "runtimeSettings".to_string(),
+                    Value::Object(runtime_settings),
+                );
+                &restored_params
+            } else if let Some(source) = source.filter(|s| {
                 s.pointer("/runtimeSettings/externalSession")
                     .and_then(Value::as_bool)
                     == Some(true)
@@ -714,6 +744,28 @@ impl<'a> DomainRepository<'a> {
             .map_err(sql_error)?;
         let rows = statement
             .query_map([agent_session_id], session_row_from_sql)
+            .map_err(sql_error)?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(sql_error)?;
+        rows.into_iter()
+            .map(|row| session_from_row(&self.server_id, row))
+            .collect()
+    }
+
+    /// Full session rows whose agent runs in an agentbox box (`runtimeSettings.agentbox.boxName`),
+    /// optionally only the running ones. The JSON filter runs in SQLite, so the activity poller's
+    /// tick hydrates only box sessions.
+    pub fn list_agentbox_sessions(&self, running_only: bool) -> DomainResult<Vec<Value>> {
+        let mut statement = self
+            .db
+            .prepare(if running_only {
+                "SELECT * FROM sessions WHERE lifecycleState = 'running' AND json_extract(runtimeSettingsJson, '$.agentbox.boxName') IS NOT NULL ORDER BY updatedAt DESC, projectId ASC, sessionId ASC"
+            } else {
+                "SELECT * FROM sessions WHERE json_extract(runtimeSettingsJson, '$.agentbox.boxName') IS NOT NULL ORDER BY updatedAt DESC, projectId ASC, sessionId ASC"
+            })
+            .map_err(sql_error)?;
+        let rows = statement
+            .query_map([], session_row_from_sql)
             .map_err(sql_error)?
             .collect::<std::result::Result<Vec<_>, _>>()
             .map_err(sql_error)?;

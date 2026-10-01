@@ -15,6 +15,11 @@ impl GhostexGpuiApp {
         session_id: TerminalSessionId,
     ) -> Option<&'static str> {
         let session = self.agents_workspace.session(session_id)?;
+        // Every desktop chat entry point asks here first, so a session gx-core rules out of Chat
+        // View (an agentbox box's, CDXC:AgentBox in gx-core agentbox.rs) stays on its terminal.
+        if session.agent_icon.is_some() && self.agents_session_chat_view_unavailable(session_id) {
+            return None;
+        }
         match session.agent_icon {
             Some("antigravity-cli") => Some("antigravity"),
             Some("claude") => Some("claude"),

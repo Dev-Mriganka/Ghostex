@@ -4,6 +4,7 @@ pub(crate) mod about;
 pub(crate) mod accounts;
 pub(crate) mod actions;
 pub(crate) mod agents;
+pub(crate) mod cloud_boxes;
 pub(crate) mod debugging;
 pub(crate) mod extensions;
 pub(crate) mod general;
@@ -37,6 +38,7 @@ pub(crate) fn settings_tab_view(
         SettingsTabId::About => about::about_tab_view(store, cx),
         SettingsTabId::Debugging => debugging::debugging_tab_view(store, cx),
         SettingsTabId::Integrations => integrations::integrations_tab_view(store, cx),
+        SettingsTabId::CloudBoxes => cloud_boxes::cloud_boxes_tab_view(store, cx),
         SettingsTabId::Hotkeys => hotkeys::hotkeys_tab_view(store, cx),
         SettingsTabId::Theme => theme::theme_tab_view(store, window, cx),
         SettingsTabId::OpenTargets => open_targets::open_targets_tab_view(store, window, cx),

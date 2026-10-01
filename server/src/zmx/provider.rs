@@ -328,6 +328,9 @@ pub(crate) fn start_session_provider_with_observed_state(
     before.
     */
     let session = crate::agents::arm_draft_launch_activity_suppression(repository, &session)?;
+    if crate::agentbox::is_agentbox_session(&session) {
+        crate::agentbox::wake_agentbox_activity_poller();
+    }
     Ok((
         json!({
             "exitCode": start.result.exit_code,
@@ -441,6 +444,10 @@ pub(crate) fn kill_and_cache_session_provider(
     );
     update.insert("providerState".to_string(), Value::Object(provider_state));
     let updated = repository.update_session_for_lifecycle(&update)?;
+    // Every close passes here; closing a box session stops its box (agentbox/lifecycle.rs).
+    if kill.killed && lifecycle_state == "stopped" {
+        crate::agentbox::stop_session_box_in_background(repository, &updated);
+    }
     Ok((kill, updated))
 }
 

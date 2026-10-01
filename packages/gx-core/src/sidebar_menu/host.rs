@@ -53,6 +53,9 @@ pub struct MenuHost {
     /// The host is the desktop app, which can check for updates, restart and quit. False for a
     /// page in a browser.
     pub app_lifecycle: bool,
+    /// The agentbox locations `/api/agentbox status` last reported ready on this computer; empty
+    /// where the host has not read one (the launcher then offers no Run in a Box page).
+    pub agentbox_locations: Vec<crate::agentbox::AgentboxLocation>,
 }
 
 impl MenuHost {

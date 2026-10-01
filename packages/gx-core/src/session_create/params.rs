@@ -100,6 +100,20 @@ pub fn remote_agent_launch_params(
     })
 }
 
+/// Adds `runLocation` to an `/api/createAgentSession` call when the launch runs in an agentbox
+/// box; a launch on this computer leaves the key out, which gxserver reads as `local`.
+pub fn with_run_location(mut params: Value, run_location: Option<&str>) -> Value {
+    if let (Some(run_location), Value::Object(object)) = (
+        run_location
+            .map(str::trim)
+            .filter(|location| crate::agentbox::is_agentbox_run_location(Some(location))),
+        &mut params,
+    ) {
+        object.insert("runLocation".to_string(), json!(run_location));
+    }
+    params
+}
+
 /// The options of `createAgentSessionRecordForProject`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AgentRecordOptions {

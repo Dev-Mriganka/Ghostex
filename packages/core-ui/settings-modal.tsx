@@ -127,6 +127,7 @@ import { AccountsSettingsTab } from './settings-modal/tabs/accounts';
 import { ExtensionsSettingsTab } from './settings-modal/tabs/extensions';
 import { HotkeysSettingsTab } from './settings-modal/tabs/hotkeys';
 import { IntegrationsSettingsTab } from './settings-modal/tabs/integrations';
+import { CloudBoxesSettingsTab } from './settings-modal/tabs/cloud-boxes';
 import { OpenTargetsSettingsTab } from './settings-modal/tabs/open-targets';
 import { OSIntegrationSettingsTab } from './settings-modal/tabs/os-integration';
 import { ProjectsSettingsPanel } from './settings-modal/tabs/projects';
@@ -2796,6 +2797,26 @@ export function SettingsModal({
                           : undefined
                       }
                       search={extraSettingsTabSearches.integrations}
+                      searchEmptyState={settingsSearchEmptyState}
+                    />
+                  </TabsContent>
+                ) : null}
+                {!isFirstLaunchSetup ? (
+                  <TabsContent className='mt-0 min-h-0 flex-1 overflow-hidden' value='cloudBoxes'>
+                    <CloudBoxesSettingsTab
+                      defaultLocation={draft.agentboxDefaultLocation}
+                      defaultLocationModified={getSettingModificationProps('agentboxDefaultLocation').isModified}
+                      onDefaultLocationChange={(value) => updateDraft('agentboxDefaultLocation', value)}
+                      onDefaultLocationReset={getSettingModificationProps('agentboxDefaultLocation').onResetToDefault}
+                      onOpenUrl={vscode ? (url) => vscode.postMessage({ type: 'openExternalUrl', url }) : undefined}
+                      onRunTerminalCommand={
+                        vscode
+                          ? (command, args) =>
+                              vscode.postMessage({ ...args, command, type: 'runAgentboxTerminalCommand' })
+                          : undefined
+                      }
+                      onSetUpForMe={vscode ? () => vscode.postMessage({ type: 'setUpAgentboxWithAgent' }) : undefined}
+                      search={extraSettingsTabSearches.cloudBoxes}
                       searchEmptyState={settingsSearchEmptyState}
                     />
                   </TabsContent>

@@ -383,6 +383,11 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         | "/api/switchSessionAgent"
         | "/api/agentCliMaintenance"
         | "/api/managedTools"
+        /*
+        CDXC:AgentBox 2026-10-01 WHY:
+        Remote-allowed like managedTools beside it: the boxes and the agentbox CLI belong to the machine that owns the project, so a client looking at a remote machine asks that machine. Setup commands come back as text gxserver chose, never text the caller supplied.
+        */
+        | "/api/agentbox"
         | "/api/agentAccounts"
         | "/api/readAgentLaunchPlan"
         | "/api/readAgentResumePlan"

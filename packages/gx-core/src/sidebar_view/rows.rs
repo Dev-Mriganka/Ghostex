@@ -288,6 +288,14 @@ pub(crate) fn session_row(
             _ => None,
         },
         thread_state: session.coordinator_thread_state.clone(),
+        agentbox: session
+            .agentbox
+            .as_ref()
+            .map(|agentbox| crate::agentbox::SessionAgentbox {
+                provider: agentbox.provider.clone(),
+                box_name: agentbox.box_name.clone(),
+                provider_label: agentbox.provider_label.clone(),
+            }),
         key: Some(key),
     }
 }

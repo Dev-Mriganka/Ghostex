@@ -589,6 +589,8 @@ pub(super) async fn route_http(
             request_id,
             &body_json,
             |repository, db, params, _| {
+                // Only gxserver makes a box session (a box create, or reopening one from history).
+                let params = &crate::agentbox::without_client_agentbox_record(params);
                 let created_session = repository.create_session(params, false)?;
                 let session = apply_created_session_identity(repository, &created_session, params)?;
                 let project_id = value_text(&session, "projectId")?;
@@ -859,6 +861,7 @@ pub(super) async fn route_http(
             &body_json,
             |repository, db, params, _| {
                 let session = repository.remove_session(params)?;
+                crate::agentbox::stop_session_box_in_background(repository, &session);
                 /*
                 CDXC:Drafts 2026-08-28:
                 Removing a DRAFT also kills its background agent CLI. The row
@@ -1653,6 +1656,9 @@ pub(super) async fn route_http(
         }
         "/api/managedTools" => {
             managed_tools_http::handle(&state, endpoint.path, request_id, &body_json).await
+        }
+        "/api/agentbox" => {
+            agentbox_http::handle(&state, endpoint.path, request_id, &body_json).await
         }
         "/api/agentAccounts" => {
             accounts_http::handle_accounts_http(&state, endpoint.path, request_id, &body_json).await

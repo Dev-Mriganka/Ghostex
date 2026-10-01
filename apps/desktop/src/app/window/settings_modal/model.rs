@@ -8,6 +8,7 @@ pub(crate) enum SettingsTabId {
     General,
     Theme,
     Integrations,
+    CloudBoxes,
     Extensions,
     OsIntegration,
     Remote,
@@ -24,12 +25,13 @@ pub(crate) enum SettingsTabId {
 impl SettingsTabId {
     /// The rail order (`createSettingsSidebarPages`); OS Integration and Debugging are filtered
     /// by the shell, and About is pinned to the rail's bottom.
-    pub(crate) const RAIL_ORDER: [SettingsTabId; 14] = [
+    pub(crate) const RAIL_ORDER: [SettingsTabId; 15] = [
         SettingsTabId::General,
         SettingsTabId::Theme,
         SettingsTabId::Agents,
         SettingsTabId::Accounts,
         SettingsTabId::Integrations,
+        SettingsTabId::CloudBoxes,
         SettingsTabId::Extensions,
         SettingsTabId::Remote,
         SettingsTabId::Projects,
@@ -47,6 +49,7 @@ impl SettingsTabId {
             SettingsTabId::General => "settings",
             SettingsTabId::Theme => "theme",
             SettingsTabId::Integrations => "integrations",
+            SettingsTabId::CloudBoxes => "cloudBoxes",
             SettingsTabId::Extensions => "extensions",
             SettingsTabId::OsIntegration => "osIntegration",
             SettingsTabId::Remote => "remote",
@@ -71,6 +74,7 @@ impl SettingsTabId {
             SettingsTabId::General => "General",
             SettingsTabId::Theme => "Theme",
             SettingsTabId::Integrations => "Integrations",
+            SettingsTabId::CloudBoxes => "Cloud Boxes",
             SettingsTabId::Extensions => "Extensions",
             SettingsTabId::OsIntegration => "OS Integration",
             SettingsTabId::Remote => "Remote",
@@ -91,6 +95,7 @@ impl SettingsTabId {
             SettingsTabId::General => "modals/settings/settings.svg",
             SettingsTabId::Theme => "modals/settings/palette.svg",
             SettingsTabId::Integrations => "modals/settings/tools.svg",
+            SettingsTabId::CloudBoxes => "modals/settings/box.svg",
             SettingsTabId::Extensions => "modals/settings/puzzle.svg",
             SettingsTabId::OsIntegration => "modals/settings/device-desktop.svg",
             SettingsTabId::Remote => "modals/settings/cloud.svg",

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { SettingsModal, type TailcatSettingsRpc } from './settings-modal';
+import { setAgentboxConnectionSource, type AgentboxStatus } from './settings-modal/tabs/cloud-boxes';
 import { DEFAULT_ghostex_SETTINGS, type ghostexSettings } from '../shared/ghostex-settings';
 import type { ProjectViewProject, ProjectViewSpace } from '../shared/ghostex-settings/project-views';
 import type { WebviewApi } from './webview-api';
@@ -199,6 +200,7 @@ function SettingsModalStory({
     | 'settings'
     | 'theme'
     | 'integrations'
+    | 'cloudBoxes'
     | 'projects'
     | 'agents'
     | 'actions'
@@ -424,6 +426,81 @@ export const IntegrationsTrycuaUpdateAvailable: Story = {
 
 export const Projects: Story = {
   render: () => <SettingsModalStory initialTab='projects' projects={storyProjects} />,
+};
+
+/** A computer with agentbox and Docker ready, Hetzner logged in but not prepared, and one server. */
+const storyAgentboxStatus: AgentboxStatus = {
+  agentSignIns: { claude: false, codex: true },
+  dockerReady: true,
+  installed: true,
+  portlessInstalled: false,
+  providers: [
+    { id: 'docker', kind: 'local', ready: true, configured: true, prepared: true },
+    { id: 'hetzner', kind: 'cloud', ready: false, configured: true, prepared: false },
+    { id: 'vercel', kind: 'cloud', ready: false, configured: false, prepared: false },
+    { id: 'daytona', kind: 'cloud', ready: false, configured: false, prepared: false },
+    { id: 'e2b', kind: 'cloud', ready: false, configured: false, prepared: false },
+    { id: 'digitalocean', kind: 'cloud', ready: false, configured: false, prepared: false },
+    { id: 'docker:selfhost', kind: 'remoteDocker', label: 'selfhost', ready: true },
+  ],
+  supported: true,
+  version: '0.33.0',
+};
+
+function mockStoryAgentbox(status: AgentboxStatus | 'missing' | 'error') {
+  setAgentboxConnectionSource(() => ({
+    request: async (params) => {
+      if (status === 'error') throw new Error('gxserver has no /api/agentbox endpoint yet.');
+      if (params.action === 'status') {
+        return status === 'missing' ? { installed: false, providers: [], supported: true } : status;
+      }
+      if (params.action === 'list') {
+        return {
+          boxes: [
+            {
+              agent: 'codex',
+              name: 'gx-ghostex-a1b2c3',
+              projectId: 'project-ghostex',
+              provider: 'docker',
+              sessionId: 'session-1',
+              sessionTitle: 'Fix the login page',
+              state: 'running',
+              webUrl: 'http://127.0.0.1:32772',
+            },
+            { agent: 'claude', name: 'gx-remote1', provider: 'remote-docker', state: 'paused' },
+          ],
+        };
+      }
+      return { ok: true };
+    },
+  }));
+}
+
+/*
+ * CDXC:AgentBox 2026-10-01 SEE-ALSO:
+ * Settings > Cloud Boxes with a scripted gxserver: Docker ready, Hetzner waiting for Prepare,
+ * a registered server, and two boxes (apps/desktop/src/bin/native_modal_demo/settings_cloud_boxes.rs
+ * is the native page's preview with the same data).
+ */
+export const CloudBoxes: Story = {
+  render: () => {
+    mockStoryAgentbox(storyAgentboxStatus);
+    return <SettingsModalStory initialTab='cloudBoxes' />;
+  },
+};
+
+export const CloudBoxesNotInstalled: Story = {
+  render: () => {
+    mockStoryAgentbox('missing');
+    return <SettingsModalStory initialTab='cloudBoxes' />;
+  },
+};
+
+export const CloudBoxesStatusError: Story = {
+  render: () => {
+    mockStoryAgentbox('error');
+    return <SettingsModalStory initialTab='cloudBoxes' />;
+  },
 };
 
 const storyScopeProjects: ProjectViewProject[] = storyProjects.map((project) => ({

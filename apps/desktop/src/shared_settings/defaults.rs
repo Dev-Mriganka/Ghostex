@@ -22,6 +22,17 @@ pub const DEFAULT_KEEP_AWAKE_WHILE_WORKING_SESSIONS: bool = false;
 pub const DEFAULT_HIDE_KEEP_AWAKE_TITLEBAR_CONTROL: bool = false;
 pub const DEFAULT_GHOSTEX_CAPTURE_ENABLED: bool = false;
 pub const DEFAULT_GHOSTEX_CAPTURE_SWITCH_TO_SESSION: bool = true;
+/// `agentboxDefaultLocation`: new threads run on this computer unless the user picks a box.
+pub const DEFAULT_AGENTBOX_LOCATION: &str = "local";
+/// The agentbox providers a box location may name, in the order Settings and the picker list them.
+pub const AGENTBOX_PROVIDER_IDS: [&str; 6] = [
+    "docker",
+    "hetzner",
+    "vercel",
+    "daytona",
+    "e2b",
+    "digitalocean",
+];
 pub(crate) const MIN_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 10.0;
 pub(crate) const MAX_KEEP_AWAKE_BATTERY_THRESHOLD_PERCENT: f64 = 90.0;
 pub(crate) const MAX_CUSTOM_DEFAULT_EDITOR_COMMAND_CHARS: usize = 240;

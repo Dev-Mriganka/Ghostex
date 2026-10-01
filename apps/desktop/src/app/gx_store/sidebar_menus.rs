@@ -19,7 +19,8 @@ use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
 use ghostex_gx_core::{
-    HeaderCommand, HoverAction, LauncherAgent, MenuHost, MenuOpenTarget, SidebarMenus,
+    AgentboxLocation, HeaderCommand, HoverAction, LauncherAgent, MenuHost, MenuOpenTarget,
+    SidebarMenus,
 };
 use serde_json::Value;
 
@@ -40,6 +41,9 @@ pub(super) struct MenuHostCache {
     keep_awake_minutes: Option<i64>,
     /// The Open In targets, re-read from Settings on the same clock.
     open_targets: Vec<MenuOpenTarget>,
+    /// The ready agentbox locations, re-read from the status cache on the same clock
+    /// (gx_store/agentbox.rs).
+    agentbox_locations: Vec<AgentboxLocation>,
     /// Bumped whenever a re-read found a different value, so the install gate can see a change
     /// that neither the store nor a publish reports.
     generation: u64,
@@ -75,6 +79,13 @@ impl GhostexGpuiApp {
             cache.open_targets = open_targets;
             cache.generation += 1;
         }
+        let agentbox_locations = super::agentbox::cached_agentbox_locations()
+            .map(|locations| locations.ready)
+            .unwrap_or_default();
+        if cache.agentbox_locations != agentbox_locations {
+            cache.agentbox_locations = agentbox_locations;
+            cache.generation += 1;
+        }
         cache.generation
     }
 
@@ -104,6 +115,7 @@ impl GhostexGpuiApp {
         if !self.gx_store_sidebar_list_ready() {
             return;
         }
+        self.gx_store_poll_agentbox_locations(cx);
         let generation = self.gx_store_menu_host_generation();
         if self.gx_store.sidebar_list.installed_menu_host_generation() != Some(generation) {
             self.gx_store_install_sidebar_list(cx);
@@ -142,6 +154,7 @@ impl GhostexGpuiApp {
             machine_connected,
             open_targets: self.gx_store.menu_host.open_targets.clone(),
             app_lifecycle: true,
+            agentbox_locations: self.gx_store.menu_host.agentbox_locations.clone(),
         }
     }
 

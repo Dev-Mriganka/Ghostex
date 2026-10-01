@@ -728,6 +728,12 @@ impl GhostexGpuiApp {
                     self.run_managed_tool_terminal_command(tool_id.to_string(), window, cx);
                 }
             }
+            "runAgentboxTerminalCommand" => {
+                self.run_agentbox_terminal_command(command, window, cx);
+            }
+            "setUpAgentboxWithAgent" => {
+                self.run_agentbox_setup_chat(cx);
+            }
             "uninstallBundledAgentSkills" => {
                 self.run_gpui_ghostex_cli_settings_action(
                     GpuiGhostexCliSettingsAction::UninstallBundledAgentSkills,

@@ -2,7 +2,10 @@
 //! default (nine agents, two Codex and one Claude account), `accounts` (the
 //! Codex account list opens after a moment), `noaccounts` (accounts read but
 //! none for Codex: Current CLI login and Add account), `error` (the accounts
-//! list could not be read: Try again), `loading` (agents not read yet).
+//! list could not be read: Try again), `loading` (agents not read yet), `boxes`
+//! (the Run on row with Docker, Hetzner and an SSH host ready, Docker picked),
+//! `noboxes` (agentbox installed, no box ready: the Settings link). Every other
+//! state has no Run on row.
 use super::new_thread_picker::*;
 use gpui::{App, AppContext as _, Entity, WindowHandle};
 use gpui_component::Root;
@@ -125,8 +128,13 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         NewThreadPickerCommand::LaunchAgent {
             agent_id,
             account_id,
+            run_location,
         } => {
-            eprintln!("launch {agent_id} with account {account_id:?}");
+            eprintln!("launch {agent_id} with account {account_id:?} in {run_location:?}");
+            cx.quit();
+        }
+        NewThreadPickerCommand::OpenCloudBoxesSettings => {
+            eprintln!("open Settings > Cloud Boxes");
             cx.quit();
         }
         NewThreadPickerCommand::OpenBrowser => {
@@ -164,16 +172,37 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
             cx.quit();
         }
     });
+    let location = |run_location: &str, label: &str, kind: &str| NewThreadPickerLocation {
+        run_location: run_location.to_string(),
+        label: label.to_string(),
+        kind: kind.to_string(),
+    };
+    let boxes = match state.as_str() {
+        "boxes" => NewThreadPickerBoxes::Ready(vec![
+            location("agentbox:docker", "Docker", "local"),
+            location("agentbox:hetzner", "Hetzner", "cloud"),
+            location("agentbox:docker:selfhost", "selfhost (SSH)", "remoteDocker"),
+        ]),
+        "noboxes" => NewThreadPickerBoxes::NotSetUp,
+        _ => NewThreadPickerBoxes::Unknown,
+    };
+    let run_on_shown = boxes.shows_run_on();
     let config = NewThreadPickerConfig {
         palette: demo.palette,
         agents: agents.clone(),
         agents_loaded: state != "loading",
         accounts: accounts(&state),
+        boxes,
+        default_run_location: if state == "boxes" {
+            "agentbox:docker".to_string()
+        } else {
+            "local".to_string()
+        },
         close_when_inactive: false,
     };
     let (window, view) = super::open_modal_window(
         NEW_THREAD_PICKER_WIDTH,
-        new_thread_picker_window_height(agents.len()),
+        new_thread_picker_window_height(agents.len(), run_on_shown),
         move |window, cx| cx.new(|cx| GpuiNewThreadPickerWindow::new(config, host, window, cx)),
         cx,
     );

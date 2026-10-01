@@ -205,8 +205,8 @@ pub fn usage() -> String {
             "Create a Quick chat workspace with its first terminal session",
         ),
         format_help_command(
-            "create-agent <agentId> --project-id id [--group-id id] [--model m] [--effort e] [--first-input-draft text] [--defer-start]",
-            "Create and start a configured agent session; --model/--effort (Claude, Codex) apply to this session only; --first-input-draft stages text in its input without sending",
+            "create-agent <agentId> --project-id id [--group-id id] [--model m] [--effort e] [--first-input-draft text] [--run-on location] [--defer-start]",
+            "Create and start a configured agent session; --model/--effort (Claude, Codex) apply to this session only; --first-input-draft stages text in its input without sending; --run-on local|docker|hetzner|vercel|daytona|e2b|digitalocean|docker:<host> runs Claude, Codex, OpenCode or Pi in an agentbox box",
         ),
         format_help_command(
             "board start-work <bead-id> [--agent id] [--model m] [--effort e] [--project-path path|--project-id id] [--json]",
@@ -467,6 +467,10 @@ pub fn usage() -> String {
         format_help_command(
             "coordinator --help",
             "Run a coordinator: one agent you talk to that starts, supervises, and reports on thread sessions",
+        ),
+        format_help_command(
+            "agentbox status | list | url <session> [--screen] [--json]",
+            "Check agentbox readiness, list boxes, and print a box session's web app or screen URL",
         ),
         format_help_command(
             "agent-cli status | install <agent> | update <agent> [--json]",

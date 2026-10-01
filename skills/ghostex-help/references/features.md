@@ -1596,6 +1596,46 @@ Related settings: Settings > Remote (all rows are user-only; open them with
 `ghostex settings open --tab remote`), `hideKeepAwakeTitlebarControl` and the
 Keep Awake rows for machines that must stay reachable.
 
+## Cloud Boxes (agents in a box, here or in the cloud)
+
+A box is an isolated copy of your project where an agent works without touching
+this computer. Boxes run on this computer with Docker (free), in the cloud on
+Hetzner, Vercel, Daytona, E2B or DigitalOcean, or on your own server over SSH.
+Ghostex drives agentbox, a free open-source command line tool
+(https://github.com/madarco/agentbox); Claude, Codex, OpenCode and Pi can run
+in a box. Your agent's settings, skills and Codex sign-in go with it. Claude
+needs its own one-time sign-in for boxes, so Claude on this computer stays
+signed in.
+
+- **Set up**: Settings > Cloud Boxes. "Set It Up for Me" starts an agent that
+  installs agentbox, asks which clouds you want before anything that costs
+  money, creates the provider API token in your browser, and signs Claude and
+  Codex in for boxes. To do it by hand: Install agentbox, then Set Up for
+  Docker, or Log In (paste an API token from the provider's console) and
+  Prepare (once, builds the base image) for a cloud. Add Server registers your
+  own server by a name and its SSH address; Check tests it. Claude in boxes >
+  Sign In opens the sign-in page. Each step runs in a terminal tab; the page
+  updates while it runs. Run Check shows agentbox's own health check.
+- **Use**: pick a box under Run on in New Thread (Cmd+Left and Cmd+Right switch
+  location), or choose Run in a Box in a project's Select Agent menu. Box
+  sessions open in the terminal view and show a badge with where they run. The
+  first Claude box asks you to sign in right in its terminal: approve in the
+  browser page that opens and paste the code. Right-click a box session for Open
+  Box Web App (the app it serves, opened on this computer), Open Box Screen (the
+  box's own browser), Stop Box and Destroy Box. Add an `agentbox.yaml` with
+  `services.web.expose.port` to your project to start your dev server in the box
+  automatically. Sleeping or waking a session, or restarting Ghostex, reconnects
+  to the same box and conversation.
+- **Cost**: cloud boxes bill while they exist. Closing or deleting a session
+  stops its box and keeps its work; Settings > Cloud Boxes > Your boxes lists
+  every box with Open Web App, Stop and Destroy (deletes the box for good).
+- Boxes run on macOS and Linux; on Windows, use Ghostex inside WSL.
+
+Related settings: `agentboxDefaultLocation` (where new threads run unless you
+pick another location; default `local`, this computer). CLI:
+`ghostex agentbox status`, `ghostex agentbox list`,
+`ghostex create-agent <agent> --project-id <id> --run-on docker`.
+
 ## Notifications and status
 
 Ghostex tells you when an agent needs you: a completion sound when a session

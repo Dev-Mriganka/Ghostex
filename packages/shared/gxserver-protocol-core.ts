@@ -137,6 +137,12 @@ export type GxserverEndpointPath =
   | "/api/switchSessionAgent"
   | "/api/agentCliMaintenance"
   | "/api/managedTools"
+  /**
+   * CDXC:AgentBox 2026-10-01 SEE-ALSO:
+   * agentbox readiness, the box list, box web app / screen URLs, stop/destroy, and the setup
+   * commands the Cloud Boxes page runs (server/src/agentbox/endpoint.rs).
+   */
+  | "/api/agentbox"
   | "/api/agentAccounts"
   | "/api/readAgentLaunchPlan"
   | "/api/readAgentResumePlan"

@@ -537,6 +537,7 @@ pub(crate) fn switch_draft_agent(
     let lifecycle = read_lifecycle(params)?;
     let project = require_project(repository, &lifecycle.project_id)?;
     let session = require_session(repository, &lifecycle)?;
+    crate::agentbox::refuse_for_agentbox_session(&session, "Switching the agent")?;
     if !session_is_draft(&session) {
         return Err(DomainStateError {
             code: "invalidState",

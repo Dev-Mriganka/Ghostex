@@ -221,6 +221,7 @@ pub fn agent_launcher_items_with_accounts(
     if !items.is_empty() {
         items.push(MenuItem::separator());
     }
+    items.extend(super::run_in_box::run_in_box_row(group_id, host));
     // CDXC:Coordinators 2026-09-30 WHY: a coordinator is started where agents are started, so the launcher that lists them offers it too; the dialog behind it names the coordinator and picks its Claude or Codex agent.
     items.push(MenuItem::row(
         "New Coordinator…",

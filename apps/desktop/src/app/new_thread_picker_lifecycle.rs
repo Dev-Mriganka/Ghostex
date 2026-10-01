@@ -153,6 +153,33 @@ fn account_usage_line(account: &Value) -> Option<String> {
     (!values.is_empty()).then(|| values.join(" · "))
 }
 
+/// The Run on row's boxes from the last `/api/agentbox` status: no row when it could not be read,
+/// when agentbox is not installed, or when the thread would start on another machine, whose boxes
+/// this computer's status does not describe.
+fn new_thread_picker_boxes(
+    locations: Option<&ghostex_gx_core::AgentboxLocations>,
+    remote_project: bool,
+) -> NewThreadPickerBoxes {
+    match locations {
+        None => NewThreadPickerBoxes::Unknown,
+        Some(_) if remote_project => NewThreadPickerBoxes::Unknown,
+        Some(locations) if !locations.supported => NewThreadPickerBoxes::Unsupported,
+        Some(locations) if !locations.installed => NewThreadPickerBoxes::Unknown,
+        Some(locations) if locations.ready.is_empty() => NewThreadPickerBoxes::NotSetUp,
+        Some(locations) => NewThreadPickerBoxes::Ready(
+            locations
+                .ready
+                .iter()
+                .map(|location| NewThreadPickerLocation {
+                    run_location: location.run_location(),
+                    label: location.label.clone(),
+                    kind: location.kind.clone(),
+                })
+                .collect(),
+        ),
+    }
+}
+
 /// The registered accounts of the `/api/agentAccounts` list, masked and
 /// summarised for the picker's rows.
 fn new_thread_picker_accounts(state: &Value) -> Vec<NewThreadPickerAccount> {
@@ -232,7 +259,14 @@ impl GhostexGpuiApp {
         )
     }
 
-    /// The picker's current palette, agents, and cached accounts.
+    fn new_thread_picker_boxes(&self) -> NewThreadPickerBoxes {
+        new_thread_picker_boxes(
+            crate::app::gx_store::cached_agentbox_locations().as_ref(),
+            self.gx_store_active_project_is_remote(),
+        )
+    }
+
+    /// The picker's current palette, agents, cached accounts and cached boxes.
     fn new_thread_picker_config(&self) -> NewThreadPickerConfig {
         NewThreadPickerConfig {
             palette: self.gpui_native_modal_palette(),
@@ -242,7 +276,32 @@ impl GhostexGpuiApp {
                 .new_thread_picker_accounts
                 .as_ref()
                 .map(new_thread_picker_accounts),
+            boxes: self.new_thread_picker_boxes(),
+            default_run_location: shared_settings::shared_sidebar_settings_snapshot()
+                .agentbox_default_location(),
             close_when_inactive: true,
+        }
+    }
+
+    /// A newer `/api/agentbox` status reaches a picker on screen (a hidden preload reads it when it
+    /// is next opened).
+    pub(crate) fn push_gpui_new_thread_picker_run_locations(
+        &mut self,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        if !self.new_thread_picker_visible {
+            return;
+        }
+        let boxes = self.new_thread_picker_boxes();
+        if let (Some(handle), Some(picker)) = (
+            self.new_thread_picker_window,
+            self.new_thread_picker.clone(),
+        ) {
+            let _ = handle.update(cx, |_root, window, cx| {
+                picker.update(cx, |picker, cx| {
+                    picker.set_run_locations(boxes, window, cx);
+                });
+            });
         }
     }
 
@@ -255,7 +314,10 @@ impl GhostexGpuiApp {
         let agent_count = config.agents.len();
         let window_size = size(
             px(NEW_THREAD_PICKER_WIDTH),
-            px(new_thread_picker_window_height(agent_count)),
+            px(new_thread_picker_window_height(
+                agent_count,
+                config.boxes.shows_run_on(),
+            )),
         );
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),
@@ -362,6 +424,7 @@ impl GhostexGpuiApp {
         }
         self.refresh_gpui_new_thread_picker_agents(cx);
         self.refresh_gpui_new_thread_picker_accounts(cx);
+        self.refresh_agentbox_locations(crate::app::gx_store::AGENTBOX_STATUS_ON_OPEN, cx);
     }
 
     /// Closes from the main window (hotkey toggle): removes the visible window
@@ -401,9 +464,10 @@ impl GhostexGpuiApp {
             NewThreadPickerCommand::LaunchAgent {
                 agent_id,
                 account_id,
+                run_location,
             } => {
                 self.release_gpui_new_thread_picker_window(cx);
-                self.launch_agent_in_active_project(agent_id, account_id, cx);
+                self.launch_agent_in_active_project(agent_id, account_id, run_location, cx);
             }
             NewThreadPickerCommand::OpenBrowser => {
                 self.dispatch_gpui_sidebar_host_message(
@@ -417,7 +481,11 @@ impl GhostexGpuiApp {
                 self.release_gpui_new_thread_picker_window(cx);
             }
             NewThreadPickerCommand::AddAccount => {
-                self.open_gpui_settings_accounts_from_new_thread_picker(cx);
+                self.open_gpui_settings_tab_from_new_thread_picker("accounts", cx);
+                self.release_gpui_new_thread_picker_window(cx);
+            }
+            NewThreadPickerCommand::OpenCloudBoxesSettings => {
+                self.open_gpui_settings_tab_from_new_thread_picker("cloudBoxes", cx);
                 self.release_gpui_new_thread_picker_window(cx);
             }
             NewThreadPickerCommand::RetryAccounts => {
@@ -519,16 +587,18 @@ impl GhostexGpuiApp {
         .detach();
     }
 
-    /// The picker's Add account row: Settings opens on its Accounts page, the
-    /// same destination the dropdown's Add account row uses.
-    pub(crate) fn open_gpui_settings_accounts_from_new_thread_picker(
+    /// The picker's Add account row (Settings on its Accounts page, the same
+    /// destination the dropdown's Add account row uses) and the Run on row's
+    /// set-up link (its Cloud Boxes page).
+    pub(crate) fn open_gpui_settings_tab_from_new_thread_picker(
         &mut self,
+        tab: &str,
         cx: &mut gpui::Context<Self>,
     ) {
         let modal = GpuiAppModalKind::Settings;
         let sidebar_state_message = self.gpui_app_modal_sidebar_state_message_for_open(modal, cx);
         let mut open_message = modal.open_message();
-        open_message["initialTab"] = json!("accounts");
+        open_message["initialTab"] = json!(tab);
         if modal.requires_sidebar_state() {
             open_message["latestSidebarStateMessage"] = sidebar_state_message.clone();
         }

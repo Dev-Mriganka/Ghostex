@@ -466,6 +466,37 @@ fn full_menu(
         });
     }
 
+    // A box session's own section. Only this computer's rows: `/api/agentbox` answers for the
+    // gxserver the app talks to, and a remote row's box lives on that machine.
+    if row.agentbox.is_some() && !group.is_remote && !group.is_stale {
+        if !menu.is_empty() {
+            menu.push(MenuItem::separator());
+        }
+        menu.push(MenuItem::row(
+            "Open Box Web App",
+            "world",
+            MenuCommand::agentbox_session(id, "openWeb"),
+        ));
+        menu.push(MenuItem::row(
+            "Open Box Screen",
+            "device-desktop",
+            MenuCommand::agentbox_session(id, "openScreen"),
+        ));
+        menu.push(MenuItem::row(
+            "Stop Box",
+            "player-stop",
+            MenuCommand::agentbox_session(id, "stop"),
+        ));
+        menu.push(
+            MenuItem::row(
+                "Destroy Box…",
+                "trash",
+                MenuCommand::agentbox_session(id, "destroy"),
+            )
+            .with_danger(),
+        );
+    }
+
     let mut advanced: Vec<MenuItem> = vec![MenuItem::heading("Session")];
     if !enabled.contains(&HoverAction::Note) {
         if let Some(item) = &rows.note {
@@ -487,7 +518,9 @@ fn full_menu(
             advanced.push(item.clone());
         }
     }
-    if caps.can_fork_session {
+    // A box session has no transcript on this computer to fork, export or move to another account.
+    let in_box = row.agentbox.is_some();
+    if caps.can_fork_session && !in_box {
         advanced.push(MenuItem::row(
             "Fork",
             "git-fork",
@@ -507,6 +540,7 @@ fn full_menu(
     );
     if !caps.is_browser_session
         && !group.is_stale
+        && !in_box
         && matches!(account_provider, Some("claude") | Some("codex"))
     {
         advanced.push(MenuItem {
@@ -517,7 +551,7 @@ fn full_menu(
             ..MenuItem::default()
         });
     }
-    if caps.can_export_transcript {
+    if caps.can_export_transcript && !in_box {
         advanced.push(MenuItem::row(
             "Handoff / Export",
             "file-export",

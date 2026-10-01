@@ -157,6 +157,17 @@ impl SharedSidebarSettingsSnapshot {
         }
     }
 
+    /// Where new threads run unless the user picks another location: `"local"`,
+    /// `"agentbox:<provider>"` or `"agentbox:docker:<sshHost>"`, already in the
+    /// `/api/createAgentSession` `runLocation` form.
+    pub fn agentbox_default_location(&self) -> String {
+        normalize_agentbox_location(
+            self.object
+                .get("agentboxDefaultLocation")
+                .and_then(Value::as_str),
+        )
+    }
+
     /// Whether the floating Ghostex Capture button, its hotkeys and its capture tools are on.
     pub fn ghostex_capture_enabled(&self) -> bool {
         strict_bool_field(&self.object, "ghostexCaptureEnabled")

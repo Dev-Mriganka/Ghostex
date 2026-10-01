@@ -257,6 +257,12 @@ export type ghostexSettings = {
   /** After Floating Capture sends a prompt, the Ghostex window shows the session it went to. */
   ghostexCaptureSwitchToSession: boolean;
   /**
+   * Where new threads run unless the user picks another location, already in the
+   * `/api/createAgentSession` `runLocation` form: `local`, `agentbox:<provider>`, or
+   * `agentbox:docker:<alias>` for a registered remote Docker server.
+   */
+  agentboxDefaultLocation: string;
+  /**
    * CDXC:AgentProviders 2026-06-02-22:23:
    * This field is the sidebar render cache for gxserver-owned global agent approval
    * settings. Settings UI can display and edit it, but gxserver persists the

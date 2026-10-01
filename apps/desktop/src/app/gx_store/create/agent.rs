@@ -30,8 +30,8 @@ use std::time::Duration;
 use ghostex_gx_core::{
     CHATS_GROUP_ID, ProjectKey, SessionKey, TitleGenerationSettings, agent_session_default_title,
     created_session, default_agent_id_for_icon, first_prompt_title_runtime_settings,
-    local_agent_launch_params, open_remote_session_terminal, remote_agent_launch_params,
-    resolve_sidebar_agent, start_provider_params,
+    is_agentbox_run_location, local_agent_launch_params, open_remote_session_terminal,
+    remote_agent_launch_params, resolve_sidebar_agent, start_provider_params, with_run_location,
 };
 use serde_json::{Value, json};
 
@@ -113,6 +113,24 @@ impl GhostexGpuiApp {
         .detach();
         let group_id = message.get("groupId").and_then(Value::as_str);
         let account_id = message.get("accountId").and_then(Value::as_str);
+        let run_location = message
+            .get("runLocation")
+            .and_then(Value::as_str)
+            .filter(|location| is_agentbox_run_location(Some(location)));
+        if let Some(run_location) = run_location {
+            // CDXC:AgentBox 2026-10-01 WHY: a box session gets no Ghostex hooks (agentbox keeps the
+            // host's hooks out of the box), so the Hooks Required check is skipped, and no account
+            // goes with it: the box signs in on its own.
+            self.gx_store.create.counters.agent_launches += 1;
+            self.gx_store_launch_agent_from_sidebar(
+                &agent_id,
+                group_id,
+                None,
+                Some(run_location),
+                cx,
+            );
+            return;
+        }
         self.gx_store_request_agent_launch(&agent_id, group_id, account_id, cx);
     }
 
@@ -133,11 +151,11 @@ impl GhostexGpuiApp {
             .as_ref()
             .and_then(|agent| default_agent_id_for_icon(agent.icon.as_deref()));
         let (Some(agent), Some(hook_agent_id)) = (agent, hook_agent_id) else {
-            self.gx_store_launch_agent_from_sidebar(agent_id, group_id, account_id, cx);
+            self.gx_store_launch_agent_from_sidebar(agent_id, group_id, account_id, None, cx);
             return;
         };
         if normalized.is_empty() || hook_agent_id == "zcode" {
-            self.gx_store_launch_agent_from_sidebar(agent_id, group_id, account_id, cx);
+            self.gx_store_launch_agent_from_sidebar(agent_id, group_id, account_id, None, cx);
             return;
         }
         let remote = group_id
@@ -181,6 +199,7 @@ impl GhostexGpuiApp {
                         &agent_id,
                         group_id.as_deref(),
                         account_id.as_deref(),
+                        None,
                         cx,
                     );
                     return;
@@ -234,6 +253,7 @@ impl GhostexGpuiApp {
                 &agent_id,
                 group_id.as_deref(),
                 account_id.as_deref(),
+                None,
                 cx,
             );
             return;
@@ -287,6 +307,7 @@ impl GhostexGpuiApp {
                     &agent_id,
                     group_id.as_deref(),
                     account_id.as_deref(),
+                    None,
                     cx,
                 );
             });
@@ -330,34 +351,37 @@ impl GhostexGpuiApp {
     }
 
     /// `createAgentSessionFromSidebarLaunch`: the Chats collection launches into a new Quick
-    /// project; every other group into its own project.
+    /// project; every other group into its own project. `run_location` names an agentbox box.
     fn gx_store_launch_agent_from_sidebar(
         &mut self,
         agent_id: &str,
         group_id: Option<&str>,
         account_id: Option<&str>,
+        run_location: Option<&str>,
         cx: &mut gpui::Context<Self>,
     ) {
         if group_id == Some(CHATS_GROUP_ID) {
             let agent_id = agent_id.to_string();
             let account_id = account_id.map(str::to_string);
+            let run_location = run_location.map(str::to_string);
             // CDXC:AgentLauncher 2026-07-11:
             // A Quick agent never launches inside the active code project: it gets a new
             // projectless chat workspace, then the same configured-agent launch path as project
             // headers.
             self.gx_store_create_quick_project("agent", cx, move |this, project_id, cx| {
                 let group_id = ProjectKey::local(project_id).to_sidebar_group_id();
-                this.gx_store_create_agent_session(
+                this.gx_store_create_agent_session_at(
                     &agent_id,
                     Some(&group_id),
                     account_id.as_deref(),
+                    run_location.as_deref(),
                     cx,
                 )
                 .detach();
             });
             return;
         }
-        self.gx_store_create_agent_session(agent_id, group_id, account_id, cx)
+        self.gx_store_create_agent_session_at(agent_id, group_id, account_id, run_location, cx)
             .detach();
     }
 
@@ -369,6 +393,20 @@ impl GhostexGpuiApp {
         account_id: Option<&str>,
         cx: &mut gpui::Context<Self>,
     ) -> gpui::Task<Result<(), String>> {
+        self.gx_store_create_agent_session_at(agent_id, group_id, account_id, None, cx)
+    }
+
+    /// `createAgentSession` on this computer or, with `run_location`, in an agentbox box: gxserver
+    /// gets the location as `runLocation` and the session opens in the terminal, because a box
+    /// keeps no transcript on this computer for Chat View to read.
+    fn gx_store_create_agent_session_at(
+        &mut self,
+        agent_id: &str,
+        group_id: Option<&str>,
+        account_id: Option<&str>,
+        run_location: Option<&str>,
+        cx: &mut gpui::Context<Self>,
+    ) -> gpui::Task<Result<(), String>> {
         let group_id = group_id
             .map(str::to_string)
             .or_else(|| self.gx_store_active_group_id());
@@ -377,7 +415,13 @@ impl GhostexGpuiApp {
             .and_then(ProjectKey::parse_sidebar_group_id)
             .filter(|project| !project.machine.is_local());
         if let Some(project) = remote {
-            self.gx_store_create_remote_agent_session(agent_id, project, account_id, cx);
+            self.gx_store_create_remote_agent_session(
+                agent_id,
+                project,
+                account_id,
+                run_location,
+                cx,
+            );
             return gpui::Task::ready(Ok(()));
         }
         // `parseGxserverPresentationProjectGroupId(groupId)` when a group was given, the active
@@ -433,9 +477,15 @@ impl GhostexGpuiApp {
             .gx_store_bot_name(&project_id, &agent.agent_id)
             .unwrap_or_else(|| agent.name.clone());
         let title = agent_session_default_title(Some(&title_name));
-        let params =
-            local_agent_launch_params(&agent, &project_id, title_settings, account_id, &title);
-        let preferred_interface = self.gx_store_preferred_interface(&agent.agent_id);
+        let params = with_run_location(
+            local_agent_launch_params(&agent, &project_id, title_settings, account_id, &title),
+            run_location,
+        );
+        let preferred_interface = if is_agentbox_run_location(run_location) {
+            "terminal".to_string()
+        } else {
+            self.gx_store_preferred_interface(&agent.agent_id)
+        };
         cx.spawn(async move |this, cx| {
             let result = gx_rpc(None, "/api/createAgentSession", params).await;
             let failure = result.as_ref().err().and_then(|error| {
@@ -474,6 +524,7 @@ impl GhostexGpuiApp {
         agent_id: &str,
         project: ProjectKey,
         account_id: Option<&str>,
+        run_location: Option<&str>,
         cx: &mut gpui::Context<Self>,
     ) {
         let Some(machine_id) = project.machine.remote_id().map(str::to_string) else {
@@ -500,14 +551,19 @@ impl GhostexGpuiApp {
             None,
             None,
         );
-        let params = remote_agent_launch_params(
-            &normalized,
-            &project.project_id,
-            title_settings,
-            account_id,
-            &title,
+        // The remote machine's own gxserver runs agentbox for a box launch there.
+        let params = with_run_location(
+            remote_agent_launch_params(
+                &normalized,
+                &project.project_id,
+                title_settings,
+                account_id,
+                &title,
+            ),
+            run_location,
         );
-        let chat = self.gx_store_preferred_interface(&normalized) == "chat";
+        let chat = !is_agentbox_run_location(run_location)
+            && self.gx_store_preferred_interface(&normalized) == "chat";
         let task = self.start_gpui_remote_sidebar_rpc(
             &machine_id,
             "/api/createAgentSession",

@@ -880,6 +880,17 @@ fn build_session(
         );
     }
     insert_optional(&mut details, "threadState", row.thread_state.clone());
+    // The box an agentbox session runs in, drawn by native_sidebar/agentbox.rs.
+    if let Some(agentbox) = &row.agentbox {
+        details.insert(
+            "agentbox".to_string(),
+            json!({
+                "provider": agentbox.provider,
+                "boxName": agentbox.box_name,
+                "providerLabel": agentbox.badge_label(),
+            }),
+        );
+    }
     NativeSidebarSession {
         session_id: row.sidebar_session_id.clone(),
         display_title: Some(row.display_title.clone()),

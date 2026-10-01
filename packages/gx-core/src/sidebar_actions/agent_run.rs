@@ -82,6 +82,10 @@ pub fn plan_agent_run(view: &SidebarView, command: &Value) -> Option<SidebarActi
     if let Some(account_id) = command.get("accountId") {
         message.insert("accountId".to_string(), account_id.clone());
     }
+    // A Run in a Box row's location (gx-core agentbox.rs), passed on the same way.
+    if let Some(run_location) = command.get("runLocation") {
+        message.insert("runLocation".to_string(), run_location.clone());
+    }
     Some(SidebarActionPlan::one(ActionEffect::SidebarHostMessage {
         message: Value::Object(message),
     }))

@@ -176,17 +176,18 @@ pub(crate) fn normalize_worktree_session_create_request(
             ))
         }
     };
-    let mut agent_session_params: Map<String, Value> = ["title", "agentModel", "agentEffort"]
-        .into_iter()
-        .filter_map(|key| {
-            params
-                .get(key)
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(|value| (key.to_string(), Value::String(value.to_string())))
-        })
-        .collect();
+    let mut agent_session_params: Map<String, Value> =
+        ["title", "agentModel", "agentEffort", "runLocation"]
+            .into_iter()
+            .filter_map(|key| {
+                params
+                    .get(key)
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(|value| (key.to_string(), Value::String(value.to_string())))
+            })
+            .collect();
     if let Some(launch_settings) = params
         .get("launchSettings")
         .filter(|value| value.is_object())
@@ -540,7 +541,38 @@ pub(crate) async fn start_worktree_session(
             .into())
         }
     };
-    if let Some(prompt) = request.first_prompt.as_deref() {
+    let first_prompt = request.first_prompt.as_deref().filter(|prompt| {
+        !worktree_first_prompt_rode_box_launch(state, &project_id, &session_id, prompt)
+    });
+    let box_session = first_prompt.is_some()
+        && crate::agentbox::is_agentbox_session_by_ids(
+            &state.paths,
+            state.metadata.server_id.as_str(),
+            &project_id,
+            &session_id,
+        );
+    if let Some(prompt) = first_prompt.filter(|_| box_session) {
+        // A prompt too long to ride the box launch waits, in the background, for the box's agent
+        // (agentbox/input_ready.rs); the create answers now instead of after the box is up.
+        let (state, project_id, session_id, prompt) = (
+            state.clone(),
+            project_id.clone(),
+            session_id.clone(),
+            prompt.to_string(),
+        );
+        tokio::spawn(async move {
+            if crate::agentbox::wait_for_box_agent_input(
+                &state.paths,
+                state.metadata.server_id.as_str(),
+                &project_id,
+                &session_id,
+            )
+            .await
+            {
+                send_worktree_session_first_prompt(&state, &project_id, &session_id, &prompt);
+            }
+        });
+    } else if let Some(prompt) = first_prompt {
         /*
         Text and Enter are two separate zmx sends with a settle window between
         them (`sendSessionMessage` owns that split): bracketed-paste composers
@@ -735,6 +767,22 @@ pub(crate) fn remove_created_worktree_session_row(
     params.insert("projectId".to_string(), Value::String(project_id));
     params.insert("sessionId".to_string(), Value::String(session_id));
     let _ = repository.remove_session(&params);
+}
+
+/// Whether a box session's launch already handed this first prompt to its agent (see
+/// agentbox/first_prompt.rs), so it must not be typed again.
+fn worktree_first_prompt_rode_box_launch(
+    state: &AppState,
+    project_id: &str,
+    session_id: &str,
+    prompt: &str,
+) -> bool {
+    let Ok(db) = open_gxserver_database(&state.paths) else {
+        return false;
+    };
+    let repository = DomainRepository::new(&db, state.metadata.server_id.as_str());
+    crate::agentbox::claim_launch_prompt_echo(&repository, project_id, session_id, prompt)
+        .unwrap_or(false)
 }
 
 pub(crate) fn send_worktree_session_first_prompt(

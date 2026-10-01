@@ -123,6 +123,14 @@ impl GhostexGpuiApp {
             .into_any_element()
     }
 
+    /// Whether the work area draws `session`'s terminal: the page's Chat/Terminal choice, unless
+    /// gx-core rules Chat View out for the session (an agentbox box's), which always shows its
+    /// terminal.
+    pub(crate) fn web_shows_terminal(&self, session: &ghostex_gx_core::SessionKey) -> bool {
+        self.show_terminal
+            || ghostex_gx_core::session_chat_view_unavailable(&self.gx_store.core, session)
+    }
+
     pub(crate) fn web_show_terminal(&mut self, terminal: bool, cx: &mut Context<Self>) {
         self.show_terminal = terminal;
         if terminal && let Some(session) = self.open_session.clone() {
@@ -137,15 +145,16 @@ impl Render for GhostexGpuiApp {
         let sidebar = (!self.sidebar_collapsed).then(|| self.render_native_sidebar(window, cx));
         let status = self.gx_store.status.clone();
         let open = self.open_session.clone();
+        let shows_terminal = open.as_ref().is_some_and(|session| self.web_shows_terminal(session));
         let surface: Option<AnyElement> = open.as_ref().and_then(|session| {
-            if self.show_terminal {
+            if shows_terminal {
                 self.terminals.get(session).map(|view| view.clone().into_any_element())
             } else {
                 self.native_chats.get(session).map(|(_, view)| view.clone().into_any_element())
             }
         });
         let header = self.render_workarea_header(cx);
-        let terminal_bar = (self.show_terminal && surface.is_some())
+        let terminal_bar = (shows_terminal && surface.is_some())
             .then(|| self.render_terminal_action_bar(cx));
         div()
             .id("ghostex-web-shell")

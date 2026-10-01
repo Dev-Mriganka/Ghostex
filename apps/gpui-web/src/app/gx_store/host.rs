@@ -59,6 +59,11 @@ pub(crate) struct GxStoreHost {
     pub(crate) client: Option<WebStoreClient>,
     pub(crate) custom_tags: super::custom_tags_sync::CustomTagsSyncHost,
     pub(crate) close_project: super::sidebar_close_project::CloseProjectCounters,
+    /// The agentbox locations gxserver reported ready when the page connected, for the
+    /// launcher's Run in a Box page (the desktop's `gx_store/agentbox.rs` reads them on open).
+    pub(crate) agentbox_locations: Vec<ghostex_gx_core::AgentboxLocation>,
+    /// The launcher state behind those pages (`web_commands.rs`); its account pages stay unused.
+    pub(crate) launcher_box_pages: ghostex_gx_core::SidebarAccountMenus,
 }
 
 /// The desktop's `GxClient`, as far as the shared files use it: ask for a fresh full snapshot.
@@ -84,6 +89,30 @@ pub(crate) fn now_ms() -> u64 {
 }
 
 impl GhostexGpuiApp {
+    /// Reads `/api/agentbox` status once the daemon is known; a gxserver without the endpoint
+    /// leaves the launcher without its Run in a Box page.
+    fn web_read_agentbox_locations(&mut self, cx: &mut gpui::Context<Self>) {
+        cx.spawn(async move |app, cx| {
+            let Ok(status) = super::gx_rpc(
+                None,
+                "/api/agentbox",
+                serde_json::json!({ "action": "status" }),
+            )
+            .await
+            else {
+                return;
+            };
+            let ready = ghostex_gx_core::agentbox_locations_from_status(&status).ready;
+            let _ = app.update(cx, |app, cx| {
+                if app.gx_store.agentbox_locations != ready {
+                    app.gx_store.agentbox_locations = ready;
+                    app.gx_store_sidebar_state_changed(cx);
+                }
+            });
+        })
+        .detach();
+    }
+
     /// Bootstraps, connects and pumps until the page goes away, reconnecting on a close.
     pub(crate) fn gx_store_start(&mut self, cx: &mut gpui::Context<Self>) {
         self.gx_store_restore_sidebar_ui();
@@ -104,7 +133,10 @@ impl GhostexGpuiApp {
                 &endpoint.base_url,
                 &endpoint.auth_token,
             );
-            let _ = app.update(cx, |app, _| app.gx_store.endpoint = Some(endpoint.clone()));
+            let _ = app.update(cx, |app, cx| {
+                app.gx_store.endpoint = Some(endpoint.clone());
+                app.web_read_agentbox_locations(cx);
+            });
             let mut attempt = 0u32;
             loop {
                 let (sender, mut receiver) = mpsc::unbounded();
@@ -271,6 +303,7 @@ impl GhostexGpuiApp {
             open_targets: Vec::new(),
             // A page cannot update, restart or quit the app.
             app_lifecycle: false,
+            agentbox_locations: store.agentbox_locations.clone(),
         };
         store.sidebar_list.last_inputs.host.project_diff_stats = store
             .runtime_facts

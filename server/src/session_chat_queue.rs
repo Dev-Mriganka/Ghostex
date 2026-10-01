@@ -299,6 +299,35 @@ pub fn handle_session_chat_queue_endpoint(
             }
             let draft_before_queue = read_snapshot(&transaction, &project_id, &session_id)?.draft;
             let startup_send = params.get("startupSend").and_then(Value::as_bool) == Some(true);
+            // The prompt a box session's launch already handed to its agent is answered, not typed again.
+            if startup_send
+                && crate::agentbox::claim_launch_prompt_echo(
+                    &DomainRepository::new(&transaction, server_id),
+                    &project_id,
+                    &session_id,
+                    &text,
+                )?
+            {
+                let prompt = SessionChatQueuedPrompt {
+                    id: create_prompt_id(),
+                    text: text.clone(),
+                    startup_send: true,
+                    state: SESSION_CHAT_QUEUE_STATE_QUEUED.to_string(),
+                    error_message: None,
+                    created_at: now_iso(),
+                    updated_at: now_iso(),
+                };
+                let snapshot = read_snapshot(&transaction, &project_id, &session_id)?;
+                let mut value = snapshot_value(&snapshot);
+                insert_prompt(&mut value, &prompt);
+                transaction.commit().map_err(sql_error)?;
+                return Ok(SessionChatQueueEndpointResult {
+                    value,
+                    broadcast: false,
+                    project_id,
+                    session_id,
+                });
+            }
             let prompt =
                 append_prompt(&transaction, &project_id, &session_id, &text, startup_send)?;
             if let Some(version) = version.as_ref() {
