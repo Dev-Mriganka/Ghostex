@@ -1,4 +1,4 @@
-//! The Quick Access wire snapshot, the Rust half of packages/shared/native-quick-access.ts.
+//! The Quick Access wire snapshot, the Rust half of packages/shared/native-quick-access.ts (deleted 2026-10-01).
 //! Every field is already resolved for display: the controller owns filtering, sorting, grouping and
 //! formatting, and this window only paints what arrives here.
 use serde::Deserialize;

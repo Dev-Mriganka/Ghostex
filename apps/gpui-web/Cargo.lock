@@ -2039,6 +2039,7 @@ name = "ghostex-gx-core"
 version = "0.1.0"
 dependencies = [
  "ghostex-gx-protocol",
+ "ghostex-settings-catalog",
  "serde",
  "serde_json",
 ]
@@ -2048,6 +2049,13 @@ name = "ghostex-gx-protocol"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ghostex-settings-catalog"
+version = "0.1.0"
+dependencies = [
  "serde_json",
 ]
 

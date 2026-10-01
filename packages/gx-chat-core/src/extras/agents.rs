@@ -5,7 +5,7 @@
 //! same table for the sidebar but keeps it crate-private, so this is a private copy until the two
 //! crates share one (noted in `docs/2026-09-21/rust-chat/PROGRESS.md`).
 //!
-//! SEE-ALSO: packages/shared/sidebar-agents.ts (`DEFAULT_SIDEBAR_AGENT_DEFINITIONS`) and
+//! SEE-ALSO: packages/shared/sidebar-agents.ts (deleted 2026-10-01) (`DEFAULT_SIDEBAR_AGENT_DEFINITIONS`) and
 //! packages/gx-core/src/sidebar_view/agents.rs; the three tables must list the same agents.
 
 /// `(agentId, icon, name)` in catalog order.

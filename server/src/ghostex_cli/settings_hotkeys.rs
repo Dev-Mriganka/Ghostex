@@ -13,7 +13,7 @@ use crate::ghostex_cli::args::{parse_args, Flags};
 use crate::ghostex_cli::output::print_json;
 use crate::ghostex_cli::rpc::{CliError, CliResult};
 use crate::ghostex_cli::settings::{
-    read_settings_file, SETTINGS_CATALOG_JSON, SETTINGS_UPDATE_SOURCE,
+    read_settings_file, settings_catalog_json, SETTINGS_UPDATE_SOURCE,
 };
 use crate::ghostex_cli::usage;
 
@@ -38,8 +38,8 @@ const NAMED_KEYS: &[&str] = &[
 ];
 const UNASSIGN_WORDS: &[&str] = &["none", "off", "unassigned", "unset", "-"];
 
-/// One row of the hotkey catalog `tooling/ghostex-help/generate.ts` writes from
-/// `GHOSTEX_HOTKEY_DEFINITIONS` into settings-catalog.json.
+/// One row of the hotkey catalog in settings-catalog.json, rendered from the Settings
+/// catalog crate's hotkey definitions.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HotkeyDefinition {
@@ -62,7 +62,7 @@ fn definitions() -> CliResult<&'static [HotkeyDefinition]> {
     static CATALOG: OnceLock<Result<HotkeyCatalog, String>> = OnceLock::new();
     CATALOG
         .get_or_init(|| {
-            serde_json::from_str::<HotkeyCatalog>(SETTINGS_CATALOG_JSON)
+            serde_json::from_str::<HotkeyCatalog>(settings_catalog_json())
                 .map_err(|error| format!("Bundled hotkey catalog is invalid: {error}"))
         })
         .as_ref()
@@ -90,7 +90,7 @@ fn is_reserved(hotkey: &str) -> bool {
     is_mac() && hotkey.split(' ').next() == Some("cmd+k")
 }
 
-/// Mirrors `normalizeHotkeyText` in packages/shared/ghostex-hotkeys.ts, so a chord typed here is
+/// Mirrors `normalizeHotkeyText` in packages/shared/hotkey-text.ts, so a chord typed here is
 /// stored with the exact spelling the Settings recorder would write.
 fn normalize_hotkey_text(value: &str) -> String {
     let lowered = value
@@ -375,7 +375,7 @@ fn hotkey_json(definition: &HotkeyDefinition, current: &str) -> Value {
 /// CDXC:Hotkeys 2026-09-25 DECISION:
 /// User: "Allow cli to set hotkeys pls and list etc". `ghostex settings hotkeys` lists, reads, sets, unassigns and resets bindings for agents and users; the Settings UI is no longer the only writer.
 /// It sends the complete resolved map, exactly what the Hotkeys page saves, through the running app's `updateSettingsPatch` path (CDXC:Settings 2026-09-09), so every save gets the same fan-out and the new keys bind at once.
-/// SEE-ALSO: tooling/ghostex-help/generate.ts (the hotkey catalog, including retired keys), packages/shared/ghostex-hotkeys.ts (`normalizeghostexHotkeySettings`, `normalizeHotkeyText`).
+/// SEE-ALSO: packages/settings-catalog/src/hotkey_definitions.rs (the hotkey catalog, including retired keys), packages/gx-core/src/quick_access/hotkeys.rs (`normalize_hotkey_settings`) and apps/desktop/src/app/window/settings_modal/tabs/hotkeys.rs resolve a saved map the same way.
 pub(super) fn hotkeys_command(args: &[String]) -> CliResult<()> {
     let subcommand = args.first().map(String::as_str).unwrap_or("list");
     let rest: Vec<String> = args.iter().skip(1).cloned().collect();

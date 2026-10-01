@@ -42,7 +42,7 @@ impl DiagnosticLogScenario {
     /// Debugging page merged its log switches into one per feature area; the variant still names
     /// what is being logged.
     ///
-    /// SEE-ALSO: `DIAGNOSTIC_LOGGING_SCENARIOS` in packages/shared/ghostex-settings/diagnostic-logging.ts
+    /// SEE-ALSO: `DIAGNOSTIC_LOGGING_SCENARIOS` in packages/settings-catalog/src/data/diagnostic_logging.rs
     /// lists the ids Settings can turn on.
     pub fn id(self) -> &'static str {
         match self {

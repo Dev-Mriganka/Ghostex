@@ -126,6 +126,9 @@ const DESKTOP_APP_PATHSPECS = Object.freeze([
   { pathspec: 'packages/paths/**' },
   { pathspec: 'packages/find/**' },
   { pathspec: ':(exclude)packages/find/target' },
+  /* The Settings rows, defaults and hotkeys, compiled into the desktop app and gxserver. */
+  { pathspec: 'packages/settings-catalog/**' },
+  { pathspec: ':(exclude)packages/settings-catalog/target' },
   { pathspec: 'server/**' },
   { pathspec: ':(exclude)server/target' },
   { pathspec: 'packages/shared/**' },
@@ -160,6 +163,8 @@ const GXSERVER_PATHSPECS = Object.freeze([
   { pathspec: 'packages/paths/**' },
   { pathspec: 'packages/find/**' },
   { pathspec: ':(exclude)packages/find/target' },
+  { pathspec: 'packages/settings-catalog/**' },
+  { pathspec: ':(exclude)packages/settings-catalog/target' },
   { pathspec: '.dependencies/zmx' },
   /* server/package-remote-linux.mjs stages the bundled skills catalog into the package. */
   { pathspec: 'skills/**' },

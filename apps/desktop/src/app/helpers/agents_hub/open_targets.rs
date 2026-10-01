@@ -23,7 +23,7 @@ pub(crate) struct GpuiBuiltInOpenTargetDefinition {
     pub(crate) commands: &'static [&'static str],
     pub(crate) base_args: &'static [&'static str],
     // Detection probe names mirroring macOSAppNames in
-    // packages/shared/workspace-open-targets.ts; keep both catalogs in sync.
+    // packages/shared/workspace-open-targets.ts (deleted 2026-10-01); keep both catalogs in sync.
     pub(crate) macos_app_names: &'static [&'static str],
 }
 

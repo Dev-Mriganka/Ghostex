@@ -1,0 +1,33 @@
+//! The searchable pages other than General, Theme and Hotkeys, in the order Settings lists them.
+mod about;
+mod accounts;
+mod actions;
+mod agents;
+mod cloud_boxes;
+mod debugging;
+mod extensions;
+mod integrations;
+mod open_targets;
+mod os_integration;
+mod projects;
+mod remote;
+
+use crate::rows::Page;
+use crate::Platform;
+
+pub fn pages(platform: Platform) -> Vec<Page> {
+    vec![
+        debugging::page(),
+        about::page(),
+        actions::page(),
+        accounts::page(),
+        agents::page(),
+        integrations::page(),
+        cloud_boxes::page(),
+        extensions::page(platform),
+        open_targets::page(),
+        os_integration::page(),
+        projects::page(),
+        remote::page(),
+    ]
+}

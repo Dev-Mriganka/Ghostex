@@ -42,7 +42,7 @@ pub(crate) const DEFAULT_TERMINAL_FONT_WEIGHT: f64 = 300.0;
 pub(crate) const NORMAL_TERMINAL_FONT_WEIGHT: f64 = 400.0;
 pub(crate) const DEFAULT_TERMINAL_GHOSTTY_THEME: &str = "GitHub Dark";
 /// Empty: no custom terminal background colour (`workspaceBackgroundColor` in
-/// packages/shared/ghostex-settings/defaults.ts).
+/// packages/settings-catalog/src/data/defaults.rs).
 pub(crate) const DEFAULT_TERMINAL_BACKGROUND_COLOR: &str = "";
 pub(crate) const DEFAULT_TERMINAL_BACKGROUND_IMAGE: &str = "";
 pub(crate) const DEFAULT_TERMINAL_BACKGROUND_IMAGE_OPACITY: f64 = 1.0;
@@ -73,7 +73,7 @@ pub(crate) const MAX_TERMINAL_VIEW_WIDTH_PERCENT: f64 = 100.0;
 pub(crate) const DEFAULT_CHAT_CONTENT_MAX_WIDTH_PX: f32 = 768.0;
 pub(crate) const DEFAULT_TERMINAL_WIDTH_APPLY_TO_COMMAND_PANE_TERMINALS: bool = false;
 /// Mirrors `DEFAULT_SIDEBAR_COLLAPSE_ANIMATION_DURATION_MS` / `MAX_...` in
-/// `packages/shared/ghostex-settings/types.ts`.
+/// `packages/shared/ghostex-settings/types.ts` (deleted 2026-10-01).
 pub(crate) const DEFAULT_SIDEBAR_COLLAPSE_ANIMATION_DURATION_MS: f64 = 400.0;
 pub(crate) const MAX_SIDEBAR_COLLAPSE_ANIMATION_DURATION_MS: f64 = 1000.0;
 pub(crate) const MIN_TERMINAL_FONT_WEIGHT: f64 = 100.0;

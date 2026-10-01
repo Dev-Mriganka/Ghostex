@@ -1,7 +1,7 @@
 //! `HotkeyRecorderField` (packages/core-ui/hotkey-recorder-field.tsx (deleted 2026-10-01)): an outline button showing a
 //! shortcut the way the app's menus label it, which records the next chord pressed while it is
 //! armed, with Reset and Remove chips that show while the field is hovered. Also the hotkey text
-//! helpers of packages/shared/ghostex-hotkeys.ts the recorder and the Hotkeys page need
+//! helpers of packages/shared/ghostex-hotkeys.ts (deleted 2026-10-01) the recorder and the Hotkeys page need
 //! (`normalizeHotkeyText`, `ghostexHotkeyTextFromKeyboardEvent`, `isReservedghostexHotkeyText`).
 //!
 //! A page embeds a [`HotkeyRecorder`] and implements [`HotkeyRecorderHost`]; while a field is
@@ -105,7 +105,7 @@ fn normalize_chord(chord: &str) -> String {
 }
 
 /// `isReservedghostexHotkeyText`: Cmd+K belongs to the focused terminal on macOS
-/// (CDXC:Hotkeys 2026-08-22 in packages/shared/ghostex-hotkeys.ts), judged by the opening chord.
+/// (CDXC:Hotkeys 2026-08-22 in packages/shared/ghostex-hotkeys.ts (deleted 2026-10-01)), judged by the opening chord.
 pub(crate) fn is_reserved_hotkey(text: &str) -> bool {
     let normalized = normalize_hotkey_text(text);
     let opening = normalized.split(' ').next().unwrap_or_default();

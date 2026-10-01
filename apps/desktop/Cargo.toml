@@ -61,6 +61,7 @@ ghostex-gx-chat-core = { path = "../../packages/gx-chat-core" }
 ghostex-gx-chat-client = { path = "../../packages/gx-chat-client" }
 ghostex-gx-client = { path = "../../packages/gx-client" }
 ghostex-gx-core = { path = "../../packages/gx-core" }
+ghostex-settings-catalog = { path = "../../packages/settings-catalog" }
 ghostex-agent-sync = { path = "../../packages/agent-sync" }
 ghostex-docs = { path = "../../packages/project-docs" }
 # CDXC:Docs 2026-09-24 DECISION: User: build native Docs on zorite-editor, the MIT crate from packetThrower/zorite ("you can look at the gpl code but dont copy it verbatim"). The live-preview editor, math (RaTeX) and Mermaid (mermaid-rs-renderer, rasterized by resvg) are the prototype the user reviewed ("ok this looks AWESOME ... let's keep going this way").

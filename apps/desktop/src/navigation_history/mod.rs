@@ -58,7 +58,7 @@ pub(crate) struct GpuiNavigationHistoryState {
     pub(crate) can_go_forward: bool,
 }
 
-/// Map the shared hotkey action ids (`packages/shared/ghostex-hotkeys.ts`) onto a trail
+/// Map the shared hotkey action ids (`packages/shared/ghostex-hotkeys.ts` (deleted 2026-10-01)) onto a trail
 /// direction, so a keypress and a titlebar click enter the exact same route.
 pub(crate) fn navigation_history_hotkey_direction(action_id: &str) -> Option<&'static str> {
     match action_id {

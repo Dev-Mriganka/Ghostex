@@ -1,4 +1,4 @@
-import { detectghostexHotkeyPlatform } from '@/packages/shared/ghostex-hotkeys';
+import { detectghostexHotkeyPlatform } from '@/packages/shared/hotkey-text';
 import { shortcutKeyFromKeyboardEvent } from '@/packages/shared/keyboard-shortcut-key';
 import type { SessionChatComposerKeyEvent } from './session-chat-input-api';
 

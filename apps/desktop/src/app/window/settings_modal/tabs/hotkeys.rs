@@ -22,7 +22,7 @@ use gpui_component::h_flex;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 
-const HOTKEYS_MODULE: &str = "shared/ghostex-hotkeys";
+const HOTKEYS_MODULE: &str = super::super::catalog::module::HOTKEYS;
 
 /// One `GHOSTEX_HOTKEY_DEFINITIONS` entry.
 struct HotkeyDefinition {
@@ -276,10 +276,10 @@ impl Render for HotkeysTab {
         let expand_collapsed = values.bool("expandCollapsedProjectsOnJump");
         let searches = hotkey_section_searches(&query, expand_collapsed);
         let hotkeys = self.current_hotkeys(cx);
-        // `normalizeghostexHotkeySettings(DEFAULT_ghostex_HOTKEYS)`: the macOS defaults, moved to the
+        // `normalizeghostexHotkeySettings(DEFAULT_GHOSTEX_HOTKEYS)`: the macOS defaults, moved to the
         // Windows/Linux chord where an action has one.
         let default_table = settings_catalog()
-            .module_value(HOTKEYS_MODULE, "DEFAULT_ghostex_HOTKEYS")
+            .module_value(HOTKEYS_MODULE, "DEFAULT_GHOSTEX_HOTKEYS")
             .cloned()
             .unwrap_or_default();
         let defaults = normalize_hotkeys(&default_table, &self.definitions);

@@ -8,6 +8,8 @@ edition = "2021"
 publish = false
 
 [dependencies]
+# `help-generate` renders the Ghostex Help files from the Settings catalog crate.
+ghostex-settings-catalog = { path = "../../packages/settings-catalog" }
 serde_json = "1"
 
 [target.'cfg(unix)'.dependencies]

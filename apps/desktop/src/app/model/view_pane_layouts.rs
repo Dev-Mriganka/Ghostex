@@ -5,7 +5,7 @@ use crate::*;
 /// So the two layouts remember only the sessions sidebar, and only while the advanced `sidebarVisibilityMemory` setting is per-view: `Agents` is the window with no view open, `Wide` is the window with a view panel beside the sessions, so Browser, Code and Docs never reshuffle between each other. The Commands pane keeps the mode saved in its own per-project model, and no view or project switch writes it.
 /// Sidebar visibility is still remembered for the whole app, never per project, so switching projects cannot toggle the sidebar on its own.
 /// This supersedes the 2026-09-12 decision that the Commands pane always follows the layout of the view.
-/// SEE-ALSO: packages/shared/ghostex-settings/types.ts, apps/desktop/src/app/view_pane_state.rs, apps/desktop/native/macos/GpuiSidebarReveal.m.
+/// SEE-ALSO: packages/shared/ghostex-settings/types.ts (deleted 2026-10-01), apps/desktop/src/app/view_pane_state.rs, apps/desktop/native/macos/GpuiSidebarReveal.m.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum GpuiViewPaneLayoutKind {
     /// No view is open; the Agents workspace has the whole workarea.

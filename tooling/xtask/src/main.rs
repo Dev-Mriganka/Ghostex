@@ -3,6 +3,7 @@
 
 mod codesign;
 mod gxserver;
+mod help;
 mod http;
 mod isolated;
 mod start;
@@ -34,7 +35,7 @@ Checks and generators
   test [<vitest arguments>]
                           the vitest suites
   storage-check           client-storage access lint
-  help-generate           regenerate skills/ghostex-help and the native Settings catalog
+  help-generate           regenerate the skills/ghostex-help references from packages/settings-catalog
   help-check              fail when those generated files are stale
   build-sidebar-css       regenerate packages/core-ui/styles/shadcn.generated.css
   build-editor            build the GhostexEditor page and app

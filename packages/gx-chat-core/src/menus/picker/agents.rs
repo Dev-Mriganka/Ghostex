@@ -5,7 +5,7 @@
 //! read only `name` and `icon`. The whole default agent list belongs to the sidebar, not to chat,
 //! so only those two fields for the five providers a picker can open are here.
 //!
-//! SEE-ALSO: `packages/shared/sidebar-agents.ts` (`DEFAULT_SIDEBAR_AGENTS`),
+//! SEE-ALSO: `packages/shared/sidebar-agents.ts` (deleted 2026-10-01) (`DEFAULT_SIDEBAR_AGENTS`),
 //! `apps/desktop/src/app/helpers/sidebar/sidebar_defaults_types.rs`.
 
 use crate::menus::picker::model_picker::ModelPickerProvider;

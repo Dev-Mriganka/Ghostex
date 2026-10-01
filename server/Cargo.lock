@@ -518,6 +518,13 @@ name = "ghostex-paths"
 version = "0.1.0"
 
 [[package]]
+name = "ghostex-settings-catalog"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "gxserver"
 version = "0.1.0"
 dependencies = [
@@ -533,6 +540,7 @@ dependencies = [
  "ghostex-editor-client",
  "ghostex-find",
  "ghostex-paths",
+ "ghostex-settings-catalog",
  "jsonc-parser",
  "libc",
  "md-5",

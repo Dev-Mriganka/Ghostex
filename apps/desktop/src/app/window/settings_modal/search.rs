@@ -1,4 +1,4 @@
-//! Settings search, ported from packages/core-ui/settings-modal/search.ts: the same Fuse.js fuzzy
+//! Settings search, ported from packages/settings-catalog/src/pages/: the same Fuse.js fuzzy
 //! match (7.3.0, `threshold: 0.24`, `ignoreLocation`, keys title/subtitle/options), the same
 //! section, group and page results, and the same Show Advanced visibility rules.
 //!

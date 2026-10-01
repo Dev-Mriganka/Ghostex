@@ -1,5 +1,5 @@
 //! The data the Extensions page reads, ported from the TypeScript it used: the built-in
-//! descriptors (packages/shared/ghostex-official-extensions.ts, read from the generated catalog),
+//! descriptors (packages/shared/ghostex-official-extensions.ts (deleted 2026-10-01), read from the generated catalog),
 //! the page filter (extensions-modal/extension-filter.ts (deleted 2026-10-01)), the installed and catalog entries of the
 //! gxserver wire contract (packages/shared/ghostex-extensions.ts), view scopes
 //! (ghostex-settings/view-scopes.ts), the view order (ghostex-settings/titlebar-view-order.ts) and

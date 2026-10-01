@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedBy": "tooling/ghostex-help/generate.ts",
+  "generatedBy": "packages/settings-catalog",
   "settings": [
     {
       "key": "sidebarSettingsPreset",

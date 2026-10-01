@@ -2,7 +2,7 @@
 //! (`activeProjectSpaceRefs`), every Space a scope can name (`projectViewSpaces`), and every
 //! project the sidebar lists (`projectViewProjects`)
 //! (the app runtime's view-scopes helper, deleted, and
-//! packages/shared/ghostex-settings/project-views.ts `projectViewSpaceOptions`).
+//! packages/shared/ghostex-settings/project-views.ts (deleted 2026-10-01) `projectViewSpaceOptions`).
 //!
 //! CDXC:Extensions 2026-09-20 WHY:
 //! A view with a per-space override has to answer "is the ACTIVE project in this space?" while the

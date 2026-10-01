@@ -180,7 +180,7 @@ pub(crate) fn gpui_disabled_project_workarea_copy_noun(mode: TitlebarMode) -> &'
 }
 
 /// The Official switch a view needs on as well as its own, the Rust side of a descriptor's
-/// `requiresExtension` (packages/shared/ghostex-official-extensions.ts).
+/// `requiresExtension` (packages/shared/ghostex-official-extensions.ts (deleted 2026-10-01)).
 fn titlebar_mode_required_hidden_settings_key(mode: TitlebarMode) -> Option<&'static str> {
     (mode == TitlebarMode::BotFeed).then_some(BOTS_HIDDEN_SETTINGS_KEY)
 }

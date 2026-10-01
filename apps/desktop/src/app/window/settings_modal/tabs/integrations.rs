@@ -29,7 +29,7 @@ use std::time::Duration;
 mod spaceo;
 mod tools;
 
-const SKILLS_MODULE: &str = "shared/ghostex-agent-skills";
+const SKILLS_MODULE: &str = super::super::catalog::module::AGENT_SKILLS;
 
 const ICON_TERMINAL: &str = "modals/settings/terminal-2.svg";
 const ICON_DOWNLOAD: &str = "modals/settings/download.svg";

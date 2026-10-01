@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from 'react';
 
-import { getSidebarTitlebarMenuBackgroundForChrome } from '@/packages/shared/ghostex-settings';
-
 export type WorkareaTheme = 'light' | 'dark';
 const THEME_EVENT = 'ghostex-workarea-theme-changed';
 
@@ -29,11 +27,7 @@ export function applyWorkareaTheme(theme: WorkareaTheme, colors?: WorkareaThemeC
    * Menus and popovers take the sidebar's tinted menu colour, the same one the desktop's own menus
    * use (`titlebar_popup_menu_background`, and `ChatAppearance::menu_surface` for the chat).
    */
-  if (chrome)
-    document.documentElement.style.setProperty(
-      '--app-menu-background',
-      getSidebarTitlebarMenuBackgroundForChrome(chrome)
-    );
+  if (chrome) document.documentElement.style.setProperty('--app-menu-background', menuBackgroundForChrome(chrome));
   else document.documentElement.style.removeProperty('--app-menu-background');
   if (content) document.documentElement.style.setProperty('--app-background', content);
   else document.documentElement.style.removeProperty('--app-background');
@@ -43,6 +37,32 @@ export function applyWorkareaTheme(theme: WorkareaTheme, colors?: WorkareaThemeC
 
 /** `glass`: the page is a solid card on the desktop window's glass. */
 export type WorkareaThemeColors = { chrome?: string; content?: string; glass?: boolean };
+
+/**
+ * CDXC:Theming 2026-09-22 DECISION:
+ * User: the theme also colors the sidebar's dropdown menus and the chat view background. Both are a fixed
+ * step off the resolved chrome background so a tinted chrome carries its hue into them: the menu sits 5%
+ * toward white on dark chrome and 70% on light chrome, the chat 1% on dark chrome and 25% on light
+ * (2026-09-22: User: keep the dark mode's two tones in light mode too, the sidebar a tiny bit more
+ * contrast than the rest; this replaces the same-day exact match and the earlier 70% / 40% steps). With
+ * the shipped neutral chrome these land next to the previous fixed menu colours (#171717 for #191919 /
+ * #ffffff), exactly on the previous #0d0d0d dark chat, and on #f7f7f7 for the light chat.
+ * SEE-ALSO: apps/desktop/src/app/helpers/titlebar/ and apps/desktop/src/app/native_chat/appearance.rs
+ * paint the native menu and chat. `chrome` is a normalized `#rrggbb`; light chrome is the one whose
+ * luminance takes the dark foreground (above 0.54).
+ */
+function menuBackgroundForChrome(chrome: string): string {
+  const channels = [1, 3, 5].map((index) => Number.parseInt(chrome.slice(index, index + 2), 16));
+  const [red = 0, green = 0, blue = 0] = channels;
+  const amount = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255 > 0.54 ? 0.7 : 0.05;
+  return `#${channels
+    .map((channel) =>
+      Math.min(255, Math.max(0, Math.round(channel + (255 - channel) * amount)))
+        .toString(16)
+        .padStart(2, '0')
+    )
+    .join('')}`;
+}
 
 function normalizeHex(value: unknown): string | undefined {
   return typeof value === 'string' && /^#[0-9a-f]{6}$/iu.test(value) ? value.toLowerCase() : undefined;

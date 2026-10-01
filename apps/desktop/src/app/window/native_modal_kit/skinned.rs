@@ -180,7 +180,7 @@ pub(crate) struct ModalButtonSkin {
     pub(crate) hover_text: Rgba,
 }
 
-/// A shadcn `Button` (packages/components/ui/button.tsx): content-sized, 8px radius, a 1px edge,
+/// A shadcn `Button` (packages/components/ui/button.tsx (deleted 2026-10-01)): content-sized, 8px radius, a 1px edge,
 /// `height` tall (32 for `default` and `icon`, 28 for `sm`) with `padding_x` sides, a 14px/400
 /// label after an optional leading icon, `gap` apart, and `disabled_opacity` when disabled
 /// (0.5 in shadcn). A button without a label is square. Returned stateful so callers can attach

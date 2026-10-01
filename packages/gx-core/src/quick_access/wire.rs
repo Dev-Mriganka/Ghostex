@@ -1,5 +1,5 @@
 //! What the Quick Access window paints: the snapshot, a row's actions menu, and the close request.
-//! Field names and shapes are packages/shared/native-quick-access.ts, so the window's reader
+//! Field names and shapes are packages/shared/native-quick-access.ts (deleted 2026-10-01), so the window's reader
 //! (apps/desktop/src/app/window/quick_access/model.rs) takes these unchanged.
 
 use serde::Serialize;

@@ -20,7 +20,7 @@ const ZOOM_PERCENT_KEY: &str = "keyboardZoomPercent";
 /// every rung is also a multiple of the shared 5% step. Cmd+0 drops the override and returns the pane to the
 /// configured default instead of to a flat 100%, which is what a reset means once the default is a
 /// user setting.
-/// SEE-ALSO: packages/shared/ghostex-settings/types.ts owns the range, step and default.
+/// SEE-ALSO: packages/shared/ghostex-settings/types.ts (deleted 2026-10-01) owns the range, step and default.
 const ZOOM_PERCENT_RUNGS: [f32; 10] = [
     70.0, 75.0, 80.0, 90.0, 100.0, 110.0, 125.0, 150.0, 175.0, 200.0,
 ];

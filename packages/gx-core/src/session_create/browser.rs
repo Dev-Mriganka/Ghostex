@@ -19,7 +19,7 @@ use crate::sidebar_actions::{
 
 use super::target::group_project;
 
-/// `DEFAULT_BROWSER_LAUNCH_URL` in packages/shared/sidebar-commands.ts.
+/// `DEFAULT_BROWSER_LAUNCH_URL` in packages/shared/sidebar-commands.ts (deleted 2026-10-01).
 pub const DEFAULT_BROWSER_LAUNCH_URL: &str = "https://www.google.com";
 
 /// What a project header's New Browser Tab does.

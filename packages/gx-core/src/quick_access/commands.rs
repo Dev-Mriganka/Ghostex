@@ -3,14 +3,13 @@
 //!
 //! Ported from `apps/desktop/sidebar/native-quick-access/commands.ts` (deleted; see git history).
 //!
-//! SEE-ALSO: tooling/gx-core/quick-access-hotkey-table.ts (the generated hotkey rows).
+//! SEE-ALSO: packages/settings-catalog/src/hotkey_definitions.rs (the hotkey rows; `hotkey_action_icon` below gives each its icon).
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{json, Value};
 
 use super::data::QuickAccessData;
-use super::hotkey_table::{HotkeyDefinition, HOTKEY_DEFINITIONS};
 use super::hotkeys::normalize_hotkey_settings;
 use super::text::{
     format_hotkey_label, is_format_character, is_letter_or_number, js_lower, locale_compare,
@@ -19,6 +18,7 @@ use super::text::{
 use super::wire::{QuickAccessGroup, QuickAccessIcon, QuickAccessRow};
 use crate::app_lifecycle::{AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE};
 use crate::sidebar_view::text::js_trim;
+use ghostex_settings_catalog::{hotkey_definitions, HotkeyDefinition, J};
 
 const GHOSTEX_CHANGELOG_URL: &str = "https://github.com/maddada/ghostex/releases";
 const DEFAULT_SIDEBAR_COMMAND_ICON: &str = "playerPlay";
@@ -388,7 +388,7 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
             hotkey,
         }
     };
-    let mut built_in: Vec<PaletteCommand> = HOTKEY_DEFINITIONS
+    let mut built_in: Vec<PaletteCommand> = hotkey_definitions()
         .iter()
         .filter(|definition| {
             definition.id != "openCommandPalette"
@@ -397,8 +397,8 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
                 && definition.id != "openExtensions"
                 // The same command as Open Commands Panel, under its second key.
                 && definition.id != "openCommandsPanelSecondKey"
-                && definition.kind != "runActionSlot"
-                && definition.kind != "chatAction"
+                && definition.kind() != "runActionSlot"
+                && definition.kind() != "chatAction"
                 && !PANE_ACTION_COMMAND_IDS.contains(&definition.id)
                 && !hidden.contains(definition.id)
         })
@@ -453,7 +453,7 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
         .iter()
         .filter(|id| !hidden.contains(*id))
         .filter_map(|id| {
-            HOTKEY_DEFINITIONS
+            hotkey_definitions()
                 .iter()
                 .find(|definition| definition.id == *id)
         })
@@ -518,7 +518,7 @@ fn command_row(command: &PaletteCommand, data: &QuickAccessData) -> QuickAccessR
             definition, hotkey, ..
         } => (
             definition.title.to_string(),
-            definition.icon.to_string(),
+            hotkey_action_icon(&definition.action).to_string(),
             hotkey.clone(),
         ),
         PaletteCommand::AppModal { modal, title, .. } => (
@@ -561,6 +561,60 @@ fn command_row(command: &PaletteCommand, data: &QuickAccessData) -> QuickAccessR
         } else {
             format_hotkey_label(&hotkey, platform)
         },
+    }
+}
+
+/// `BuiltInCommandIcon` for a hotkey-backed row: the icon of its action.
+fn hotkey_action_icon(action: &J) -> &'static str {
+    let text = |key: &str| action.get(key).and_then(J::as_str).unwrap_or_default();
+    match text("kind") {
+        "createSession" | "createAgentSession" => "plus",
+        "openCommandsPanel" => "terminal-2",
+        "openSettings" => "settings",
+        "openHotkeys" => "keyboard",
+        "toggleSidebarCollapsed" => "layout-sidebar",
+        "toggleViewPanel" => "layout-sidebar-right-expand",
+        "expandViewPanel" | "expandViewPanelFully" => "arrows-diagonal",
+        "renameActiveSession" => "edit",
+        "focusedPaneAction" => focused_pane_icon(text("focusedPaneAction")),
+        "focusAdjacentGroup" | "cyclePaneTab" => {
+            if action
+                .get("direction")
+                .and_then(J::as_f64)
+                .unwrap_or_default()
+                < 0.0
+            {
+                "chevron-left"
+            } else {
+                "chevron-right"
+            }
+        }
+        "focusDirection" => match text("direction") {
+            "up" => "chevron-up",
+            "right" => "arrow-right",
+            "down" => "chevron-down",
+            _ => "arrow-left",
+        },
+        "splitFocusedPane" => "arrows-diagonal-2",
+        "setViewMode" => "layout-dashboard",
+        _ => "keyboard",
+    }
+}
+
+/// `FocusedPaneCommandIcon`.
+fn focused_pane_icon(action: &str) -> &'static str {
+    match action {
+        "openBrowserPane" => "browser",
+        "rotatePanesClockwise" => "rotate-clockwise",
+        "mergeAllTabs" => "window-maximize",
+        "delayedSend" | "closeAfterDone" => "clock",
+        "forkSession" => "git-fork",
+        "reloadSession" => "refresh",
+        "sleepFocusedSession" => "moon",
+        "wakeFocusedSession" => "player-play",
+        "closeFocusedSession" => "x",
+        "popOutPane" => "external-link",
+        _ => "layout-sidebar-right-expand",
     }
 }
 

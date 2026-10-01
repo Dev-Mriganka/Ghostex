@@ -1,6 +1,6 @@
 //! The session card's hover button strip: which actions it offers and where the chevron splits it.
 //!
-//! SEE-ALSO: packages/shared/session-card-hover-actions.ts, which carries the user decision that
+//! SEE-ALSO: packages/shared/session-card-hover-actions.ts (deleted 2026-10-01), which carries the user decision that
 //! defines this strip (whatever sits right of the chevron is always shown, whatever sits left of
 //! it is hidden until the chevron is clicked, and an action enabled here is hidden from the row's
 //! context menu).

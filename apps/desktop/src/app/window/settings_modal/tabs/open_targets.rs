@@ -1,7 +1,7 @@
 //! The Open In page (packages/core-ui/settings-modal/tabs/open-targets.tsx (deleted 2026-10-01)): a switch per built-in
 //! editor target (disabled while it is not installed) and the custom targets with their editor.
 //! The targets come from `BUILT_IN_WORKSPACE_OPEN_TARGETS` in the generated catalog
-//! (packages/shared/workspace-open-targets.ts); saves are whole-settings saves, as React made them.
+//! (packages/shared/workspace-open-targets.ts (deleted 2026-10-01)); saves are whole-settings saves, as React made them.
 use super::super::super::native_modal_kit::*;
 use super::super::catalog::settings_catalog;
 use super::super::fields::{
@@ -24,7 +24,7 @@ use gpui_component::{Sizable as _, Size as ComponentSize, h_flex, v_flex};
 use serde_json::{Map, Value, json};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MODULE: &str = "shared/workspace-open-targets";
+const MODULE: &str = super::super::catalog::module::OPEN_TARGETS;
 const ICON_FOLDER_OPEN: &str = "modals/settings/folder-open.svg";
 const ICON_CODE_DOTS: &str = "modals/settings/code-dots.svg";
 const ICON_PENCIL: &str = "modals/settings/pencil.svg";

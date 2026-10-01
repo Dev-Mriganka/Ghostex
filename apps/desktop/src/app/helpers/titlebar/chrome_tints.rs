@@ -2,7 +2,7 @@ use super::*;
 use crate::app::helpers::*;
 
 /// Rust port of `getSidebarTitlebarGradientColors` /
-/// `normalizedSidebarTitlebarTintDirection` in packages/shared/ghostex-settings.ts: the
+/// `normalizedSidebarTitlebarTintDirection` in packages/shared/ghostex-settings.ts (deleted 2026-10-01): the
 /// tint direction is the background's per-channel deviation from its average,
 /// normalized by its largest channel magnitude (neutral grays stay neutral),
 /// and the two stops sit at +2 and +10 of that direction. Rounding matches JS
@@ -54,7 +54,7 @@ pub(crate) fn sidebar_titlebar_tint_direction(base: [f32; 3]) -> [f32; 3] {
 }
 
 /// CDXC:Theming 2026-09-08 SEE-ALSO:
-/// packages/shared/ghostex-settings/titlebar-color.ts owns the matching neutral #808080 tint at 96 contrast default.
+/// packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01) owns the matching neutral #808080 tint at 96 contrast default.
 pub(crate) const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_RGB: u32 = 0x0b0b0b;
 pub(crate) const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_TINT_RGB: u32 = 0x808080;
 pub(crate) const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARKNESS_PERCENT: f64 = 96.0;
@@ -64,7 +64,7 @@ pub(crate) const CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_SCALE_REFERENCE_DARKNESS_PER
 const CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_CALIBRATION_RGB: u32 = 0x040607;
 
 /// Mirror of `CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARK_TINTS` in
-/// packages/shared/ghostex-settings.ts. Keep both tables in sync.
+/// packages/shared/ghostex-settings.ts (deleted 2026-10-01). Keep both tables in sync.
 pub(crate) const CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_DARK_TINTS: [(u32, u32); 25] = [
     (0x000000, 0x000000),
     (0xffffff, 0x0e0e0e),
@@ -111,7 +111,7 @@ pub(crate) fn sidebar_titlebar_background_darkness_for_color(background: u32) ->
 }
 
 /// Rust port of `getSidebarTitlebarBackgroundForDarkness` in
-/// packages/shared/ghostex-settings.ts: resolve the calibrated dark background for the
+/// packages/shared/ghostex-settings.ts (deleted 2026-10-01): resolve the calibrated dark background for the
 /// selected tint (falling back to the neutral default for same-channel tints,
 /// or default-base + tint-direction * 4 for uncalibrated tints), then scale it
 /// with the Background Contrast slider.
@@ -154,7 +154,7 @@ pub(crate) fn sidebar_titlebar_background_for_darkness(darkness_percent: f64, ti
 }
 
 /// CDXC:Theming 2026-09-22 SEE-ALSO:
-/// Rust port of the light chrome scale in packages/shared/ghostex-settings/titlebar-color.ts
+/// Rust port of the light chrome scale in packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01)
 /// (`getSidebarTitlebarLightBackgroundForLightness`): 100 is white, the neutral tint at 96 is the
 /// #f4f4f5 light chrome, and the calibrated pale tint table mirrors `CUSTOM_SIDEBAR_TITLEBAR_BACKGROUND_LIGHT_TINTS`.
 pub(crate) const DEFAULT_CUSTOM_SIDEBAR_TITLEBAR_LIGHT_BACKGROUND_TINT_RGB: u32 = 0x808080;
@@ -244,7 +244,7 @@ pub(crate) fn sidebar_titlebar_light_background_for_lightness(
 
 /// CDXC:Theming 2026-09-25 SEE-ALSO:
 /// Mirror of `DARK_THEME_PRESET_CONTROLS` / `LIGHT_THEME_PRESET_CONTROLS` in
-/// packages/shared/ghostex-settings/titlebar-color.ts: each of the sixteen presets per appearance is
+/// packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01): each of the sixteen presets per appearance is
 /// a (contrast, tint) pair fed through the same scale as the custom controls, and the new tints
 /// have matching entries in the tint tables above. Keep the tables in sync entry for entry.
 pub(crate) const DARK_THEME_PRESET_CONTROLS: [(&str, f64, u32); 16] = [
@@ -316,7 +316,7 @@ pub(crate) fn custom_dark_chrome_controls(
 
 /// CDXC:Theming 2026-09-23 SEE-ALSO:
 /// Mirror of `readThemeContrastPoints` / `SIDEBAR_CONTRAST_KEY` / `WORK_AREA_CONTRAST_KEY` in
-/// packages/shared/ghostex-settings/titlebar-color.ts: `themeSidebarContrast` and
+/// packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01): `themeSidebarContrast` and
 /// `themeWorkAreaContrast` are contrast points (-12 to 4) added to a preset theme's contrast. When
 /// either is missing, the retired five-step `themeContrast` (-2 to 2) carries over as -8, -4, 0, 2 or
 /// 4 points for both.
@@ -353,7 +353,7 @@ fn work_area_contrast_delta(object: &serde_json::Map<String, serde_json::Value>)
 }
 
 /// Mirror of `resolveDarkChromeControls` plus the preset migration in
-/// packages/shared/ghostex-settings/normalize.ts: a missing or unknown preset with non-default
+/// packages/shared/ghostex-settings/normalize.ts (deleted 2026-10-01): a missing or unknown preset with non-default
 /// custom values means the user tuned them before the dropdown existed, so they stay in force.
 pub(crate) fn dark_chrome_controls(
     object: &serde_json::Map<String, serde_json::Value>,
@@ -394,7 +394,7 @@ pub(crate) fn dark_chrome_controls(
     )
 }
 
-/// Mirror of `resolveLightChromeControls` in packages/shared/ghostex-settings/titlebar-color.ts.
+/// Mirror of `resolveLightChromeControls` in packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01).
 pub(crate) fn light_chrome_controls(
     object: &serde_json::Map<String, serde_json::Value>,
 ) -> (f64, u32) {
@@ -468,7 +468,7 @@ pub(crate) fn resolved_work_area_chrome_for_variant(
 
 /// CDXC:Theming 2026-09-23 DECISION:
 /// User: "make the contrast show as a slider in the advanced and make sidebar and main contrast different please". The work area's own colour (chat, terminals, the workspace and its glass tint, web pages' content colour) comes from the theme at the work area contrast, while the sidebar keeps the sidebar contrast.
-/// SEE-ALSO: `getWorkAreaBackgroundForSettings` in packages/shared/ghostex-settings/titlebar-color.ts.
+/// SEE-ALSO: `getWorkAreaBackgroundForSettings` in packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01).
 pub(crate) fn work_area_background_for_variant(
     object: &serde_json::Map<String, serde_json::Value>,
     light: bool,
@@ -480,7 +480,7 @@ pub(crate) fn work_area_background_for_variant(
 /// User: light mode has its own background contrast and tint, and both appearances pick a preset theme
 /// or Custom. This supersedes the 2026-09-14 fixed #f4f4f5 light chrome: that colour is now what the
 /// default Light Gray preset resolves to.
-/// SEE-ALSO: packages/shared/ghostex-settings/normalize.ts computes the same two effective colours.
+/// SEE-ALSO: packages/shared/ghostex-settings/normalize.ts (deleted 2026-10-01) computes the same two effective colours.
 pub(crate) fn resolved_custom_sidebar_titlebar_background(
     object: &serde_json::Map<String, serde_json::Value>,
 ) -> u32 {
@@ -508,7 +508,7 @@ fn sidebar_titlebar_background_is_light(color: u32) -> bool {
 /// CDXC:Theming 2026-09-22 DECISION:
 /// User: the theme also colours the sidebar's dropdown menus and the chat view background. Mirror of
 /// `getSidebarTitlebarMenuBackgroundForChrome` / `getSessionChatBackgroundForChrome` in
-/// packages/shared/ghostex-settings/titlebar-color.ts: a fixed step toward white off the resolved chrome
+/// packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01): a fixed step toward white off the resolved chrome
 /// (menu 5% on dark chrome, 70% on light; chat 1% on dark and 25% on light, the same two-tone split
 /// in both appearances), so the neutral defaults land on the previous #0d0d0d dark chat and #f7f7f7.
 pub(crate) fn sidebar_titlebar_menu_background_for_chrome(chrome: u32) -> u32 {
@@ -534,7 +534,7 @@ pub(crate) fn session_chat_background_for_chrome(chrome: u32) -> u32 {
 }
 
 /// Rust port of `getAccentColorForBackgroundTint` / `getLightAccentColorForBackgroundTint` in
-/// packages/shared/ghostex-settings/titlebar-color.ts: the tint's hue at a fixed lightness (0.75 for the
+/// packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01): the tint's hue at a fixed lightness (0.75 for the
 /// dark appearance, 0.38 for the light one) with saturation held in 0.55-0.9, and a fixed colour for a
 /// neutral tint (#86d3f8 dark, #262626 light). Keep both in lockstep.
 pub(crate) fn accent_color_for_tint(tint: u32, light: bool) -> u32 {

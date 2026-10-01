@@ -115,7 +115,7 @@ pub(crate) fn normalize_ghostty_theme(value: &str) -> String {
     }
 }
 
-/// SEE-ALSO: `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize-fields.ts, whose
+/// SEE-ALSO: `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize-fields.ts (deleted 2026-10-01), whose
 /// migration this mirrors: a file without a mode keeps its custom colour, otherwise it gets the
 /// Black / white default.
 pub(crate) fn terminal_background(
@@ -301,7 +301,7 @@ pub(crate) fn json_number_value_to_f32(value: &Value) -> Option<f32> {
 /// Normalizes an `agentboxDefaultLocation` (or `/api/createAgentSession` `runLocation`) value:
 /// `"local"`, `"agentbox:<provider>"` for a known provider, or `"agentbox:docker:<alias>"` for a
 /// registered remote Docker server. Anything else is `"local"`, the same rule as
-/// `normalizeAgentboxDefaultLocation` in `packages/shared/ghostex-settings/normalize-fields.ts`.
+/// `normalizeAgentboxDefaultLocation` in `packages/shared/ghostex-settings/normalize-fields.ts` (deleted 2026-10-01).
 pub fn normalize_agentbox_location(value: Option<&str>) -> String {
     let value = value.unwrap_or("").trim();
     let Some(provider) = value.strip_prefix("agentbox:") else {

@@ -1,4 +1,4 @@
-import { detectghostexHotkeyPlatform, normalizeHotkeyText, type ghostexHotkeyPlatform } from './ghostex-hotkeys';
+import { detectghostexHotkeyPlatform, normalizeHotkeyText, type ghostexHotkeyPlatform } from './hotkey-text';
 
 /**
  * CDXC:Hotkeys 2026-07-30:

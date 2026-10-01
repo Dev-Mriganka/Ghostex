@@ -335,6 +335,10 @@ pub(crate) struct ViewOrderItem {
 }
 
 /// `titlebarViewOrderItems(settings, installed)`.
+///
+/// CDXC:Titlebar 2026-09-09 DECISION:
+/// User: one Settings popup controls the order of built-in, extension, and custom views together.
+/// SEE-ALSO: apps/desktop/src/app/workarea.rs applies these mode slugs to the native titlebar list before numbered shortcuts resolve it.
 pub(crate) fn view_order_items(
     values: &SettingsValues,
     installed: &[InstalledExtension],
@@ -783,6 +787,9 @@ fn normalize_project_view_options(value: &Map<String, Value>) -> Map<String, Val
 }
 
 /// `normalizeGhostexCustomViews(candidate)`.
+///
+/// CDXC:Extensions 2026-09-03 DECISION: Users can add any number of custom titlebar views, arrange them in their preferred order, and turn individual views off without deleting their name and HTTP or HTTPS URL.
+/// CDXC:Extensions 2026-09-03 SEE-ALSO: The editor, native titlebar projection, and isolated CEF workarea must keep this ordered, enabled, name-and-URL contract aligned. See apps/desktop/src/app/helpers/titlebar/mode_switcher.rs and apps/desktop/src/app/workarea.rs.
 pub(crate) fn normalize_custom_views(views: &[CustomView]) -> Value {
     let mut ids: Vec<String> = Vec::new();
     let mut normalized: Vec<Value> = Vec::new();

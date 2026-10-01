@@ -79,7 +79,7 @@ pub(crate) fn split_words(value: &str) -> Vec<&str> {
         .collect()
 }
 
-/// `normalizeHotkeyText` (packages/shared/ghostex-hotkeys.ts).
+/// `normalizeHotkeyText` (packages/shared/hotkey-text.ts).
 pub(crate) fn normalize_hotkey_text(value: &str) -> String {
     let lowered = js_lower(js_trim(value));
     let replaced = lowered

@@ -42,7 +42,7 @@ pub const SESSION_STATUS_INDICATORS_MESSAGE_TYPE: &str =
     "ghostex.gpui.sidebar.sessionStatusIndicators";
 pub const PET_OVERLAY_STATE_MESSAGE_TYPE: &str = "ghostex.gpui.sidebar.petOverlayState";
 
-/// `PET_IDS` (packages/shared/pets.ts); the first is `DEFAULT_PET_ID`.
+/// `PET_IDS` (packages/shared/pets.ts (deleted 2026-10-01)); the first is `DEFAULT_PET_ID`.
 const PET_IDS: [&str; 9] = [
     "boo",
     "codex",

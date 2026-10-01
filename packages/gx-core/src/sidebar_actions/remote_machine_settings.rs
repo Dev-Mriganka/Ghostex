@@ -1,4 +1,4 @@
-//! `normalizeRemoteMachineSettings` (packages/shared/ghostex-settings/remote-machines.ts), the list
+//! `normalizeRemoteMachineSettings` (packages/shared/ghostex-settings/remote-machines.ts (deleted 2026-10-01)), the list
 //! the sidebar store holds as `hud.settings.remoteMachines`.
 //!
 //! CDXC:RemoteMachines 2026-09-21 WHY:
@@ -11,7 +11,7 @@
 //! Every rule below is the TypeScript's, including JavaScript's `Number` for the port and UTF-16
 //! lengths for the cuts.
 //!
-//! SEE-ALSO: packages/shared/ghostex-settings/remote-machines.ts,
+//! SEE-ALSO: packages/shared/ghostex-settings/remote-machines.ts (deleted 2026-10-01),
 //! packages/gx-core/src/sidebar_actions/machine_disable.rs.
 
 use serde_json::{Map, Value};

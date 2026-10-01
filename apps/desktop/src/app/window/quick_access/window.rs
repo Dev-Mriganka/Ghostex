@@ -10,7 +10,7 @@
 //! instruction to look exactly like the React one; the React twins keep their look on web and mobile.
 //! The controller (gx-core `quick_access`) owns data and commands and publishes one resolved snapshot per frame; this
 //! window paints it, owns the search field, hover, scroll and keyboard, and posts interactions back.
-//! SEE-ALSO: packages/shared/native-quick-access.ts (the contract), packages/gx-core/src/quick_access/ (the controller),
+//! SEE-ALSO: packages/shared/native-quick-access.ts (deleted 2026-10-01) (the contract), packages/gx-core/src/quick_access/ (the controller),
 //! apps/desktop/src/app/quick_access_modal_lifecycle.rs (open, snapshot routing, close),
 //! packages/core-ui/command-palette.tsx (deleted 2026-10-01), recent-projects-modal.tsx (deleted 2026-10-01), previous-sessions-modal.tsx (deleted 2026-10-01), stashed-prompts-modal.tsx (deleted 2026-10-01) (the retained React twins).
 use super::actions_menu::{QuickAccessMenuRequest, QuickAccessOpenMenu};

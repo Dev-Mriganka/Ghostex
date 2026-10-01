@@ -2,7 +2,7 @@
 //! (Cmd+Shift+C, Mac only) do to one chat. The keys themselves are app hotkeys routed to the chat
 //! of the focused session (`focused_chat_hotkeys.rs`), because the chat's key context only covers
 //! its chat box: bound there, Shift+Esc could only fire when the chat box already had focus.
-//! SEE-ALSO: packages/shared/ghostex-hotkeys.ts (CDXC:Hotkeys 2026-09-25 on createAgentSession).
+//! SEE-ALSO: packages/settings-catalog/src/hotkey_definitions.rs (CDXC:Hotkeys 2026-09-25 on createAgentSession).
 
 use super::state::NativeChatView;
 use gpui::{Context, Window};

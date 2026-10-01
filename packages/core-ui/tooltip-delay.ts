@@ -1,6 +1,8 @@
 import { TooltipProvider } from '../components/ui/tooltip';
 import { createContext, createElement, useContext, type ReactNode } from 'react';
-import { DEFAULT_SIDEBAR_TOOLTIP_DELAY_MS } from '../shared/ghostex-settings';
+
+/** The Settings default for `sidebarTooltipDelayMs` (packages/settings-catalog/src/data/defaults.rs). */
+const DEFAULT_SIDEBAR_TOOLTIP_DELAY_MS = 600;
 
 const SidebarTooltipDelayContext = createContext<number | undefined>(undefined);
 

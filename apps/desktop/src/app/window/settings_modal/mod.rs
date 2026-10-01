@@ -3,7 +3,7 @@
 //!
 //! CDXC:Settings 2026-09-30 DECISION:
 //! User: migrate every React modal to GPUI with GPUI-Kit components, looking and working exactly as now, so the app runs without CEF; now that every page is native, "i want to show the gpui one for everything please no more react settings" (supersedes the 2026-09-28 `GHOSTEX_NATIVE_SETTINGS=1` opt-in). Settings, Hotkeys, Configure Agents, Configure Actions and Open Targets always open this modal.
-//! SEE-ALSO: docs/2026-09-28/gpui-modals-migration/SETTINGS-ARCH.md (how a page plugs in), packages/core-ui/settings-modal.tsx (deleted 2026-10-01) and packages/core-ui/settings-modal/ (the React twin), apps/desktop/src/app/settings_modal_lifecycle.rs (open, save, bridge).
+//! SEE-ALSO: docs/2026-09-28/gpui-modals-migration/SETTINGS-ARCH.md (how a page plugs in), packages/core-ui/settings-modal.tsx (deleted 2026-10-01) and packages/core-ui/settings-modal/ (deleted 2026-10-01) (the React twin), apps/desktop/src/app/settings_modal_lifecycle.rs (open, save, bridge).
 //!
 //! Like every native modal view, this module depends only on gpui, gpui-component, gpui-base,
 //! serde_json and the shared modal kit, so the `native-modal-demo` binary can include it.

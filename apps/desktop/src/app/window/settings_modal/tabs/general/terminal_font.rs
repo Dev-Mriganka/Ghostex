@@ -1,5 +1,5 @@
-//! `normalizeGhosttyFontFamily` (packages/shared/ghostex-settings/normalize-fields.ts) over the generated
-//! `TERMINAL_FONT_PRESETS` table (packages/shared/terminal-font-preset.ts): a legacy preset name
+//! `normalizeGhosttyFontFamily` (packages/shared/ghostex-settings/normalize-fields.ts (deleted 2026-10-01)) over the generated
+//! `TERMINAL_FONT_PRESETS` table (packages/shared/terminal-font-preset.ts (deleted 2026-10-01)): a legacy preset name
 //! saves as the Ghostty family it stood for, anything else is saved trimmed.
 use super::super::super::catalog::{module, settings_catalog};
 use serde_json::Value;

@@ -5,7 +5,6 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use super::hotkey_table::HOTKEY_DEFINITIONS;
 use super::text::{normalize_hotkey_text, HotkeyPlatform};
 use crate::sidebar_view::text::js_trim;
 
@@ -24,7 +23,7 @@ pub(crate) fn normalize_hotkey_settings(
     let source = candidate.as_object();
     let read = |id: &str| -> Option<&Value> { source.and_then(|source| source.get(id)) };
     let mut normalized: BTreeMap<&'static str, String> = BTreeMap::new();
-    for definition in HOTKEY_DEFINITIONS {
+    for definition in ghostex_settings_catalog::hotkey_definitions() {
         let platform_default = if platform == HotkeyPlatform::Mac {
             definition.default_key
         } else {

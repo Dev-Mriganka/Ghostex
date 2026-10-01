@@ -1,5 +1,5 @@
 //! `TerminalDevServerIgnoredPortsField`: the ignored port rules as removable rows, and a box with
-//! Add for a port or an inclusive range (packages/shared/ghostex-settings/terminal-dev-servers.ts
+//! Add for a port or an inclusive range (packages/shared/ghostex-settings/terminal-dev-servers.ts (deleted 2026-10-01)
 //! rules: 1-65535, merged and sorted).
 use super::super::super::native_modal_kit::*;
 use super::super::palette::SettingsPalette;

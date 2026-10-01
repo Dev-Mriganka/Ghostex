@@ -11,7 +11,7 @@ use crate::shared_settings::{self, SharedMediaFileOpenTarget};
 /// in the system app, `None` for any other file. Files takes it when its "Images / Videos / Audio
 /// open in" setting says Files and Files can show its format.
 ///
-/// CDXC:Docs 2026-09-27 SEE-ALSO: `imageFileOpenTarget` in packages/shared/ghostex-settings/types.ts holds the decision; terminal links (`gpui_terminal_file_opens_with_os_default`) and chat file links (`open_session_chat_file_for_session`) both ask here.
+/// CDXC:Docs 2026-09-27 SEE-ALSO: `imageFileOpenTarget` in packages/shared/ghostex-settings/types.ts (deleted 2026-10-01) holds the decision; terminal links (`gpui_terminal_file_opens_with_os_default`) and chat file links (`open_session_chat_file_for_session`) both ask here.
 pub(crate) fn media_file_opens_in_files(path: &std::path::Path) -> Option<bool> {
     let path = path.to_string_lossy();
     let media = DocsMediaKind::for_path(&path)?;

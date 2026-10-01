@@ -158,7 +158,7 @@ impl GpuiNotificationFeedState {
     }
 }
 
-/// Map the shared hotkey action ids (`packages/shared/ghostex-hotkeys.ts`) onto
+/// Map the shared hotkey action ids (`packages/shared/ghostex-hotkeys.ts` (deleted 2026-10-01)) onto
 /// the feed command, so a keypress and a panel click enter the exact same route.
 pub(crate) fn notification_feed_hotkey_command(action_id: &str) -> Option<&'static str> {
     match action_id {

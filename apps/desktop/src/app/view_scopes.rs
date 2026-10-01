@@ -17,7 +17,7 @@ rather than falling back to a default entry: the setting only ever stores the vi
 
 Space membership itself is owned by the daemon's collections and spaces documents, which this process
 cannot read; the sidebar HUD carries the active project's resolved spaces instead.
-SEE-ALSO: packages/shared/ghostex-settings/view-scopes.ts owns the same rule, the same precedence and
+SEE-ALSO: packages/shared/ghostex-settings/view-scopes.ts (deleted 2026-10-01) owns the same rule, the same precedence and
 the same allow-list migration for React and the settings schema, and
 packages/gx-core/src/hud/scopes.rs resolves the HUD field.
 */
@@ -286,7 +286,7 @@ impl GhostexGpuiApp {
 
     /// CDXC:Extensions 2026-09-20 SEE-ALSO:
     /// One override, written the way `setViewScopeOverride` writes it in
-    /// packages/shared/ghostex-settings/view-scopes.ts: same map shape, same `inherit` meaning, same
+    /// packages/shared/ghostex-settings/view-scopes.ts (deleted 2026-10-01): same map shape, same `inherit` meaning, same
     /// pruning, same "a scope that says nothing is not stored at all" normalisation. Rust owns a
     /// writer of its own because the view tab's right-click menu is native, and it already owns the
     /// reader beside it for the same reason; the two implementations must stay word for word.

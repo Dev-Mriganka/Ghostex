@@ -305,7 +305,7 @@ fn sounds_section(
 }
 
 /// The two sleeping-session toggles (CDXC:SessionSleep 2026-09-29 DECISION in
-/// packages/shared/ghostex-settings/types.ts).
+/// packages/shared/ghostex-settings/types.ts (deleted 2026-10-01)).
 fn sleeping_sessions_section(
     page: &mut GeneralTab,
     g: &GeneralCx,

@@ -14,7 +14,7 @@ use serde_json::{Map, Value};
 use crate::keys::{MachineId, ProjectKey};
 use crate::presentation_store::PresentationStore;
 
-/// `SIDEBAR_COMMAND_ICON_IDS` (packages/shared/sidebar-command-icons.ts).
+/// `SIDEBAR_COMMAND_ICON_IDS` (packages/shared/sidebar-command-icons.ts (deleted 2026-10-01)).
 const SIDEBAR_COMMAND_ICON_IDS: [&str; 59] = [
     "playerPlay",
     "api",

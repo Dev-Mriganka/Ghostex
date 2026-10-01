@@ -6,7 +6,7 @@ use gpui::{
 use serde_json::json;
 
 impl NativeChatView {
-    /// CDXC:SessionChat 2026-09-23 SEE-ALSO: `sessionChatKeepComposerExpanded` in `packages/shared/ghostex-settings/types.ts` holds the user's decision; a missing key reads as its default, off.
+    /// CDXC:SessionChat 2026-09-23 SEE-ALSO: `sessionChatKeepComposerExpanded` in `packages/shared/ghostex-settings/types.ts` (deleted 2026-10-01) holds the user's decision; a missing key reads as its default, off.
     pub(super) fn composer_collapse_eligible(&self) -> bool {
         !keep_composer_expanded() && self.composer_collapse_allowed()
     }

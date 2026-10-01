@@ -42,7 +42,7 @@ fn window_glass_blur_radius() -> gpui::Pixels {
 }
 
 /// Reads a blur radius setting: whole points from 0 to 100 (`MAX_WINDOW_GLASS_BLUR_RADIUS` in
-/// packages/shared/ghostex-settings/option-tables.ts).
+/// packages/shared/ghostex-settings/option-tables.ts (deleted 2026-10-01)).
 fn read_blur_radius(
     object: &serde_json::Map<String, serde_json::Value>,
     key: &str,
@@ -163,7 +163,7 @@ static MAIN_WINDOW_ID: AtomicU64 = AtomicU64::new(u64::MAX);
 /// of the Transparency strength slider (`transparencyStrengthPatch` in
 /// packages/core-ui/settings-modal/theme-simple-controls.tsx (deleted 2026-10-01)), which keeps the sidebar 7 points
 /// more solid than the work area. SEE-ALSO: the CDXC:Theming 2026-09-25 DECISION on
-/// `DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT` in packages/shared/ghostex-settings/types.ts.
+/// `DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT` in packages/shared/ghostex-settings/types.ts (deleted 2026-10-01).
 const SIDEBAR_GLASS_ALPHA_DARK: f32 = 0.88;
 const SIDEBAR_GLASS_ALPHA_LIGHT: f32 = 0.93;
 const WORK_AREA_GLASS_ALPHA_DARK: f32 = 0.81;
@@ -202,7 +202,7 @@ fn store_sidebar_glass_percent(
     target: &AtomicU8,
 ) -> u8 {
     let percent = read_glass_percent(object, key)
-        // Full 0-100% (`MIN_WINDOW_GLASS_SIDEBAR_OPACITY_PERCENT` in packages/shared/ghostex-settings/types.ts).
+        // Full 0-100% (`MIN_WINDOW_GLASS_SIDEBAR_OPACITY_PERCENT` in packages/shared/ghostex-settings/types.ts (deleted 2026-10-01)).
         .map(|value| value.clamp(0.0, 100.0).round() as u8)
         .unwrap_or_else(|| glass_percent(default_alpha));
     target.store(percent, Ordering::Relaxed);
@@ -211,7 +211,7 @@ fn store_sidebar_glass_percent(
 
 /// Stores the work area's percentage. Settings that still hold the retired extra layer
 /// (`legacy_extra_key`) get the coverage it and the sidebar tint added up to, the same migration
-/// `normalizeWindowGlassWorkAreaTint` in packages/shared/ghostex-settings/normalize-fields.ts applies.
+/// `normalizeWindowGlassWorkAreaTint` in packages/shared/ghostex-settings/normalize-fields.ts (deleted 2026-10-01) applies.
 fn store_work_area_glass_percent(
     object: &serde_json::Map<String, serde_json::Value>,
     key: &str,

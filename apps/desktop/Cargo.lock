@@ -2597,6 +2597,7 @@ dependencies = [
  "ghostex-gx-client",
  "ghostex-gx-core",
  "ghostex-paths",
+ "ghostex-settings-catalog",
  "gpui",
  "gpui-base",
  "gpui-component",
@@ -2675,6 +2676,7 @@ name = "ghostex-gx-core"
 version = "0.1.0"
 dependencies = [
  "ghostex-gx-protocol",
+ "ghostex-settings-catalog",
  "serde",
  "serde_json",
 ]
@@ -2690,6 +2692,13 @@ dependencies = [
 [[package]]
 name = "ghostex-paths"
 version = "0.1.0"
+
+[[package]]
+name = "ghostex-settings-catalog"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "gif"

@@ -5,7 +5,7 @@
 //! The picker returns a launcher configuration id, but title generation needs its CLI family. Passing a custom Claude id previously selected Codex flags and ran `claude --yolo exec ...`, which exits immediately. Keep the selected configuration's command so its account and arguments survive the family resolution.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/terminal_lifecycle/session_edits.rs (the caller),
-//! packages/shared/ghostex-settings/session-title-generation.ts (the agents that can generate).
+//! packages/shared/ghostex-settings/session-title-generation.ts (deleted 2026-10-01) (the agents that can generate).
 
 use serde_json::{json, Map, Value};
 

@@ -35,7 +35,7 @@ CDXC:Hotkeys 2026-08-22:
 Cmd-K clears the focused terminal, matching the `clear_screen` binding
 ghostty ships by default, so the terminal owns that chord outright and no
 configured command may take it over. This mirrors the reserved-chord list in
-packages/shared/ghostex-hotkeys.ts: a chord persisted before the reservation falls
+packages/shared/ghostex-hotkeys.ts (deleted 2026-10-01): a chord persisted before the reservation falls
 back to its action's default, and the chord itself never registers a gpui
 binding. macOS only, because that is the only platform ghostty binds
 `clear_screen` on, and elsewhere "cmd+k" is how the shared model spells
@@ -79,7 +79,7 @@ pub(crate) fn gpui_migrated_hotkey_for_action<'a>(
         return default_key;
     }
     // CDXC:Hotkeys 2026-09-25: the new-session keys moved (Cmd+Shift+O, Cmd+N picker, Cmd+T browser
-    // tab, Cmd+Ctrl+Shift+F fork), mirroring retiredDefaultKeys in packages/shared/ghostex-hotkeys.ts.
+    // tab, Cmd+Ctrl+Shift+F fork), mirroring retiredDefaultKeys in packages/settings-catalog/src/hotkey_definitions.rs.
     let retired_new_session_keys: &[&str] = match action_id {
         "createAgentSession" => &["cmd+t"],
         "createSession" => &["cmd+t"],
@@ -100,19 +100,19 @@ pub(crate) fn gpui_migrated_hotkey_for_action<'a>(
         return default_key;
     }
     // CDXC:PromptSearch 2026-08-24: retired Alt+F default, mirroring
-    // retiredDefaultKeys in packages/shared/ghostex-hotkeys.ts.
+    // retiredDefaultKeys in packages/settings-catalog/src/hotkey_definitions.rs.
     if action_id == "openFindPrompts" && key.trim().eq_ignore_ascii_case("alt+f") {
         return default_key;
     }
     // Retired Alt+Shift+S default for Saved Prompts, mirroring
-    // retiredDefaultKeys in packages/shared/ghostex-hotkeys.ts.
+    // retiredDefaultKeys in packages/settings-catalog/src/hotkey_definitions.rs.
     if action_id == "stashedPrompts" && key.trim().eq_ignore_ascii_case("alt+shift+s") {
         return default_key;
     }
     // CDXC:Navigation 2026-09-19: Back/Forward now own the plain brackets, so a
     // persisted copy of the old group-focus default has to fall back to the new
     // (unassigned) default instead of firing on the same press. Mirrors
-    // retiredDefaultKeys in packages/shared/ghostex-hotkeys.ts.
+    // retiredDefaultKeys in packages/settings-catalog/src/hotkey_definitions.rs.
     if action_id == "focusPreviousGroup" && key.trim().eq_ignore_ascii_case("cmd+[") {
         return default_key;
     }
@@ -122,7 +122,7 @@ pub(crate) fn gpui_migrated_hotkey_for_action<'a>(
     // CDXC:Hotkeys 2026-09-19: macOS owns Cmd+Tab, so Previous/Next Session
     // moved to Ctrl+Tab and Windows/Linux Back/Forward gave Ctrl+Alt+[ / ] to
     // pane-tab cycling. Mirrors retiredDefaultKeys in
-    // packages/shared/ghostex-hotkeys.ts.
+    // packages/settings-catalog/src/hotkey_definitions.rs.
     let retired_key = match action_id {
         "focusNextSession" => Some("cmd+tab"),
         "focusPreviousSession" => Some("cmd+shift+tab"),
@@ -174,7 +174,7 @@ pub(crate) fn gpui_platform_hotkey_for_action<'a>(action_id: &str, key: &'a str)
             "popOutPane" => Some(("ctrl+shift+o", "cmd+alt+o")),
             // CDXC:Navigation 2026-08-19: same Mac-Control substitution
             // as the Jump to Project entries below, mirroring the
-            // windowsLinuxDefaultKey values in packages/shared/ghostex-hotkeys.ts.
+            // windowsLinuxDefaultKey values in packages/settings-catalog/src/hotkey_definitions.rs.
             "navigateHistoryBack" => Some(("cmd+[", "cmd+alt+shift+[")),
             "navigateHistoryForward" => Some(("cmd+]", "cmd+alt+shift+]")),
             "focusPreviousSession" => Some(("ctrl+shift+tab", "cmd+shift+tab")),
@@ -313,13 +313,12 @@ pub(crate) fn gpui_key_binding_from_shared_hotkey<A: Action>(
     KeyBinding::new(keystroke.as_str(), action, context)
 }
 
-/// Default hotkey chords mirrored from `DEFAULT_ghostex_HOTKEYS` in
-/// packages/shared/ghostex-hotkeys.ts (action id → default chord in shared "+"
-/// syntax; an empty chord means the action is intentionally unassigned by
-/// default). macOS never persists defaults — it overlays them at read time
-/// via `normalizeghostexHotkeySettings` — so GPUI mirrors the same read-time
-/// overlay from this table. Kept in lockstep with the TypeScript source by
-/// packages/shared/gpui-hotkey-defaults-parity.test.ts.
+/// Default hotkey chords mirrored from the hotkey catalog (`default_hotkeys()` in
+/// packages/settings-catalog; action id → default chord in shared "+" syntax; an empty
+/// chord means the action is intentionally unassigned by default). macOS never persists
+/// defaults — it overlays them at read time — so GPUI mirrors the same read-time overlay
+/// from this table. Kept in lockstep with the catalog by
+/// packages/settings-catalog/tests/desktop_hotkey_defaults.rs.
 pub(crate) const GPUI_DEFAULT_GHOSTEX_HOTKEYS: &[(&str, &str)] = &[
     ("createAgentSession", "cmd+shift+o"),
     ("createSession", "cmd+shift+t"),
@@ -369,13 +368,13 @@ pub(crate) const GPUI_DEFAULT_GHOSTEX_HOTKEYS: &[(&str, &str)] = &[
     ("toggleAgentActions", "cmd+alt+a"),
     ("toggleChatView", "alt+g"),
     ("openModelPicker", "alt+p"),
-    // CDXC:PromptSearch 2026-08-24: mirrors packages/shared/ghostex-hotkeys.ts.
+    // CDXC:PromptSearch 2026-08-24: mirrors packages/settings-catalog/src/hotkey_definitions.rs.
     ("openFindPrompts", "cmd+shift+f"),
     ("scrollTerminalToTop", ""),
     ("scrollTerminalToBottom", ""),
     /*
     CDXC:SessionChat 2026-09-12 WHY:
-    The table has to mirror packages/shared/ghostex-hotkeys.ts entry for entry,
+    The table has to mirror packages/settings-catalog/src/hotkey_definitions.rs entry for entry,
     but chat owns this chord inside its own capture handler so it also fires
     while the composer has focus. Every native path therefore skips the id
     instead of binding or resolving it: binding it natively would swallow the
@@ -392,13 +391,13 @@ pub(crate) const GPUI_DEFAULT_GHOSTEX_HOTKEYS: &[(&str, &str)] = &[
     ("wakeFocusedSession", ""),
     ("closeFocusedSession", "cmd+shift+backspace"),
     ("popOutPane", "ctrl+shift+o"),
-    // CDXC:Navigation 2026-09-19: mirrors packages/shared/ghostex-hotkeys.ts,
+    // CDXC:Navigation 2026-09-19: mirrors packages/settings-catalog/src/hotkey_definitions.rs,
     // where the brackets moved from group focus to Back/Forward.
     ("focusPreviousGroup", ""),
     ("focusNextGroup", ""),
     ("navigateHistoryBack", "cmd+["),
     ("navigateHistoryForward", "cmd+]"),
-    // CDXC:Notifications 2026-09-11: mirrors packages/shared/ghostex-hotkeys.ts.
+    // CDXC:Notifications 2026-09-11: mirrors packages/settings-catalog/src/hotkey_definitions.rs.
     ("openNotifications", "cmd+i"),
     ("jumpToLatestUnreadNotification", "cmd+shift+u"),
     ("deferNotificationAndJumpNext", "cmd+ctrl+u"),

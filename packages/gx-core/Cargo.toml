@@ -13,5 +13,6 @@ path = "src/lib.rs"
 
 [dependencies]
 ghostex-gx-protocol = { path = "../gx-protocol" }
+ghostex-settings-catalog = { path = "../settings-catalog" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

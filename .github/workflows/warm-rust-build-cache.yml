@@ -65,6 +65,7 @@ on:
       - 'server/**'
       - 'packages/find/**'
       - 'packages/paths/**'
+      - 'packages/settings-catalog/**'
       - 'apps/history-cli/**'
       - '**/Cargo.lock'
       - '**/Cargo.toml'

@@ -85,7 +85,7 @@ pub(crate) async fn generate_first_prompt_session_title(
 /// CDXC:SessionTitles 2026-09-11 WHY:
 /// Pi and Antigravity CLI generate titles through their non-interactive print modes (`pi -p`, `agy -p`), verified against the real binaries; before that a machine with only those CLIs fell back to the Codex default, which was not installed (GitHub issue #125).
 /// Pi gets `--no-tools --no-context-files --no-session` so a title prompt never runs tools, loads AGENTS.md, or leaves a session behind; Antigravity gets `--disable-slash-commands` so a prompt starting with `/` is not expanded.
-/// SEE-ALSO: packages/shared/ghostex-settings/session-title-generation.ts, which must preview the same commands.
+/// SEE-ALSO: packages/shared/ghostex-settings/session-title-generation.ts (deleted 2026-10-01), which must preview the same commands.
 pub(crate) fn normalize_title_generation_agent(value: Option<&str>) -> String {
     match value {
         Some("cursor" | "claude" | "grok" | "pi" | "antigravity" | "custom") => {

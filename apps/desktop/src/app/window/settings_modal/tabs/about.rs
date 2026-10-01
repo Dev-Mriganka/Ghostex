@@ -15,7 +15,7 @@ use gpui::{
 use gpui_component::{h_flex, v_flex};
 use serde_json::json;
 
-/// `GHOSTEX_DISCORD_URL` (packages/shared/sidebar-commands.ts).
+/// `GHOSTEX_DISCORD_URL` (packages/shared/sidebar-commands.ts (deleted 2026-10-01)).
 const GHOSTEX_DISCORD_URL: &str = "https://discord.gg/df7b3G92CS";
 /// `GHOSTEX_GITHUB_URL`.
 const GHOSTEX_GITHUB_URL: &str = "https://github.com/maddada/Ghostex";

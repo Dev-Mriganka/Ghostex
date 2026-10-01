@@ -29,16 +29,15 @@ pub fn storage_check_command() -> Command {
     bun(["tooling/client-storage/check.mjs"])
 }
 
-fn help_check_command() -> Command {
-    bun(["tooling/ghostex-help/generate.ts", "--check"])
-}
-
 /// The root TypeScript gate: the storage lint, the generated Help files, the root tsconfig and the release scripts.
 pub fn typecheck(args: &[String]) -> Res<i32> {
     no_arguments("typecheck", args)?;
+    let help = crate::help::check()?;
+    if help != 0 {
+        return Ok(help);
+    }
     steps(vec![
         storage_check_command(),
-        help_check_command(),
         bun_x("tsc", ["--noEmit", "--pretty", "false"]),
         bun(["run", "release:typecheck"]),
     ])
@@ -60,12 +59,12 @@ pub fn storage_check(args: &[String]) -> Res<i32> {
 
 pub fn help_generate(args: &[String]) -> Res<i32> {
     no_arguments("help-generate", args)?;
-    status_code(&mut bun(["tooling/ghostex-help/generate.ts"]))
+    crate::help::generate()
 }
 
 pub fn help_check(args: &[String]) -> Res<i32> {
     no_arguments("help-check", args)?;
-    status_code(&mut help_check_command())
+    crate::help::check()
 }
 
 /// vitest over the repository; extra arguments go to vitest (a file filter, `--watch`, ...).

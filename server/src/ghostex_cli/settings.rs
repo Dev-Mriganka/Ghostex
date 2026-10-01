@@ -13,11 +13,14 @@ use crate::ghostex_cli::output::{normalize_js_numbers, print_json};
 use crate::ghostex_cli::rpc::{self, CliError, CliResult};
 use crate::ghostex_cli::usage;
 
-/// The agent-facing settings catalog generated from the Settings modal's own
-/// search rows by `tooling/ghostex-help/generate.ts`. Embedded so the installed
-/// CLI validates against the catalog that matches its own build.
-pub(super) const SETTINGS_CATALOG_JSON: &str =
-    include_str!("../../../skills/ghostex-help/references/settings-catalog.json");
+/// The agent-facing settings catalog, rendered from the Settings catalog crate
+/// (`packages/settings-catalog`), the same text `cargo xtask help-generate` writes to
+/// skills/ghostex-help/references/settings-catalog.json. Built in, so the installed CLI
+/// validates against the catalog of its own build.
+pub(super) fn settings_catalog_json() -> &'static str {
+    static JSON: OnceLock<String> = OnceLock::new();
+    JSON.get_or_init(ghostex_settings_catalog::help::catalog_json)
+}
 
 const SETTINGS_FILE_NAME: &str = "native-sidebar-settings.json";
 const SETTINGS_WRITE_CONFIRM_TIMEOUT: Duration = Duration::from_secs(3);
@@ -25,7 +28,7 @@ const SETTINGS_WRITE_POLL_INTERVAL: Duration = Duration::from_millis(100);
 pub(super) const SETTINGS_UPDATE_SOURCE: &str = "cli:settings";
 
 /// Mirrors `SETTINGS_MODAL_NAVIGATION_TABS` in
-/// packages/shared/ghostex-settings/settings-modal-navigation.ts.
+/// packages/shared/ghostex-settings/settings-modal-navigation.ts (deleted 2026-10-01).
 const SETTINGS_MODAL_TABS: &[&str] = &[
     "settings",
     "theme",
@@ -91,7 +94,7 @@ fn catalog() -> CliResult<&'static SettingsCatalog> {
     static CATALOG: OnceLock<Result<SettingsCatalog, String>> = OnceLock::new();
     CATALOG
         .get_or_init(|| {
-            serde_json::from_str::<SettingsCatalog>(SETTINGS_CATALOG_JSON)
+            serde_json::from_str::<SettingsCatalog>(settings_catalog_json())
                 .map_err(|error| format!("Bundled settings catalog is invalid: {error}"))
         })
         .as_ref()
@@ -599,7 +602,7 @@ fn app_not_running_error(error: CliError, entry: &CatalogEntry) -> CliError {
 
 /// CDXC:Settings 2026-09-09 DECISION:
 /// User: agent settings writes go through the running desktop app (renderer command -> the Settings modal's own save path), not a direct file write, so every save gets the same normalization and fan-out; when the app is not running the command fails instead of writing the file.
-/// SEE-ALSO: packages/gx-core/src/renderer_commands/verbs.rs (`updateSettingsPatch`), apps/desktop/src/app/gx_store/renderer_commands/perform.rs, tooling/ghostex-help/generate.ts.
+/// SEE-ALSO: packages/gx-core/src/renderer_commands/verbs.rs (`updateSettingsPatch`), apps/desktop/src/app/gx_store/renderer_commands/perform.rs, packages/settings-catalog/src/help/ (the catalog this validates against).
 fn apply_setting(entry: &CatalogEntry, value: Value, flags: &Flags, verb: &str) -> CliResult<()> {
     if !entry.agent_writable {
         return Err(not_writable_error(entry));

@@ -8,7 +8,6 @@ mod commands;
 mod controller;
 mod controller_rows;
 mod data;
-mod hotkey_table;
 mod hotkeys;
 mod icons;
 mod projects;

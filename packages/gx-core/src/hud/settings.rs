@@ -1,6 +1,6 @@
 //! The HUD's `settings` block: the saved settings object with every key a Rust reader takes from
 //! `hud.settings` normalized the way `normalizeghostexSettings` normalizes it
-//! (packages/shared/ghostex-settings/normalize.ts), and the two runtime flags pinned.
+//! (packages/shared/ghostex-settings/normalize.ts (deleted 2026-10-01)), and the two runtime flags pinned.
 //!
 //! CDXC:Sidebar 2026-09-25 WHY:
 //! The runtime's HUD carried the whole normalized settings object. Porting the full 1.4k-line

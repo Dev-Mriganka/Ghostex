@@ -2,7 +2,7 @@
 //! it: the hook family its hooks are checked for, the default session title, and the first-prompt
 //! title settings gxserver generates a title from.
 //!
-//! SEE-ALSO: packages/shared/sidebar-agents.ts (`getDefaultSidebarAgentByIcon`),
+//! SEE-ALSO: packages/shared/sidebar-agents.ts (deleted 2026-10-01) (`getDefaultSidebarAgentByIcon`),
 //! packages/shared/session-grid-contract-session.ts (`createAgentSessionDefaultTitle`).
 //! `createFirstPromptTitleRuntimeSettings` and `resolveSessionTitleGenerationCommandForGxserver`
 //! were ported from the deleted `gxserver-runtime/session-create.ts` (see git history).

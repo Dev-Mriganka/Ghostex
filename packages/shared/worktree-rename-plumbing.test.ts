@@ -16,7 +16,7 @@ import { describe, expect, test } from 'vitest';
  * without an error, and a command type missing from the dispatch list simply
  * never reaches the allowlist at all. This test reads those files as text and
  * asserts the hops exist, following the precedent set by
- * `packages/shared/gpui-hotkey-defaults-parity.test.ts`.
+ * `packages/shared/gpui-hotkey-defaults-parity.test.ts` (deleted 2026-10-01).
  *
  * CDXC:RepoStructure 2026-08-22:
  * `gxserver-runtime.ts` became a folder (itself deleted on 2026-09-25; see the note below). The three hops this file used to find

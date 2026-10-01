@@ -1,5 +1,5 @@
 //! New Agent Session (Cmd+Shift+O) and the cleanup of the chats agent launchers leave empty.
-//! SEE-ALSO: packages/shared/ghostex-hotkeys.ts (CDXC:Hotkeys 2026-09-25), apps/desktop/src/app/hotkeys.rs.
+//! SEE-ALSO: packages/settings-catalog/src/hotkey_definitions.rs (CDXC:Hotkeys 2026-09-25), apps/desktop/src/app/hotkeys.rs.
 use super::native_chat::state::NativeChatView;
 use super::new_thread_picker_lifecycle::order_new_thread_picker_agents;
 use crate::app::helpers::*;

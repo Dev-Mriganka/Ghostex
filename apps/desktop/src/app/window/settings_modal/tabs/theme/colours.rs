@@ -1,14 +1,14 @@
 //! The theme colour math the Theme page draws its colour squares and its Colourfulness preview
-//! with, and the simple controls' settings mappings (packages/core-ui/settings-modal/
-//! theme-simple-controls.tsx (deleted 2026-10-01), packages/shared/ghostex-settings/titlebar-color.ts).
+//! with, and the simple controls' settings mappings (packages/core-ui/settings-modal/ (deleted 2026-10-01)
+//! theme-simple-controls.tsx (deleted 2026-10-01), packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01)).
 //!
 //! CDXC:Theming 2026-09-28 SEE-ALSO:
-//! This is the third copy of the chrome scale: packages/shared/ghostex-settings/titlebar-color.ts owns it and apps/desktop/src/app/helpers/titlebar/ paints the app with it. The Settings view cannot reach the app helpers (the preview binary includes it alone), so it ports the functions and reads every table (presets, calibrated tints) from the generated catalog; keep the functions in lockstep with titlebar-color.ts.
+//! This is the third copy of the chrome scale: packages/shared/ghostex-settings/titlebar-color.ts (deleted 2026-10-01) owns it and apps/desktop/src/app/helpers/titlebar/ paints the app with it. The Settings view cannot reach the app helpers (the preview binary includes it alone), so it ports the functions and reads every table (presets, calibrated tints) from the generated catalog; keep the functions in lockstep with titlebar-color.ts.
 use super::super::super::catalog::{module, settings_catalog};
 use super::super::super::store::SettingsValues;
 use serde_json::{Map, Value, json};
 
-const TITLEBAR_MODULE: &str = "shared/ghostex-settings/titlebar-color";
+const TITLEBAR_MODULE: &str = module::TITLEBAR_COLOR;
 
 pub(super) const MIN_DARKNESS: f64 = 85.0;
 pub(super) const MAX_DARKNESS: f64 = 100.0;

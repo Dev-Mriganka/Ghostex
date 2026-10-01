@@ -43,7 +43,7 @@ const SIDEBAR_SPACE_COLORS: [&str; 13] = [
 ];
 
 /// Icon ids come from SIDEBAR_COMMAND_ICON_IDS in
-/// packages/shared/sidebar-command-icons.ts. The daemon deliberately does not
+/// packages/shared/sidebar-command-icons.ts (deleted 2026-10-01). The daemon deliberately does not
 /// validate against that allowlist — that would pin the server to one client
 /// build's icon pack — it only bounds the id and supplies this default when a
 /// Space carries no usable icon.

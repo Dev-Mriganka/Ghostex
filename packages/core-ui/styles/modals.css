@@ -77,7 +77,7 @@ html:has(body.app-modal-host-native-window-body) {
  * In a native child window the window-root dialog IS the window, so its backdrop and edge are painted in the window colour.
  * A dialog nested inside that dialog (Settings → Remote's machine editor) is a floating dialog again: it keeps the shared dimmed backdrop, hairline border, and shadow, so every rule here excludes `[data-nested]`.
  * Before this exclusion the nested dialog inherited a window-coloured border and a window-coloured overlay and read as borderless with no dimming.
- * SEE-ALSO: `nested` on DialogContent in packages/components/ui/dialog.tsx.
+ * SEE-ALSO: `nested` on DialogContent in packages/components/ui/dialog.tsx (deleted 2026-10-01).
  */
 .app-modal-host-native-window-body [data-slot='dialog-overlay']:where(:not([data-nested])),
 .app-modal-host-native-window-body [data-slot='dialog-content']:where(:not([data-nested])),
