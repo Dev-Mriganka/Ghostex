@@ -117,8 +117,9 @@ impl GhostexGpuiApp {
             window,
             cx,
         );
-        let display_id = crate::app::window::popup_frame::display_at(popup_bounds.center(), cx)
-            .or_else(|| window.display(cx).map(|display| display.id()));
+        // `popup_bounds` is measured from this window's frame.
+        let display_id = crate::app::window::popup_frame::PopupOwner::of(window, cx)
+            .display_for(popup_bounds, cx);
         /*
         The dropdown is an exact, owned popup window that stays on the trigger
         window's display. macOS and Windows keep it non-activating so opening a

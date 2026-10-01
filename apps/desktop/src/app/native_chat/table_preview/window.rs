@@ -82,8 +82,8 @@ impl NativeChatView {
                     let bounds = Bounds::new(origin + frame.origin, frame.size);
                     (
                         bounds,
-                        crate::app::window::popup_frame::display_at(bounds.center(), cx)
-                            .or_else(|| window.display(cx).map(|display| display.id())),
+                        crate::app::window::popup_frame::PopupOwner::of(window, cx)
+                            .display_for(bounds, cx),
                     )
                 })
                 .and_then(|(bounds, display_id)| {

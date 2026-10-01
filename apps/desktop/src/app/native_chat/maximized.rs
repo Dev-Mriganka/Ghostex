@@ -119,20 +119,19 @@ impl NativeChatView {
         // WHY: the Maximize click arrives while the main window is mid-update, so reading its
         // frame has to wait for the deferred pass; updating it re-entrantly fails and nothing opens.
         cx.defer(move |cx| {
-            let Ok((bounds, display_id)) = main.update(cx, |_, window, cx| {
+            let Ok((bounds, popup_owner)) = main.update(cx, |_, window, cx| {
                 (
                     gpui::Bounds::new(
                         super::child_window::content_bounds(window).origin + pane.origin,
                         pane.size,
                     ),
-                    window.display(cx).map(|display| display.id()),
+                    crate::app::window::popup_frame::PopupOwner::of(window, cx),
                 )
             }) else {
                 chat.update(cx, |this, _| this.maximized_opening = false);
                 return;
             };
-            let display_id =
-                crate::app::window::popup_frame::display_at(bounds.center(), cx).or(display_id);
+            let display_id = popup_owner.display_for(bounds, cx);
             let result = cx.open_window(
                 WindowOptions {
                     kind: crate::app::window::popup_frame::child_window_kind(),

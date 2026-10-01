@@ -63,6 +63,15 @@ impl GhostexGpuiApp {
         });
     }
 
+    /// The main window as the owner of the app's modals, menus and toasts: its frame and display
+    /// as of its last draw.
+    pub(crate) fn main_window_popup_owner(&self) -> crate::app::window::popup_frame::PopupOwner {
+        crate::app::window::popup_frame::PopupOwner::new(
+            self.main_window_bounds,
+            self.main_window_display_id,
+        )
+    }
+
     /// A popup's size, kept on the main window's screen: the window is centred on the main window,
     /// so it may use twice the room between that centre and the nearer screen edge, less a margin.
     pub(crate) fn gpui_native_modal_size_on_screen(
@@ -73,16 +82,12 @@ impl GhostexGpuiApp {
         let (width, height) = (f32::from(size.width), f32::from(size.height));
         let center = self.main_window_bounds.center();
         // The display `open_native_app_modal` opens the window on.
-        let display_id =
-            crate::app::window::popup_frame::display_at(center, cx).or(self.main_window_display_id);
-        let Some(display) = cx
-            .displays()
-            .into_iter()
-            .find(|display| Some(display.id()) == display_id)
+        let Some(visible) = self
+            .main_window_popup_owner()
+            .visible_frame(gpui::Bounds::centered_at(center, size), cx)
         else {
             return (width, height);
         };
-        let visible = display.visible_bounds();
         let room = |near: f32, far: f32| (near.min(far) - MODAL_SCROLL_FIT_SCREEN_MARGIN) * 2.0;
         let room_x = room(
             f32::from(center.x - visible.left()),

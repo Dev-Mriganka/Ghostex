@@ -174,27 +174,28 @@ impl NativeAutomateView {
             draft,
         };
         let view = cx.weak_entity();
+        let window_bounds = gpui::Bounds::centered_at(
+            host.main_window_bounds.center(),
+            size(px(DIALOG_WIDTH), px(DIALOG_INITIAL_HEIGHT)),
+        );
         let options = WindowOptions {
             #[cfg(target_os = "linux")]
             kind: crate::app::window::popup_frame::child_window_kind(),
             window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
             x11_parent: Some(host.window),
-            window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(
-                host.main_window_bounds.center(),
-                size(px(DIALOG_WIDTH), px(DIALOG_INITIAL_HEIGHT)),
-            ))),
+            window_bounds: Some(WindowBounds::Windowed(window_bounds)),
             app_id: crate::gpui_platform_window_app_id(),
             focus: true,
             icon: crate::gpui_platform_window_icon(),
             show: true,
             is_resizable: false,
             is_minimizable: false,
-            display_id: crate::app::window::popup_frame::display_at(
-                host.main_window_bounds.center(),
-                cx,
+            display_id: crate::app::window::popup_frame::PopupOwner::new(
+                host.main_window_bounds,
+                host.display_id,
             )
-            .or(host.display_id),
+            .display_for(window_bounds, cx),
             titlebar: None,
             // The dialog draws the app modals' palette, frosted under window glass.
             window_background: crate::app::helpers::window_glass_background_appearance(),

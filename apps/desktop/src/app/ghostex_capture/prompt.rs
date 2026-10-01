@@ -160,10 +160,11 @@ impl GhostexGpuiApp {
             let slot: std::rc::Rc<std::cell::RefCell<Option<Entity<PromptView>>>> =
                 Default::default();
             let slot_in = slot.clone();
+            let (bounds, display_id) = crate::app::window::popup_frame::place_global(frame, cx);
             let result = cx.open_window(
                 WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(frame)),
-                    display_id: crate::app::window::popup_frame::display_at(frame.center(), cx),
+                    window_bounds: Some(WindowBounds::Windowed(bounds)),
+                    display_id,
                     titlebar: None,
                     focus: true,
                     show: true,

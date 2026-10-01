@@ -116,22 +116,22 @@ pub(crate) fn show_copied_indicator(cx: &mut App) {
             pointer.x - size.width / 2.0,
             pointer.y - px(POINTER_GAP) - size.height + px(SHADOW_INSET),
         );
-        if let Some(display) = cx
-            .displays()
-            .into_iter()
-            .find(|display| display.bounds().contains(&pointer))
-        {
-            let bounds = display.bounds();
+        if let Some(bounds) = cx.displays().into_iter().find_map(|display| {
+            let (bounds, _) = crate::app::window::popup_frame::global_display_frames(&*display);
+            bounds.contains(&pointer).then_some(bounds)
+        }) {
             origin.x = origin.x.max(bounds.left()).min(bounds.right() - size.width);
             origin.y = origin
                 .y
                 .max(bounds.top())
                 .min(bounds.bottom() - size.height);
         }
+        let (bounds, display_id) =
+            crate::app::window::popup_frame::place_global(Bounds::new(origin, size), cx);
         let result = cx.open_window(
             WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(Bounds::new(origin, size))),
-                display_id: crate::app::window::popup_frame::display_at(pointer, cx),
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                display_id,
                 titlebar: None,
                 focus: false,
                 show: true,
@@ -191,7 +191,7 @@ fn flash_clicked_tooltip(pointer: Point<Pixels>, cx: &mut App) -> bool {
     };
     handle
         .update(cx, |_, window, cx| {
-            let gpui_pointer = window_pointer(window);
+            let gpui_pointer = window_pointer(window, cx);
             if (gpui_pointer.x - pointer.x).abs() > px(POINTER_TOLERANCE)
                 || (gpui_pointer.y - pointer.y).abs() > px(POINTER_TOLERANCE)
             {
@@ -207,17 +207,20 @@ fn copied_tooltip(window: &mut Window, cx: &mut App) -> AnyView {
     Tooltip::new("Copied!").build(window, cx)
 }
 
-/// GPUI's last pointer position in `window`, in the global space [`pointer_position`] returns.
-fn window_pointer(window: &Window) -> Point<Pixels> {
+/// GPUI's last pointer position in `window`, in the shared space [`pointer_position`] returns.
+fn window_pointer(window: &Window, cx: &App) -> Point<Pixels> {
     let bounds = window.bounds();
     // The window's frame includes a system titlebar where it has one; content coordinates start
     // under it.
     let titlebar = (bounds.size.height - window.viewport_size().height).max(px(0.0));
-    bounds.origin + point(px(0.0), titlebar) + window.mouse_position()
+    crate::app::window::popup_frame::PopupOwner::of(window, cx).to_global(
+        bounds.origin + point(px(0.0), titlebar) + window.mouse_position(),
+        cx,
+    )
 }
 
-/// The pointer in the same global space window frames are given in: points from the top-left
-/// corner of the primary display.
+/// The pointer in the space every display shares (`popup_frame::place_global`): points from the
+/// top-left corner of the primary display.
 fn pointer_position(cx: &mut App) -> Option<Point<Pixels>> {
     #[cfg(target_os = "macos")]
     {
@@ -230,7 +233,7 @@ fn pointer_position(cx: &mut App) -> Option<Point<Pixels>> {
     }
     let window = cx.active_window()?;
     window
-        .update(cx, |_, window, _| window_pointer(window))
+        .update(cx, |_, window, cx| window_pointer(window, cx))
         .ok()
 }
 

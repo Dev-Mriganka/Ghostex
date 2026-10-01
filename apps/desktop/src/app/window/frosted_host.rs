@@ -268,17 +268,16 @@ fn open_host(
     cx: &mut App,
 ) -> Option<WindowHandle<FrostedHostView>> {
     let parent_view = native_view_of(parent, cx)?;
-    let (origin, display_id) = parent
+    let (origin, owner) = parent
         .update(cx, |_, window, cx| {
             (
                 crate::app::native_chat::child_window::content_bounds(window).origin,
-                window.display(cx).map(|display| display.id()),
+                crate::app::window::popup_frame::PopupOwner::of(window, cx),
             )
         })
         .ok()?;
     let screen_frame = Bounds::new(origin + frame.origin, frame.size);
-    let display_id =
-        crate::app::window::popup_frame::display_at(screen_frame.center(), cx).or(display_id);
+    let display_id = owner.display_for(screen_frame, cx);
     cx.open_window(
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(screen_frame)),

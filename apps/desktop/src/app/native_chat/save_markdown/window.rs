@@ -59,7 +59,7 @@ impl NativeChatView {
                 #[cfg(target_os = "macos")]
                 let origin = origin + gpui::point(px(0.0), (window.bounds().size.height - window.viewport_size().height).max(px(0.0)));
                 let bounds = gpui::Bounds::new(origin, pane.size);
-                (bounds, crate::app::window::popup_frame::display_at(bounds.center(), cx).or_else(|| window.display(cx).map(|display| display.id())))
+                (bounds, crate::app::window::popup_frame::PopupOwner::of(window, cx).display_for(bounds, cx))
             }).and_then(|(bounds, display_id)| cx.open_window(WindowOptions {
                 kind: crate::app::window::popup_frame::child_window_kind(),
                 window_decorations: crate::app::window::popup_frame::child_window_decorations(),

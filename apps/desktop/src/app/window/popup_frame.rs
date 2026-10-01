@@ -20,24 +20,170 @@ pub(crate) fn child_window_decorations() -> Option<gpui::WindowDecorations> {
     cfg!(target_os = "linux").then_some(gpui::WindowDecorations::Client)
 }
 
-/// The display a popup at `point` belongs to, for `WindowOptions::display_id`.
-///
-/// CDXC:PlatformSupport 2026-09-23 WHY:
-/// On Windows a window opened without a display is placed against the primary monitor, and bounds that lie on another monitor fail its on-display check and are replaced by the primary monitor's default spot. With the app on a second monitor, the chat's model, mode and context window menus therefore opened somewhere else, where they looked like they were behind the main window. Every popup names the display its bounds are on.
+/// The window a menu, dialog, toast or other child window belongs to: its frame and the display
+/// that frame is measured on, read together. Child windows take their `WindowOptions::display_id`
+/// from here, never from a point alone.
 ///
 /// CDXC:PlatformSupport 2026-10-01 WHY:
-/// macOS answers `None`: there every display's GPUI bounds start at (0, 0) and a window's bounds are relative to the display it is on, so a point cannot name a display, and the search returned the menu-bar display for any point that fit inside it. Callers that chained the parent window's display behind it (`display_at(..).or(parent_display)`) therefore opened their window on the menu-bar display whenever Ghostex sat on another monitor: the Files view's comment box landed on the other screen, read as never opening, and its open state hid the selection toolbar until a restart (reported on 10.8.1). With `None` the parent's display places the window; a caller with no display of its own gets the menu-bar display, as before. SEE-ALSO: `sync_suggestion_window` in native_chat/suggestions/window.rs (CDXC:SessionChat 2026-09-19).
-pub(crate) fn display_at(
-    point: gpui::Point<gpui::Pixels>,
-    cx: &gpui::App,
-) -> Option<gpui::DisplayId> {
-    if cfg!(target_os = "macos") {
-        return None;
+/// A frame given to `WindowOptions::window_bounds` means something only together with its
+/// `display_id`, and what it means differs by platform. On macOS every display's GPUI bounds start
+/// at (0, 0), `Window::bounds` is measured from the display the window is on, and a new window is
+/// placed against `display_id`, falling back to the menu-bar display; a frame measured from its
+/// owner but opened with no display (or the display "under" a point, which on macOS was always the
+/// menu-bar display) landed on the menu-bar display at the owner's offset whenever Ghostex sat on
+/// another monitor, so the chat composer's menus, the toasts and the modal close button read as
+/// never opening, and the Files comment box hid the selection toolbar until a restart (10.8.1).
+/// On macOS a child window therefore always opens on its owner's display, whatever monitor its own
+/// frame reaches. On Windows and X11 frames are global and displays report their real origin, but
+/// Windows replaces bounds whose centre is not on the named display with that display's default
+/// spot (the chat menus opened "behind" the main window, 2026-09-23), so there the display is the
+/// one under the frame's centre, else the owner's. Windows placed from the OS pointer use
+/// `place_global` instead. Supersedes the 2026-09-23 and 2026-10-01 notes on `display_at`, which
+/// let a caller pick a display without naming the window its frame was measured from.
+/// SEE-ALSO: GhostexGpuiPointerScreenLocation and GhostexGpuiCaptureWindowFrame (native/macos), which
+/// report the shared space `place_global` reads.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct PopupOwner {
+    /// The owner's frame, in the space `Window::bounds` reports.
+    pub(crate) frame: gpui::Bounds<gpui::Pixels>,
+    pub(crate) display_id: Option<gpui::DisplayId>,
+}
+
+impl PopupOwner {
+    pub(crate) fn of(window: &Window, cx: &gpui::App) -> Self {
+        Self::new(
+            window.bounds(),
+            window.display(cx).map(|display| display.id()),
+        )
     }
+
+    /// An owner known from a frame and display read together earlier (the main window's, cached
+    /// by the app on every draw).
+    pub(crate) fn new(
+        frame: gpui::Bounds<gpui::Pixels>,
+        display_id: Option<gpui::DisplayId>,
+    ) -> Self {
+        Self { frame, display_id }
+    }
+
+    /// `WindowOptions::display_id` for a child window at `frame`, measured in the owner's space.
+    pub(crate) fn display_for(
+        &self,
+        frame: gpui::Bounds<gpui::Pixels>,
+        cx: &gpui::App,
+    ) -> Option<gpui::DisplayId> {
+        if cfg!(target_os = "macos") {
+            return self.display_id;
+        }
+        cx.displays()
+            .into_iter()
+            .find(|display| display.bounds().contains(&frame.center()))
+            .map(|display| display.id())
+            .or(self.display_id)
+    }
+
+    /// The visible frame (without the menu bar, notch, Dock or taskbar) of the display a child
+    /// window at `frame` opens on, in the owner's space.
+    pub(crate) fn visible_frame(
+        &self,
+        frame: gpui::Bounds<gpui::Pixels>,
+        cx: &gpui::App,
+    ) -> Option<gpui::Bounds<gpui::Pixels>> {
+        let display = cx.find_display(self.display_for(frame, cx)?)?;
+        Some(display.visible_bounds())
+    }
+
+    /// `point`, measured in the owner's space, in the space every display shares (`place_global`).
+    pub(crate) fn to_global(
+        &self,
+        point: gpui::Point<gpui::Pixels>,
+        cx: &gpui::App,
+    ) -> gpui::Point<gpui::Pixels> {
+        self.display_id
+            .and_then(|id| cx.find_display(id))
+            .map_or(point, |display| point + global_shift(&*display))
+    }
+}
+
+/// How far `display`'s GPUI frame sits from its place in the shared space: logical pixels from the
+/// menu-bar display's top-left corner, y down, where the OS reports the pointer. Windows and X11
+/// report displays there already; GPUI's macOS displays all start at (0, 0), so their origin comes
+/// from Core Graphics, whose global display space is that same space.
+fn global_shift(display: &dyn gpui::PlatformDisplay) -> gpui::Point<gpui::Pixels> {
+    #[cfg(target_os = "macos")]
+    {
+        #[repr(C)]
+        #[allow(dead_code)]
+        struct CGPoint {
+            x: f64,
+            y: f64,
+        }
+        #[repr(C)]
+        #[allow(dead_code)]
+        struct CGSize {
+            width: f64,
+            height: f64,
+        }
+        #[repr(C)]
+        #[allow(dead_code)]
+        struct CGRect {
+            origin: CGPoint,
+            size: CGSize,
+        }
+        #[link(name = "CoreGraphics", kind = "framework")]
+        unsafe extern "C" {
+            fn CGDisplayBounds(display: u32) -> CGRect;
+        }
+        // GPUI's macOS display ids are CGDirectDisplayIDs.
+        let rect = unsafe { CGDisplayBounds(u64::from(display.id()) as u32) };
+        gpui::point(
+            gpui::px(rect.origin.x as f32),
+            gpui::px(rect.origin.y as f32),
+        ) - display.bounds().origin
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = display;
+        gpui::Point::default()
+    }
+}
+
+/// `display`'s frame and visible frame in the shared space (`place_global`).
+pub(crate) fn global_display_frames(
+    display: &dyn gpui::PlatformDisplay,
+) -> (gpui::Bounds<gpui::Pixels>, gpui::Bounds<gpui::Pixels>) {
+    let shift = global_shift(display);
+    let (bounds, visible) = (display.bounds(), display.visible_bounds());
+    (
+        gpui::Bounds::new(bounds.origin + shift, bounds.size),
+        gpui::Bounds::new(visible.origin + shift, visible.size),
+    )
+}
+
+/// A window not owned by another window (the "Copied!" bubble, Ghostex Capture's windows) placed
+/// from the OS pointer or a saved screen position: `frame` in the shared space, as
+/// `WindowOptions::window_bounds` and `display_id` take it. The display is the one under the frame's
+/// centre; a frame on no display opens against the menu-bar display, whose GPUI frame starts where
+/// the shared space does.
+pub(crate) fn place_global(
+    frame: gpui::Bounds<gpui::Pixels>,
+    cx: &gpui::App,
+) -> (gpui::Bounds<gpui::Pixels>, Option<gpui::DisplayId>) {
     cx.displays()
         .into_iter()
-        .find(|display| display.bounds().contains(&point))
-        .map(|display| display.id())
+        .find_map(|display| {
+            let shift = global_shift(&*display);
+            let bounds = display.bounds();
+            gpui::Bounds::new(bounds.origin + shift, bounds.size)
+                .contains(&frame.center())
+                .then(|| {
+                    (
+                        gpui::Bounds::new(frame.origin - shift, frame.size),
+                        Some(display.id()),
+                    )
+                })
+        })
+        .unwrap_or((frame, None))
 }
 
 /// Strips the system frame and shadow from a popup's own window (`GpuiChatDialogWindow.m`).

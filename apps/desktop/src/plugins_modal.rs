@@ -556,21 +556,18 @@ impl GhostexGpuiApp {
         }
 
         let window_size = size(px(PLUGINS_MODAL_WIDTH), px(PLUGINS_MODAL_HEIGHT));
+        let window_bounds =
+            gpui::Bounds::centered_at(self.main_window_bounds.center(), window_size);
         let options = WindowOptions {
-            window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(
-                self.main_window_bounds.center(),
-                window_size,
-            ))),
+            window_bounds: Some(WindowBounds::Windowed(window_bounds)),
             app_id: gpui_platform_window_app_id(),
             focus: true,
             icon: gpui_platform_window_icon(),
             show: true,
             is_resizable: false,
-            display_id: crate::app::window::popup_frame::display_at(
-                self.main_window_bounds.center(),
-                cx,
-            )
-            .or(self.main_window_display_id),
+            display_id: self
+                .main_window_popup_owner()
+                .display_for(window_bounds, cx),
             titlebar: Some(gpui::TitlebarOptions {
                 title: Some("Ghostex Plugins".into()),
                 appears_transparent: false,

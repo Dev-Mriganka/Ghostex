@@ -90,10 +90,11 @@ impl GhostexGpuiApp {
         let app = cx.weak_entity();
         App::defer(cx, move |cx| {
             let owner = app.clone();
+            let (bounds, display_id) = crate::app::window::popup_frame::place_global(frame, cx);
             let result = cx.open_window(
                 WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(frame)),
-                    display_id: crate::app::window::popup_frame::display_at(frame.center(), cx),
+                    window_bounds: Some(WindowBounds::Windowed(bounds)),
+                    display_id,
                     titlebar: None,
                     focus: true,
                     show: true,

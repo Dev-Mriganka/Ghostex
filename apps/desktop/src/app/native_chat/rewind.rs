@@ -71,13 +71,11 @@ impl NativeChatView {
                         );
                     (
                         gpui::Bounds::new(origin, pane.size),
-                        window.display(cx).map(|display| display.id()),
+                        crate::app::window::popup_frame::PopupOwner::of(window, cx),
                     )
                 })
-                .and_then(|(bounds, display_id)| {
-                    let display_id =
-                        crate::app::window::popup_frame::display_at(bounds.center(), cx)
-                            .or(display_id);
+                .and_then(|(bounds, owner)| {
+                    let display_id = owner.display_for(bounds, cx);
                     cx.open_window(
                         WindowOptions {
                             kind: crate::app::window::popup_frame::child_window_kind(),

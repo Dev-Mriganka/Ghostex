@@ -219,10 +219,10 @@ impl GhostexGpuiApp {
                 finish(&app, cx);
                 return;
             };
-            let Ok((origin, display_id)) = main.update(cx, |_, window, cx| {
+            let Ok((origin, owner)) = main.update(cx, |_, window, cx| {
                 (
                     crate::app::native_chat::child_window::content_bounds(window).origin,
-                    window.display(cx).map(|display| display.id()),
+                    crate::app::window::popup_frame::PopupOwner::of(window, cx),
                 )
             }) else {
                 finish(&app, cx);
@@ -231,8 +231,7 @@ impl GhostexGpuiApp {
             let screen = Bounds::new(origin + frame.origin, frame.size);
             let options = gpui::WindowOptions {
                 window_bounds: Some(gpui::WindowBounds::Windowed(screen)),
-                display_id: crate::app::window::popup_frame::display_at(screen.center(), cx)
-                    .or(display_id),
+                display_id: owner.display_for(screen, cx),
                 focus: false,
                 // AppKit orders the window in as it slides it out; elsewhere the platform shows it
                 // as it opens.

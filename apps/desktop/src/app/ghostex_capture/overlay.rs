@@ -116,10 +116,12 @@ impl GhostexGpuiApp {
             for (index, screen) in frames {
                 let owner = app.clone();
                 let focused = pointer.is_some_and(|pointer| screen.bounds.contains(&pointer));
+                let (bounds, display_id) =
+                    crate::app::window::popup_frame::place_global(screen.bounds, cx);
                 let result = cx.open_window(
                     WindowOptions {
-                        window_bounds: Some(WindowBounds::Windowed(screen.bounds)),
-                        display_id: Some(screen.id),
+                        window_bounds: Some(WindowBounds::Windowed(bounds)),
+                        display_id,
                         titlebar: None,
                         focus: true,
                         show: true,

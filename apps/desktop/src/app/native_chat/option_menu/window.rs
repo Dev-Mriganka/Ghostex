@@ -48,6 +48,8 @@ pub(in crate::app::native_chat) struct ChatOptionMenu {
     pub(super) source: gpui::AnyWindowHandle,
     pub(super) source_focus: Option<FocusHandle>,
     pub(super) source_bounds: Bounds<Pixels>,
+    /// The window `source_bounds` and every panel's frame are measured in, with its display.
+    owner: crate::app::window::popup_frame::PopupOwner,
     pub(super) appearance: ChatAppearance,
     pub(super) windows: Vec<gpui::WindowHandle<Root>>,
     pub(super) opening: bool,
@@ -377,7 +379,7 @@ impl ChatOptionMenu {
                 metrics.radius
             } * scale,
         );
-        let display_id = crate::app::window::popup_frame::display_at(bounds.center(), cx);
+        let display_id = self.owner.display_for(bounds, cx);
         cx.defer(move |cx| {
             let result = cx.open_window(
                 WindowOptions {
@@ -722,11 +724,13 @@ impl NativeChatView {
             .unwrap_or(self.config.parent_native_view);
         let outside_pane = std::mem::take(&mut self.menu_outside_pane);
         let tooltips = Some(Root::suppress_tooltips(window, cx));
+        let owner = crate::app::window::popup_frame::PopupOwner::of(window, cx);
         let menu = cx.new(|_| ChatOptionMenu {
             chat,
             source,
             source_focus,
             source_bounds,
+            owner,
             appearance,
             windows: vec![],
             opening: false,

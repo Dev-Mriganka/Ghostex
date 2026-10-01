@@ -182,7 +182,7 @@ impl NativeChatView {
                                 (
                                     snap_to_device_pixels(card, window.scale_factor()),
                                     origin,
-                                    window.display(cx).map(|display| display.id()),
+                                    crate::app::window::popup_frame::PopupOwner::of(window, cx),
                                 )
                             })
                         })
@@ -224,13 +224,10 @@ impl NativeChatView {
             if let Some(old) = old {
                 let _ = old.update(cx, |_, window, _| window.remove_window());
             }
-            let result = placement.map(|(card, origin, display_id)| {
+            let result = placement.map(|(card, origin, owner)| {
                 let frame = window_frame(card);
-                let display_id = crate::app::window::popup_frame::display_at(
-                    Bounds::new(origin + frame.origin, frame.size).center(),
-                    cx,
-                )
-                .or(display_id);
+                let display_id =
+                    owner.display_for(Bounds::new(origin + frame.origin, frame.size), cx);
                 cx.open_window(
                     WindowOptions {
                         window_bounds: Some(WindowBounds::Windowed(Bounds::new(

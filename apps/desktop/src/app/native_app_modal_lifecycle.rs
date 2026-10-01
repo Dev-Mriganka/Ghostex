@@ -60,26 +60,23 @@ impl GhostexGpuiApp {
             (width, initial_height)
         };
         let window_size = size(px(width), px(initial_height));
+        let window_bounds =
+            gpui::Bounds::centered_at(self.main_window_bounds.center(), window_size);
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),
             window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
             x11_parent: self.main_window_handle,
-            window_bounds: Some(WindowBounds::Windowed(gpui::Bounds::centered_at(
-                self.main_window_bounds.center(),
-                window_size,
-            ))),
+            window_bounds: Some(WindowBounds::Windowed(window_bounds)),
             app_id: gpui_platform_window_app_id(),
             focus: true,
             icon: gpui_platform_window_icon(),
             show: true,
             is_resizable: false,
             is_minimizable: false,
-            display_id: crate::app::window::popup_frame::display_at(
-                self.main_window_bounds.center(),
-                cx,
-            )
-            .or(self.main_window_display_id),
+            display_id: self
+                .main_window_popup_owner()
+                .display_for(window_bounds, cx),
             titlebar: None,
             // Under window glass the modal draws the frosted palette over what its window blurs.
             window_background: window_glass_background_appearance(),

@@ -134,11 +134,11 @@ impl GhostexGpuiApp {
         // GPUI draws a new window's root synchronously; opening it inside this entity's update
         // would lease the app twice (the floating sidebar's September 9 crash).
         App::defer(cx, move |cx| {
-            let display_id = crate::app::window::popup_frame::display_at(frame.center(), cx);
+            let (bounds, display_id) = crate::app::window::popup_frame::place_global(frame, cx);
             let observed = app.clone();
             let result = cx.open_window(
                 WindowOptions {
-                    window_bounds: Some(WindowBounds::Windowed(frame)),
+                    window_bounds: Some(WindowBounds::Windowed(bounds)),
                     display_id,
                     titlebar: None,
                     focus: false,

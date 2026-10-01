@@ -5,7 +5,9 @@ use gpui::{App, Bounds, DisplayId, Pixels, Point, Size, point, px, size};
 use super::model::*;
 use super::persistence::{SavedPlacement, SavedWindowFrame};
 
-/// One screen, keyed the way placements are saved.
+/// One screen, keyed the way placements are saved. Its frames are in the shared space the pointer,
+/// screenshots and `platform::set_window_frame` use (`popup_frame::place_global`), so every window
+/// here opens through `place_global`.
 #[derive(Clone, Debug)]
 pub(crate) struct Screen {
     pub(crate) key: String,
@@ -17,14 +19,18 @@ pub(crate) struct Screen {
 pub(crate) fn screens(cx: &App) -> Vec<Screen> {
     cx.displays()
         .into_iter()
-        .map(|display| Screen {
-            key: display
-                .uuid()
-                .map(|uuid| uuid.to_string())
-                .unwrap_or_else(|_| format!("{:?}", display.id())),
-            id: display.id(),
-            bounds: display.bounds(),
-            visible: display.visible_bounds(),
+        .map(|display| {
+            let (bounds, visible) =
+                crate::app::window::popup_frame::global_display_frames(&*display);
+            Screen {
+                key: display
+                    .uuid()
+                    .map(|uuid| uuid.to_string())
+                    .unwrap_or_else(|_| format!("{:?}", display.id())),
+                id: display.id(),
+                bounds,
+                visible,
+            }
         })
         .collect()
 }

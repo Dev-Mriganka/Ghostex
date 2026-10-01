@@ -337,11 +337,7 @@ impl GhostexGpuiApp {
                 (
                     gpui::WindowOptions {
                         window_bounds: Some(gpui::WindowBounds::Windowed(bounds)),
-                        display_id: crate::app::window::popup_frame::display_at(
-                            bounds.center(),
-                            cx,
-                        )
-                        .or(this.main_window_display_id),
+                        display_id: this.main_window_popup_owner().display_for(bounds, cx),
                         focus: false,
                         // The AppKit host orders the panel in once it is a child window; elsewhere
                         // the popup is shown by the platform when it is created.

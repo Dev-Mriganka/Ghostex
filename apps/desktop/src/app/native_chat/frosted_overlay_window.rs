@@ -202,13 +202,13 @@ fn apply_frosted_overlay(
             .update(cx, |_, window, cx| {
                 (
                     super::child_window::content_bounds(window).origin,
-                    window.display(cx).map(|display| display.id()),
+                    crate::app::window::popup_frame::PopupOwner::of(window, cx),
                 )
             })
             .ok()
-            .map(|(origin, display_id)| (frame, origin, display_id))
+            .map(|(origin, owner)| (frame, origin, owner))
     });
-    let Some((frame, origin, display_id)) = placement else {
+    let Some((frame, origin, owner)) = placement else {
         finish(&chat, overlay, None, None, cx);
         return;
     };
@@ -216,11 +216,7 @@ fn apply_frosted_overlay(
         FrostedOverlay::ScrollBottom => frame.size.height / 2.0,
         FrostedOverlay::ForkBranches => px(super::fork_branches::BADGE_RADIUS * scale),
     };
-    let display_id = crate::app::window::popup_frame::display_at(
-        Bounds::new(origin + frame.origin, frame.size).center(),
-        cx,
-    )
-    .or(display_id);
+    let display_id = owner.display_for(Bounds::new(origin + frame.origin, frame.size), cx);
     let result = cx.open_window(
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::new(

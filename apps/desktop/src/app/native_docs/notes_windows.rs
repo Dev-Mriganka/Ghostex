@@ -250,13 +250,13 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
             .update(cx, |_, window, cx| {
                 (
                     crate::app::native_chat::child_window::content_bounds(window).origin,
-                    window.display(cx).map(|display| display.id()),
+                    crate::app::window::popup_frame::PopupOwner::of(window, cx),
                 )
             })
             .ok()
-            .map(|(origin, display_id)| (frame, origin, display_id))
+            .map(|(origin, owner)| (frame, origin, owner))
     });
-    let Some((frame, origin, display_id)) = placement else {
+    let Some((frame, origin, owner)) = placement else {
         give_up(
             &app,
             wanted.is_some().then(|| "no main window".to_string()),
@@ -269,8 +269,7 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
     let result = cx.open_window(
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(screen)),
-            display_id: crate::app::window::popup_frame::display_at(screen.center(), cx)
-                .or(display_id),
+            display_id: owner.display_for(screen, cx),
             titlebar: None,
             kind: crate::app::window::popup_frame::child_window_kind(),
             window_decorations: crate::app::window::popup_frame::child_window_decorations(),

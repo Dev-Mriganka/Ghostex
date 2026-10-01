@@ -112,7 +112,8 @@ impl GhostexGpuiApp {
         let main_window_native_view = self.parent_ns_view;
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
-            display_id: crate::app::window::popup_frame::display_at(anchor, cx),
+            // The anchor is measured from the main window's frame.
+            display_id: self.main_window_popup_owner().display_for(bounds, cx),
             focus: false,
             show: true,
             kind: WindowKind::PopUp,
