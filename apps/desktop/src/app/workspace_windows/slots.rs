@@ -13,7 +13,9 @@ use std::time::Duration;
 
 use gpui::{App, Window, WindowBounds};
 
-use super::registry::{WORKSPACE_WINDOWS, open_workspace_window_slots};
+use super::registry::{
+    WORKSPACE_WINDOWS, open_workspace_window_slots, used_workspace_window_slots,
+};
 use crate::app::helpers::*;
 use crate::*;
 
@@ -88,7 +90,7 @@ pub(super) fn write_workspace_windows_manifest() {
 
 /// The lowest slot no open window uses, with anything an earlier window left in it cleared.
 pub(super) fn allocate_workspace_window_slot() -> u32 {
-    let used = open_workspace_window_slots();
+    let used = used_workspace_window_slots();
     let slot = (0..).find(|slot| !used.contains(slot)).unwrap_or(0);
     discard_workspace_window_slot_files(slot);
     slot
@@ -136,7 +138,7 @@ pub(super) fn note_workspace_window_frame(window: &Window, cx: &App) -> bool {
         let entry = windows
             .iter_mut()
             .find(|entry| entry.handle.window_id() == window_id)?;
-        if entry.frame == frame {
+        if entry.frame == frame || entry.closing {
             return None;
         }
         entry.frame = frame;
@@ -173,7 +175,7 @@ pub(crate) fn persist_workspace_window_slot_frame(slot: u32) {
         windows
             .borrow()
             .iter()
-            .find(|entry| entry.slot == slot)
+            .find(|entry| entry.slot == slot && !entry.closing)
             .map(|entry| entry.frame.clone())
     });
     // A slot whose window closed was forgotten; writing would bring its file back.

@@ -288,6 +288,8 @@ impl GhostexGpuiApp {
     ) {
     }
 
+    /// The update state lives in the lead window, which runs the updater; every other window's
+    /// update button and download ring mirror it (app/workspace_windows/).
     pub(crate) fn set_gpui_update_available(
         &mut self,
         available: bool,
@@ -297,6 +299,11 @@ impl GhostexGpuiApp {
             return;
         }
         self.update_available = available;
+        if self.is_lead_window() {
+            self.update_other_workspace_windows(cx, move |app, cx| {
+                app.set_gpui_update_available(available, cx);
+            });
+        }
         cx.notify();
     }
 
@@ -313,6 +320,11 @@ impl GhostexGpuiApp {
             return;
         }
         self.update_downloading = downloading;
+        if self.is_lead_window() {
+            self.update_other_workspace_windows(cx, move |app, cx| {
+                app.set_gpui_update_downloading(downloading, cx);
+            });
+        }
         cx.notify();
     }
 
@@ -327,9 +339,28 @@ impl GhostexGpuiApp {
             return;
         }
         self.update_download_progress = normalized;
+        if self.is_lead_window() {
+            self.update_other_workspace_windows(cx, move |app, cx| {
+                app.set_gpui_update_download_progress(normalized, cx);
+            });
+        }
         if self.update_downloading {
             cx.notify();
         }
+    }
+
+    /// The update button in any window: the lead window runs the updater, so a click in another
+    /// window is performed there (app/workspace_windows/).
+    pub(crate) fn check_for_gpui_updates_from_any_window(
+        &mut self,
+        window: &mut Window,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        if self.forward_to_lead_window(cx, |app, window, cx| app.check_for_gpui_updates(window, cx))
+        {
+            return;
+        }
+        self.check_for_gpui_updates(window, cx);
     }
 
     #[cfg(target_os = "windows")]

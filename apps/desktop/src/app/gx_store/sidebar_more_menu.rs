@@ -56,11 +56,21 @@ impl GhostexGpuiApp {
     /// arrives inside a window update, where dispatching into the active window is refused.
     pub(crate) fn run_app_lifecycle_action(&mut self, action: &str, cx: &mut gpui::Context<Self>) {
         use crate::app::actions::{
-            CheckForGhostexGpuiUpdates, NewGhostexGpuiWindow, QuitGhostexGpui,
-            QuitGhostexGpuiAndBackgroundServices, RestartGhostexGpui,
+            CheckForGhostexGpuiUpdates, QuitGhostexGpui, QuitGhostexGpuiAndBackgroundServices,
+            RestartGhostexGpui,
         };
+        if action == "newWindow" {
+            // From the window the row was in, not whichever window is key: Quick Access is
+            // (app/workspace_windows/).
+            let source = self
+                .main_window_handle
+                .map(|handle| (handle, cx.weak_entity()));
+            cx.defer(move |cx| {
+                crate::app::workspace_windows::open_new_workspace_window_from(source, cx)
+            });
+            return;
+        }
         let action: Box<dyn gpui::Action> = match action {
-            "newWindow" => Box::new(NewGhostexGpuiWindow),
             "checkForUpdates" => Box::new(CheckForGhostexGpuiUpdates),
             "restart" => Box::new(RestartGhostexGpui),
             "quit" => Box::new(QuitGhostexGpui),

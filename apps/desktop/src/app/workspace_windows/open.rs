@@ -10,7 +10,8 @@ use gpui_component::Root;
 
 use super::close::install_workspace_window_close_handler;
 use super::registry::{
-    active_workspace_window, note_workspace_window_activated, register_workspace_window,
+    active_workspace_window, lead_workspace_window, note_workspace_window_activated,
+    register_workspace_window,
 };
 use super::slots::*;
 use crate::app::helpers::*;
@@ -122,6 +123,15 @@ pub(crate) fn open_saved_workspace_windows(cx: &mut App) {
 /// File > New Window: a window on the active window's project, cascaded from it.
 pub(crate) fn open_new_workspace_window(cx: &mut App) {
     let source = active_workspace_window(cx);
+    open_new_workspace_window_from(source, cx);
+}
+
+/// New Window from a command that knows which window it was used in (Quick Access, the sidebar's
+/// More menu): the new window cascades from that one and opens on its project.
+pub(crate) fn open_new_workspace_window_from(
+    source: Option<(gpui::AnyWindowHandle, gpui::WeakEntity<GhostexGpuiApp>)>,
+    cx: &mut App,
+) {
     let (frame, active_project_id) = source
         .and_then(|(handle, app)| {
             handle
@@ -238,6 +248,18 @@ pub(crate) fn open_workspace_window(
                 // The lead starts gxserver; this window only connects to it.
                 app.replay_sidebar_gxserver_bootstrap(cx);
                 app.refresh_titlebar_accounts(cx);
+                // The lead runs the updater; this window shows what it found (updater.rs).
+                if let Some(lead) = lead_workspace_window(cx).and_then(|(_, lead)| lead.upgrade()) {
+                    let lead = lead.read(cx);
+                    let (available, downloading, progress) = (
+                        lead.update_available,
+                        lead.update_downloading,
+                        lead.update_download_progress,
+                    );
+                    app.update_available = available;
+                    app.update_downloading = downloading;
+                    app.update_download_progress = progress;
+                }
             }
             app.start_gpui_workspace_open_target_availability_scan(cx);
             if lead {

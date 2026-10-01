@@ -25,6 +25,9 @@ pub(super) struct WorkspaceWindow {
     pub(super) title: String,
     /// What the Window menu calls it: its project's name.
     pub(super) label: String,
+    /// The user asked to close it and it is finishing (close.rs): its slot is already forgotten,
+    /// so a quit in the meantime neither lists it nor writes its files.
+    pub(super) closing: bool,
 }
 
 /// One row of the Window menu's list of windows.
@@ -92,6 +95,7 @@ pub(super) fn register_workspace_window(
             frame,
             title: String::new(),
             label: TITLEBAR_PROJECT_LABEL_FALLBACK.to_string(),
+            closing: false,
         });
     });
 }
@@ -185,13 +189,49 @@ pub(super) fn note_workspace_window_activated(window: &Window, source_focus: boo
     if number.is_none() {
         return;
     }
+    // Activation churns on tab clicks, modal closes and Cmd+Tab; the menu bar is rebuilt only when
+    // the tick or the menu variant really changes.
+    if number == ACTIVE_WINDOW_NUMBER.get() && source_focus == installed_main_menus_source_focus() {
+        return;
+    }
     ACTIVE_WINDOW_NUMBER.set(number);
     cx.defer(move |cx| set_ghostex_gpui_main_menus(source_focus, cx));
 }
 
-/// The slots of the open windows, oldest first.
+/// The slots the next launch reopens: the open windows', oldest first, without one that is
+/// closing.
 pub(super) fn open_workspace_window_slots() -> Vec<u32> {
+    WORKSPACE_WINDOWS.with(|windows| {
+        windows
+            .borrow()
+            .iter()
+            .filter(|entry| !entry.closing)
+            .map(|entry| entry.slot)
+            .collect()
+    })
+}
+
+/// Every slot an open window holds, a closing one's included, which a new window must not take:
+/// the closing window's slot is cleared once more when it finally goes.
+pub(super) fn used_workspace_window_slots() -> Vec<u32> {
     WORKSPACE_WINDOWS.with(|windows| windows.borrow().iter().map(|entry| entry.slot).collect())
+}
+
+/// The user is closing `window_id` while another window stays open. Its slot is forgotten now
+/// rather than when it goes: a quit while it finishes (its remote Action closes can take seconds)
+/// must not bring it back at the next launch with the tabs it was closing.
+pub(super) fn note_workspace_window_closing(window_id: WindowId) {
+    let slot = WORKSPACE_WINDOWS.with(|windows| {
+        let mut windows = windows.borrow_mut();
+        let entry = windows
+            .iter_mut()
+            .find(|entry| entry.handle.window_id() == window_id && !entry.closing)?;
+        entry.closing = true;
+        Some(entry.slot)
+    });
+    if let Some(slot) = slot {
+        forget_workspace_window_slot(slot);
+    }
 }
 
 /// The workspace window the user is in: the active window when it is one, else the lead, else
@@ -205,6 +245,16 @@ pub(crate) fn active_workspace_window(
         let live = || windows.iter().filter(|entry| entry.app.upgrade().is_some());
         live()
             .find(|entry| Some(entry.handle.window_id()) == active)
+            // A modal, Quick Access or a popup is the active window: the window it belongs to.
+            .or_else(|| {
+                let active = active?;
+                live().find(|entry| {
+                    entry
+                        .app
+                        .upgrade()
+                        .is_some_and(|app| app.read(cx).owns_child_window(active))
+                })
+            })
             .or_else(|| {
                 live().find(|entry| {
                     entry
@@ -245,6 +295,33 @@ pub(crate) fn other_workspace_window_apps(except: gpui::EntityId) -> Vec<Entity<
             .filter(|entry| entry.app.entity_id() != except)
             .filter_map(|entry| entry.app.upgrade())
             .collect()
+    })
+}
+
+/// The open window that shows the session behind `row_id` (focused or on screen), the one last
+/// active first; `None` when no window shows it.
+pub(super) fn workspace_window_showing_session(
+    row_id: &str,
+    cx: &App,
+) -> Option<(AnyWindowHandle, WeakEntity<GhostexGpuiApp>)> {
+    let active = ACTIVE_WINDOW_NUMBER.get();
+    WORKSPACE_WINDOWS.with(|windows| {
+        let windows = windows.borrow();
+        let showing = windows
+            .iter()
+            .filter(|entry| !entry.closing)
+            .filter(|entry| {
+                entry
+                    .app
+                    .upgrade()
+                    .is_some_and(|app| app.read(cx).gx_store_shows_session_row(row_id))
+            })
+            .collect::<Vec<_>>();
+        showing
+            .iter()
+            .find(|entry| Some(entry.number) == active)
+            .or_else(|| showing.first())
+            .map(|entry| (entry.handle, entry.app.clone()))
     })
 }
 
@@ -392,6 +469,29 @@ impl GhostexGpuiApp {
     /// The lead term a new window starts with: a fresh one for the launch window, none otherwise.
     pub(crate) fn initial_lead_window_term(lead: bool) -> Option<u64> {
         lead.then(begin_lead_term)
+    }
+
+    /// Whether `window_id` is one of the windows this workspace window opened over itself: its
+    /// app modal (Settings, Quick Access, the dialogs), the extension modal host, its toast, its
+    /// titlebar popup (Tips, Resources, the menus), the plugins modal, the New Thread picker or
+    /// the web runtime's install window.
+    pub(crate) fn owns_child_window(&self, window_id: WindowId) -> bool {
+        let owned = [
+            self.app_modal_window.map(|handle| handle.window_id()),
+            self.app_toast_window.map(|handle| handle.window_id()),
+            self.titlebar_popup_window.map(|handle| handle.window_id()),
+            self.plugins_modal_window.map(|handle| handle.window_id()),
+            self.new_thread_picker_window
+                .map(|handle| handle.window_id()),
+            self.native_app_modal
+                .as_ref()
+                .map(|modal| modal.window.window_id()),
+            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            self.cef_component_window
+                .as_ref()
+                .map(|handle| handle.window_id()),
+        ];
+        owned.contains(&Some(window_id))
     }
 
     /// Whether nothing else uses what this window's teardown would stop for the whole process:

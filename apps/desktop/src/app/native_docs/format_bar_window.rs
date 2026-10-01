@@ -110,7 +110,7 @@ impl GhostexGpuiApp {
         self.native_docs_place_format_bar_window(None, cx);
     }
 
-    fn native_docs_place_format_bar_window(
+    pub(crate) fn native_docs_place_format_bar_window(
         &mut self,
         control: Option<Bounds<Pixels>>,
         cx: &mut Context<Self>,

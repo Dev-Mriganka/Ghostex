@@ -87,7 +87,7 @@ impl GhostexGpuiApp {
                 cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
                     window.prevent_default();
                     cx.stop_propagation();
-                    this.check_for_gpui_updates(window, cx);
+                    this.check_for_gpui_updates_from_any_window(window, cx);
                 }),
             )
             .managed_tooltip_with_placement(ManagedTooltipPlacement::Right, move |window, cx| {

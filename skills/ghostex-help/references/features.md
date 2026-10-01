@@ -1931,8 +1931,10 @@ sessions on screen, panes, view panel and views, Commands panel and Browser
 tabs. Projects, sessions, settings, themes and hotkeys are shared: a session
 started in one window shows up in every window's sidebar, and a setting changed
 in one window applies to all of them. The same session can be open in two
-windows at once; its terminal takes the size of the window you last typed in or
-showed it in. The Code view works in every window at once, all on the same
+windows at once: its chat stays live in both, and its terminal takes the size of
+the window you last typed in or showed it in. Clicking a notification or a
+session in the menu bar status menu goes to the window already showing that
+session. The Code view works in every window at once, all on the same
 editor. The menu bar status icon, notifications, completion sounds and Keep
 Awake are the app's, not each window's: Keep Awake started from any window keeps
 the computer awake and shows as on in every window. The Window menu lists the

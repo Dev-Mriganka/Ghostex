@@ -216,14 +216,20 @@ impl GhostexGpuiApp {
             button
                 .on_mouse_down(
                     MouseButton::Left,
-                    _cx.listener(move |_this, _event, window, cx| {
+                    _cx.listener(move |this, _event, window, cx| {
                         window.prevent_default();
                         cx.stop_propagation();
                         match control {
                             GpuiWindowCaptionControl::Minimize => window.minimize_window(),
                             GpuiWindowCaptionControl::Maximize
                             | GpuiWindowCaptionControl::Restore => window.zoom_window(),
-                            GpuiWindowCaptionControl::Close => window.remove_window(),
+                            // The same question and clean-up as the window manager's close
+                            // (app/workspace_windows/close.rs).
+                            GpuiWindowCaptionControl::Close => {
+                                if this.workspace_window_should_close(window, cx) {
+                                    window.remove_window();
+                                }
+                            }
                         }
                     }),
                 )

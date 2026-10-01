@@ -196,6 +196,7 @@ impl ChatHostHandle {
         }));
         submit(Some(HostCommand::Call {
             key: key.clone(),
+            sink: id,
             method: "start",
             arguments: vec![config],
         }));
@@ -209,6 +210,7 @@ impl ChatHostHandle {
     pub(crate) fn call(&self, method: &'static str, arguments: Vec<Value>) {
         submit(Some(HostCommand::Call {
             key: self.key.clone(),
+            sink: self.id,
             method,
             arguments,
         }));

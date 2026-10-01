@@ -922,8 +922,33 @@ static void GhostexGpuiCEFOnScheduleMessagePumpWork(int64_t delayMs) {
   });
 }
 
+// CDXC:AppWindows 2026-10-01 WHY:
+// GPUI makes the menu named "Window" the app's windows menu, and AppKit then lists every titled
+// window in it on its own, beside the rows Ghostex builds for its workspace windows
+// (helpers/os_cli/main_menus.rs): each window twice, plus Settings and the other dialogs.
+// Ghostex keeps its own rows and takes the menu back from AppKit after every menu install,
+// removing what AppKit had already added to it.
+static void GhostexGpuiDetachSystemWindowsMenu(void) {
+  NSMenu *windowsMenu = NSApp.windowsMenu;
+  if (windowsMenu == nil) {
+    return;
+  }
+  NSApp.windowsMenu = nil;
+  for (NSMenuItem *item in [windowsMenu.itemArray copy]) {
+    if (item.action == @selector(makeKeyAndOrderFront:) ||
+        item.action == @selector(arrangeInFront:)) {
+      [windowsMenu removeItem:item];
+    }
+  }
+  while (windowsMenu.numberOfItems > 0 &&
+         windowsMenu.itemArray.lastObject.isSeparatorItem) {
+    [windowsMenu removeItemAtIndex:windowsMenu.numberOfItems - 1];
+  }
+}
+
 void GhostexGpuiCEFInstallApplicationHooks(void) {
   GhostexGpuiCEFInstallStandardEditMenu();
+  GhostexGpuiDetachSystemWindowsMenu();
   if (g_ghostexGpuiCEFApplicationHooksInstalled || !NSApp) {
     return;
   }

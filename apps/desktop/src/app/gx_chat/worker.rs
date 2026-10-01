@@ -88,6 +88,7 @@ impl ChatHostHandle {
         // QuickJS brain heard `nativeChat.start(config)`.
         let _ = commands.send(HostCommand::Call {
             key: key.clone(),
+            sink: id,
             method: "start",
             arguments: vec![config],
         });
@@ -105,6 +106,7 @@ impl ChatHostHandle {
         if let Some(commands) = COMMANDS.get() {
             let _ = commands.send(HostCommand::Call {
                 key: self.key.clone(),
+                sink: self.id,
                 method,
                 arguments,
             });

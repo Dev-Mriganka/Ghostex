@@ -96,6 +96,8 @@ pub(super) enum HostCommand {
     },
     Call {
         key: String,
+        /// The view that made the call, which becomes the one performing the chat's requests.
+        sink: u64,
         method: &'static str,
         arguments: Vec<Value>,
     },
@@ -128,11 +130,21 @@ pub(super) enum HostCommand {
 /// timers produce in five minutes.
 const MAX_HELD_REQUESTS: usize = 128;
 
+/// One view attached to a chat, with its own record of what it was sent.
+struct View {
+    sink: Sink,
+    sent: ghostex_gx_chat_core::SentFrame,
+}
+
 /// Every chat, and what the host counts about them.
 #[derive(Default)]
 pub(super) struct World {
     pub(super) store: ChatStore,
-    sinks: std::collections::BTreeMap<String, Sink>,
+    /// The views of each chat, the ACTIVE one last.
+    ///
+    /// CDXC:AppWindows 2026-10-01 WHY:
+    /// One chat can be on screen in several workspace windows at once (File > New Window), each its own view. A second view used to REPLACE the first, which then froze: it was sent nothing, and its resume was ignored because the host held the other sink. Every shown view is now sent the document, each against its own `SentFrame`, so none splices against rows it never had. Exactly one view, the last one attached, shown or used, performs what the chat asks of a view (its RPCs, saves, composer edits and opens), because those must happen once.
+    views: std::collections::BTreeMap<String, Vec<View>>,
     wakes: std::collections::BTreeMap<String, Instant>,
     pub(super) counters: HostCounters,
     diagnostics: HostDiagnostics,
@@ -220,13 +232,14 @@ fn disable_chat(world: &mut World) {
         world.store.remove(&key);
         purge(world, &key);
         world.disabled.insert(key.clone());
-        if let Some(sink) = world.sinks.remove(&key) {
-            let posted = sink
+        for view in world.views.remove(&key).unwrap_or_default() {
+            let posted = view
+                .sink
                 .outputs
                 .send(ChatHostOutput::Error(HOST_PANIC_MESSAGE.to_string()))
                 .is_ok();
             if posted {
-                (sink.wake)();
+                (view.sink.wake)();
             }
         }
         world.counters.chats_disabled += 1;
@@ -310,18 +323,19 @@ fn step(world: &mut World, command: Option<HostCommand>) {
                 let retained = world.store.entry(&identity);
                 retained.listeners = 1;
                 retained.touched_at = Instant::now();
-                // CDXC:SessionChat 2026-09-23 WHY:
-                // A new view starts with no rows, and a RETAINED core remembers what the previous
-                // view was sent: its next frame was a splice against rows the new view never had,
-                // so a chat switched away from and back to drew an empty transcript. The new view
-                // must be sent every channel whole, which is what each QuickJS view got by booting
-                // its own brain.
-                retained.core.forget_sent();
             }
-            // One sink per chat. A second view of the same session replaces the first, which is
-            // how the app resolves a chat to one view already (`native_chat_for_generation`);
-            // the replaced handle simply stops being drained.
-            world.sinks.insert(key.clone(), sink);
+            // CDXC:SessionChat 2026-09-23 WHY:
+            // A new view starts with no rows, and a RETAINED core remembers what the previous
+            // view was sent: its next frame was a splice against rows the new view never had,
+            // so a chat switched away from and back to drew an empty transcript. The new view
+            // must be sent every channel whole, which is what each QuickJS view got by booting
+            // its own brain: it starts with an empty `SentFrame` of its own (see `World::views`).
+            let views = world.views.entry(key.clone()).or_default();
+            views.retain(|view| view.sink.id != sink.id);
+            views.push(View {
+                sink,
+                sent: Default::default(),
+            });
             // `replayDraftSaves`: a save a previous run could not deliver is still in the
             // outbox, and opening its chat is what registers the writer that drains it.
             world.draft_workers.entry(key.clone()).or_default();
@@ -330,8 +344,12 @@ fn step(world: &mut World, command: Option<HostCommand>) {
             drive(world, &key, settings.into_iter().collect());
         }
         Some(HostCommand::Detach { key, sink }) => {
-            if world.sinks.get(&key).is_some_and(|held| held.id == sink) {
-                world.sinks.remove(&key);
+            let Some(views) = world.views.get_mut(&key) else {
+                return;
+            };
+            views.retain(|view| view.sink.id != sink);
+            if views.is_empty() {
+                world.views.remove(&key);
                 if let Some(retained) = world.store.get_mut(&key) {
                     retained.listeners = 0;
                     retained.touched_at = Instant::now();
@@ -340,9 +358,12 @@ fn step(world: &mut World, command: Option<HostCommand>) {
         }
         Some(HostCommand::Call {
             key,
+            sink,
             method,
             arguments,
         }) => {
+            // The view the user is using performs what this call makes the chat ask for.
+            activate_view(world, &key, sink);
             // A `resolve` is the answer to a request the core made, and the view echoes the
             // core's own id back, so there is no order matching to do. A retry write is the
             // one exception: it is the HOST's own request, numbered above every id the core
@@ -390,11 +411,27 @@ fn step(world: &mut World, command: Option<HostCommand>) {
             }
         }
         Some(HostCommand::Pause { key, sink, paused }) => {
-            let Some(held) = world.sinks.get_mut(&key).filter(|held| held.id == sink) else {
+            let Some(view) = world
+                .views
+                .get_mut(&key)
+                .and_then(|views| views.iter_mut().find(|view| view.sink.id == sink))
+            else {
                 return;
             };
-            let resumed = held.paused && !paused;
-            held.paused = paused;
+            let resumed = view.sink.paused && !paused;
+            view.sink.paused = paused;
+            if paused {
+                // Hidden: a view still on screen in another window takes over the requests.
+                if let Some(views) = world.views.get_mut(&key)
+                    && views.last().is_some_and(|active| active.sink.id == sink)
+                    && let Some(shown) = views.iter().rposition(|view| !view.sink.paused)
+                {
+                    let shown = views.remove(shown);
+                    views.push(shown);
+                }
+            } else {
+                activate_view(world, &key, sink);
+            }
             // Shown again: everything the view missed, as one drain from the revision it last had.
             if resumed {
                 publish(world, &key, Vec::new());
@@ -466,7 +503,7 @@ fn settings_pass(world: &mut World) {
         return;
     }
     world.settings_checked_at = Some(Instant::now());
-    let keys: Vec<String> = world.sinks.keys().cloned().collect();
+    let keys: Vec<String> = world.views.keys().cloned().collect();
     for key in keys {
         if let Some(event) = settings_moved(world, &key) {
             drive(world, &key, vec![event]);
@@ -891,55 +928,80 @@ fn write_storage(
 /// chat was closed. The document itself was never at risk, because a drain with no sink does not
 /// advance the revision and a new view reads the whole snapshot.
 pub(super) fn publish(world: &mut World, key: &str, requests: Vec<HostRequest>) {
-    let Some((last_revision, paused)) = world
-        .sinks
-        .get(key)
-        .map(|sink| (sink.last_revision, sink.paused))
-    else {
+    if world.views.get(key).is_none_or(|views| views.is_empty()) {
         hold(world, key, requests);
         return;
+    }
+    let (Some(views), Some(retained)) = (world.views.get_mut(key), world.store.get_mut(key)) else {
+        return;
     };
-    // A paused view still performs what the chat asks of it (its reads, its saves), so its lanes
-    // settle; the document waits, undrained, for the view to be shown.
-    if paused {
-        if let Some(sink) = world.sinks.get(key).filter(|_| !requests.is_empty()) {
-            let envelope = frame::envelope(
-                ghostex_gx_chat_core::Frame {
-                    revision: last_revision,
-                    ..Default::default()
-                },
-                requests,
-            );
-            if sink.outputs.send(ChatHostOutput::Drained(envelope)).is_ok() {
-                (sink.wake)();
+    let active = views.len() - 1;
+    let mut requests = Some(requests);
+    for (index, view) in views.iter_mut().enumerate() {
+        // Only the active view performs the chat's requests (see `World::views`).
+        let view_requests = if index == active {
+            requests.take().unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        // A paused view still performs what the chat asks of it (its reads, its saves), so its
+        // lanes settle; the document waits, undrained, for the view to be shown.
+        if view.sink.paused {
+            if !view_requests.is_empty() {
+                let envelope = frame::envelope(
+                    ghostex_gx_chat_core::Frame {
+                        revision: view.sink.last_revision,
+                        ..Default::default()
+                    },
+                    view_requests,
+                );
+                if view
+                    .sink
+                    .outputs
+                    .send(ChatHostOutput::Drained(envelope))
+                    .is_ok()
+                {
+                    (view.sink.wake)();
+                }
             }
+            continue;
         }
-        return;
+        // `frame_at` (here `frame_for`, its per-view twin), not `frame`: `take` in
+        // `native-host.ts` read `Date.now()` itself, and measuring `nextWakeMs` against the clock
+        // of the last event handled is one turn stale, so the host would arm its timer that much
+        // late (`docs/2026-09-21/rust-chat/PROGRESS.md`, Integration 2 item 8).
+        let drained =
+            retained
+                .core
+                .frame_for(&mut view.sent, view.sink.last_revision, now_millis() as f64);
+        let revision = drained.revision;
+        let envelope = frame::envelope(drained, view_requests);
+        let carries = envelope
+            .as_object()
+            .is_some_and(frame::envelope_carries_change);
+        view.sink.last_revision = revision;
+        if !carries {
+            continue;
+        }
+        let posted = view
+            .sink
+            .outputs
+            .send(ChatHostOutput::Drained(envelope))
+            .is_ok();
+        world.counters.frames_published += 1;
+        if posted {
+            (view.sink.wake)();
+        }
     }
-    let Some(retained) = world.store.get_mut(key) else {
-        return;
-    };
-    // `frame_at`, not `frame`: `take` in `native-host.ts` read `Date.now()` itself, and measuring
-    // `nextWakeMs` against the clock of the last event handled is one turn stale, so the host would
-    // arm its timer that much late (`docs/2026-09-21/rust-chat/PROGRESS.md`, Integration 2 item 8).
-    let drained = retained.core.frame_at(last_revision, now_millis() as f64);
-    let revision = drained.revision;
-    let envelope = frame::envelope(drained, requests);
-    let carries = envelope
-        .as_object()
-        .is_some_and(frame::envelope_carries_change);
-    let Some(sink) = world.sinks.get_mut(key) else {
-        return;
-    };
-    sink.last_revision = revision;
-    if !carries {
-        return;
-    }
-    let posted = sink.outputs.send(ChatHostOutput::Drained(envelope)).is_ok();
-    let wake = sink.wake.clone();
-    world.counters.frames_published += 1;
-    if posted {
-        wake();
+}
+
+/// Makes `sink` the chat's active view: the one that performs its requests.
+fn activate_view(world: &mut World, key: &str, sink: u64) {
+    if let Some(views) = world.views.get_mut(key)
+        && let Some(index) = views.iter().position(|view| view.sink.id == sink)
+    {
+        let view = views.remove(index);
+        views.push(view);
     }
 }
 

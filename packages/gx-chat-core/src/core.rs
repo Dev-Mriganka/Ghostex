@@ -64,7 +64,7 @@ pub struct ChatCore {
 /// items kept their identity there (`native-presentation.ts` cached its projection), so comparing
 /// by value here is the same test.
 #[derive(Clone, Debug, Default)]
-struct SentFrame {
+pub struct SentFrame {
     /// The parts counter the host was last sent, so a drain after a publish ships all four
     /// channels and a drain without one ships none.
     parts_revision: u64,
@@ -244,6 +244,20 @@ impl ChatCore {
     /// against the rows the OLD view held and draws an empty transcript.
     pub fn forget_sent(&mut self) {
         self.sent = SentFrame::default();
+    }
+
+    /// [`Self::frame_at`] for one of several renderers drawing the same chat, each keeping its own
+    /// record of what it was sent. A new renderer starts from `SentFrame::default()` and so gets
+    /// every channel whole.
+    ///
+    /// For a host that shows one chat in more than one window (the desktop's File > New Window):
+    /// the splices are relative to what THIS renderer holds, so draining one renderer never
+    /// leaves another splicing against rows it was not sent.
+    pub fn frame_for(&mut self, sent: &mut SentFrame, last_revision: u64, now_ms: f64) -> Frame {
+        std::mem::swap(&mut self.sent, sent);
+        let frame = self.frame_at(last_revision, now_ms);
+        std::mem::swap(&mut self.sent, sent);
+        frame
     }
 
     /// The id for the next request the core asks for.

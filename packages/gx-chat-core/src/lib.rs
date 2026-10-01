@@ -41,7 +41,7 @@ pub mod transcript;
 mod wire;
 
 pub use crate::action::{ActionKind, UserAction};
-pub use crate::core::ChatCore;
+pub use crate::core::{ChatCore, SentFrame};
 pub use crate::dispatch::{owner, Family};
 pub use crate::document::{
     assemble, frame_parts, AccountStatus, AsyncQuestions, ComposerActions, ComposerChrome,

@@ -20,6 +20,11 @@ pub(crate) fn set_ghostex_gpui_main_menus(source_workarea_cef_owns_native_focus:
     cef::refresh_application_menu_hooks();
 }
 
+/// The menu variant installed now (`set_ghostex_gpui_main_menus`).
+pub(crate) fn installed_main_menus_source_focus() -> bool {
+    MAIN_MENUS_SOURCE_FOCUS.get()
+}
+
 /// Rebuilds the menu bar after a workspace window opened, closed, was renamed or became the
 /// active one, so the Window menu lists the windows as they are (app/workspace_windows/).
 pub(crate) fn refresh_ghostex_gpui_main_menus(cx: &mut App) {

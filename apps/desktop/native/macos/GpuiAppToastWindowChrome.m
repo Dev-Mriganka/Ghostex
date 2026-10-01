@@ -296,6 +296,29 @@ void GhostexGpuiShowChildWindowAboveParent(NSWindow *child, NSWindow *parent) {
   [child orderWindow:NSWindowAbove relativeTo:parent.windowNumber];
 }
 
+// Whether the window holding `childNativeView` is attached to the one holding `parentNativeView`,
+// directly or through other child windows: a workspace window that closes while another stays open
+// closes what it carries (app/workspace_windows/close.rs).
+bool GhostexGpuiWindowIsAttachedTo(void *childNativeView, void *parentNativeView) {
+  @autoreleasepool {
+    if (childNativeView == NULL || parentNativeView == NULL) {
+      return false;
+    }
+    NSWindow *child = ((__bridge NSView *)childNativeView).window;
+    NSWindow *parent = ((__bridge NSView *)parentNativeView).window;
+    if (child == nil || parent == nil || child == parent) {
+      return false;
+    }
+    for (NSWindow *ancestor = child.parentWindow; ancestor != nil;
+         ancestor = ancestor.parentWindow) {
+      if (ancestor == parent) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
 // CDXC:Theming 2026-09-25 WHY:
 // Under window glass the app's menus and tooltips draw in small frosted child windows, and only
 // one of each kind is up at a time, so each kind keeps one window and hides it between uses:

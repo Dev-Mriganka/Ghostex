@@ -125,7 +125,7 @@ impl GhostexGpuiApp {
         );
     }
 
-    fn native_docs_hide_toolbar_host(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn native_docs_hide_toolbar_host(&mut self, cx: &mut Context<Self>) {
         if std::mem::take(&mut self.native_docs.notes_windows.toolbar_hosted) {
             hide_frosted_host(FrostedHostKind::DocsSelectionToolbar, cx);
         }
@@ -150,7 +150,7 @@ impl GhostexGpuiApp {
         self.native_docs_place_composer_window(frame, cx);
     }
 
-    fn native_docs_place_composer_window(
+    pub(crate) fn native_docs_place_composer_window(
         &mut self,
         frame: Option<Bounds<Pixels>>,
         cx: &mut Context<Self>,

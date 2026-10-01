@@ -36,6 +36,20 @@ impl GhostexGpuiApp {
         self.gx_store_focus_session_row(session_id, RowFocusOptions::default(), cx)
     }
 
+    /// Whether this window has the session behind `row_id` focused or on screen, so a
+    /// notification or menu bar click on it can go to this window (app/workspace_windows/).
+    pub(crate) fn gx_store_shows_session_row(&self, row_id: &str) -> bool {
+        let row_id = row_id.trim();
+        let Some(session) = SessionKey::parse_remote_scoped_session_id(row_id)
+            .or_else(|| SessionKey::parse_sidebar_session_id(row_id))
+        else {
+            return false;
+        };
+        let focus = self.gx_store.core.focus();
+        focus.focused_session.as_ref() == Some(&session)
+            || focus.visible_sessions.contains(&session)
+    }
+
     /// Focuses one sidebar group (a project, or a user-made group in one) the way a header click
     /// does. Returns whether the id named a group a focus can take.
     pub(crate) fn gx_store_focus_activated_group(

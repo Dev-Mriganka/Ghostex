@@ -46,8 +46,11 @@ pub(crate) fn queue_gpui_session_attention_notification_click(session_id: String
         .spawn(async move {
             let _ = app.update_in(&mut async_app, |this, window, cx| {
                 cx.activate(true);
-                window.activate_window();
-                this.dispatch_gpui_status_pet_activation(session_id.as_str(), cx);
+                // The window already showing the session takes the click (app/workspace_windows/).
+                let row_id = session_id.clone();
+                this.activate_session_in_its_window(&row_id, window, cx, move |app, cx| {
+                    app.dispatch_gpui_status_pet_activation(session_id.as_str(), cx);
+                });
             });
         })
         .detach();
@@ -68,10 +71,20 @@ pub(crate) fn queue_gpui_accessibility_display_options_changed(should_reduce_mot
                 cx.set_reduce_motion(should_reduce_motion);
                 // The same notification carries Reduce Transparency, which turns window glass off.
                 let settings = shared_settings::shared_sidebar_settings_snapshot();
-                if refresh_window_glass(settings.object()) {
+                let glass_changed = refresh_window_glass(settings.object());
+                if glass_changed {
                     this.refresh_workarea_page_themes(&settings, cx);
                     cx.notify();
                 }
+                // Every window draws its own pet and pages (app/workspace_windows/).
+                this.update_other_workspace_windows(cx, move |app, cx| {
+                    app.set_gpui_pet_overlay_reduce_motion_enabled(should_reduce_motion, cx);
+                    if glass_changed {
+                        let settings = shared_settings::shared_sidebar_settings_snapshot();
+                        app.refresh_workarea_page_themes(&settings, cx);
+                    }
+                    cx.notify();
+                });
             });
         })
         .detach();
