@@ -915,6 +915,11 @@ impl SettingsStore {
         );
     }
 
+    /// The app's handler of this modal's commands, which outlives the modal window.
+    pub(crate) fn host(&self) -> SettingsModalHost {
+        self.host.clone()
+    }
+
     /// `closeSettingsModal`: saves the navigation and any pending edit, then tells the host.
     pub(crate) fn close(&mut self, cx: &mut Context<Self>) {
         if self.closed {

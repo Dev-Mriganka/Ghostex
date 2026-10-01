@@ -16,6 +16,7 @@ mod editor;
 mod guide;
 mod helper_tools;
 mod manager;
+mod sign_in_watch;
 pub(crate) mod widgets;
 
 use super::super::fields::{
@@ -114,6 +115,9 @@ impl AccountsTab {
         // CDXC:Settings 2026-09-08 DECISION: Refresh accounts every time the Accounts page opens and show loading on the Refresh accounts button itself.
         let client = cx.new(|cx| AccountsClient::new(store.clone(), true, cx));
         cx.observe(&client, |_, _, cx| cx.notify()).detach();
+        // Settings closing drops the page with a sign-in still running in the browser.
+        cx.on_release(|page: &mut Self, cx| page.hand_off_sign_ins(cx))
+            .detach();
         cx.observe_window_activation(window, |page: &mut Self, window, cx| {
             if window.is_window_active() {
                 page.client
@@ -160,6 +164,7 @@ impl AccountsTab {
         self.client
             .update(cx, |client, cx| client.set_active(active, cx));
         if !active {
+            self.hand_off_sign_ins(cx);
             self.setup_poll = None;
             self.helpers.poll = None;
             for flow in self.flows.values_mut() {
@@ -167,6 +172,7 @@ impl AccountsTab {
             }
             return;
         }
+        sign_in_watch::stop();
         if !self.client.read(cx).connected(cx) {
             return;
         }
@@ -190,7 +196,7 @@ impl AccountsTab {
     ///
     /// CDXC:AgentProviders 2026-09-08 DECISION:
     /// Finishing login reopens Settings at Accounts, even if the user left Settings while the browser was open. The account is already registered before this completion is announced.
-    /// This watch runs only while the Accounts page is open, so nothing reopens Settings after it is closed; React's `monitorAccountSetup` (accounts/setup-monitor.ts) had no caller either when it was deleted on 2026-10-01.
+    /// This watch runs while the Accounts page is open; a sign-in still running when the page closes is watched by `sign_in_watch`, which reopens Settings at Accounts when it completes.
     fn poll_setup_jobs(&mut self, cx: &mut Context<Self>) {
         let this = cx.weak_entity();
         let params = json!({ "operation": "setupStatus", "owner": client::ACCOUNT_SETUP_OWNER });
@@ -239,6 +245,24 @@ impl AccountsTab {
             },
             cx,
         );
+    }
+
+    /// The page is leaving with sign-ins still running: watch them from outside the page
+    /// (`sign_in_watch`).
+    fn hand_off_sign_ins(&self, cx: &mut App) {
+        let mut job_ids: Vec<String> = self
+            .flows
+            .values()
+            .filter_map(|flow| flow.job.as_ref())
+            .chain(self.pending_job.as_ref())
+            .filter(|job| !matches!(job["status"].as_str(), Some("complete" | "failed")))
+            .filter_map(|job| job["id"].as_str().map(str::to_string))
+            .collect();
+        job_ids.sort();
+        job_ids.dedup();
+        if !job_ids.is_empty() && self.client.read(cx).connected(cx) {
+            sign_in_watch::watch(self.store.read(cx).host(), job_ids, cx);
+        }
     }
 
     /// `request(params)` of the manager: a mutation whose answer is the new state.

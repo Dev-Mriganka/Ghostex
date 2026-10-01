@@ -243,6 +243,9 @@ pub(crate) enum SettingsModalCommand {
     HostMessage(Value),
     /// The modal removed its own window.
     Close,
+    /// A sign-in the Accounts page started finished after the page closed: show Settings at
+    /// Accounts (`tabs/accounts/sign_in_watch.rs`).
+    OpenAccounts,
 }
 
 /// The answer of a [`SettingsModalCommand::GxserverRpc`].

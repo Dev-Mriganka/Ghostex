@@ -12,6 +12,7 @@ use crate::app::window::settings_modal::{
     GpuiSettingsModalWindow, SETTINGS_MODAL_HEIGHT, SETTINGS_MODAL_WIDTH, SettingsModalCommand,
     SettingsModalConfig, SettingsOpenRequest,
 };
+use crate::app::window::settings_modal::model::SettingsTabId;
 use crate::*;
 
 /// The per-dialog prompt-agent overrides (`PROMPT_AGENT_MODAL_STORAGE_KEYS` of the React modal host):
@@ -226,6 +227,20 @@ impl GhostexGpuiApp {
             }
             SettingsModalCommand::Close => {
                 self.release_native_app_modal_window(kind, cx);
+            }
+            SettingsModalCommand::OpenAccounts => {
+                // Settings still open on another page switches to Accounts in place.
+                let switched = self.update_native_app_modal::<GpuiSettingsModalWindow, _>(
+                    GpuiAppModalKind::Settings,
+                    cx,
+                    |settings, window, cx| {
+                        settings.select_page(SettingsTabId::Accounts, window, cx);
+                        window.activate_window();
+                    },
+                );
+                if switched.is_none() {
+                    self.open_gpui_settings_accounts_page(None, cx);
+                }
             }
         }
     }

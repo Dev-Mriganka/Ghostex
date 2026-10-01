@@ -180,6 +180,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
                 eprintln!("close");
                 cx.quit();
             }
+            SettingsModalCommand::OpenAccounts => eprintln!("open accounts"),
         }
     });
     let open_message = match state.as_str() {
