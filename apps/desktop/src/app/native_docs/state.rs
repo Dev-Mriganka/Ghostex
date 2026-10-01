@@ -252,6 +252,8 @@ pub(crate) struct DocsDocument {
     pub(crate) changes: Option<(Vec<super::gutter::LineChange>, Vec<usize>)>,
     pub(crate) dirty: bool,
     pub(crate) saving: bool,
+    /// Saves the browser area's page sent for this file that have not answered yet.
+    pub(crate) page_saves_in_flight: u32,
     pub(crate) mode: DocsMarkdownMode,
     pub(crate) size: Option<u64>,
     /// HTML files: the page's annotation tool (Agentation) is on.
@@ -299,6 +301,7 @@ impl DocsDocument {
             changes: None,
             dirty: false,
             saving: false,
+            page_saves_in_flight: 0,
             mode: DocsMarkdownMode::default(),
             size: None,
             html_annotate: true,

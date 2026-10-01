@@ -135,7 +135,19 @@ impl GhostexGpuiApp {
                     }
                     return;
                 }
+                let page_save = serde_json::from_str::<serde_json::Value>(&payload)
+                    .ok()
+                    .filter(|request| {
+                        manage_request_string(request, "action").as_deref() == Some("save")
+                    })
+                    .and_then(|request| manage_request_string(&request, "path"));
+                if let Some(path) = page_save.as_deref() {
+                    self.native_docs_begin_page_save(path);
+                }
                 self.run_docs_files_request(payload, cx, move |this, response, cx| {
+                    if let Some(path) = page_save.as_deref() {
+                        this.native_docs_finish_page_save(path, &response);
+                    }
                     this.dispatch_project_workarea_json_event(
                         slot_key,
                         "ghostex-manage-files-response",

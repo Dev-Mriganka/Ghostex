@@ -60,6 +60,37 @@ impl GhostexGpuiApp {
         }));
     }
 
+    /// The browser area's page (an Excalidraw drawing's autosave) is writing `path`: the change
+    /// poll stands down until [`Self::native_docs_finish_page_save`] records the written file.
+    ///
+    /// CDXC:Docs 2026-10-01 WHY:
+    /// The page's own saves went around the document's state, so the poll saw each autosave as a change on disk and reloaded the page (a new `revision`), remounting the drawing every few seconds while the user drew. The save is marked like a native one (`saving`, then the written file's signature) so only a write from elsewhere reloads the page.
+    pub(crate) fn native_docs_begin_page_save(&mut self, path: &str) {
+        if let Some(document) = self.native_docs.document_mut(path) {
+            document.page_saves_in_flight += 1;
+            document.saving = true;
+        }
+    }
+
+    /// The page's save answered: its file becomes the known disk state.
+    pub(crate) fn native_docs_finish_page_save(
+        &mut self,
+        path: &str,
+        response: &serde_json::Value,
+    ) {
+        let Some(document) = self.native_docs.document_mut(path) else {
+            return;
+        };
+        document.page_saves_in_flight = document.page_saves_in_flight.saturating_sub(1);
+        document.saving = document.page_saves_in_flight > 0;
+        if response.get("error").is_none()
+            && let Some(signature) = disk_signature(&response["file"])
+        {
+            document.disk_signature = Some(signature);
+            document.size = response["file"]["size"].as_u64().or(document.size);
+        }
+    }
+
     fn native_docs_poll_active_file(&mut self, cx: &mut Context<Self>) {
         let Some(document) = self.native_docs.active_document() else {
             return;
