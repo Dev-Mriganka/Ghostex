@@ -86,6 +86,7 @@ impl NativeChatView {
         }
         let p = p;
         let s = p.scale;
+        self.begin_row_find(index, main, &p);
         let content = if item["kind"] == "summary" {
             let id = format!("summary:{}", text(&item, "id"));
             let expanded = self.is_expanded(&id, item["latestReply"] == true);
@@ -153,6 +154,7 @@ impl NativeChatView {
             self.message_row(&item["message"], &p, window, cx)
         };
         self.detail_rows.end_row();
+        self.row_find = None;
         if self.disclosure_motion.borrow().running() {
             window.request_animation_frame();
         }
