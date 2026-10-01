@@ -24,10 +24,16 @@ pub(crate) fn child_window_decorations() -> Option<gpui::WindowDecorations> {
 ///
 /// CDXC:PlatformSupport 2026-09-23 WHY:
 /// On Windows a window opened without a display is placed against the primary monitor, and bounds that lie on another monitor fail its on-display check and are replaced by the primary monitor's default spot. With the app on a second monitor, the chat's model, mode and context window menus therefore opened somewhere else, where they looked like they were behind the main window. Every popup names the display its bounds are on.
+///
+/// CDXC:PlatformSupport 2026-10-01 WHY:
+/// macOS answers `None`: there every display's GPUI bounds start at (0, 0) and a window's bounds are relative to the display it is on, so a point cannot name a display, and the search returned the menu-bar display for any point that fit inside it. Callers that chained the parent window's display behind it (`display_at(..).or(parent_display)`) therefore opened their window on the menu-bar display whenever Ghostex sat on another monitor: the Files view's comment box landed on the other screen, read as never opening, and its open state hid the selection toolbar until a restart (reported on 10.8.1). With `None` the parent's display places the window; a caller with no display of its own gets the menu-bar display, as before. SEE-ALSO: `sync_suggestion_window` in native_chat/suggestions/window.rs (CDXC:SessionChat 2026-09-19).
 pub(crate) fn display_at(
     point: gpui::Point<gpui::Pixels>,
     cx: &gpui::App,
 ) -> Option<gpui::DisplayId> {
+    if cfg!(target_os = "macos") {
+        return None;
+    }
     cx.displays()
         .into_iter()
         .find(|display| display.bounds().contains(&point))

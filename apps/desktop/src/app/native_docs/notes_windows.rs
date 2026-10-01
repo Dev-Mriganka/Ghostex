@@ -257,7 +257,11 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
             .map(|(origin, display_id)| (frame, origin, display_id))
     });
     let Some((frame, origin, display_id)) = placement else {
-        give_up(&app, wanted.is_some(), cx);
+        give_up(
+            &app,
+            wanted.is_some().then(|| "no main window".to_string()),
+            cx,
+        );
         return;
     };
     let screen = Bounds::new(origin + frame.origin, frame.size);
@@ -313,7 +317,7 @@ fn apply_composer_window(app: gpui::Entity<GhostexGpuiApp>, cx: &mut gpui::App) 
     );
     match result {
         Ok(handle) => finish(&app, Some(handle), Some(frame), cx),
-        Err(_) => give_up(&app, true, cx),
+        Err(error) => give_up(&app, Some(error.to_string()), cx),
     }
 }
 
@@ -337,12 +341,21 @@ fn finish(
     });
 }
 
-/// A window that could not open drops its request, so the next draw of the Docs view asks again
-/// instead of this retrying in a loop.
-fn give_up(app: &gpui::Entity<GhostexGpuiApp>, failed: bool, cx: &mut gpui::App) {
-    if failed {
-        app.update(cx, |app, _| {
+/// A composer whose window could not open (`failure`) is closed, not left open with nothing on
+/// screen.
+///
+/// CDXC:Docs 2026-10-01 WHY:
+/// The toolbar over selected text stays hidden while a composer is open, and only the composer's own Add, X or Escape closes it. A composer whose window failed to open used to stay open while every draw asked for its window again, so the toolbar never came back until Ghostex restarted (reported on 10.8.1, where the window opened on another monitor). A failed open now closes the composer, and the failure is logged.
+fn give_up(app: &gpui::Entity<GhostexGpuiApp>, failure: Option<String>, cx: &mut gpui::App) {
+    if let Some(error) = failure {
+        crate::support_logs::append(
+            crate::support_logs::GpuiSupportLog::HostLifecycle,
+            "docsComposer.windowOpenFailed",
+            serde_json::json!({ "error": error }),
+        );
+        app.update(cx, |app, cx| {
             app.native_docs.notes_windows.composer_wanted = None;
+            app.native_docs_close_composer(cx);
         });
     }
     finish(app, None, None, cx);
