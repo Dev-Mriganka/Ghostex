@@ -67,6 +67,24 @@ impl NativeChatView {
         self.note_image_viewer_action("Path copied", cx);
     }
 
+    /// Opens the file behind a picture the preview could not show, or its folder, through the
+    /// host's own file routes, which know the session's machine, then closes the preview.
+    pub(super) fn open_viewer_file(&mut self, locate: bool, cx: &mut Context<Self>) {
+        let Some(path) = self
+            .image_viewer_current()
+            .map(|image| text(&image, "path"))
+            .filter(|path| !path.is_empty())
+        else {
+            return;
+        };
+        self.host(
+            if locate { "locateFile" } else { "openFile" },
+            json!({ "path": path }),
+            cx,
+        );
+        self.close_image_viewer(cx);
+    }
+
     /// Hands the bytes to the host's Downloads writer, the route React's Save image also takes.
     pub(super) fn save_viewer_image(&mut self, cx: &mut Context<Self>) {
         let Some(image) = self.image_viewer_current() else {

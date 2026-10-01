@@ -86,6 +86,35 @@ fn download_file_name(label: &str, path: &str, url: &str) -> String {
     }
 }
 
+/**
+ * Why `readSessionChatImage` refused a picture, so the viewer can say so instead of one sentence for
+ * every failure: `missing` (the file has gone), `tooLarge` (empty, or over the read cap), `notImage`
+ * (bytes nothing recognises as a picture) and `unreadable` (anything else, the server's own message
+ * standing in). Renderers add `unsupported` and `damaged` for bytes that arrived but did not decode,
+ * and `unavailable` for a block with no transport at all.
+ *
+ * CDXC:SessionChat 2026-10-01 SEE-ALSO:
+ * The messages matched here are the refusals in server/src/session_chat_files.rs
+ * (`handle_read_session_chat_image_http`); each reason's title and sentence are drawn by
+ * apps/desktop/src/app/native_chat/image_viewer/unavailable.rs and
+ * apps/mobile/app/src/chat/native/cards/ImageUnavailable.tsx, which must keep the same words.
+ */
+pub fn image_read_failure_reason(code: &str, message: &str) -> &'static str {
+    if code == "notFound" {
+        return "missing";
+    }
+    let message = ascii_lower(message);
+    if message.contains("absolute path") {
+        "missing"
+    } else if message.contains("between 1 byte") {
+        "tooLarge"
+    } else if message.contains("not a recognized image") {
+        "notImage"
+    } else {
+        "unreadable"
+    }
+}
+
 /// Classifies one transcript image block into a source both renderers can load.
 ///
 /// `transport` says how a renderer obtains the bytes: `url` renders the address as-is, `data`

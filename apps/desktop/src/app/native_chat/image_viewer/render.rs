@@ -210,10 +210,12 @@ impl Render for ImageViewerWindow {
         if window.focused(cx).is_none() {
             self.focus.focus(window, cx);
         }
-        let label = text(&image, "label");
         let copyable = !text(&image, "copyPath").is_empty();
         let source = self.chat.update(cx, |chat, cx| chat.chat_image(&image, cx));
-        let loading = matches!(source, ChatImageSource::Loading);
+        let failure = match &source {
+            ChatImageSource::Unavailable(failure) => Some(failure.clone()),
+            _ => None,
+        };
         let viewport = window.viewport_size();
         let natural = self.natural_size(&source, window, cx);
         // Exactly the box the picture fills, whenever its own size is known.
@@ -287,19 +289,20 @@ impl Render for ImageViewerWindow {
                 )
                 .child(picture)
                 .into_any_element(),
-            None => div()
-                .px(px(16.0))
-                .py(px(12.0))
-                .rounded(px(12.0))
-                .border_1()
-                .border_color(p.control_border)
-                .text_color(p.muted)
-                .child(if loading {
-                    "Loading image…".to_string()
-                } else {
-                    format!("{label} could not be shown here.")
-                })
-                .into_any_element(),
+            None => match &failure {
+                Some(failure) => {
+                    self.unavailable_card(&image, failure, completed, viewport.width, &p, cx)
+                }
+                None => div()
+                    .px(px(16.0))
+                    .py(px(12.0))
+                    .rounded(px(12.0))
+                    .border_1()
+                    .border_color(p.control_border)
+                    .text_color(p.muted)
+                    .child("Loading image…")
+                    .into_any_element(),
+            },
         };
         let body = div()
             .id("chat-image-viewer-scroll")
@@ -341,6 +344,7 @@ impl Render for ImageViewerWindow {
         } else {
             gpui::black().opacity(0.5)
         };
+        // A picture that cannot be shown carries its own actions in its card (unavailable.rs).
         let toolbar = stop(
             div()
                 .absolute()
@@ -482,7 +486,7 @@ impl Render for ImageViewerWindow {
                 }
             }))
             .child(body)
-            .child(toolbar)
+            .when(failure.is_none(), |viewer| viewer.child(toolbar))
             .child(close)
             .child(self.pan_listeners(cx))
             .into_any_element()

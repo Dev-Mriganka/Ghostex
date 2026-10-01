@@ -341,10 +341,14 @@ pub fn settle_rpc(state: &mut ChatState, request_id: u64, outcome: &RpcOutcome) 
             action: "chatImage".to_string(),
             params: Box::new(match &result {
                 Some(image) => json!({ "path": path, "image": image }),
-                None => json!({
-                    "path": path,
-                    "error": failure.map(|(_, message)| message).unwrap_or_default(),
-                }),
+                None => {
+                    let (code, message) = failure.unwrap_or_default();
+                    json!({
+                        "path": path,
+                        "reason": crate::transcript::images::image_read_failure_reason(code.as_deref().unwrap_or_default(), &message),
+                        "error": message,
+                    })
+                }
             }),
         }];
     }

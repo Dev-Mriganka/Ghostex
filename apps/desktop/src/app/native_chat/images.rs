@@ -67,7 +67,33 @@ const THUMBNAIL_MAX_SOURCE_PIXELS: u64 = 64 * 1024 * 1024;
 enum ChatImageEntry {
     Loading,
     Ready(Arc<gpui::Image>),
-    Failed,
+    Failed(ChatImageFailure),
+}
+
+/// Why a picture cannot be shown: one of the core's `image_read_failure_reason` words, or
+/// `unsupported`, `damaged` and `unavailable`, which only a renderer can tell.
+#[derive(Clone, Debug)]
+pub(super) struct ChatImageFailure {
+    pub(super) reason: String,
+    /// The server's own sentence, shown when the reason alone says too little.
+    pub(super) error: String,
+}
+
+impl ChatImageFailure {
+    fn new(reason: &str) -> Self {
+        Self {
+            reason: reason.to_string(),
+            error: String::new(),
+        }
+    }
+
+    /// The file is there and only its bytes could not be shown, so opening it elsewhere can help.
+    pub(super) fn file_exists(&self) -> bool {
+        matches!(
+            self.reason.as_str(),
+            "tooLarge" | "notImage" | "unsupported" | "damaged"
+        )
+    }
 }
 
 /// One picture shrunk to the tile it is painted in.
@@ -98,7 +124,7 @@ pub(super) enum ChatImageSource {
     Bytes(Arc<gpui::Image>),
     Loading,
     /// No transport, unreadable bytes, or a format GPUI cannot decode: the named chip stands in.
-    Unavailable,
+    Unavailable(ChatImageFailure),
 }
 
 /// What one transcript tile paints: the same picture, already shrunk to the size it is drawn at.
@@ -107,7 +133,7 @@ enum ChatImageTile {
     Thumbnail(Arc<RenderImage>),
     Whole(Arc<gpui::Image>),
     Loading,
-    Unavailable,
+    Unavailable(ChatImageFailure),
 }
 
 fn image_format(media_type: &str) -> Option<ImageFormat> {
@@ -124,16 +150,46 @@ fn image_format(media_type: &str) -> Option<ImageFormat> {
     }
 }
 
-fn decode_data_url(url: &str) -> Option<gpui::Image> {
-    let (meta, payload) = url.strip_prefix("data:")?.split_once(',')?;
+fn decode_data_url(url: &str) -> Result<gpui::Image, ChatImageFailure> {
+    let damaged = || ChatImageFailure::new("damaged");
+    let (meta, payload) = url
+        .strip_prefix("data:")
+        .and_then(|url| url.split_once(','))
+        .ok_or_else(damaged)?;
     if !meta.contains(";base64") {
-        return None;
+        return Err(ChatImageFailure::new("unsupported"));
     }
-    let format = image_format(meta.split(';').next().unwrap_or_default())?;
+    decoded_image(meta.split(';').next().unwrap_or_default(), payload.trim())
+}
+
+/**
+ * The picture behind base64 bytes, refused when GPUI has no decoder for its type or its header
+ * does not read as a picture.
+ *
+ * CDXC:SessionChat 2026-10-01 WHY:
+ * The server recognises a file by its first bytes, so a truncated or corrupt PNG arrives as
+ * `loaded` and GPUI then paints nothing at all; checking the header here lets the viewer say the
+ * file looks damaged instead of showing an empty stage.
+ */
+fn decoded_image(media_type: &str, base64_data: &str) -> Result<gpui::Image, ChatImageFailure> {
+    let format = image_format(media_type).ok_or_else(|| ChatImageFailure::new("unsupported"))?;
     let bytes = base64::engine::general_purpose::STANDARD
-        .decode(payload.trim())
-        .ok()?;
-    Some(gpui::Image::from_bytes(format, bytes))
+        .decode(base64_data)
+        .map_err(|_| ChatImageFailure::new("damaged"))?;
+    if format != ImageFormat::Svg {
+        // Only a header that fails to parse counts: a type this build has no header reader for
+        // (`Unsupported`) is still left to GPUI's own decoders.
+        let header = image::ImageReader::new(std::io::Cursor::new(bytes.as_slice()))
+            .with_guessed_format()
+            .map_err(|_| ChatImageFailure::new("damaged"))?
+            .into_dimensions();
+        match header {
+            Ok((width, height)) if width > 0 && height > 0 => {}
+            Err(image::ImageError::Unsupported(_)) => {}
+            _ => return Err(ChatImageFailure::new("damaged")),
+        }
+    }
+    Ok(gpui::Image::from_bytes(format, bytes))
 }
 
 /// The 3rem square React draws for a picture (`.ghostex-chat-inline-image`), or nothing when its
@@ -196,7 +252,7 @@ fn thumbnail(source: &ChatImageTile, p: &ChatAppearance) -> Option<AnyElement> {
                 )
                 .into_any_element(),
         ),
-        ChatImageTile::Unavailable => None,
+        ChatImageTile::Unavailable(_) => None,
     }
 }
 
@@ -248,12 +304,11 @@ fn build_thumbnail(picture: &gpui::Image, pixels: u32) -> Option<RenderImage> {
     Some(RenderImage::new(vec![image::Frame::new(data)]))
 }
 
-fn decode_read_result(result: &Value) -> Option<gpui::Image> {
-    let format = image_format(result["mediaType"].as_str()?)?;
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(result["base64Data"].as_str()?)
-        .ok()?;
-    Some(gpui::Image::from_bytes(format, bytes))
+fn decode_read_result(result: &Value) -> Result<gpui::Image, ChatImageFailure> {
+    decoded_image(
+        result["mediaType"].as_str().unwrap_or_default(),
+        result["base64Data"].as_str().unwrap_or_default(),
+    )
 }
 
 impl NativeChatView {
@@ -263,7 +318,7 @@ impl NativeChatView {
         if transport == "url" {
             let url = text(image, "url");
             return if url.is_empty() {
-                ChatImageSource::Unavailable
+                ChatImageSource::Unavailable(ChatImageFailure::new("unavailable"))
             } else {
                 ChatImageSource::Uri(url)
             };
@@ -274,11 +329,13 @@ impl NativeChatView {
             _ => String::new(),
         };
         if key.is_empty() {
-            return ChatImageSource::Unavailable;
+            return ChatImageSource::Unavailable(ChatImageFailure::new("unavailable"));
         }
         match self.images.entries.borrow().get(&key) {
             Some(ChatImageEntry::Ready(image)) => return ChatImageSource::Bytes(image.clone()),
-            Some(ChatImageEntry::Failed) => return ChatImageSource::Unavailable,
+            Some(ChatImageEntry::Failed(failure)) => {
+                return ChatImageSource::Unavailable(failure.clone());
+            }
             Some(ChatImageEntry::Loading) => return ChatImageSource::Loading,
             None => {}
         }
@@ -323,7 +380,7 @@ impl NativeChatView {
             // An address GPUI fetches and scales itself, as the browser does for React.
             ChatImageSource::Uri(url) => return ChatImageTile::Uri(url),
             ChatImageSource::Loading => return ChatImageTile::Loading,
-            ChatImageSource::Unavailable => return ChatImageTile::Unavailable,
+            ChatImageSource::Unavailable(failure) => return ChatImageTile::Unavailable(failure),
             ChatImageSource::Bytes(picture) => picture,
         };
         if picture.format == ImageFormat::Svg {
@@ -372,7 +429,17 @@ impl NativeChatView {
             return;
         }
         if request["method"] != "loaded" {
-            self.store_chat_image(path, None, cx);
+            let params = &request["params"];
+            let reason = text(params, "reason");
+            let failure = ChatImageFailure {
+                reason: if reason.is_empty() {
+                    "unreadable".to_string()
+                } else {
+                    reason
+                },
+                error: text(params, "error"),
+            };
+            self.store_chat_image(path, Err(failure), cx);
             return;
         }
         let params = request["params"].clone();
@@ -389,14 +456,14 @@ impl NativeChatView {
     fn store_chat_image(
         &mut self,
         key: String,
-        loaded: Option<gpui::Image>,
+        loaded: Result<gpui::Image, ChatImageFailure>,
         cx: &mut Context<Self>,
     ) {
         self.images.entries.borrow_mut().insert(
             key,
             match loaded {
-                Some(image) => ChatImageEntry::Ready(Arc::new(image)),
-                None => ChatImageEntry::Failed,
+                Ok(image) => ChatImageEntry::Ready(Arc::new(image)),
+                Err(failure) => ChatImageEntry::Failed(failure),
             },
         );
         self.list.remeasure();
@@ -484,25 +551,64 @@ impl NativeChatView {
             .on_click(
                 cx.listener(move |chat, _, _, cx| chat.open_image_viewer(open.clone(), index, cx)),
             );
-        match thumbnail(&source, p) {
-            Some(picture) => tile.child(picture).into_any_element(),
-            // A host with no image transport, or a file that has since gone: the honest stand-in.
-            None if user => div()
-                .flex_shrink_0()
-                .text_size(px(12.0 * s))
-                .text_color(p.muted)
-                .child(if label.is_empty() {
-                    format!("Image #{}", index + 1)
-                } else {
-                    label
-                })
-                .into_any_element(),
-            // React's `Attachment size='xs'`: a 12px-radius card with a 4px inset, a 28px rounded
-            // media well for the icon, and a medium-weight title in the card's own colour. Its
-            // `min-w-40` is what keeps a short file name from shrinking the card to a pill.
-            None => div()
+        let failure = match &source {
+            ChatImageTile::Unavailable(failure) => Some(failure.clone()),
+            _ => None,
+        };
+        if let Some(picture) = thumbnail(&source, p) {
+            return tile.child(picture).into_any_element();
+        }
+        // A file that has since gone, or bytes that would not decode: still a tile that opens the
+        // preview, where the card says why (image_viewer/unavailable.rs).
+        let title = failure
+            .as_ref()
+            .map(|failure| super::image_viewer::failure_copy(failure).0)
+            .unwrap_or("Image unavailable");
+        let named = if label.is_empty() {
+            format!("Image #{}", index + 1)
+        } else {
+            label
+        };
+        let tooltip = gpui::SharedString::from(format!("{title}: {named}"));
+        let tile = tile.tooltip(move |window, cx| {
+            gpui_component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+        });
+        if user {
+            /*
+            CDXC:SessionChat 2026-10-01 DECISION:
+            User: the chat's own thumbnail for a picture that cannot be shown is a small
+            missing-image placeholder rather than a broken preview, consistent with the preview's
+            card. The user's row draws the thumbnail's square with a dashed hairline and a crossed
+            photo; the agent's row keeps its named chip with the same glyph.
+            */
+            let size = px(VISUAL.thumbnail_size * s);
+            return tile
+                .child(
+                    div()
+                        .size(size)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded(px(VISUAL.thumbnail_radius * s))
+                        .border(px(VISUAL.border_width * s))
+                        .border_dashed()
+                        .border_color(p.border)
+                        .bg(p.input.opacity(0.5))
+                        .child(
+                            svg()
+                                .path("titlebar/photo-off.svg")
+                                .size(px(18.0 * s))
+                                .text_color(p.muted),
+                        ),
+                )
+                .into_any_element();
+        }
+        // React's `Attachment size='xs'`: a 12px-radius card with a 4px inset, a 28px rounded
+        // media well for the icon, and a medium-weight title in the card's own colour. Its
+        // `min-w-40` is what keeps a short file name from shrinking the card to a pill.
+        tile.child(
+            div()
                 .flex()
-                .flex_shrink_0()
                 .items_center()
                 .gap(px(6.0 * s))
                 .min_w(px(160.0 * s))
@@ -525,10 +631,10 @@ impl NativeChatView {
                         .bg(p.input)
                         .child(
                             svg()
-                                .path("chat-actions/photo")
+                                .path("titlebar/photo-off.svg")
                                 .size(px(14.0 * s))
                                 .flex_shrink_0()
-                                .text_color(p.foreground),
+                                .text_color(p.muted),
                         ),
                 )
                 .child(
@@ -538,10 +644,10 @@ impl NativeChatView {
                         .py(px(4.0 * s))
                         .truncate()
                         .font_weight(gpui::FontWeight::MEDIUM)
-                        .child(label),
-                )
-                .into_any_element(),
-        }
+                        .child(named),
+                ),
+        )
+        .into_any_element()
     }
 
     /// A picture written into prose, at the position its author wrote it.
@@ -585,14 +691,54 @@ impl NativeChatView {
                 }))
                 .child(picture)
                 .into_any_element(),
-            None => div()
-                .flex_shrink_0()
-                .child(if label.is_empty() {
+            // The picture's words with the crossed photo before them, still opening the preview
+            // so its card can say why the picture is not there.
+            None => {
+                let title = match &source {
+                    ChatImageTile::Unavailable(failure) => {
+                        super::image_viewer::failure_copy(failure).0
+                    }
+                    _ => "Image unavailable",
+                };
+                let named = if label.is_empty() {
                     "Image".to_owned()
                 } else {
                     label
-                })
-                .into_any_element(),
+                };
+                let tooltip = gpui::SharedString::from(format!("{title}: {named}"));
+                div()
+                    .id(gpui::SharedString::from(format!("chat-inline-image:{id}")))
+                    .role(gpui::Role::Button)
+                    .aria_label(format!("{title}: {named}"))
+                    .flex_shrink_0()
+                    .flex()
+                    .items_center()
+                    .gap(px(4.0 * p.scale))
+                    .mx(px(VISUAL.inline_margin_x * p.scale))
+                    .px(px(6.0 * p.scale))
+                    .rounded(px(6.0 * p.scale))
+                    .border(px(VISUAL.border_width * p.scale))
+                    .border_dashed()
+                    .border_color(p.border)
+                    .text_color(p.muted)
+                    .chat_cursor_pointer()
+                    .tooltip(move |window, cx| {
+                        gpui_component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+                    })
+                    .on_click(cx.listener(move |chat, _, _, cx| {
+                        cx.stop_propagation();
+                        chat.open_image_viewer(open.clone(), 0, cx);
+                    }))
+                    .child(
+                        svg()
+                            .path("titlebar/photo-off.svg")
+                            .size(px(13.0 * p.scale))
+                            .flex_shrink_0()
+                            .text_color(p.muted),
+                    )
+                    .child(named)
+                    .into_any_element()
+            }
         }
     }
 }
