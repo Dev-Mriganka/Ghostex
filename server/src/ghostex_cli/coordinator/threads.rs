@@ -1,8 +1,8 @@
 use serde_json::{json, Value};
 
 use super::command::{
-    flag_text, launch_settings_for, read_view, resolve_session, server_flags, target_coordinator,
-    text_or_file,
+    flag_text, launch_settings_for, read_view, resolve_session, resolve_thread_session,
+    server_flags, target_coordinator, text_or_file,
 };
 use crate::coordinators::{agent_message, thread_brief, BriefContext, MessageSender};
 use crate::ghostex_cli::{
@@ -205,27 +205,62 @@ pub(super) fn link(parsed: &ParsedArgs) -> CliResult<()> {
     Ok(())
 }
 
+/// `resolve` marks a thread done and closes its session (`--keep-open` parks it instead);
+/// `reopen` resumes a closed thread's session, then puts it back in its coordinator's tree.
 pub(super) fn set_resolved(parsed: &ParsedArgs, resolved: bool) -> CliResult<()> {
     let verb = if resolved { "resolve" } else { "reopen" };
     let reference = parsed.rest.first().cloned().ok_or_else(|| {
         CliError::Other(format!("Usage: ghostex coordinator {verb} <thread-ref>"))
     })?;
-    let (thread, flags) = resolve_session(&reference, &server_flags(&parsed.flags))?;
+    let (thread, flags) = resolve_thread_session(&reference, &server_flags(&parsed.flags))?;
+    let global_ref = agents::text(&thread, "globalRef").to_string();
+    let session = json!({
+        "globalRef": global_ref, "projectId": thread["projectId"], "sessionId": thread["sessionId"],
+    });
+    let closed = agents::text(&thread, "lifecycleState") == "stopped";
+    let close_session = resolved && !parsed.flags.truthy("keepOpen");
+    // Woken before it is reopened: an open thread whose session is still closed is reported to the
+    // coordinator as closed and marked done again.
+    let resumed = !resolved && closed;
+    if resumed {
+        call_gxserver_rpc("/api/wakeSession", &session, &flags).map_err(|error| {
+            CliError::Other(format!(
+                "Could not resume {global_ref}: {error}. It was not reopened."
+            ))
+        })?;
+    }
     let result = call_gxserver_rpc(
         "/api/setCoordinatorThreadResolved",
         &json!({
             "projectId": thread["projectId"],
             "sessionId": thread["sessionId"],
             "resolved": resolved,
+            "closeSession": close_session,
         }),
         &flags,
     )?;
+    if close_session && !closed {
+        call_gxserver_rpc("/api/killSession", &session, &flags).map_err(|error| {
+            CliError::Other(format!(
+                "Marked {global_ref} done, but its session did not close: {error}. Close it with ghostex agents close {global_ref}."
+            ))
+        })?;
+    }
     if parsed.flags.truthy("json") {
+        let mut result = result;
+        result["sessionClosed"] = json!(close_session);
+        result["sessionResumed"] = json!(resumed);
         print_json(&result);
+    } else if close_session {
+        println!(
+            "Marked {global_ref} done and closed its session. `ghostex coordinator reopen {global_ref}` or a message resumes the same conversation."
+        );
     } else if resolved {
-        println!("Marked {} done.", agents::text(&thread, "globalRef"));
+        println!("Marked {global_ref} done; its session stays open (parked).");
+    } else if resumed {
+        println!("Reopened {global_ref} and resumed its session.");
     } else {
-        println!("Reopened {}.", agents::text(&thread, "globalRef"));
+        println!("Reopened {global_ref}.");
     }
     Ok(())
 }

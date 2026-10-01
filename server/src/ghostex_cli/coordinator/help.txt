@@ -12,7 +12,7 @@ USAGE
                              [--worktree [--base-branch <branch>]] [--project-id <id>]
                              [--coordinator <ref>] [--json]
   ghostex coordinator link <session-ref> [--task <text>] [--coordinator <ref>]
-  ghostex coordinator resolve <thread-ref> [--json]
+  ghostex coordinator resolve <thread-ref> [--keep-open] [--json]
   ghostex coordinator reopen <thread-ref> [--json]
   ghostex coordinator remember <note> [--coordinator <ref>]
   ghostex coordinator forget <number> [--coordinator <ref>]
@@ -57,8 +57,12 @@ THREADS
   `ghostex agents send <thread-ref> "<text>"` sends a thread a follow-up;
   `ghostex read-session-chat <thread-ref> --last 2 --format text` reads it.
   `ghostex agents create` run by a coordinator also links the new session.
-  resolve marks a thread done (it leaves the sidebar tree and stops reporting);
-  reopen brings it back. Neither touches the session itself.
+  resolve marks a finished thread done and closes its session, so it leaves the
+  sidebar; it refuses while the thread is working or waiting for an answer.
+  --keep-open only marks it done and parks the session. A closed thread keeps
+  its conversation: reopen resumes the same session and puts it back under its
+  coordinator, and the coordinator's `ghostex agents send <thread-ref> "<text>"`
+  to a closed thread resumes it the same way and reopens it.
 
 MEMORY AND INSTRUCTIONS
   remember saves a one-line note (a preference, a decision, a pitfall); every
@@ -71,5 +75,5 @@ STATES
   working   the thread is running a turn
   finished  its turn ended; its report was sent to the coordinator
   sleeping  its session is asleep
-  closed    its session was closed (it is then marked done)
-  done      resolved
+  closed    its session was closed by hand (it is then marked done)
+  done      resolved (its session is closed unless --keep-open was used)

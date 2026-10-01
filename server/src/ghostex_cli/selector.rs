@@ -75,6 +75,21 @@ pub fn resolve_cli_session_selector(selector: &str, flags: &Flags) -> CliResult<
     resolve_one_listed_session(selector, &session_list, flags)
 }
 
+/// One session among the live ones, else among the closed ones too, for a verb that can resume a
+/// closed session (a coordinator's `reopen`, `agents send`).
+///
+/// CDXC:Coordinators 2026-10-01 WHY: coordinators close finished threads and later reopen or message them, so these verbs must find a closed session. Live sessions are matched first because a title or alias selector that names one live session today must not turn ambiguous when an old closed session shares its title.
+pub fn resolve_live_or_closed_session(selector: &str, flags: &Flags) -> CliResult<Value> {
+    let live = sessions::fetch_session_list(flags, false)?;
+    if !resolve_listed_sessions(selector, &live, flags)?.is_empty() {
+        return resolve_one_listed_session(selector, &live, flags);
+    }
+    let mut with_closed = flags.clone();
+    with_closed.insert_bool("includeStopped", true);
+    let all = sessions::fetch_session_list(&with_closed, false)?;
+    resolve_one_listed_session(selector, &all, flags)
+}
+
 /// resolveOneListedSession: exactly one match or an error listing candidates.
 pub fn resolve_one_listed_session(
     selector: &str,

@@ -65,6 +65,13 @@ pub(super) fn resolve_session(reference: &str, flags: &Flags) -> CliResult<(Valu
     Ok((row, flags))
 }
 
+/// A thread by reference, closed sessions included, for `resolve` and `reopen`.
+pub(super) fn resolve_thread_session(reference: &str, flags: &Flags) -> CliResult<(Value, Flags)> {
+    let flags = agents::inventory_flags(flags, reference)?;
+    let row = selector::resolve_live_or_closed_session(reference, &flags)?;
+    Ok((row, flags))
+}
+
 /// The coordinator a command acts on: `--coordinator <ref>`, else the calling session.
 pub(super) fn target_coordinator(parsed: &ParsedArgs) -> CliResult<(Value, Flags)> {
     let base = server_flags(&parsed.flags);

@@ -1388,15 +1388,22 @@ version of the Projects features in Cursor and Claude Code.
   work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo (on the phone's session list too), and a crew icon
-  with a number: how many threads are working while any are (orange, or light
-  blue when one waits on you), otherwise how many of its threads are not done,
-  followed by a moon with the sleeping threads and a check with the done ones. Its
+  with one number: how many thread sessions it has in the sidebar, whatever
+  their state. The icon turns orange while a thread works and light blue when
+  one waits on you. Its
   threads sit indented right under it with their own status dots; the chevron
   beside the crown folds them away and back (remembered across restarts), and a
-  folded coordinator keeps its counts and colour. Click a thread to watch it or
+  folded coordinator keeps its number and colour. Click a thread to watch it or
   talk to it directly; answer its questions and approvals there. Pinning the
-  coordinator takes its threads along. A thread the coordinator marks done is
-  parked and leaves the tree.
+  coordinator takes its threads along.
+- **Finished threads are closed**: once the coordinator has checked and
+  committed a thread's work and expects nothing more from it, it marks the
+  thread done and closes its session, so the sidebar keeps only work in flight
+  (it never closes a thread that is still working or waiting on you). A closed
+  thread is not lost: when a follow-up comes, the coordinator reopens it or
+  messages it, and the same conversation resumes under the coordinator with
+  everything it knew. Ask the coordinator to keep a thread open if you want to
+  look at it.
 - **Threads panel in the chat**: above the coordinator's message box, the
   Threads panel lists its threads under Waiting on you, Working and Finished,
   each with one line (what it asks, what it is doing, or how its last report
@@ -1433,8 +1440,9 @@ Coordinators run on Claude or Codex; threads can be any configured agent. From
 a terminal or another agent: `ghostex coordinator create --title <name>
 [--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator status`,
 `ghostex coordinator start-thread --title <title> --task <brief> [--worktree]
-[--agent <id>] [--model <m>] [--effort <e>]`, `ghostex coordinator
-resolve|reopen <thread>`, `ghostex coordinator remember <note>`, `ghostex
+[--agent <id>] [--model <m>] [--effort <e>]`, `ghostex coordinator resolve
+<thread> [--keep-open]` (mark done and close its session), `ghostex coordinator
+reopen <thread>` (resume a closed thread), `ghostex coordinator remember <note>`, `ghostex
 coordinator set-goal|set-instructions`, and `ghostex coordinator guide` (the
 coordinator's own playbook). `ghostex coordinator --help` lists every flag.
 

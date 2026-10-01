@@ -17,12 +17,10 @@ use crate::app::helpers::*;
 /// Indent per tree level; one agent icon plus the row gap, so a thread's icon sits under its
 /// coordinator's title.
 pub(crate) const THREAD_INDENT: f32 = 16.0;
-/// The coordinator marker and the open-thread count.
+/// The coordinator marker and its thread count.
 const COORDINATOR_ICON: &str = "titlebar/users-group.svg";
 const WAITING_COLOR: u32 = 0x95d7f6;
 const COORDINATOR_ROW_ICON: &str = "titlebar/coordinator-crown.svg";
-const SLEEPING_ICON: &str = "titlebar/moon.svg";
-const DONE_ICON: &str = "titlebar/circle-check.svg";
 const COORDINATOR_COLOR_DARK: u32 = 0xffffff;
 const COORDINATOR_COLOR_LIGHT: u32 = 0x000000;
 
@@ -97,7 +95,7 @@ pub(crate) fn is_coordinator(session: &NativeSidebarSession) -> bool {
 /// The icon a coordinator row draws in place of its agent's logo.
 ///
 /// CDXC:Coordinators 2026-10-01 DECISION:
-/// User: "please give coordinator agents a different logo in the sidebar of the app (not the agent's app logo)", a cool SVG instead of the Claude icon. A crown, bold enough to read at the row's 13px, drawn white on dark themes and black on light ones the way the Codex logo adapts (user: "make the crown white, not purple"), with the row's usual focus and hover dimming; its threads keep their agent logos, and the crew icon with the open-thread count stays beside it.
+/// User: "please give coordinator agents a different logo in the sidebar of the app (not the agent's app logo)", a cool SVG instead of the Claude icon. A crown, bold enough to read at the row's 13px, drawn white on dark themes and black on light ones the way the Codex logo adapts (user: "make the crown white, not purple"), with the row's usual focus and hover dimming; its threads keep their agent logos, and the crew icon with the thread count stays beside it.
 pub(crate) fn coordinator_icon(appearance: &SidebarAppearance) -> AnyElement {
     titlebar_svg_icon(
         COORDINATOR_ROW_ICON,
@@ -112,8 +110,8 @@ pub(crate) fn coordinator_icon(appearance: &SidebarAppearance) -> AnyElement {
     .into_any_element()
 }
 
-/// The coordinator row's marker: the crew icon and its count, tinted when a thread waits on someone
-/// (light blue) or works (orange); while nothing works, the done and sleeping counts follow it.
+/// The coordinator row's marker: the crew icon and its thread count, tinted when a thread waits on
+/// someone (light blue) or works (orange).
 ///
 /// CDXC:Coordinators 2026-09-30 WHY:
 /// A coordinator looks like any other session of its agent otherwise, and its thread rows alone do not say which row they hang from once the list scrolls (or once the tree is folded). What the numbers mean is gx-core's `RowNesting::coordinator_badge`.
@@ -126,13 +124,10 @@ pub(crate) fn coordinator_badge(
     }
     let scale = appearance.scale;
     let threads = session.details.get("coordinatorThreads");
-    let number = |key: &str| {
-        threads
-            .and_then(|threads| threads.get(key))
-            .and_then(Value::as_u64)
-            .unwrap_or(0)
-    };
-    let (count, done, sleeping) = (number("count"), number("done"), number("sleeping"));
+    let count = threads
+        .and_then(|threads| threads.get("count"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     let tint = match threads
         .and_then(|threads| threads.get("tone"))
         .and_then(Value::as_str)
@@ -141,38 +136,21 @@ pub(crate) fn coordinator_badge(
         Some("working") => rgb(super::status::WORKING_COLOR).into(),
         _ => appearance.muted,
     };
-    let label = |value: u64, color: gpui::Hsla| {
-        div()
-            .text_size(px(11.5 * scale))
-            .text_color(color)
-            .child(value.to_string())
-    };
-    let tally = |icon: &'static str, value: u64| {
-        div()
-            .flex()
-            .items_center()
-            .gap(px(2.0 * scale))
-            .child(titlebar_svg_icon(icon, 12.0 * scale, appearance.muted))
-            .child(label(value, appearance.muted))
-    };
     Some(
         div()
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap(px(6.0 * scale))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(2.0 * scale))
-                    .child(titlebar_svg_icon(COORDINATOR_ICON, 13.0 * scale, tint))
-                    .when(count > 0, |badge| badge.child(label(count, tint))),
-            )
-            .when(sleeping > 0, |badge| {
-                badge.child(tally(SLEEPING_ICON, sleeping))
+            .gap(px(2.0 * scale))
+            .child(titlebar_svg_icon(COORDINATOR_ICON, 13.0 * scale, tint))
+            .when(count > 0, |badge| {
+                badge.child(
+                    div()
+                        .text_size(px(11.5 * scale))
+                        .text_color(tint)
+                        .child(count.to_string()),
+                )
             })
-            .when(done > 0, |badge| badge.child(tally(DONE_ICON, done)))
             .into_any_element(),
     )
 }

@@ -27,17 +27,11 @@ pub(crate) fn tally_threads<'a>(
         }
         let tally = tallies.entry(parent.clone()).or_default();
         let bump = |count: &mut u16| *count = count.saturating_add(1);
+        bump(&mut tally.total);
         match row.thread_state.as_deref() {
-            Some("done") => bump(&mut tally.done),
-            state => {
-                bump(&mut tally.open);
-                match state {
-                    Some("waiting") => bump(&mut tally.waiting),
-                    Some("working") => bump(&mut tally.working),
-                    Some("sleeping") => bump(&mut tally.sleeping),
-                    _ => {}
-                }
-            }
+            Some("waiting") => bump(&mut tally.waiting),
+            Some("working") => bump(&mut tally.working),
+            _ => {}
         }
     }
     tallies

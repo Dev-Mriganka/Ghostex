@@ -4,7 +4,7 @@ use super::{
 };
 use crate::ghostex_cli::{
     rpc::{call_gxserver_rpc, CliError, CliResult},
-    selector, sessions,
+    selector,
 };
 use serde_json::{json, Value};
 
@@ -31,14 +31,14 @@ pub(super) fn send(args: &Arguments) -> CliResult<Value> {
     }
     let reference = &args.positional[0];
     let flags = identity::inventory_flags(&args.flags, reference)?;
-    let rows = sessions::fetch_session_list(&flags, false)?;
-    let recipient = selector::resolve_one_listed_session(reference, &rows, &flags)?;
+    let recipient = selector::resolve_live_or_closed_session(reference, &flags)?;
     if !identity::is_agent(&recipient) {
         return Err(CliError::Other(
             "The recipient is not an agent session. Run ghostex agents list --all.".into(),
         ));
     }
-    // A sleeping recipient has nothing to interrupt; the send itself wakes it.
+    // A sleeping or closed recipient has nothing to interrupt; the send itself wakes it and
+    // resumes its conversation.
     let waking =
         args.delivery != Delivery::Queue && text(&recipient, "lifecycleState") != "running";
     let mut payload = json!({"globalRef": recipient["globalRef"], "projectId": recipient["projectId"], "sessionId": recipient["sessionId"]});

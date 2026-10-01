@@ -212,7 +212,7 @@ pub struct RowNesting {
     /// On a coordinator row: the open threads drawn under it.
     pub thread_count: u16,
     /// On a coordinator row: every thread of it in the list, wherever it is drawn (a worktree
-    /// thread sits in its worktree's project), by state.
+    /// thread sits in its worktree's project).
     pub threads: ThreadTally,
     /// On a coordinator row with threads under it: the user folded them away.
     pub collapsed: bool,
@@ -220,27 +220,22 @@ pub struct RowNesting {
     pub folded: bool,
 }
 
-/// A coordinator's threads in the list, by state.
+/// A coordinator's threads in the list.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ThreadTally {
-    /// Every thread that is not done.
-    pub open: u16,
+    /// Every thread session still in the list, whatever its state.
+    pub total: u16,
     pub waiting: u16,
     pub working: u16,
-    pub sleeping: u16,
-    pub done: u16,
 }
 
 /// What a coordinator row's badge shows.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CoordinatorBadge {
-    /// The number beside the crew icon: the working threads while any work, otherwise every open
-    /// thread of the coordinator. `0` draws no number.
+    /// The number beside the crew icon: every thread session of the coordinator. `0` draws no
+    /// number.
     pub count: u16,
     pub tone: CoordinatorBadgeTone,
-    /// Drawn beside the count only while nothing works: done threads, and sleeping threads.
-    pub done: u16,
-    pub sleeping: u16,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -255,25 +250,18 @@ impl RowNesting {
     /// The coordinator row's badge.
     ///
     /// CDXC:Coordinators 2026-10-01 DECISION:
-    /// User: "We need to show how many are running as the number, not how many it has under it (unless none are running, then show the number under it)", and "For coordinators we need to keep showing the number of done + number of sleeping + working, all in the titlebar of the coord, when it doesn't have any working." So the number is the working threads while any work; once none do, it is every open thread of the coordinator, and the done and sleeping counts are drawn beside it (done threads have left the tree, so this is the only place they still show). Every thread of the coordinator in the list counts, including worktree threads drawn under their worktree's project, so the badge agrees with the Threads panel except for done threads whose sessions were closed. The tint keeps its meaning: light blue while a thread waits on someone, orange while one works. Supersedes the 2026-09-30 rule that the number was always the open threads.
+    /// User: "I don't like seeing 3 like this; make it just show the people icon and the total number of sessions that are part of this one." The badge is the crew icon and one number: every thread session of the coordinator still in the sidebar, whatever its state (working, waiting, finished, sleeping, or done but not closed), including worktree threads drawn under their worktree's project. A thread whose session was closed is no longer a session in the sidebar, so it does not count; coordinators close finished threads, so the number is the work still around. The tint keeps its meaning: light blue while a thread waits on someone, orange while one works. Supersedes the 2026-10-01 rule that showed the working count first and the sleeping and done counts beside it.
     pub fn coordinator_badge(&self) -> CoordinatorBadge {
         let threads = self.threads;
-        let working = threads.working > 0;
         CoordinatorBadge {
-            count: if working {
-                threads.working
-            } else {
-                threads.open
-            },
+            count: threads.total,
             tone: if threads.waiting > 0 {
                 CoordinatorBadgeTone::Waiting
-            } else if working {
+            } else if threads.working > 0 {
                 CoordinatorBadgeTone::Working
             } else {
                 CoordinatorBadgeTone::Idle
             },
-            done: if working { 0 } else { threads.done },
-            sleeping: if working { 0 } else { threads.sleeping },
         }
     }
 }

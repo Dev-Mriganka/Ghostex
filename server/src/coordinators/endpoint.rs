@@ -200,13 +200,18 @@ pub fn handle_coordinator_endpoint(
                 .get("resolved")
                 .and_then(Value::as_bool)
                 .ok_or_else(|| DomainStateError::bad_request("Say resolved: true or false."))?;
-            if read_thread(db, &thread_key.0, &thread_key.1)?.is_none() {
+            let Some(thread) = read_thread(db, &thread_key.0, &thread_key.1)? else {
                 return Err(DomainStateError::not_found(
                     "That session is not a coordinator thread.",
                 ));
+            };
+            let close_session =
+                resolved && params.get("closeSession").and_then(Value::as_bool) == Some(true);
+            if close_session {
+                refuse_closing_unfinished(repository, &thread)?;
             }
             let changed = set_thread_resolved(db, &thread_key.0, &thread_key.1, resolved)?;
-            if changed {
+            if changed && !close_session {
                 set_parked(repository, &thread_key, resolved)?;
             }
             let thread = read_thread(db, &thread_key.0, &thread_key.1)?
@@ -223,8 +228,30 @@ pub fn handle_coordinator_endpoint(
     }
 }
 
-/// CDXC:Coordinators 2026-09-30 WHY:
-/// A done thread is parked so the sidebar's Sessions list keeps only the work in flight (Claude hides resolved threads the same way), and reopening unparks it. Parking is the ordinary reversible flag; "Unpark after sending a message" still brings a parked thread back when the user talks to it.
+/// A thread whose session the resolve is about to close must have nothing left running: closing
+/// stops its agent mid-turn or under an unanswered question.
+fn refuse_closing_unfinished(
+    repository: &DomainRepository<'_>,
+    thread: &ThreadRecord,
+) -> Result<(), DomainStateError> {
+    let session = repository.get_session(&thread.project_id, &thread.session_id)?;
+    let progress = ThreadProgress {
+        resolved: false,
+        ..ThreadProgress::of(thread)
+    };
+    match classify_thread_session(session.as_ref(), progress, &now_iso(), false) {
+        ThreadState::Working => Err(DomainStateError::bad_request(
+            "The thread is still working, so its session was not closed. Wait for its report, or pass --keep-open to only mark it done.",
+        )),
+        ThreadState::Waiting => Err(DomainStateError::bad_request(
+            "The thread is waiting for an answer, so its session was not closed. Answer it first, or pass --keep-open to only mark it done.",
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// CDXC:Coordinators 2026-10-01 DECISION:
+/// User: "If I close those threads in the sidebar, would we still be able to reopen them and send there later if needed? Can we start doing this to make the sidebar less cluttered? Instead of moving them to Parked." So `ghostex coordinator resolve` closes a finished thread's session (`closeSession`, which skips parking) and `reopen` or a coordinator's message resumes the same conversation. Only `resolve --keep-open` still parks a done thread, so the sidebar's Sessions list keeps only the work in flight, and reopening unparks it. Supersedes the 2026-09-30 rule that every done thread was parked.
 fn set_parked(
     repository: &DomainRepository<'_>,
     key: &SessionKey,

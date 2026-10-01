@@ -885,8 +885,6 @@ fn build_session(
                     ghostex_gx_core::CoordinatorBadgeTone::Working => "working",
                     ghostex_gx_core::CoordinatorBadgeTone::Idle => "idle",
                 },
-                "done": badge.done,
-                "sleeping": badge.sleeping,
                 "open": session.nesting.thread_count,
                 "collapsible": session.nesting.thread_count > 0,
                 "collapsed": session.nesting.collapsed,

@@ -122,9 +122,9 @@ pub fn report_body(report: &ThreadReport<'_>, thread_ref: &str) -> String {
             "Ghostex thread report: waiting for an answer.\n\n{}",
             prompt.trim()
         ),
-        ThreadReport::Closed => {
-            "Ghostex thread report: its session was closed, so it is marked done.".to_string()
-        }
+        ThreadReport::Closed => format!(
+            "Ghostex thread report: its session was closed, so it is marked done. `ghostex coordinator reopen {thread_ref}` or a message to it resumes the same conversation."
+        ),
     }
 }
 
