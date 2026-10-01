@@ -169,6 +169,12 @@ pub(crate) fn modal_shell_inset<V: Render>(
 /// visible bottom edge (above the Dock or taskbar) when the window grows.
 pub(crate) const MODAL_SCROLL_FIT_SCREEN_MARGIN: f32 = 16.0;
 
+/// A large panel modal's opening size: its base frame 10% wider and taller
+/// (CDXC:AppModal 2026-10-01 in app/model/app_modal_kind.rs).
+pub(crate) fn large_panel_modal_size(width: f32, height: f32) -> (f32, f32) {
+    ((width * 1.1).round(), (height * 1.1).round())
+}
+
 /// The window fit for a modal whose body scrolls (Remote Setup): the window is
 /// sized once, on open, to the header plus the body's own content and never
 /// past the display's visible bottom. Anything taller later (the Android

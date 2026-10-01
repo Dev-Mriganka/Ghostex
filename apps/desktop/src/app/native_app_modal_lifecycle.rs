@@ -53,6 +53,12 @@ impl GhostexGpuiApp {
     ) {
         self.remove_gpui_app_modal_window_without_focus_restore(cx);
         self.remove_native_app_modal_window(cx);
+        let (width, initial_height) = if kind.is_large_panel() {
+            let (width, height) = kind.large_panel_size(width, initial_height);
+            self.gpui_native_modal_size_on_screen(size(px(width), px(height)), cx)
+        } else {
+            (width, initial_height)
+        };
         let window_size = size(px(width), px(initial_height));
         let options = WindowOptions {
             kind: crate::app::window::popup_frame::child_window_kind(),

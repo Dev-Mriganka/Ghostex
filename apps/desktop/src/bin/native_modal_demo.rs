@@ -192,6 +192,18 @@ fn open_modal_window<V: Render>(
     (window, view)
 }
 
+/// `open_modal_window` for the large panel modals (Settings, Agents Hub, Commit Changes, File
+/// Diff), which the app opens 10% bigger than their base frame.
+fn open_large_modal_window<V: Render>(
+    width: f32,
+    height: f32,
+    build: impl FnOnce(&mut gpui::Window, &mut App) -> Entity<V>,
+    cx: &mut App,
+) -> (WindowHandle<Root>, Entity<V>) {
+    let (width, height) = native_modal_kit::large_panel_modal_size(width, height);
+    open_modal_window(width, height, build, cx)
+}
+
 fn deliver_export_result(
     window: WindowHandle<Root>,
     view: Entity<GpuiExportTranscriptModalWindow>,

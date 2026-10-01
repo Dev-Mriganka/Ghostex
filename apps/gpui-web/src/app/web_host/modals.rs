@@ -114,6 +114,17 @@ impl GhostexGpuiApp {
                 )
             })
             .unwrap_or((1280.0, 800.0));
+        let (width, initial_height) = if kind.is_large_panel() {
+            // Kept inside the page the way the desktop keeps it on screen.
+            let fit = |value: f32, page: f32| {
+                let room = page - crate::app::window::MODAL_SCROLL_FIT_SCREEN_MARGIN * 2.0;
+                if room > 0.0 { value.min(room) } else { value }
+            };
+            let (width, height) = kind.large_panel_size(width, initial_height);
+            (fit(width, page.0), fit(height, page.1))
+        } else {
+            (width, initial_height)
+        };
         let window_size = size(px(width), px(initial_height));
         let bounds =
             Bounds::centered_at(gpui::point(px(page.0 / 2.0), px(page.1 / 2.0)), window_size);

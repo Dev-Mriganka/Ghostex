@@ -495,7 +495,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         diff_prefs: GitDiffPrefs::default(),
         palette,
     };
-    let (window, view) = super::open_modal_window(
+    let (window, view) = super::open_large_modal_window(
         GIT_COMMIT_MODAL_WIDTH,
         GIT_COMMIT_MODAL_HEIGHT,
         move |window, cx| cx.new(|cx| GpuiGitCommitModalWindow::new(config, host, window, cx)),
@@ -539,7 +539,7 @@ pub(super) fn open_file_diff(demo: &super::DemoEnv, cx: &mut App) {
         }
     });
     let state = names.first().cloned().unwrap_or_default();
-    let (window, view) = super::open_modal_window(
+    let (window, view) = super::open_large_modal_window(
         GIT_FILE_DIFF_MODAL_WIDTH,
         GIT_FILE_DIFF_MODAL_HEIGHT,
         move |window, cx| {

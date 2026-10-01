@@ -20,7 +20,7 @@ impl GhostexGpuiApp {
         });
         self.open_native_app_modal(
             GpuiAppModalKind::FindPrompts,
-            // The Settings frame (CDXC:AppModal 2026-09-30 in app/model/app_modal_kind.rs).
+            // The Settings frame (CDXC:AppModal 2026-10-01 in app/model/app_modal_kind.rs).
             APP_MODAL_HOST_SETTINGS_WINDOW_WIDTH,
             APP_MODAL_HOST_SETTINGS_WINDOW_HEIGHT,
             move |window, cx| {

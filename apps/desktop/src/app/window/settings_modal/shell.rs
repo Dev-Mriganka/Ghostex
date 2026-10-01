@@ -20,7 +20,7 @@ use gpui_component::{Sizable as _, Size as ComponentSize, h_flex, v_flex};
 use serde_json::Value;
 use std::collections::HashMap;
 
-/// The Settings frame (CDXC:AppModal 2026-09-30 in app/model/app_modal_kind.rs):
+/// The Settings frame (CDXC:AppModal 2026-10-01 in app/model/app_modal_kind.rs):
 /// `APP_MODAL_HOST_SETTINGS_WINDOW_WIDTH` x `APP_MODAL_HOST_SETTINGS_WINDOW_HEIGHT`.
 pub(crate) const SETTINGS_MODAL_WIDTH: f32 = 900.0;
 pub(crate) const SETTINGS_MODAL_HEIGHT: f32 = 663.0;

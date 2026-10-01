@@ -366,7 +366,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         palette: demo.palette,
         initial_tab,
     };
-    let (window, view) = super::open_modal_window(
+    let (window, view) = super::open_large_modal_window(
         AGENTS_HUB_MODAL_WIDTH,
         AGENTS_HUB_MODAL_HEIGHT,
         move |window, cx| cx.new(|cx| GpuiAgentsHubModalWindow::new(config, host, window, cx)),

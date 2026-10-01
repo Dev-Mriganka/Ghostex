@@ -168,6 +168,40 @@ impl GpuiAppModalKind {
     }
 
     pub(crate) fn window_size(self) -> Size<Pixels> {
+        let base = self.base_window_size();
+        let (width, height) = self.large_panel_size(f32::from(base.width), f32::from(base.height));
+        size(px(width), px(height))
+    }
+
+    /// The large panel modals that open centred over the app: the Settings dialog (every entry),
+    /// Search by Prompt, the Agents Hub, Commit Changes and File Diff. Quick Access, Browser
+    /// History, the compact forms and confirmations, onboarding and the chat's diagram and table
+    /// popups are not in this class.
+    pub(crate) fn is_large_panel(self) -> bool {
+        matches!(
+            self,
+            Self::Settings
+                | Self::Hotkeys
+                | Self::ConfigureAgents
+                | Self::ConfigureActions
+                | Self::OpenTargets
+                | Self::FindPrompts
+                | Self::AgentsHub
+                | Self::GitCommit
+                | Self::GitFileDiff
+        )
+    }
+
+    /// CDXC:AppModal 2026-10-01 DECISION:
+    /// User: Settings and Search by Prompt "open way too big. they should open centered in the page like the size that the quick access modal opens, not biggger", then "please make the settings and find by prompt modals to be bigger by 30% width and height" (2026-09-30), then "the bigger modals that pop up in the centre of the screen, like Find by Prompt and Settings: the size needs to be 10% bigger." Settings and Search by Prompt keep the Quick Access frame 30% wider and taller as their base (900 x 663), and every large panel modal opens 10% wider and taller than its base frame (Settings and Search by Prompt 990 x 729); the opener still shrinks it to fit the screen it opens on. This supersedes the 2026-09-30 opening size.
+    pub(crate) fn large_panel_size(self, width: f32, height: f32) -> (f32, f32) {
+        if !self.is_large_panel() {
+            return (width, height);
+        }
+        crate::app::window::large_panel_modal_size(width, height)
+    }
+
+    fn base_window_size(self) -> Size<Pixels> {
         match self {
             Self::BrowserHistory => size(
                 px(APP_MODAL_HOST_COMMAND_PALETTE_WINDOW_WIDTH),
@@ -211,10 +245,7 @@ impl GpuiAppModalKind {
             CDXC:AppModal 2026-07-26-07:20:
             Settings, Hotkeys, Configure Agents, Configure Actions, and Open Targets all render the one tabbed Settings dialog in the modal host, so they must keep the full Settings frame even though their legacy standalone stylesheets are narrower.
             */
-            /*
-            CDXC:AppModal 2026-09-30 DECISION:
-            User: Settings and Search by Prompt "open way too big. they should open centered in the page like the size that the quick access modal opens, not biggger", then "please make the settings and find by prompt modals to be bigger by 30% width and height". The Settings dialog (every entry above) and Search by Prompt open centered, 30% wider and taller than the Quick Access frame (900 x 663).
-            */
+            // The Settings and Search by Prompt base frame; they open 10% bigger (CDXC:AppModal 2026-10-01 on `large_panel_size`).
             Self::Settings
             | Self::Hotkeys
             | Self::FindPrompts

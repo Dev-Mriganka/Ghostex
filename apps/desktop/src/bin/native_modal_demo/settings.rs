@@ -230,7 +230,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         request,
         sidebar_state: sidebar_state(&settings.borrow()),
     };
-    let (window, view) = super::open_modal_window(
+    let (window, view) = super::open_large_modal_window(
         SETTINGS_MODAL_WIDTH,
         SETTINGS_MODAL_HEIGHT,
         move |window, cx| cx.new(|cx| GpuiSettingsModalWindow::new(config, host, window, cx)),
