@@ -251,6 +251,13 @@ impl Render for GhostexGpuiApp {
             .on_action(cx.listener(|this, action: &crate::app::native_sidebar::actions::NativeSidebarAction, window, cx| {
                 this.handle_native_sidebar_action(action, window, cx);
             }))
+            /*
+            CDXC:ContextMenus 2026-10-01 WHY:
+            The Files view's menus (`+` New Markdown/HTML/drawing/folder, the overflow menu, a row's right-click menu, the formatting bar's overflow) open over the main window and dispatch from whatever held focus there. With the files list floating in its drawer window, or focus left in a terminal or chat, that is not inside the Docs view, so the row fell back to the root handle and did nothing (New Markdown created no file, reported 2026-10-01). Like the sidebar's action it is handled here, where every menu row reaches.
+            */
+            .on_action(cx.listener(|this, action: &crate::app::native_docs::actions::NativeDocsAction, window, cx| {
+                this.handle_native_docs_action(action, window, cx);
+            }))
             // CDXC:Hotkeys 2026-09-25 DECISION:
             // User: hotkeys go to the Code editor only while it is focused, not whenever it is open. A CEF page keeps AppKit's first responder until something takes it, so clicking the sidebar, a header or the tab strip left Code (or a browser page) receiving every chord. Clicks inside a CEF page never reach GPUI, so a GPUI mouse-down is always a click outside it and hands the keyboard back to the window.
             .capture_any_mouse_down(cx.listener(|app, _: &MouseDownEvent, _window, cx| {
