@@ -88,7 +88,20 @@ pub(crate) fn settings_text_input(
     window: &Window,
     cx: &gpui::App,
 ) -> AnyElement {
-    let focused = state.read(cx).focus_handle(cx).is_focused(window);
+    settings_text_input_with_disabled(p, state, width, monospace, false, window, cx)
+}
+
+/// The same input skin with interaction disabled; existing callers remain editable.
+pub(crate) fn settings_text_input_with_disabled(
+    p: &SettingsPalette,
+    state: &Entity<InputState>,
+    width: Option<f32>,
+    monospace: bool,
+    disabled: bool,
+    window: &Window,
+    cx: &gpui::App,
+) -> AnyElement {
+    let focused = !disabled && state.read(cx).focus_handle(cx).is_focused(window);
     div()
         .when_some(width, |this, width| this.w(px(width)).flex_shrink_0())
         .when(width.is_none(), |this| this.flex_1().w_full())
@@ -106,6 +119,7 @@ pub(crate) fn settings_text_input(
         .child(
             div().flex_1().min_w_0().child(
                 Input::new(state)
+                    .disabled(disabled)
                     .with_size(ComponentSize::Small)
                     .appearance(false)
                     .bordered(false)

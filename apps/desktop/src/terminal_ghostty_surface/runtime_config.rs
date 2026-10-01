@@ -6,7 +6,10 @@ use std::{
 };
 
 #[cfg(target_os = "macos")]
-use std::{os::unix::ffi::OsStrExt as _, path::Path};
+use std::{
+    os::unix::ffi::OsStrExt as _,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     ghostty_kit::ffi,
@@ -255,11 +258,42 @@ fn parse_ghostty_terminal_engine_config(
     let (mouse_scroll_precision, mouse_scroll_discrete) =
         parse_mouse_scroll_multiplier(value("mouse-scroll-multiplier"))?;
 
+    // Ghostty's numeric blur retains the configured background; its macOS
+    // glass styles supply that background themselves. Match the byte alpha
+    // used by Ghostty's renderer before any custom shader samples it.
+    let shader_background_alpha = if !crate::terminal_shaders::enabled() {
+        1.0
+    } else {
+        match value("background-blur") {
+            Some("macos-glass-regular" | "macos-glass-clear") => 0.0,
+            _ => {
+                (parse_config_f32(value("background-opacity"))?.clamp(0.0, 1.0) * 255.0).round()
+                    / 255.0
+            }
+        }
+    };
+
     Ok(GpuiTerminalEngineConfig {
         font,
         view: TerminalViewSettings {
             light_theme: false,
             cursor_shape,
+            shaders: crate::terminal_shaders::load(
+                canonical_config_values(formatted, "custom-shader")
+                    .into_iter()
+                    .filter(|path| !path.is_empty())
+                    .filter_map(|path| {
+                        if let Some(optional) = path.strip_prefix('?') {
+                            let path = PathBuf::from(optional);
+                            path.exists().then_some(path)
+                        } else {
+                            Some(PathBuf::from(path))
+                        }
+                    })
+                    .collect(),
+                value("custom-shader-animation").unwrap_or("true"),
+                shader_background_alpha,
+            ),
             // The GhosttyKit surface path is not selected at runtime; the
             // composited engine owns background images.
             background_image: None,
