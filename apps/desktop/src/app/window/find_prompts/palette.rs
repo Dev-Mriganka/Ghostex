@@ -1,5 +1,5 @@
 //! Search by Prompt's colours: the tokens the React page resolved (`.ghostex-find-scope` in
-//! packages/core-ui/styles/find.css), laid over the theme's own window colour like the other native
+//! packages/core-ui/styles/find.css, deleted 2026-10-01), laid over the theme's own window colour like the other native
 //! modals, and frosted under window glass.
 //!
 //! CDXC:Theming 2026-09-29 DECISION:

@@ -1,10 +1,10 @@
 //! Search by Prompt's data: the gxserver rows as the window keeps them, the labels the rows and the
 //! footer print, the flattened prompt line with its match ranges, and the one key map.
 //!
-//! Every function here is a port of the React Find page, now the phone's `apps/mobile/app/views/find/` (find-prompts-format.ts,
-//! find-prompt-highlight.ts, find-prompts-hotkeys.ts and `buildViewRows` in find-prompts-view.tsx),
-//! which the mobile Find still runs, so the two surfaces must keep reading the same.
-//! SEE-ALSO: apps/mobile/app/views/find/agent-prompt-search.ts (the wire contract's TypeScript types), server/src/agent_prompt_search.rs.
+//! Every function here is a port of the React Find page (find-prompts-format.ts, find-prompt-highlight.ts,
+//! find-prompts-hotkeys.ts and `buildViewRows` in find-prompts-view.tsx; deleted 2026-10-01, in git
+//! history). The phone's native Find screens print the same labels and highlights, so keep them reading the same.
+//! SEE-ALSO: apps/mobile/app/src/find/findFormat.ts and promptSearch.ts (the phone's labels and wire types), server/src/agent_prompt_search.rs.
 use gpui::{Keystroke, Rgba, SharedString};
 use serde::Deserialize;
 use std::ops::Range;

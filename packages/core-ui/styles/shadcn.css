@@ -10,8 +10,6 @@
 @source "../../../apps/desktop/sidebar";
 @source "../../../apps/desktop/views";
 @source "../../shared";
-/* The phone's Find page (apps/mobile/app submodule) bundles this CSS too; nothing matches when the submodule is absent. */
-@source "../../../apps/mobile/app/views";
 /* CDXC:DesignSystem 2026-04-27-03:41: All app scroll containers should use
    Tailwind v4 scroll-mask edge fades from a local CSS utility module. Keeping
    the utilities local makes Storybook/sidebar CSS builds independent of an

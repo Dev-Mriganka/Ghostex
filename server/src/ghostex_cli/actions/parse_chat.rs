@@ -90,6 +90,18 @@ and forward to the daemon's own endpoints. Every follow-up verb addresses a
 result by its stable `--key`, never by a list position, so a phone acting on a
 result minutes later still lands on the prompt it displayed.
 */
+/// CDXC:PromptSearch 2026-10-01 WHY:
+/// The prompt-search verbs document `true|false` values, but JS truthiness reads the text "false" as true, so `--favorite false` starred instead of unstarring, `--group-by-day false` still grouped, and `--refresh false` rebuilt the index on every phone search.
+fn agent_prompt_bool_flag(flags: &Flags, key: &str) -> bool {
+    match flags.string_value(key) {
+        Some(text) => !matches!(
+            text.trim().to_ascii_lowercase().as_str(),
+            "" | "false" | "0" | "no" | "off"
+        ),
+        None => flags.truthy(key),
+    }
+}
+
 fn parse_agent_prompt_search(flags: &Flags) -> CliResult<Value> {
     let mut map = Map::new();
     if let Some(query) = flags.text("query") {
@@ -112,17 +124,20 @@ fn parse_agent_prompt_search(flags: &Flags) -> CliResult<Value> {
     if flags.contains("groupByDay") {
         map.insert(
             "groupByDay".to_string(),
-            Value::Bool(flags.truthy("groupByDay")),
+            Value::Bool(agent_prompt_bool_flag(flags, "groupByDay")),
         );
     }
     if flags.contains("includeFacets") {
         map.insert(
             "includeFacets".to_string(),
-            Value::Bool(flags.truthy("includeFacets")),
+            Value::Bool(agent_prompt_bool_flag(flags, "includeFacets")),
         );
     }
     if flags.contains("refresh") {
-        map.insert("refresh".to_string(), Value::Bool(flags.truthy("refresh")));
+        map.insert(
+            "refresh".to_string(),
+            Value::Bool(agent_prompt_bool_flag(flags, "refresh")),
+        );
     }
     for key in ["limit", "offset", "textLimit"] {
         if flags.contains(key) {
@@ -149,7 +164,7 @@ fn parse_agent_prompt_ref(flags: &Flags) -> CliResult<Value> {
     if flags.contains("favorite") {
         map.insert(
             "favorite".to_string(),
-            Value::Bool(flags.truthy("favorite")),
+            Value::Bool(agent_prompt_bool_flag(flags, "favorite")),
         );
     }
     Ok(Value::Object(map))

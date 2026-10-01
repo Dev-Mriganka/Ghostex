@@ -1,6 +1,6 @@
 //! The Search by Prompt window's state and behaviour: the query line, the paged result window,
 //! the filters, the preview, the fork picker, and every hotkey. A port of
-//! apps/mobile/app/views/find/use-find-prompts.ts and the key handling of find-prompts-view.tsx.
+//! the React page's use-find-prompts.ts and the key handling of find-prompts-view.tsx (deleted 2026-10-01).
 //!
 //! CDXC:PromptSearch 2026-09-27 WHY:
 //! Results are a window, not the whole list, as in the React hook: gxserver holds ~30k prompts and

@@ -615,7 +615,11 @@ when you open it.
   sent to an agent; Enter resumes that session, and starred prompts stay on
   top. Inside the picker the agent and project filters are dropdowns at the top
   right (Ctrl+G and Ctrl+J open them), Grouping (Ctrl+D) toggles day headers,
-  and hovering any control shows its hotkey.
+  and hovering any control shows its hotkey. On the phone, Search Prompts in
+  the menu at the top right searches the selected computer the same way: the agent,
+  project and Days buttons under the search field filter and group the results,
+  the star on a result stars it, pull down rebuilds the index, and tapping a
+  result shows the whole prompt with Resume, Fork, Copy and Star.
 - Delayed Actions opens Session Automations. Send Enter defaults to **When all
   agents finish**. It can also run after a delay, when this agent finishes, or
   **When a specific agent finishes**. Choose the specific agent from the Agent sessions

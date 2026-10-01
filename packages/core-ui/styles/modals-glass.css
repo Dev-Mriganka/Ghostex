@@ -66,12 +66,6 @@
   background: var(--app-dropdown-background) !important;
 }
 
-/* Search by Prompt's result counter carries its own dark fill. */
-:root[data-window-glass='true'][data-app-appearance='dark']:not(:has(.gx-onboarding)) .ghostex-find-count-pill {
-  --ghostex-find-pill-surface: color-mix(in srgb, #ffffff 6%, var(--gx-glass-surface));
-  --ghostex-find-pill-outline: rgba(255, 255, 255, 0.1);
-}
-
 /* Agents Hub's editor is Monaco on its built-in dark theme, which paints its own background. */
 :root[data-window-glass='true'][data-app-appearance='dark']:not(:has(.gx-onboarding))
   .agents-hub-monaco

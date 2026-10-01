@@ -20,8 +20,8 @@ import { pathToFileURL } from 'node:url';
  Gradle, signing, notarisation, code-server packaging, component publishing, and
  anything that fetches large artifacts or needs release secrets. `cargo xtask
  typecheck` and `bun run release:test` are separate preflight stages already.
- the phone's Find page bundle, `cargo xtask web-build`, and the editor build are not run by any
- release workflow, so they are not here either.
+ `cargo xtask web-build` and the editor build are not run by any release workflow, so
+ they are not here either.
 
  Two of the steps write TRACKED files: the sidebar CSS build regenerates
  packages/core-ui/styles/shadcn.generated.css and generate-chat-agents.mjs
