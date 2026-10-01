@@ -45,6 +45,7 @@ pub(crate) struct GpuiGhostexCliProbe {
     pub(crate) cli_skill_path: Option<String>,
     pub(crate) browser_skill_path: Option<String>,
     pub(crate) computer_use_skill_path: Option<String>,
+    pub(crate) spaceo_skill_path: Option<String>,
     pub(crate) embedded_browser_skill_path: Option<String>,
     pub(crate) agents_orchestration_skill_path: Option<String>,
     pub(crate) manage_beads_skill_path: Option<String>,
@@ -65,6 +66,8 @@ pub(crate) fn gpui_ghostex_cli_probe() -> Result<GpuiGhostexCliProbe, String> {
         cli_skill_path: status.cli_skill_path,
         browser_skill_path: status.browser_skill_path,
         computer_use_skill_path: status.computer_use_skill_path,
+        // SpaceO runs only on macOS, so Windows never offers its skill.
+        spaceo_skill_path: None,
         embedded_browser_skill_path: status.embedded_browser_skill_path,
         agents_orchestration_skill_path: status.agents_orchestration_skill_path,
         manage_beads_skill_path: status.manage_beads_skill_path,
@@ -100,6 +103,7 @@ pub(crate) fn gpui_ghostex_cli_probe() -> Result<GpuiGhostexCliProbe, String> {
         cli_skill_path: skill_path("ghostex-cli"),
         browser_skill_path: skill_path("ghostex-browser-use"),
         computer_use_skill_path: skill_path("ghostex-computer-use"),
+        spaceo_skill_path: skill_path("ghostex-spaceo"),
         embedded_browser_skill_path: skill_path("ghostex-embedded-browser-use"),
         agents_orchestration_skill_path: skill_path("ghostex-agents"),
         manage_beads_skill_path: skill_path("ghostex-manage-beads"),
@@ -118,7 +122,8 @@ pub(crate) fn gpui_ghostex_cli_status_message(detail_override: Option<&str>) -> 
     gpui_ghostex_cli_status_message_with_cua_update_check(detail_override, false)
 }
 
-/// `fresh_cua_update_check` bypasses cua-driver's cached update answer for an explicit check.
+/// `fresh_cua_update_check` bypasses cua-driver's cached update answer, and SpaceO's cached latest
+/// release, for an explicit check.
 pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
     detail_override: Option<&str>,
     fresh_cua_update_check: bool,
@@ -147,10 +152,18 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
     let cua_app_installed = gpui_is_dir(Path::new("/Applications/CuaDriver.app"));
     let cua_driver_installed = cua_driver_path.is_some() || cua_app_installed;
     let desktop_control_installed = cua_driver_installed && computer_use_skill_installed;
-    let cua_driver_update_status =
-        gpui_cua_driver_update_status(cua_driver_path.as_deref(), fresh_cua_update_check);
-    let cua_permission_status =
-        gpui_cua_driver_permission_status(cua_driver_path.as_deref(), cua_app_installed);
+    // SpaceO's probes (version, latest release, daemon ping) run beside Trycua's instead of after them.
+    let (spaceo_status, (cua_driver_update_status, cua_permission_status)) =
+        std::thread::scope(|scope| {
+            let spaceo = scope.spawn(|| {
+                gpui_spaceo_supported().then(|| gpui_spaceo_status(fresh_cua_update_check))
+            });
+            let cua = (
+                gpui_cua_driver_update_status(cua_driver_path.as_deref(), fresh_cua_update_check),
+                gpui_cua_driver_permission_status(cua_driver_path.as_deref(), cua_app_installed),
+            );
+            (spaceo.join().ok().flatten(), cua)
+        });
     let detail = detail_override
         .map(str::to_string)
         .unwrap_or_else(|| {
@@ -244,6 +257,9 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
                 "Desktop Control is not installed yet.".to_string()
             });
             parts.push(cua_permission_status.detail.clone());
+            if let Some(spaceo_status) = spaceo_status.as_ref() {
+                parts.push(spaceo_status.permission_detail.clone());
+            }
             parts.join(" ")
         });
 
@@ -292,6 +308,15 @@ pub(crate) fn gpui_ghostex_cli_status_message_with_cua_update_check(
         "helpSkillPath": probe.help_skill_path,
         "type": "ghostexCliStatus",
     });
+    if let (Some(payload), serde_json::Value::Object(spaceo)) = (
+        payload.as_object_mut(),
+        gpui_spaceo_status_fields(
+            &spaceo_status.unwrap_or_default(),
+            probe.spaceo_skill_path.as_deref(),
+        ),
+    ) {
+        payload.extend(spaceo);
+    }
     gpui_decorate_ghostex_cli_status(&mut payload);
     payload
 }

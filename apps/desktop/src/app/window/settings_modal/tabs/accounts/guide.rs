@@ -3,8 +3,8 @@
 //! per provider (the chosen one highlighted, its helper's install command while it is missing) and
 //! the sign-in form for the chosen provider.
 //!
-//! CDXC:Settings 2026-09-07 DECISION (see the React twin): each provider has a connection-guide
-//! button; both open this same dialog, at most 90% of the Settings modal's height.
+//! CDXC:Settings 2026-09-07 DECISION:
+//! Each provider has a connection-guide button. Both open the same Settings dialog with a backdrop, shared Ghostex instructions once, and two bullets for the provider-specific steps, each with a short helper and author credit. The tutorial is at most 90% of its Settings modal's height, including when Settings resizes.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::fields::settings_dialog_sheet;
 use super::super::super::palette::SettingsPalette;

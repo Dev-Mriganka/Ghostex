@@ -301,6 +301,8 @@ impl ExtensionsTab {
         )
     }
 
+    /// CDXC:Extensions 2026-09-24 DECISION:
+    /// User (ruling 3A, 2026-09-20): a view's scope is a Default of shown or hidden plus per-project and per-space overrides. User (2026-09-24): replace the grids of toggle cards with a multi-select dropdown and "make the UX for this part great". The editor reads as one rule: "Show <view> [Everywhere | Only in selected places]", then "Except in" / "Show in" with the picked spaces and projects (the overrides that differ from the Default), then, once a space is picked, "But keep in" / "But not in" for projects that override their space, and a plain sentence stating the result.
     fn render_scope_editor(
         &mut self,
         p: &SettingsPalette,
@@ -546,6 +548,8 @@ impl ExtensionsTab {
         cx.notify();
     }
 
+    /// CDXC:Extensions 2026-09-24 DECISION:
+    /// User: "I really hate seeing all the toggles like this, please make it just a dropdown with multi select." Projects and spaces are picked from one searchable multi-select: the picks show as chips with a remove button, and the list shows spaces first, then projects, with a check on each pick. It replaces the 2026-09-18 toggle cards (three to a row, one switch per project and per space).
     /// `ScopeMultiSelect`: the chips, the trigger and, while open, the searchable list.
     #[allow(clippy::too_many_arguments)]
     fn render_multi_select(

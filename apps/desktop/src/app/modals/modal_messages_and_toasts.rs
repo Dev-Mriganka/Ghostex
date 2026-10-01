@@ -16,22 +16,10 @@ impl GhostexGpuiApp {
         sidebar_state_message: serde_json::Value,
         cx: &mut gpui::Context<Self>,
     ) {
-        let Some(handle) = self.app_modal_window.clone() else {
-            // The native Settings modal (settings_modal_lifecycle.rs) follows the same hydrate.
-            let sidebar_state_message =
-                self.with_gpui_command_pane_sidebar_indicators(sidebar_state_message);
-            self.refresh_native_settings_modal_sidebar_state(sidebar_state_message, cx);
-            return;
-        };
+        // The native Settings modal (settings_modal_lifecycle.rs) follows the same hydrate.
         let sidebar_state_message =
             self.with_gpui_command_pane_sidebar_indicators(sidebar_state_message);
-        let update_result = handle.update(cx, |host, modal_window, cx| {
-            host.refresh_sidebar_state_message(sidebar_state_message.clone(), cx);
-            modal_window.refresh();
-        });
-        if update_result.is_err() {
-            self.clear_lost_gpui_app_modal_window_handle();
-        }
+        self.refresh_native_settings_modal_sidebar_state(sidebar_state_message, cx);
     }
 
     pub(crate) fn dispatch_open_gpui_app_modal_sidebar_state_payload(
@@ -40,40 +28,26 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) {
         /*
-        CDXC:StatusPet 2026-06-24-11:36:
-        Settings status/action responses are transient `sidebarState` messages to the shared React modal host. They must clear modal loading states without replacing the stored full hydrate snapshot used when the app-modal host becomes ready or a Settings save rehydrates the modal.
+        CDXC:AppModal 2026-09-25 WHY:
+        Quick Access is a native GPUI window with no modal-host page; its model is gx-core's
+        (apps/desktop/src/app/quick_access/host.rs). Its answers (recent projects, saved
+        prompts, previous sessions, transcript sizes) go straight to that model.
         */
-        let Some(handle) = self.app_modal_window.clone() else {
-            /*
-            CDXC:AppModal 2026-09-25 WHY:
-            Quick Access is a native GPUI window with no modal-host page; its model is gx-core's
-            (apps/desktop/src/app/quick_access/host.rs). Its answers (recent projects, saved
-            prompts, previous sessions, transcript sizes) go straight to that model.
-            */
-            if self
-                .native_app_modal_kind()
-                .and_then(crate::app::window::quick_access::QuickAccessTabId::from_modal_kind)
-                .is_some()
-            {
-                self.quick_access_receive(payload, cx);
-                return;
-            }
-            // The native onboarding reads the same detection, CLI and install answers (onboarding_modal_lifecycle.rs).
-            if self.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding) {
-                self.receive_gpui_onboarding_status_payload(payload, cx);
-                return;
-            }
-            // The native Settings modal takes the same status answers (settings_modal_lifecycle.rs).
-            self.receive_native_settings_modal_payload(&payload, cx);
+        if self
+            .native_app_modal_kind()
+            .and_then(crate::app::window::quick_access::QuickAccessTabId::from_modal_kind)
+            .is_some()
+        {
+            self.quick_access_receive(payload, cx);
             return;
-        };
-        let update_result = handle.update(cx, |host, modal_window, cx| {
-            host.dispatch_transient_sidebar_state_message(payload, cx);
-            modal_window.refresh();
-        });
-        if update_result.is_err() {
-            self.clear_lost_gpui_app_modal_window_handle();
         }
+        // The native onboarding reads the same detection, CLI and install answers (onboarding_modal_lifecycle.rs).
+        if self.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding) {
+            self.receive_gpui_onboarding_status_payload(payload, cx);
+            return;
+        }
+        // The native Settings modal takes the same status answers (settings_modal_lifecycle.rs).
+        self.receive_native_settings_modal_payload(&payload, cx);
     }
 
     pub(crate) fn dispatch_gpui_titlebar_tips_sidebar_state_payload(
@@ -101,34 +75,12 @@ impl GhostexGpuiApp {
         }
     }
 
-    pub(crate) fn gpui_app_modal_current_modal(
-        &mut self,
-        cx: &mut gpui::Context<Self>,
-    ) -> Option<GpuiAppModalKind> {
-        let handle = self.app_modal_window.clone()?;
-        handle
-            .update(cx, |host, _modal_window, _cx| host.current_modal)
-            .ok()
-    }
-
     pub(crate) fn dispatch_open_gpui_app_modal_message(
         &mut self,
         message: serde_json::Value,
         cx: &mut gpui::Context<Self>,
     ) {
-        if self.receive_native_app_modal_message(&message, cx) {
-            return;
-        }
-        let Some(handle) = self.app_modal_window.clone() else {
-            return;
-        };
-        let update_result = handle.update(cx, |host, modal_window, cx| {
-            host.dispatch_transient_message(message.clone(), cx);
-            modal_window.refresh();
-        });
-        if update_result.is_err() {
-            self.clear_lost_gpui_app_modal_window_handle();
-        }
+        self.receive_native_app_modal_message(&message, cx);
     }
 
     pub(crate) fn dispatch_gpui_app_modal_toast(

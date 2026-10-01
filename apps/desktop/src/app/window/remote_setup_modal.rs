@@ -120,6 +120,8 @@ pub(crate) type RemoteSetupModalHost = Rc<dyn Fn(RemoteSetupModalCommand, &mut A
 pub(crate) struct RemoteSetupModalConfig {
     pub(crate) palette: ModalPalette,
     /// `Settings.remoteTailscaleEnabled`; off hides the Tailscale card.
+    /// CDXC:RemotePairing 2026-09-03 DECISION:
+    /// User: "please add a toggle for tailscale. if tailscale is disabled …" (cut off); assumed reading: a path the user switched off in Settings → Remote is not offered here either, so the Tailscale option is hidden rather than shown as off.
     pub(crate) tailscale_enabled: bool,
     /// Whether the local gxserver can be reached; off disables Connect with the reason as its tooltip.
     pub(crate) gxserver_available: bool,

@@ -819,6 +819,7 @@ impl ChatOptionMenuPanel {
                 text, strong: true, ..
             } => strong(text).into_any_element(),
             Block::Text { text, dim, .. } => paragraph(text, dim).into_any_element(),
+            // CDXC:AgentProviders 2026-09-12 DECISION: Give the recovery message and Stop automatic recovery button clear spacing, and keep that button rounded.
             Block::Recovery { reason, next, busy } => div()
                 .id("account-recovery")
                 .role(gpui::Role::Status)

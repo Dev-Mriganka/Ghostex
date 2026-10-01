@@ -1860,8 +1860,9 @@ docs directory), `hideProjectHeaderDiffStats`,
 - Settings > Open In chooses which apps appear on session and project Open In
   menus and adds custom open targets.
 - Settings > Integrations installs the bundled agent skills (Ghostex CLI,
-  Ghostex Help, Computer Use and Browser Use through Fast Computer Use, Embedded Browser
-  Use, Project Board Beads) and shows their install status. Skills are copied
+  Ghostex Help, Computer Use and Browser Use through Fast Computer Use, SpaceO
+  through SpaceO, Embedded Browser Use, Project Board Beads) and shows their
+  install status. Skills are copied
   into the global skill folders every agent CLI reads. When the computer is
   online they are downloaded from the Ghostex GitHub repository, so skill fixes
   arrive between releases, and installed skills are refreshed automatically
@@ -1872,6 +1873,18 @@ docs directory), `hideProjectHeaderDiffStats`,
   button that runs the official installer again, and an uninstall button
   that removes Fast Computer Use but keeps its Accessibility and Screen Recording
   permissions. Hover them to see the installed and latest versions.
+  On an Apple Silicon Mac with macOS 14 or later, the same section also
+  installs SpaceO, which gives agents their own hidden screen: apps open on a
+  virtual display, so agents click, type and take screenshots there while you
+  keep your own screen, pointer and focus. Install SpaceO runs its official
+  installer, keeps SpaceO running in the background and installs the Ghostex
+  SpaceO skill; it does not add SpaceO to your agents' MCP settings. Its row
+  gets the same update, reinstall and uninstall buttons (an update waits for
+  agents using SpaceO to finish; uninstalling ends their SpaceO sessions and
+  keeps the permissions). Its permissions row says which app needs
+  Accessibility and Screen Recording turned on and opens those settings. Ask
+  agents to use $ghostex-spaceo (or /ghostex-spaceo in Claude). Commands:
+  `ghostex spaceo install-skill`, `spaceo doctor`.
 - Settings > Integrations > Tools lists the tools Ghostex can install for you
   when something you set up needs them: Node.js and npm, uv, Homebrew (Mac),
   System tools (curl, certificates, unzip and git on Linux), Beads, and the

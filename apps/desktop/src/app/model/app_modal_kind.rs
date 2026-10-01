@@ -326,10 +326,6 @@ impl GpuiAppModalKind {
         self.window_size_for_open(open_message)
     }
 
-    pub(crate) fn uses_react_modal_host(self) -> bool {
-        !matches!(self, Self::Extension(_))
-    }
-
     pub(crate) fn is_settings_modal_entry(self) -> bool {
         matches!(
             self,
@@ -339,16 +335,6 @@ impl GpuiAppModalKind {
                 | Self::ConfigureActions
                 | Self::OpenTargets
         )
-    }
-
-    /// CDXC:Settings 2026-09-07 WHY:
-    /// Configure Agents and the other Settings entry points expose Accounts and Extensions too; omitting their server connection made Accounts incorrectly ask the local user to connect a computer.
-    /// CDXC:Onboarding 2026-09-15 WHY:
-    /// The Agents panel installs missing agent CLIs through gxserver's `/api/agentCliMaintenance` (the same transport as
-    /// Settings > Agents), which reads `window.ghostexGpui.gxserverBootstrap`. Without the bootstrap the panel silently
-    /// downgrades every Install button to "Install guide", so Onboarding must be in this allowlist.
-    pub(crate) fn needs_gxserver_bootstrap(self) -> bool {
-        self.is_settings_modal_entry() || matches!(self, Self::RemoteSetup | Self::Onboarding)
     }
 
     pub(crate) fn requires_sidebar_state(self) -> bool {

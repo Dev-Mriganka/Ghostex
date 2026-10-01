@@ -488,6 +488,9 @@ impl AccountsTab {
 
 /// `.gx-account-mark` with its indicator: the provider logo at 30% under a 9.9px label (Codex in
 /// `#7db8fb`); a `-` indicator shows the plain logo.
+///
+/// CDXC:AgentProviders 2026-09-09 DECISION:
+/// User wants the same account-label font centered over a larger provider icon as its background. Account icons always use original provider colors; labels and adjacent usage figures share the chat indicator's monospace font. Claude keeps its label color; Codex uses #7db8fb. The background icon is 19.2px (20% smaller) and the label is 9.9px (10% bigger). This replaces the label-underneath design. Sidebar icons and account menus have no indicator. Labels accept up to two letters or digits; - hides the label and an empty setting uses the slot number.
 fn account_mark(p: &SettingsPalette, provider: &str, indicator: &str) -> AnyElement {
     if indicator == "-" {
         return account_logo(p, provider, 21.0);

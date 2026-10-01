@@ -220,6 +220,8 @@ pub(crate) struct GridCardSpec {
     pub(crate) dragging: bool,
 }
 
+/// CDXC:Extensions 2026-09-24 DECISION:
+/// User: every extension on the Settings Extensions page (built-in, installed, Store and the user's own views) is a card in a grid, three to a row, instead of a list row. One card shape serves all four so they read as one family: icon and the on/off switch (or Install) on top, title, description, an optional scope label, and a footer with the type or author on the left and the row actions, which appear on hover or focus. The switch is the state, so there is no status dot; a card that is off dims its icon.
 /// `ExtensionGridCard`: icon and control on top, title, three lines of description, an optional
 /// scope label, and a footer with the meta text and the actions that appear on hover.
 pub(crate) fn grid_card(p: &SettingsPalette, spec: GridCardSpec) -> AnyElement {

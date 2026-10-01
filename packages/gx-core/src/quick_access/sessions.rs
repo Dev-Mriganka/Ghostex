@@ -790,6 +790,8 @@ pub(crate) fn tag_select(state: &SessionsTabState, data: &QuickAccessData) -> Qu
     }
 }
 
+/// CDXC:Sessions 2026-09-08 DECISION:
+/// User: Quick Access Sessions gets a project dropdown with a search filter at the top of the dropdown, rounded like the tags dropdown and wider. It sits at the right of the filters on the search line (the 2026-09-21 Raycast layout).
 pub(crate) fn project_select(
     state: &SessionsTabState,
     data: &QuickAccessData,

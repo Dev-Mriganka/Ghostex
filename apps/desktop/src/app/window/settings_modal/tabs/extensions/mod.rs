@@ -304,6 +304,8 @@ impl ExtensionsTab {
         self.load_browser(cx);
     }
 
+    /// CDXC:Extensions 2026-09-26 DECISION:
+    /// User: Configure view on a view tab scrolls Settings to that view. Views without their own editor (Storybook, built-in and store views) open their scope editor instead, so the page scrolls to that editor the same way it scrolls to a custom view's.
     /// `initialCustomViewId` / `initialViewScopeKey`: open that view's editor once.
     fn apply_deep_links(&mut self, cx: &mut Context<Self>) {
         let (view_id, scope_key, values) = {

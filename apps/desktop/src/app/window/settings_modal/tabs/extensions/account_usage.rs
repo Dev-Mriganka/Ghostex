@@ -1,8 +1,8 @@
 //! `TitlebarAccountUsageSection` (accounts/titlebar-settings-section.tsx (deleted 2026-10-01)): which saved accounts
 //! show their usage at the bottom of the sidebar, the same stars as Settings > Accounts.
 //!
-//! CDXC:Extensions 2026-09-10 DECISION (see the React twin): the Extensions page also controls
-//! which accounts show usage, keeping the existing controls on the Accounts page.
+//! CDXC:Extensions 2026-09-10 DECISION:
+//! User: the Extensions page also controls which accounts show usage in the GPUI titlebar, keeping the existing controls on the Accounts page. (The usage meters now sit in the sidebar usage strip; see the Settings 2026-09-20 decision in accounts/mod.rs.)
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::fields::{
     ListItemStatus, SizedButtonSize, SizedButtonVariant, settings_list_item, settings_section,

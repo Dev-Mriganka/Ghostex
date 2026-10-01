@@ -269,6 +269,8 @@ impl GpuiOnboardingWindow {
         self.update_settings(patch, cx);
     }
 
+    /// CDXC:Onboarding 2026-09-23 DECISION:
+    /// User: "lets somehow have a switch that lets you see just dark or just light themes no need to show all of them there / and by default we just pick the same color in the other scheme". Theme shows one appearance's cards behind a Dark | Light switch, and picking a look fills in the matching look for the other appearance until that one is picked by hand.
     fn pick_theme_preset(&mut self, dark: bool, preset: String, cx: &mut Context<Self>) {
         let mut patch = serde_json::Map::new();
         let (key, other_key, picked_other) = if dark {
@@ -296,6 +298,8 @@ impl GpuiOnboardingWindow {
         self.update_settings(patch, cx);
     }
 
+    /// CDXC:Onboarding 2026-09-23 DECISION:
+    /// User: "we should automatically activate night mode for them if they enable transparency (switch it from auto/light to dark and indicate this with a toast". Turning transparency on here also sets Appearance to Dark (glass only shows in dark mode) and says so in a toast; transparency is one row (switch, strength slider, value).
     fn toggle_transparency(&mut self, cx: &mut Context<Self>) {
         let turning_on = self.settings.window_glass == "opaque";
         let mut patch = serde_json::Map::new();
@@ -750,6 +754,8 @@ impl GpuiOnboardingWindow {
         out
     }
 
+    /// CDXC:Onboarding 2026-09-25 DECISION:
+    /// User, of the Theme settings revamp: "in the setup modal, we'll just have the simple thing, and then we need to tell it that you can go to settings to modify the theme even more." The look card keeps only the simple controls of Settings -> Theme (Appearance, the colour squares behind Dark | Light tabs, Colourfulness, one Transparency row) and ends with "More theme options in Settings -> Theme", which opens Settings on the Theme page. This narrows the 2026-09-23 request to "add the transparency setting and theme (just the non advanced stuff) to the onboarding setup's last page"; Custom stays on the Theme page.
     fn render_look_card(&mut self, s: S, now: Instant, cx: &mut Context<Self>) -> AnyElement {
         let settings = self.settings.clone();
         let dark_scheme = self.get_started.dark_scheme;

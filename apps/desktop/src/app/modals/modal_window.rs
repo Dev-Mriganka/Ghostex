@@ -1,4 +1,4 @@
-//! Opening app and extension modal windows, their ready timeout, closing, first-launch setup and restoring keyboard focus afterwards.
+//! Opening app and extension modal windows, closing, first-launch setup and restoring keyboard focus afterwards.
 
 use std::rc::Rc;
 use std::time::Duration;
@@ -12,7 +12,6 @@ use gpui::WindowOptions;
 use gpui_component::WindowExt;
 use gpui_component::notification::Notification;
 
-use crate::app::consts::*;
 use crate::app::helpers::*;
 use crate::app::model::*;
 use crate::app::window::*;
@@ -317,7 +316,7 @@ impl GhostexGpuiApp {
         &mut self,
         modal: GpuiAppModalKind,
         mut open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
+        _sidebar_state_message: serde_json::Value,
         source_window: Option<&mut Window>,
         cx: &mut gpui::Context<Self>,
     ) {
@@ -326,15 +325,14 @@ impl GhostexGpuiApp {
         This launcher is the single entry point for every app-modal open route
         (titlebar actions, hotkeys, command palette, sidebar bridge messages), so
         Find, the Extensions store, and Settings report `surface.opened` from
-        here. The `_inner` retry path is deliberately not hooked: a retry is the
-        same open. Modals outside the spec enum — including per-extension
+        here. Modals outside the spec enum — including per-extension
         modals — send nothing.
         */
         if let Some(surface) = gpui_telemetry_surface_for_app_modal(modal) {
             record_gpui_surface_opened_telemetry(surface, cx.background_executor());
         }
-        // Another app modal replacing the native onboarding counts as finishing setup, as the
-        // switch out of the React onboarding did (CDXC:Onboarding 2026-09-11 in the inner opener).
+        // Another app modal replacing the native onboarding counts as finishing setup; otherwise
+        // onboarding reappears on the next launch.
         if modal != GpuiAppModalKind::Onboarding
             && self.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding)
         {
@@ -343,23 +341,11 @@ impl GhostexGpuiApp {
         if modal == GpuiAppModalKind::StashedPrompts {
             self.enrich_gpui_saved_prompts_quick_access_open_message(&mut open_message);
         }
-        // Kinds rebuilt in native GPUI leave the React host here (native_app_modal_lifecycle.rs).
+        // Every built-in kind is a native GPUI window (native_app_modal_lifecycle.rs).
         if self.try_open_native_app_modal(modal, &open_message, cx) {
             return;
         }
-        // The launcher owns modal hydration. Session-scoped callers such as
-        // Rename and Delayed Send must not diverge based on their entry point.
-        if modal.requires_sidebar_state() {
-            open_message["latestSidebarStateMessage"] = sidebar_state_message.clone();
-        }
-        self.open_gpui_app_modal_window_inner(
-            modal,
-            open_message,
-            sidebar_state_message,
-            source_window,
-            true,
-            cx,
-        );
+        self.open_gpui_app_modal_window_inner(modal, open_message, source_window, cx);
     }
 
     /*
@@ -397,43 +383,21 @@ impl GhostexGpuiApp {
         );
     }
 
+    /// Opens an extension modal: a CEF child window that loads the extension's own page. The
+    /// built-in kinds never get here; `try_open_native_app_modal` opens them all natively.
     pub(crate) fn open_gpui_app_modal_window_inner(
         &mut self,
         modal: GpuiAppModalKind,
         open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
         source_window: Option<&mut Window>,
-        reset_ready_retry: bool,
         cx: &mut gpui::Context<Self>,
     ) {
-        /*
-        CDXC:Settings 2026-06-24-10:58:
-        Settings, Hotkeys, and Command Palette app-modal requests share this one GPUI-owned CEF window launcher so titlebar clicks and sidebar bridge messages cannot diverge into duplicate UI, temporary stubs, hidden overlays, or broad hit-test routing.
-
-        CDXC:Sessions 2026-06-24-11:53:
-        Previous Sessions app-modal requests share this launcher so titlebar/menu actions and modal-host open messages use one CEF window owner, while gxserver result messages remain transient sidebarState events owned by the command bridge.
-
-        CDXC:Settings 2026-06-24-12:22:
-        Settings sub-entry modal ids must share this launcher so bridge opens, command-palette commands, and titlebar actions all hydrate the same shared Settings modal while letting the React host choose the initial tab from the modal id.
-
-        CDXC:FocusRouting 2026-06-25-22:13:
-        Command-pane app modals need the same dismissal focus contract as native child windows. Capture only a runtime command group/session return target at modal open, then restore that exact command tab on close if it still exists; do not persist modal payloads, titles, command text, paths, URLs, stdout/stderr, or fallback to another command group.
-
-        CDXC:Diagnostics 2026-06-28-17:06:
-        GPUI app-modal open/retry behavior stays functional, but runtime log writers and diagnostic breadcrumbs are intentionally removed until a future requirement adds a narrower diagnostics surface.
-        */
-        if !cef::context_initialized() {
-            self.defer_gpui_app_modal_open_for_cef(
-                modal,
-                open_message,
-                sidebar_state_message,
-                reset_ready_retry,
-                cx,
-            );
+        let GpuiAppModalKind::Extension(id) = modal else {
             return;
-        }
-        if reset_ready_retry {
-            self.app_modal_ready_retry_used = false;
+        };
+        if !cef::context_initialized() {
+            self.defer_gpui_app_modal_open_for_cef(modal, open_message, cx);
+            return;
         }
         // A native GPUI modal counts as the one open app modal.
         self.remove_native_app_modal_window(cx);
@@ -450,52 +414,17 @@ impl GhostexGpuiApp {
             self.shell_focus,
             &self.command_pane,
         );
-        /*
-        CDXC:Onboarding 2026-09-11 WHY:
-        A React-initiated switch out of first-launch setup (the onboarding's
-        "Advanced settings later" and queued Remote-settings opens post a plain
-        `open` for Settings) replaces or re-targets the one reusable modal
-        window here, so the later `completeFirstLaunchSetup` message finds
-        Settings as the live modal and is ignored. Count the switch itself as
-        finishing setup, otherwise onboarding reappears on the next launch.
-        */
-        if modal != GpuiAppModalKind::Onboarding
-            && self.gpui_app_modal_current_modal(cx) == Some(GpuiAppModalKind::Onboarding)
-        {
-            self.complete_first_launch_setup();
-        }
         if let Some(handle) = self.app_modal_window.clone() {
-            let window_configuration_matches = handle
+            // The window loads one extension's page, so only the same extension reuses it.
+            let same_modal = handle
                 .update(cx, |host, _modal_window, _cx| {
-                    host.current_modal.uses_react_modal_host() == modal.uses_react_modal_host()
-                        && host.current_modal.has_titlebar() == modal.has_titlebar()
-                        && host.current_modal.is_resizable() == modal.is_resizable()
-                        && (modal.uses_react_modal_host() || host.current_modal == modal)
-                        && (modal.is_resizable() || host.initial_window_size == window_size)
+                    host.current_modal == modal && host.initial_window_size == window_size
                 })
                 .unwrap_or(false);
-            if !window_configuration_matches {
-                /*
-                CDXC:AppModal 2026-07-22:
-                The reusable React host cannot reuse native window options
-                across a resizable/fixed-size transition. In particular, a
-                Command Palette window carries the generic 520px minimum width,
-                so resizing it cannot produce Delayed Send's exact 470x365
-                fixed content size. Replace the child window at this native
-                ownership boundary while retaining the destination open
-                request, rather than closing it from React before Rust opens
-                the next modal.
-                */
+            if !same_modal {
                 self.remove_gpui_app_modal_window_without_focus_restore(cx);
             } else {
-                let update_result = handle.update(cx, |host, modal_window, cx| {
-                    host.open_modal(
-                        open_message.clone(),
-                        sidebar_state_message.clone(),
-                        modal,
-                        self.sidebar_gxserver_bootstrap.clone(),
-                        cx,
-                    );
+                let update_result = handle.update(cx, |_host, modal_window, _cx| {
                     modal_window.resize(window_size);
                     modal_window.set_window_title(
                         if cfg!(any(target_os = "windows", target_os = "linux"))
@@ -522,30 +451,14 @@ impl GhostexGpuiApp {
             }
         }
 
-        let mut extension_bridge_surface = None;
-        let url = if let GpuiAppModalKind::Extension(id) = modal {
-            let Some((url, bridge_surface)) = self.extension_modal_runtime(id) else {
-                if let Some(window) = source_window {
-                    window.push_notification(
-                        Notification::warning("The extension runtime is unavailable."),
-                        cx,
-                    );
-                }
-                return;
-            };
-            extension_bridge_surface = Some(bridge_surface);
-            url
-        } else {
-            let Some(url) = app_modal_host_url().ok() else {
-                if let Some(window) = source_window {
-                    window.push_notification(
-                        Notification::warning("The GPUI app-modal host bundle is missing."),
-                        cx,
-                    );
-                }
-                return;
-            };
-            url
+        let Some((url, extension_bridge_surface)) = self.extension_modal_runtime(id) else {
+            if let Some(window) = source_window {
+                window.push_notification(
+                    Notification::warning("The extension runtime is unavailable."),
+                    cx,
+                );
+            }
+            return;
         };
         let window_bounds = WindowBounds::Windowed(gpui::Bounds::centered_at(
             self.main_window_bounds.center(),
@@ -577,26 +490,11 @@ impl GhostexGpuiApp {
             }),
             ..Default::default()
         };
-        let event_handler = self.app_modal_host_bridge_event_handler(cx);
         self.app_modal_open_attempt_id = self.app_modal_open_attempt_id.wrapping_add(1);
-        let ready_timeout_attempt_id = self.app_modal_open_attempt_id;
-        let extension_bridge = match modal {
-            GpuiAppModalKind::Extension(id) => extension_bridge_surface.map(|bridge_surface| {
-                (
-                    bridge_surface,
-                    self.extension_modal_bridge_event_handler(ready_timeout_attempt_id, id, cx),
-                )
-            }),
-            _ => None,
-        };
-        let ready_timeout_open_message = open_message.clone();
-        let ready_timeout_sidebar_state_message = sidebar_state_message.clone();
-        let sidebar_has_projects = sidebar_state_message
-            .get("hud")
-            .and_then(|hud| hud.get("projectSettingsProjects"))
-            .and_then(serde_json::Value::as_array)
-            .is_some_and(|projects| !projects.is_empty());
-        let main_window_native_view = self.parent_ns_view;
+        let extension_bridge = (
+            extension_bridge_surface,
+            self.extension_modal_bridge_event_handler(self.app_modal_open_attempt_id, id, cx),
+        );
         let window_border = self.gpui_native_modal_palette().window_border();
         self.app_modal_window = cx
             .open_window(options, |modal_window, cx| {
@@ -614,37 +512,11 @@ impl GhostexGpuiApp {
                     );
                 }
                 modal_window.activate_window();
-                /*
-                CDXC:Onboarding 2026-09-15 DECISION:
-                User: "the modal must stay on top of the main ghostex app and centered on top of it".
-                The onboarding host becomes an AppKit child window of the main window so it never drops behind the workspace and follows the main window when it moves.
-                Other app modals keep their independent-window behaviour.
-                */
-                if modal == GpuiAppModalKind::Onboarding {
-                    attach_gpui_app_modal_window_to_main_window(
-                        modal_window,
-                        main_window_native_view,
-                    );
-                }
-                if modal == GpuiAppModalKind::Onboarding && !sidebar_has_projects {
-                    /*
-                    First-launch setup is required until the sidebar has a
-                    project. Reject native close controls and Cmd-W while it
-                    is open; the completion bridge removes the window
-                    programmatically after persisting completion. Once any
-                    project exists the user may leave through the window
-                    chrome, and the close handler records completion.
-                    */
-                    modal_window.on_window_should_close(cx, |_window, _cx| false);
-                }
                 GpuiAppModalHostWindow::new(
                     modal_window,
                     url,
                     modal,
                     open_message,
-                    sidebar_state_message,
-                    self.sidebar_gxserver_bootstrap.clone(),
-                    event_handler,
                     extension_bridge,
                     cx,
                 )
@@ -653,141 +525,10 @@ impl GhostexGpuiApp {
         if let Some(handle) = self.app_modal_window {
             self.app_modal_window_id.set(Some(handle.window_id()));
             self.app_modal_command_return_focus_target = return_focus_target;
-            if modal.uses_react_modal_host() {
-                self.schedule_gpui_app_modal_ready_timeout(
-                    ready_timeout_attempt_id,
-                    modal,
-                    ready_timeout_open_message,
-                    ready_timeout_sidebar_state_message,
-                    Duration::ZERO,
-                    cx,
-                );
-            }
         } else {
             self.app_modal_window_id.set(None);
             self.app_modal_command_return_focus_target = None;
         }
-    }
-
-    pub(crate) fn schedule_gpui_app_modal_ready_timeout(
-        &mut self,
-        attempt_id: u64,
-        modal: GpuiAppModalKind,
-        open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
-        waited: Duration,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        let timeout = if self.app_modal_ready_retry_used {
-            APP_MODAL_HOST_READY_RETRY_TIMEOUT
-        } else {
-            APP_MODAL_HOST_READY_TIMEOUT
-        };
-        cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(timeout).await;
-            let _ = this.update(cx, |this, cx| {
-                this.handle_gpui_app_modal_ready_timeout(
-                    attempt_id,
-                    modal,
-                    open_message,
-                    sidebar_state_message,
-                    waited + timeout,
-                    cx,
-                );
-            });
-        })
-        .detach();
-    }
-
-    pub(crate) fn handle_gpui_app_modal_ready_timeout(
-        &mut self,
-        attempt_id: u64,
-        modal: GpuiAppModalKind,
-        open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
-        waited: Duration,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        if attempt_id != self.app_modal_open_attempt_id {
-            return;
-        }
-        if self.app_modal_window.is_none() || self.gpui_app_modal_window_is_ready(cx) {
-            return;
-        }
-        /*
-        CDXC:Onboarding 2026-09-28 WHY:
-        A page that is still loading is slow, not dead. On a cold first launch (fresh install, antivirus scanning the new files) the modal page took tens of seconds to parse; replacing it at the timeout restarted that cold load, and after the one retry the first-run setup window was removed before it ever painted. Keep waiting while CEF reports the page loading (bounded), and retry only a page that finished loading without the ready handshake.
-        */
-        let still_loading = self
-            .app_modal_window
-            .and_then(|handle| {
-                handle
-                    .update(cx, |host, _window, cx| host.page_is_loading(cx))
-                    .ok()
-            })
-            .unwrap_or(false);
-        if still_loading && waited < APP_MODAL_HOST_LOADING_LIMIT {
-            self.schedule_gpui_app_modal_ready_timeout(
-                attempt_id,
-                modal,
-                open_message,
-                sidebar_state_message,
-                waited,
-                cx,
-            );
-            return;
-        }
-
-        if !self.app_modal_ready_retry_used {
-            self.app_modal_ready_retry_used = true;
-            self.remove_gpui_app_modal_window_without_focus_restore(cx);
-            /*
-            CDXC:AppModal 2026-09-30 WHY:
-            On Windows GPUI gives a PopUp window the thread's active window as its owner, and Windows destroys an owned window with its owner. The window being replaced is the active one and is only destroyed after this update returns, so a replacement opened here was owned by it and died with it: on a first run, when the modal page loads slowly enough to reach this retry, Settings showed for a few seconds and then closed for good. The replacement is opened once the old window is gone and the main window is active again.
-            */
-            cx.spawn(async move |this, cx| {
-                cx.background_executor()
-                    .timer(APP_MODAL_HOST_RETRY_REOPEN_DELAY)
-                    .await;
-                let _ = this.update(cx, |this, cx| {
-                    // Anything that opened or closed an app modal in the meantime owns the slot now.
-                    if attempt_id != this.app_modal_open_attempt_id
-                        || this.app_modal_window.is_some()
-                    {
-                        return;
-                    }
-                    this.open_gpui_app_modal_window_inner(
-                        modal,
-                        open_message,
-                        sidebar_state_message,
-                        None,
-                        false,
-                        cx,
-                    );
-                });
-            })
-            .detach();
-            return;
-        }
-
-        self.remove_gpui_app_modal_window_without_focus_restore(cx);
-        // The first run counted this window as shown when it opened; it never painted, so show it next launch.
-        if modal == GpuiAppModalKind::Onboarding {
-            self.persist_gpui_first_run_onboarding_marker(
-                GpuiFirstRunOnboardingMarker::FirstLaunchSetupNotShown,
-                cx,
-            );
-        }
-        cx.notify();
-    }
-
-    pub(crate) fn gpui_app_modal_window_is_ready(&mut self, cx: &mut gpui::Context<Self>) -> bool {
-        let Some(handle) = self.app_modal_window.clone() else {
-            return false;
-        };
-        handle
-            .update(cx, |host, _window, _cx| host.is_ready())
-            .unwrap_or(false)
     }
 
     pub(crate) fn remove_gpui_app_modal_window_without_focus_restore(
@@ -850,7 +591,6 @@ impl GhostexGpuiApp {
         self.app_modal_window = None;
         self.app_modal_window_id.set(None);
         self.app_modal_open_attempt_id = self.app_modal_open_attempt_id.wrapping_add(1);
-        self.app_modal_ready_retry_used = false;
         self.restore_keyboard_focus_after_app_modal(cx);
         self.resume_deferred_gpui_portless_setup_prompt(cx);
         if closed_modal == Some(GpuiAppModalKind::ExportTranscriptResult) {

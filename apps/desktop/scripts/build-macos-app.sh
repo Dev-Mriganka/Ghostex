@@ -177,6 +177,7 @@ bundled_cli_skill_assets=(
 	ghostex-browser-use
 	ghostex-embedded-browser-use
 	ghostex-computer-use
+	ghostex-spaceo
 	ghostex-cli
 	ghostex-help
 	ghostex-agents

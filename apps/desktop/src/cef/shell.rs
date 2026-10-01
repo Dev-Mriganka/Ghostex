@@ -1,19 +1,15 @@
+pub use super::sidebar_bridge_manifest::ExtensionBridgeSurfaceSpec;
 use super::sidebar_bridge_manifest::{
-    APP_MODAL_HOST_BRIDGE_PAYLOAD_MAX_CHARS, APP_MODAL_HOST_BRIDGE_PROCESS_MESSAGE_NAME,
-    APP_MODAL_HOST_BRIDGE_SURFACE_SPECS, APP_MODAL_HOST_ID_JS_FIELD, APP_MODAL_HOST_ID_VALUE,
-    APP_MODAL_HOST_SURFACE_JS_FIELD, APP_MODAL_HOST_SURFACE_VALUE,
     EXTENSION_BRIDGE_INSTALL_MESSAGE_NAME, EXTENSION_BRIDGE_PAYLOAD_MAX_CHARS,
     EXTENSION_BRIDGE_PROCESS_MESSAGE_NAME, EXTENSION_BRIDGE_RUNTIME_SHIM,
     PROJECT_WORKAREA_BRIDGE_FUNCTION_SPECS, PROJECT_WORKAREA_BRIDGE_INSTALL_MESSAGE_NAME,
     PROJECT_WORKAREA_BRIDGE_PAYLOAD_MAX_CHARS, PROJECT_WORKAREA_MANAGE_DOCS_RESOURCE_BASE_URL,
     PROJECT_WORKAREA_MANAGE_DOCS_RESOURCE_BASE_URL_JS_FIELD, ProjectWorkareaBridgeFunctionId,
-    SIDEBAR_PROJECT_CONTEXT_JS_NAMESPACE, WEBKIT_APP_MODAL_HOST_MESSAGE_HANDLER_JS_OBJECT,
-    WEBKIT_EXTENSION_HOST_MESSAGE_HANDLER_JS_OBJECT, WEBKIT_JS_OBJECT,
-    WEBKIT_MESSAGE_HANDLERS_JS_OBJECT, WEBKIT_POST_MESSAGE_JS_FUNCTION,
+    SIDEBAR_PROJECT_CONTEXT_JS_NAMESPACE, WEBKIT_EXTENSION_HOST_MESSAGE_HANDLER_JS_OBJECT,
+    WEBKIT_JS_OBJECT, WEBKIT_MESSAGE_HANDLERS_JS_OBJECT, WEBKIT_POST_MESSAGE_JS_FUNCTION,
     project_workarea_bridge_function_spec_for_js_function,
     project_workarea_bridge_function_spec_for_process_message,
 };
-pub use super::sidebar_bridge_manifest::{AppModalHostBridgeSurface, ExtensionBridgeSurfaceSpec};
 use anyhow::{Context as _, Result};
 use cef::rc::Rc as _;
 use cef::wrapper::resource_manager::{get_mime_type, get_url_without_query_or_fragment};
@@ -89,46 +85,17 @@ struct CefRuntimeState {
 static CEF_RUNTIME: OnceLock<Mutex<Option<CefRuntimeState>>> = OnceLock::new();
 static CEF_CONTEXT_INITIALIZED: AtomicBool = AtomicBool::new(false);
 static CEF_SHUTDOWN_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
-/*
-CDXC:SessionChat 2026-09-21 WHY:
-Bootstrap-only pages (Search by Prompt, gxserver-backed modal pages) need only
-the gxserver bootstrap (baseUrl/token/protocolVersion), so they use this
-dedicated message that installs exactly `window.ghostexGpui.gxserverBootstrap`.
-The message keeps its session-chat name from the removed desktop chat.html page.
-*/
-const SESSION_CHAT_GXSERVER_BOOTSTRAP_MESSAGE_NAME: &str =
-    "ghostex.gpui.sessionChat.gxserverBootstrap";
-const SIDEBAR_GXSERVER_BOOTSTRAP_JS_OBJECT: &str = "gxserverBootstrap";
-const SIDEBAR_GXSERVER_BOOTSTRAP_CHANGED_JS_CALLBACK: &str = "onGxserverBootstrapChanged";
-const SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_JS_FIELD: &str = "baseUrl";
-const SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_JS_FIELD: &str = "authToken";
-const SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_JS_FIELD: &str = "protocolVersion";
-const SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_JS_FIELD: &str = "clientId";
-const SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_JS_FIELD: &str =
-    "initialActiveProjectId";
-const SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_JS_FIELD: &str = "focusedSessionId";
-const SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_IDS_JS_FIELD: &str = "visibleSessionIds";
 const CEF_CONTEXT_MENU_INSPECT_ELEMENT_COMMAND_ID: c_int = 26_001;
 // Stable Chromium content-context commands used by the production macOS CEF
 // host (cef_command_ids.h).
 const CEF_CONTEXT_MENU_OPEN_LINK_NEW_TAB_COMMAND_ID: c_int = 50_100;
 const CEF_CONTEXT_MENU_OPEN_LINK_NEW_WINDOW_COMMAND_ID: c_int = 50_101;
-const SIDEBAR_GXSERVER_BOOTSTRAP_PRESENT_ARGUMENT_INDEX: usize = 0;
-const SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_ARGUMENT_INDEX: usize = 1;
-const SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_ARGUMENT_INDEX: usize = 2;
-const SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_ARGUMENT_INDEX: usize = 3;
-const SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_ARGUMENT_INDEX: usize = 4;
-const SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_ARGUMENT_INDEX: usize = 5;
-const SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_ARGUMENT_INDEX: usize = 6;
-const SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_COUNT_ARGUMENT_INDEX: usize = 7;
-const SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS: usize = 8;
 const BROWSER_APP_OWNED_SCRIPT_URL: &str = "ghostex://gpui/browser-feedback";
 thread_local! {
     static CEF_BROWSERS_BY_NATIVE_VIEW: RefCell<HashMap<usize, cef::Browser>> = RefCell::new(HashMap::new());
     static KEYBOARD_ZOOM_CEF_NATIVE_VIEWS: RefCell<HashSet<usize>> = RefCell::new(HashSet::new());
     static CEF_GLOBAL_REQUEST_CONTEXT: RefCell<Option<cef::RequestContext>> = const { RefCell::new(None) };
     static CEF_REQUEST_CONTEXTS_BY_PROFILE: RefCell<HashMap<String, cef::RequestContext>> = RefCell::new(HashMap::new());
-    static APP_MODAL_HOST_BRIDGE_SURFACES_BY_BROWSER_ID: RefCell<HashMap<c_int, AppModalHostBridgeSurface>> = RefCell::new(HashMap::new());
     // Native views the app has explicitly hidden via CefBrowser::set_visible.
     // The focus handler consults this so a hidden surface can never take
     // native keyboard focus (see GhostexGpuiCefFocusHandler).

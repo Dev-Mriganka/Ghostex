@@ -26,6 +26,7 @@ use gpui_component::{h_flex, v_flex};
 use serde_json::{Value, json};
 use std::time::Duration;
 
+mod spaceo;
 mod tools;
 
 const SKILLS_MODULE: &str = "shared/ghostex-agent-skills";
@@ -34,6 +35,7 @@ const ICON_TERMINAL: &str = "modals/settings/terminal-2.svg";
 const ICON_DOWNLOAD: &str = "modals/settings/download.svg";
 const ICON_REFRESH: &str = "modals/settings/refresh.svg";
 const ICON_DEVICE_DESKTOP: &str = "modals/settings/device-desktop.svg";
+const ICON_DEVICE_LAPTOP: &str = "modals/settings/device-laptop.svg";
 const ICON_SETTINGS: &str = "modals/settings/settings.svg";
 const ICON_TRASH: &str = "modals/settings/trash.svg";
 const ICON_COPY: &str = "modals/settings/copy.svg";
@@ -53,6 +55,7 @@ fn skill_icon(skill_id: &str) -> &'static str {
         "browserUse" | "embeddedBrowserUse" => "modals/settings/browser.svg",
         "cli" => ICON_TERMINAL,
         "computerUse" => ICON_DEVICE_DESKTOP,
+        "spaceo" => ICON_DEVICE_LAPTOP,
         "agentsOrchestration" => "modals/settings/sitemap.svg",
         "generateTitle" => "modals/settings/pencil.svg",
         "help" => "modals/settings/help-circle.svg",
@@ -68,6 +71,7 @@ fn skill_install_message(skill_id: &str) -> Option<&'static str> {
         "cli" => "installCliSkill",
         "browserUse" => "installBrowserUseSkill",
         "computerUse" => "installComputerUseSkill",
+        "spaceo" => "installSpaceoSkill",
         "embeddedBrowserUse" => "installBrowserControl",
         "agentsOrchestration" => "installAgentsOrchestrationSkill",
         "manageBeads" => "installManageBeadsSkill",
@@ -84,6 +88,7 @@ fn skill_installed(skill_id: &str, status: Option<&Value>) -> bool {
         "browserUse" => "browserSkillInstalled",
         "embeddedBrowserUse" => "embeddedBrowserSkillInstalled",
         "computerUse" => "computerUseSkillInstalled",
+        "spaceo" => "spaceoSkillInstalled",
         "cli" => "cliSkillInstalled",
         "agentsOrchestration" => "agentsOrchestrationSkillInstalled",
         "manageBeads" => "manageBeadsSkillInstalled",
@@ -116,6 +121,7 @@ struct Skill {
     command: String,
     tier: String,
     requires_cua_driver: bool,
+    requires_spaceo: bool,
 }
 
 fn visible_skills() -> Vec<Skill> {
@@ -125,6 +131,10 @@ fn visible_skills() -> Vec<Skill> {
         .map(|skills| {
             skills
                 .iter()
+                .filter(|skill| {
+                    cfg!(target_os = "macos")
+                        || skill.get("macOSOnly").and_then(Value::as_bool) != Some(true)
+                })
                 .filter_map(|skill| {
                     let text = |key: &str| skill.get(key)?.as_str().map(str::to_string);
                     Some(Skill {
@@ -137,6 +147,8 @@ fn visible_skills() -> Vec<Skill> {
                             .get("requiresCuaDriver")
                             .and_then(Value::as_bool)
                             == Some(true),
+                        requires_spaceo: skill.get("requiresSpaceo").and_then(Value::as_bool)
+                            == Some(true),
                     })
                 })
                 .collect()
@@ -145,8 +157,8 @@ fn visible_skills() -> Vec<Skill> {
 }
 
 /// `trycuaJobView` (packages/core-ui/trycua-job.ts (deleted 2026-10-01)): the background job the desktop app runs for
-/// Trycua's Install, Update, Reinstall and Uninstall, as the rows show it.
-struct TrycuaJob {
+/// a tool's Install, Update, Reinstall and Uninstall (Trycua's, SpaceO's), as the rows show it.
+struct InstallJob {
     running: bool,
     /// The running job's operation.
     operation: Option<String>,
@@ -159,10 +171,26 @@ struct TrycuaJob {
     blocked_reason: Option<String>,
 }
 
-fn trycua_job(status: Option<&Value>) -> TrycuaJob {
-    let name = trycua_name();
+fn trycua_job(status: Option<&Value>) -> InstallJob {
+    install_job(
+        status,
+        &trycua_name(),
+        "cuaDriverJob",
+        "cuaDriverInstallPlan",
+        Some("cuaDriverApplicationsBlockedReason"),
+    )
+}
+
+/// The job, plan and blocked reason a tool's status fields carry.
+fn install_job(
+    status: Option<&Value>,
+    name: &str,
+    job_key: &str,
+    plan_key: &str,
+    blocked_key: Option<&str>,
+) -> InstallJob {
     let job = status
-        .and_then(|status| status.get("cuaDriverJob"))
+        .and_then(|status| status.get(job_key))
         .filter(|job| job.is_object());
     let field = |key: &str| job.and_then(|job| job.get(key)).and_then(Value::as_str);
     let running = field("status") == Some("running");
@@ -200,14 +228,16 @@ fn trycua_job(status: Option<&Value>) -> TrycuaJob {
     } else {
         None
     };
-    TrycuaJob {
+    InstallJob {
         running,
         operation: running.then_some(operation),
         detail,
         output,
         running_reason: running.then(|| format!("{verb} {name}…")),
-        plan: text(status, "cuaDriverInstallPlan").map(str::to_string),
-        blocked_reason: text(status, "cuaDriverApplicationsBlockedReason").map(str::to_string),
+        plan: text(status, plan_key).map(str::to_string),
+        blocked_reason: blocked_key
+            .and_then(|key| text(status, key))
+            .map(str::to_string),
     }
 }
 
@@ -286,8 +316,8 @@ pub(crate) struct IntegrationsTab {
     fields: FieldStates,
     /// `ghostexCliStatusLoading`: set when a request or action is posted, cleared by the answer.
     loading: bool,
-    /// The copy button's `copied` state, and the task that turns it off.
-    copied: bool,
+    /// Which copy button shows its `copied` state, and the task that turns it off.
+    copied: Option<&'static str>,
     copied_task: Option<Task<()>>,
     /// The Tools section (tools.rs).
     managed: tools::ManagedToolsState,
@@ -324,7 +354,7 @@ impl IntegrationsTab {
             store,
             fields: FieldStates::default(),
             loading: missing,
-            copied: false,
+            copied: None,
             copied_task: None,
             managed: tools::ManagedToolsState::default(),
         }
@@ -342,13 +372,13 @@ impl IntegrationsTab {
     }
 
     /// `CopyCommandButton`: the command to the clipboard with the copy feedback.
-    fn copy_command(&mut self, command: String, cx: &mut Context<Self>) {
+    fn copy_command(&mut self, button: &'static str, command: String, cx: &mut Context<Self>) {
         store_copy_to_clipboard(&self.store, command, cx);
-        self.copied = true;
+        self.copied = Some(button);
         self.copied_task = Some(cx.spawn(async move |page, cx| {
             cx.background_executor().timer(COPIED_FEEDBACK).await;
             let _ = page.update(cx, |page, cx| {
-                page.copied = false;
+                page.copied = None;
                 cx.notify();
             });
         }));
@@ -377,6 +407,8 @@ struct RowTitle {
     pill: Option<String>,
 }
 
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: rows do not spell out Installed or Permissions Allowed in a pill. State is a small dot before the icon, the way the Extensions page marks enabled views.
 /// `SettingsListItem` with `IntegrationRowTitle`: the status dot, the 32px icon, the label with its
 /// badge, pill and hover info icon, and the controls; the info icon shows while the row is hovered.
 fn integration_row(
@@ -700,9 +732,11 @@ impl IntegrationsTab {
         checking: bool,
         show_trycua: bool,
         show_permissions: bool,
+        show_spaceo: bool,
+        show_spaceo_permissions: bool,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        if !show_trycua && !show_permissions {
+        if !show_trycua && !show_permissions && !show_spaceo && !show_spaceo_permissions {
             return None;
         }
         let name = trycua_name();
@@ -815,7 +849,7 @@ impl IntegrationsTab {
             && !installed
             && let Some(command) = install_command
         {
-            let copied = self.copied;
+            let copied = self.copied == Some("integrations-trycua-copy-command");
             let command_for_copy = command.clone();
             let code = div()
                 .flex_shrink_1()
@@ -848,7 +882,13 @@ impl IntegrationsTab {
                 if copied { "Copied" } else { "Copy command" }.to_string(),
                 false,
                 String::new(),
-                move |page, _window, cx| page.copy_command(command_for_copy.clone(), cx),
+                move |page, _window, cx| {
+                    page.copy_command(
+                        "integrations-trycua-copy-command",
+                        command_for_copy.clone(),
+                        cx,
+                    )
+                },
                 cx,
             );
             rows.push(integration_row(
@@ -921,6 +961,14 @@ impl IntegrationsTab {
                 controls,
             ));
         }
+        rows.extend(self.spaceo_rows(
+            p,
+            status,
+            checking,
+            show_spaceo,
+            show_spaceo_permissions,
+            cx,
+        ));
         settings_section(p, "Desktop control", None, None, rows).map(IntoElement::into_any_element)
     }
 
@@ -1026,6 +1074,8 @@ impl IntegrationsTab {
     ) -> AnyElement {
         let installed = skill_installed(&skill.id, status);
         let needs_trycua = skill.requires_cua_driver && !driver_installed && !checking;
+        let needs_spaceo =
+            skill.requires_spaceo && flag(status, "spaceoInstalled") != Some(true) && !checking;
         let install_message = skill_install_message(&skill.id);
         let install_disabled = checking || !cli_ready || install_message.is_none();
         let install_reason = if checking {
@@ -1058,7 +1108,7 @@ impl IntegrationsTab {
             },
             cx,
         );
-        if needs_trycua && !installed && !install_disabled {
+        if (needs_trycua || needs_spaceo) && !installed && !install_disabled {
             install = div().opacity(0.6).child(install).into_any_element();
         }
         let mut controls = vec![install];
@@ -1094,7 +1144,13 @@ impl IntegrationsTab {
                 label: skill.name.clone(),
                 description: format!("{}\n\n{}", skill.description, skill.command),
                 badge: None,
-                pill: needs_trycua.then(|| format!("Needs {}", trycua_name())),
+                pill: if needs_trycua {
+                    Some(format!("Needs {}", trycua_name()))
+                } else if needs_spaceo {
+                    Some(format!("Needs {}", spaceo::spaceo_name()))
+                } else {
+                    None
+                },
             },
             controls,
         )
@@ -1248,6 +1304,12 @@ impl Render for IntegrationsTab {
             // Accessibility and Screen Recording are macOS grants; Fast Computer Use needs none on Windows or Linux.
             let show_permissions =
                 cfg!(target_os = "macos") && search.row_visible(section, "cuaPermissions");
+            // SpaceO runs only on Apple Silicon Macs with macOS 14 or later; the status says when this one can't.
+            let spaceo_possible =
+                cfg!(target_os = "macos") && flag(status, "spaceoSupported") != Some(false);
+            let show_spaceo = spaceo_possible && search.row_visible(section, "spaceo");
+            let show_spaceo_permissions =
+                spaceo_possible && search.row_visible(section, "spaceoPermissions");
             blocks.extend(
                 self.desktop_control_section(
                     &p,
@@ -1255,6 +1317,8 @@ impl Render for IntegrationsTab {
                     checking,
                     show_trycua,
                     show_permissions,
+                    show_spaceo,
+                    show_spaceo_permissions,
                     cx,
                 )
                 .map(|element| PageBlock::section("desktopControl", element)),

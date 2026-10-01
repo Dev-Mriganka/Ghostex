@@ -40,6 +40,9 @@ pub(crate) fn account_text(text: &str, hide: bool) -> String {
 }
 
 /// `AccountLogo`: Claude in its brand orange, Codex in white (dark) or the foreground (light).
+///
+/// CDXC:AgentProviders 2026-09-08 DECISION:
+/// Usage bars remain neutral and selection uses brighter controls. Original provider logos keep their appearance. Account labels sit over larger session icons; sidebar icons have no account indicator.
 pub(crate) fn account_logo(p: &SettingsPalette, provider: &str, size: f32) -> AnyElement {
     let (path, color) = if provider == "codex" {
         (
@@ -101,6 +104,10 @@ pub(crate) fn account_identity(p: &SettingsPalette, account: &Account) -> AnyEle
 }
 
 /// `AccountTitlebarStar`: shows or hides the account's usage in the sidebar.
+///
+/// CDXC:AgentProviders 2026-09-08 DECISION:
+/// User: a star with the tooltip "Show this account's stats in the titlebar" pins each account independently.
+/// The tooltip says "in the sidebar" (as the React star already did when it was deleted) because the usage meters moved from the titlebar to the sidebar usage strip; see the Settings 2026-09-20 decision in mod.rs.
 pub(crate) fn account_star<V: 'static>(
     p: &SettingsPalette,
     account: &Account,

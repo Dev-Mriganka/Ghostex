@@ -18,6 +18,8 @@ use gpui::{
 };
 use gpui_component::h_flex;
 
+/// CDXC:DesignSystem 2026-09-08 DECISION:
+/// User: replace dropdowns that usually have lots of items with the wider, rounded Sessions dropdown with search at the top.
 /// The trigger and, while open, the searchable dropdown of `options`.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn searchable_select<V: SettingsPage>(

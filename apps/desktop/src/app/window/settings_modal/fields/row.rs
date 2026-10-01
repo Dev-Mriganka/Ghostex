@@ -44,6 +44,8 @@ pub(crate) struct RowSpec {
     pub(crate) advanced: bool,
     pub(crate) experimental: bool,
     pub(crate) disabled_reason: Option<SharedString>,
+    /// CDXC:Settings 2026-09-12 DECISION:
+    /// User: settings that cascade from a setting above them start their name with four spaces and the ↳ glyph.
     /// A setting that only applies while the one above is on: `    ↳ ` before the label.
     pub(crate) dependent: bool,
     /// The control takes its own full-width line under the label.
@@ -380,6 +382,8 @@ pub(crate) fn description_info_button(
     )
 }
 
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: rows show no subtitle text. The description (and any subtitle) lives only in the tooltip behind the hover-revealed info icon next to the label.
 /// `SettingRow`: the label line on the left (asterisk, `↳` prefix, label, badge, advanced arrow
 /// and info icon) and the control on the right, or under the label for a wide row.
 pub(crate) fn setting_row<V: SettingsPage>(
@@ -532,6 +536,8 @@ pub(crate) fn card_inset(content: impl IntoElement) -> AnyElement {
         .into_any_element()
 }
 
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: every Settings page and section shares one style, the grouped-list prototype: a plain group heading above a raised card, one setting per row with its label on the left and its control on the right, rows separated by hairlines, no floating title pill and no visible subtitle text.
 /// `SettingsSection`: a plain heading (16px, optional 13px description and right-side actions)
 /// above a raised card whose children divide with hairlines. `None` when every row is hidden,
 /// the `:has(> .settings-list-card:empty)` rule.

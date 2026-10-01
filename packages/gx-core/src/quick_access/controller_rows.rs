@@ -710,6 +710,7 @@ impl QuickAccessController {
                 tags: sessions::tag_select(&self.sessions, data),
                 projects: sessions::project_select(&self.sessions, data),
             },
+            // CDXC:SavedPrompts 2026-09-08 DECISION: User: Sent is the third view after Saved and Recovered. (Its "Add" button with the plus icon is the actions panel's New Prompt row under the 2026-09-21 Raycast layout.)
             QuickAccessTab::SavedPrompts => QuickAccessToolbar::Prompts {
                 view: self.prompts.view.wire().to_string(),
                 views: vec![

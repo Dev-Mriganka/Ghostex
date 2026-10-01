@@ -6536,7 +6536,7 @@
               {
                 "key": "bundledAgentSkills",
                 "title": "Bundled Agent Skills",
-                "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
+                "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first, and Ghostex SpaceO needs SpaceO (Mac only). Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
                 "options": [
                   {
                     "label": "Ghostex CLI",
@@ -6549,6 +6549,10 @@
                   {
                     "label": "Ghostex Computer Use",
                     "value": "ghostex-computer-use"
+                  },
+                  {
+                    "label": "Ghostex SpaceO",
+                    "value": "ghostex-spaceo"
                   },
                   {
                     "label": "Ghostex Browser Use",
@@ -6580,6 +6584,16 @@
                 "key": "cuaPermissions",
                 "title": "Fast Computer Use Permissions",
                 "subtitle": "Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop."
+              },
+              {
+                "key": "spaceo",
+                "title": "SpaceO",
+                "subtitle": "On an Apple Silicon Mac with macOS 14 or later, install SpaceO so agents can use Mac apps on their own hidden screen while you keep your own screen, pointer and focus. Ghostex runs the official installer, keeps SpaceO running in the background, and installs the Ghostex SpaceO skill; once installed, update, reinstall or uninstall it from the same row."
+              },
+              {
+                "key": "spaceoPermissions",
+                "title": "SpaceO Permissions",
+                "subtitle": "SpaceO needs Accessibility to click and type in apps, and Screen Recording to take screenshots of the apps it runs."
               },
               {
                 "key": "managedTools",
@@ -9409,6 +9423,16 @@
             "tier": "recommended"
           },
           {
+            "command": "ghostex spaceo install-skill",
+            "description": "Let agents use Mac apps on their own hidden screen: SpaceO opens apps on a virtual display, so agents click, type and take screenshots there while you keep your own screen, pointer and focus. Needs SpaceO, an Apple Silicon Mac and macOS 14 or later.",
+            "id": "spaceo",
+            "macOSOnly": true,
+            "name": "Ghostex SpaceO",
+            "requiresSpaceo": true,
+            "skillName": "ghostex-spaceo",
+            "tier": "recommended"
+          },
+          {
             "command": "ghostex browser-use install-skill",
             "description": "Let agents control your browser: open pages, click, fill forms, and read what is on screen in supported external browsers.",
             "id": "browserUse",
@@ -9460,6 +9484,7 @@
             "tier": "optional"
           }
         ],
+        "GHOSTEX_SPACEO_PRODUCT_NAME": "SpaceO",
         "GHOSTEX_TRYCUA_PRODUCT_NAME": "Fast Computer Use",
         "VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS": [
           {
@@ -9485,6 +9510,16 @@
             "name": "Ghostex Computer Use",
             "requiresCuaDriver": true,
             "skillName": "ghostex-computer-use",
+            "tier": "recommended"
+          },
+          {
+            "command": "ghostex spaceo install-skill",
+            "description": "Let agents use Mac apps on their own hidden screen: SpaceO opens apps on a virtual display, so agents click, type and take screenshots there while you keep your own screen, pointer and focus. Needs SpaceO, an Apple Silicon Mac and macOS 14 or later.",
+            "id": "spaceo",
+            "macOSOnly": true,
+            "name": "Ghostex SpaceO",
+            "requiresSpaceo": true,
+            "skillName": "ghostex-spaceo",
             "tier": "recommended"
           },
           {

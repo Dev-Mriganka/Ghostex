@@ -456,7 +456,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
               value: skill.skillName,
             })),
             subtitle:
-              'Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first. Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.',
+              'Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first, and Ghostex SpaceO needs SpaceO (Mac only). Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.',
             title: 'Bundled Agent Skills',
           },
           {
@@ -464,6 +464,18 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
             subtitle:
               'Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.',
             title: 'Fast Computer Use Permissions',
+          },
+          {
+            key: 'spaceo',
+            subtitle:
+              'On an Apple Silicon Mac with macOS 14 or later, install SpaceO so agents can use Mac apps on their own hidden screen while you keep your own screen, pointer and focus. Ghostex runs the official installer, keeps SpaceO running in the background, and installs the Ghostex SpaceO skill; once installed, update, reinstall or uninstall it from the same row.',
+            title: 'SpaceO',
+          },
+          {
+            key: 'spaceoPermissions',
+            subtitle:
+              'SpaceO needs Accessibility to click and type in apps, and Screen Recording to take screenshots of the apps it runs.',
+            title: 'SpaceO Permissions',
           },
           {
             key: 'managedTools',

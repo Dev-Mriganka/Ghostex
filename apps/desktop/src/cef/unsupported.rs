@@ -1,4 +1,3 @@
-pub use super::sidebar_bridge_manifest::AppModalHostBridgeSurface;
 use anyhow::Result;
 use gpui::{Bounds, Pixels};
 use std::rc::Rc;
@@ -49,10 +48,7 @@ pub enum BrowserPageMetadataEvent {
 pub type BrowserPageMetadataHandler = Rc<dyn Fn(BrowserPageMetadataEvent)>;
 
 /// Plain Rust shared with the native app; see `app/helpers/web_bridge_types.rs`.
-pub use crate::app::helpers::web_bridge_types::{
-    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
-    SidebarGxserverBootstrap,
-};
+pub use crate::app::helpers::web_bridge_types::PageLoadEndHandler;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BrowserMediaAccessKinds {
@@ -129,11 +125,8 @@ impl CefBrowser {
         _popup_open_handler: Option<BrowserPopupOpenHandler>,
         _page_metadata_handler: Option<BrowserPageMetadataHandler>,
         _media_access_handler: Option<BrowserMediaAccessHandler>,
-        _sidebar_gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
         _project_workarea_bridge_event_handler: Option<ProjectWorkareaBridgeEventHandler>,
         _manage_docs_resource_scope: Option<ManageDocsResourceScope>,
-        _app_modal_host_bridge_surface: Option<AppModalHostBridgeSurface>,
-        _app_modal_host_bridge_event_handler: Option<AppModalHostBridgeEventHandler>,
         _page_load_end_handler: Option<PageLoadEndHandler>,
     ) -> Self {
         Self
@@ -164,10 +157,6 @@ impl CefBrowser {
 
     pub fn blur(&self) {}
 
-    pub fn is_loading(&self) -> bool {
-        false
-    }
-
     pub fn page_keep_awake(&self) -> PageKeepAwake {
         PageKeepAwake::Release
     }
@@ -180,17 +169,6 @@ impl CefBrowser {
 
     pub fn execute_java_script_in_main_frame(&self, _script: &str) -> bool {
         false
-    }
-
-    pub fn refresh_session_chat_gxserver_bootstrap(
-        &self,
-        _gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
-    ) {
-        /*
-        CDXC:SessionChat 2026-07-31:
-        API mirror of the macOS Session Chat bootstrap refresh; same no-op
-        rules as the sidebar bootstrap stub above.
-        */
     }
 
     pub fn can_go_back(&self) -> bool {

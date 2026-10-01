@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use super::model::NativeSidebarSnapshot;
 use crate::GhostexGpuiApp;
-use crate::app::project_views::PROJECT_VIEW_SCOPE_OPTION_HUD_KEYS;
 
 #[derive(Default)]
 pub(crate) struct NativeSidebarState {
@@ -107,22 +106,6 @@ impl GhostexGpuiApp {
             .sync(&snapshot, self.gpui_pet_overlay_reduce_motion_enabled);
         if let Some(menu) = self.native_sidebar.menu.as_mut() {
             menu.refresh(&snapshot);
-        }
-        if let Some(handle) = self.app_modal_window {
-            let previous = self.native_sidebar.snapshot.as_ref().map(|s| &s.hud);
-            let changed = PROJECT_VIEW_SCOPE_OPTION_HUD_KEYS
-                .iter()
-                .filter_map(|key| {
-                    let value = snapshot.hud.get(*key)?;
-                    (previous.and_then(|hud| hud.get(*key)) != Some(value))
-                        .then(|| (*key, value.clone()))
-                })
-                .collect::<Vec<_>>();
-            if !changed.is_empty() {
-                let _ = handle.update(cx, |host, _, cx| {
-                    host.refresh_project_view_scope_options(&changed, cx);
-                });
-            }
         }
         // The old runtime draws no session row focused while a browser tab of the active group owns focus; rows read that per frame, so it is derived here, once per snapshot (gx_store/local_focus.rs).
         let browser_focus = snapshot.groups.iter().any(|group| {

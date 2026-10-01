@@ -332,6 +332,8 @@ pub fn fence_title(meta: Option<&str>) -> Option<&str> {
         .find(|token| is_fence_filename_token(token))
 }
 
+/// CDXC:SessionChat 2026-09-06 DECISION:
+/// User: @file mentions must follow all the same chat rules as [File #N](path) references, including images and other files. An explicit mention becomes a link like any other file reference, so previews, file opening, positions and context menus all use the attachment renderer; the @ marker is never part of the destination.
 /// One path found in ordinary prose.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BareFilePath {

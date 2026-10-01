@@ -16,18 +16,16 @@ fn app_modal_host_background() -> Hsla {
     }
 }
 
+/// The CEF child window of an extension modal: it loads the extension's own page with the
+/// extension bridge. Every built-in app modal is a native GPUI window
+/// (`native_app_modal_lifecycle.rs`).
 pub(crate) struct GpuiAppModalHostWindow {
     #[cfg(target_os = "windows")]
     _mouse_navigation_release: gpui::Subscription,
     pub(crate) current_modal: GpuiAppModalKind,
     pub(crate) initial_window_size: Size<Pixels>,
-    is_ready: bool,
-    latest_sidebar_state_message: serde_json::Value,
-    pending_messages: Vec<serde_json::Value>,
-    presented_modal: Option<GpuiAppModalKind>,
-    // None when CEF browser creation failed; the host window then never
-    // reports ready and the existing app-modal ready-timeout retry/close
-    // flow recovers (CDXC:CefRuntime 2026-07-11).
+    // None when CEF browser creation failed; the window then stays empty until
+    // the user closes it (CDXC:CefRuntime 2026-07-11).
     pub(crate) surface: Option<Entity<CefSurface>>,
 }
 
@@ -37,107 +35,29 @@ impl GpuiAppModalHostWindow {
         url: String,
         modal: GpuiAppModalKind,
         open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
-        sidebar_gxserver_bootstrap: Option<cef::SidebarGxserverBootstrap>,
-        event_handler: cef::AppModalHostBridgeEventHandler,
-        extension_bridge: Option<(
+        extension_bridge: (
             cef::ExtensionBridgeSurfaceSpec,
             cef::ExtensionBridgeEventHandler,
-        )>,
+        ),
         cx: &mut App,
     ) -> Entity<Self> {
         let parent_ns_view = cef_parent_native_view(window)
             .expect("GPUI app-modal host requires a native parent view");
-        let uses_react_modal_host = modal.uses_react_modal_host();
-        let (bridge_surface, event_handler) = if uses_react_modal_host {
-            (
-                Some(cef::AppModalHostBridgeSurface::NativeWindow),
-                Some(event_handler),
-            )
-        } else {
-            (None, None)
-        };
-        let (prepaint_background, background) = (
+        let (extension_bridge_surface, extension_bridge_event_handler) = extension_bridge;
+        let surface = CefSurface::try_new_extension(
+            APP_MODAL_HOST_ID.to_string(),
+            parent_ns_view,
+            url,
+            APP_MODAL_HOST_CEF_PROFILE_ID.to_string(),
             pane_prepaint_background_color(),
+            false,
             app_modal_host_background(),
-        );
-        // CDXC:AppModal 2026-09-14 WHY: modal-host.html (deleted 2026-10-01) needs the resolved app appearance before its first paint. Comparing prepaint colors sent "dark" even in light mode because pane white (#ffffff) differs from the chat/find light constant (#fdfdfd).
-        let url = if uses_react_modal_host {
-            gpui::http_client::Url::parse(&url)
-                .map(|mut parsed| {
-                    parsed.query_pairs_mut().append_pair(
-                        "appAppearance",
-                        if CHROME_LIGHT_APPEARANCE.load(std::sync::atomic::Ordering::Relaxed) {
-                            "light"
-                        } else {
-                            "dark"
-                        },
-                    );
-                    if window_glass_active() {
-                        parsed.query_pairs_mut().append_pair("windowGlass", "1");
-                    }
-                    parsed.to_string()
-                })
-                .unwrap_or(url)
-        } else {
-            url
-        };
-        let surface = if let Some((extension_bridge_surface, extension_bridge_event_handler)) =
-            extension_bridge
-        {
-            CefSurface::try_new_extension(
-                APP_MODAL_HOST_ID.to_string(),
-                parent_ns_view,
-                url,
-                APP_MODAL_HOST_CEF_PROFILE_ID.to_string(),
-                prepaint_background,
-                false,
-                background,
-                true,
-                extension_bridge_surface,
-                extension_bridge_event_handler,
-                None,
-                cx,
-            )
-        } else {
-            CefSurface::try_new(
-                APP_MODAL_HOST_ID.to_string(),
-                parent_ns_view,
-                url,
-                APP_MODAL_HOST_CEF_PROFILE_ID.to_string(),
-                prepaint_background,
-                false,
-                background,
-                None,
-                true,
-                None,
-                None,
-                None,
-                /*
-                CDXC:Extensions 2026-08-30:
-                The extensions store's registry/catalog transport reads
-                `window.ghostexGpui.gxserverBootstrap`, so the bootstrap
-                follows the surface: it moved from the retired
-                `extensionsBrowser` modal onto Settings, which now hosts the
-                Extensions tab.
-                CDXC:RemotePairing 2026-09-03:
-                The Remote Setup modal's Connect button calls gxserver through
-                the same bootstrap; without it the page renders Connect
-                disabled with "server connection unavailable", so the modal
-                must be in this allowlist.
-                */
-                modal
-                    .needs_gxserver_bootstrap()
-                    .then_some(sidebar_gxserver_bootstrap)
-                    .flatten(),
-                None,
-                None,
-                bridge_surface,
-                event_handler,
-                None,
-                cx,
-            )
-        }
+            true,
+            extension_bridge_surface,
+            extension_bridge_event_handler,
+            None,
+            cx,
+        )
         .map_err(|error| {
             support_logs::append(
                 support_logs::GpuiSupportLog::CrashReports,
@@ -154,11 +74,6 @@ impl GpuiAppModalHostWindow {
                 window.scale_factor(),
             );
         }
-        let pending_messages = if uses_react_modal_host {
-            vec![open_message]
-        } else {
-            Vec::new()
-        };
         cx.new(move |_cx| Self {
             #[cfg(target_os = "windows")]
             _mouse_navigation_release: {
@@ -173,217 +88,8 @@ impl GpuiAppModalHostWindow {
             },
             current_modal: modal,
             initial_window_size,
-            is_ready: !uses_react_modal_host,
-            latest_sidebar_state_message: sidebar_state_message,
-            pending_messages,
-            presented_modal: None,
             surface,
         })
-    }
-
-    pub(crate) fn is_ready(&self) -> bool {
-        self.is_ready
-    }
-
-    /// The modal page is still loading, so a missing ready handshake means "slow", not "dead".
-    pub(crate) fn page_is_loading(&self, cx: &App) -> bool {
-        self.surface
-            .as_ref()
-            .is_some_and(|surface| surface.read(cx).is_loading())
-    }
-
-    pub(crate) fn open_modal(
-        &mut self,
-        open_message: serde_json::Value,
-        sidebar_state_message: serde_json::Value,
-        modal: GpuiAppModalKind,
-        gxserver_bootstrap: Option<cef::SidebarGxserverBootstrap>,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        self.current_modal = modal;
-        self.refresh_gxserver_bootstrap(gxserver_bootstrap, cx);
-        self.presented_modal = None;
-        self.latest_sidebar_state_message = sidebar_state_message;
-        if !self.current_modal.uses_react_modal_host() {
-            self.is_ready = true;
-            self.pending_messages.clear();
-            cx.notify();
-            return;
-        }
-        if !self.is_ready {
-            self.pending_messages.push(open_message);
-            cx.notify();
-            return;
-        }
-        if self.current_modal.requires_sidebar_state() {
-            self.dispatch_sidebar_state(cx);
-        }
-        self.dispatch_message(open_message, cx);
-        cx.notify();
-    }
-
-    pub(crate) fn refresh_gxserver_bootstrap(
-        &mut self,
-        bootstrap: Option<cef::SidebarGxserverBootstrap>,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        if self.current_modal.needs_gxserver_bootstrap() {
-            if let Some(surface) = &self.surface {
-                surface.update(cx, |surface, _| {
-                    surface.refresh_session_chat_gxserver_bootstrap(bootstrap);
-                });
-            }
-        }
-    }
-
-    /// Tells the page whether window glass is showing, which lightens its dark surfaces
-    /// (packages/core-ui/styles/modals-glass.css).
-    pub(crate) fn refresh_window_glass(&self, cx: &mut App) {
-        if let Some(surface) = &self.surface {
-            surface.update(cx, |surface, _| {
-                let _ = surface
-                    .execute_app_owned_script(&window_glass_flag_script(window_glass_active()));
-            });
-        }
-    }
-
-    pub(crate) fn receive_bridge_message(
-        &mut self,
-        message: serde_json::Value,
-        window: &mut Window,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        match message.get("type").and_then(serde_json::Value::as_str) {
-            Some("ready") => {
-                self.is_ready = true;
-                self.refresh_window_glass(cx);
-                if self.current_modal.requires_sidebar_state() {
-                    self.dispatch_sidebar_state(cx);
-                }
-                let pending_messages = std::mem::take(&mut self.pending_messages);
-                for pending_message in pending_messages {
-                    self.dispatch_message(pending_message, cx);
-                }
-            }
-            Some("presented") => {
-                self.presented_modal = message
-                    .get("modal")
-                    .and_then(serde_json::Value::as_str)
-                    .and_then(GpuiAppModalKind::from_modal_id);
-                window.activate_window();
-                if let Some(surface) = &self.surface {
-                    surface.update(cx, |surface, _| {
-                        surface.focus();
-                    });
-                }
-            }
-            Some("contentHeightMeasured") => {
-                /*
-                CDXC:AppModal 2026-07-28:
-                Compact modal-host dialogs measure their rendered React dialog
-                once per open and report it (macOS resizes its child window to
-                that height; GPUI previously ignored the message, leaving large
-                dead gutters above and below dialogs like Rename Session inside
-                their worst-case fixed frame). Fit the child window's content
-                height to that one-shot measurement, keeping the modal's fixed
-                width. The measurement is a bounded number only; post-open
-                content growth still scrolls inside the dialog via the
-                fixed-window stylesheet caps.
-                */
-                let measured_modal = message
-                    .get("modal")
-                    .and_then(serde_json::Value::as_str)
-                    .and_then(GpuiAppModalKind::from_modal_id);
-                let measured_height = message
-                    .get("height")
-                    .and_then(serde_json::Value::as_f64)
-                    .map(|height| height as f32)
-                    .filter(|height| height.is_finite() && *height > 0.0);
-                if measured_modal == Some(self.current_modal) {
-                    if let Some(height) = measured_height {
-                        let fitted_height = height.clamp(
-                            APP_MODAL_HOST_FIT_CONTENT_MIN_WINDOW_HEIGHT,
-                            APP_MODAL_HOST_FIT_CONTENT_MAX_WINDOW_HEIGHT,
-                        );
-                        window.resize(size(
-                            self.current_modal.window_size().width,
-                            px(fitted_height),
-                        ));
-                    }
-                }
-            }
-            _ => {}
-        }
-        cx.notify();
-    }
-
-    fn dispatch_sidebar_state(&mut self, cx: &mut gpui::Context<Self>) {
-        self.dispatch_message(
-            serde_json::json!({
-                "message": self.latest_sidebar_state_message,
-                "type": "sidebarState",
-            }),
-            cx,
-        );
-    }
-
-    pub(crate) fn refresh_sidebar_state_message(
-        &mut self,
-        sidebar_state_message: serde_json::Value,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        /*
-        CDXC:Settings 2026-06-24-11:14:
-        An open GPUI app-modal host must receive the saved sidebar hydrate snapshot after `updateSettings` succeeds, matching macOS publish-to-modal behavior. Update the stored latest snapshot and dispatch `sidebarState` only through the modal host's existing app-owned CEF script channel; do not create overlays, hidden views, global input routing, or a second Settings state channel.
-        */
-        self.latest_sidebar_state_message = sidebar_state_message;
-        if self.is_ready {
-            self.dispatch_sidebar_state(cx);
-        }
-    }
-
-    /// CDXC:Extensions 2026-09-18 SEE-ALSO:
-    /// The Settings view scope editors read the sidebar's spaces and its current project rows, so both
-    /// HUD fields are pushed into an already-open modal host together. See apps/desktop/src/app/project_views.rs.
-    pub(crate) fn refresh_project_view_scope_options(
-        &mut self,
-        options: &[(&str, serde_json::Value)],
-        cx: &mut gpui::Context<Self>,
-    ) {
-        for (key, value) in options {
-            self.latest_sidebar_state_message["hud"][*key] = value.clone();
-        }
-        if self.is_ready && self.current_modal.requires_sidebar_state() {
-            self.dispatch_sidebar_state(cx);
-        }
-    }
-
-    pub(crate) fn dispatch_transient_sidebar_state_message(
-        &mut self,
-        payload: serde_json::Value,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        self.dispatch_transient_message(
-            serde_json::json!({
-                "message": payload,
-                "type": "sidebarState",
-            }),
-            cx,
-        );
-    }
-
-    pub(crate) fn dispatch_transient_message(
-        &mut self,
-        message: serde_json::Value,
-        cx: &mut gpui::Context<Self>,
-    ) {
-        if !self.is_ready {
-            self.pending_messages.push(message);
-            cx.notify();
-            return;
-        }
-        self.dispatch_message(message, cx);
-        cx.notify();
     }
 
     pub(crate) fn dispatch_extension_bridge_message(
@@ -397,41 +103,13 @@ impl GpuiAppModalHostWindow {
             });
         }
     }
-
-    fn dispatch_message(&mut self, message: serde_json::Value, cx: &mut gpui::Context<Self>) {
-        let script = format!(
-            "window.dispatchEvent(new CustomEvent('ghostex-app-modal-host-message', {{ detail: {} }})); undefined;",
-            message
-        );
-        if let Some(surface) = &self.surface {
-            surface.update(cx, |surface, _| {
-                surface.execute_app_owned_script(&script);
-            });
-        }
-    }
 }
 
 impl Render for GpuiAppModalHostWindow {
-    fn render(&mut self, _window: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
-        let background = app_modal_host_background();
-        // CDXC:AppModal 2026-09-15 WHY: Updating only the window root leaves the CEF host's creation-time fill on top of it, retaining the previous theme until the modal is reopened.
-        if self.current_modal.uses_react_modal_host()
-            && let Some(surface) = &self.surface
-        {
-            surface.update(cx, |surface, cx| surface.set_background(background, cx));
-        }
+    fn render(&mut self, _window: &mut Window, _cx: &mut gpui::Context<Self>) -> impl IntoElement {
         div()
             .size_full()
-            .bg(background)
+            .bg(app_modal_host_background())
             .children(self.surface.clone())
-    }
-}
-
-impl GhostexGpuiApp {
-    /// Pushes the glass flag into the open React app-modal page.
-    pub(crate) fn refresh_app_modal_pages_window_glass(&self, cx: &mut App) {
-        for handle in self.app_modal_window.iter().cloned() {
-            let _ = handle.update(cx, |host, _window, cx| host.refresh_window_glass(cx));
-        }
     }
 }

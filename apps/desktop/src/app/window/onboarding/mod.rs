@@ -913,6 +913,7 @@ impl GpuiOnboardingWindow {
             )
             .flex()
             .items_center()
+            // CDXC:Onboarding 2026-09-15 DECISION: User: "remove the back button from the first page". Back only renders from panel 2 on.
             .when(self.panel > 1, |this| {
                 // `.back`: no transition of its own, so the host's 120ms button transition.
                 let color = interact::hover_color(
@@ -952,6 +953,8 @@ impl GpuiOnboardingWindow {
         elements
     }
 
+    /// CDXC:Onboarding 2026-09-15 DECISION:
+    /// User: "make the 5 progress dots appear on the top left of the right half of the modal". They sit just right of the divider; the full-width last panel has no right half, so there they stay centred. This moves the 2026-09-12 request to put "the stepper dots at the bottom to the top center" into the stage header.
     fn render_dots(&self, s: S, now: Instant, cx: &mut Context<Self>) -> AnyElement {
         let divider_target = self.divider_x();
         // Just right of the divider; the full-width last panel has no right half, so they centre there.

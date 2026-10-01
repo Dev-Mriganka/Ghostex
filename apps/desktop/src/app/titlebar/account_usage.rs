@@ -403,6 +403,8 @@ impl GhostexGpuiApp {
     /// CDXC:AgentProviders 2026-09-20 DECISION:
     /// User: the account usage meters live at the bottom of the sidebar, not in the titlebar; this supersedes the 2026-09-13 rule that placed them before the extension buttons in the titlebar strip.
     /// Their shape is unchanged: darker Claude/Codex colors in light mode, the account label centered over a 19.2px background icon, a 9.9px label and 9.5px usage text in the chat indicator's monospace font, and the usage percentages or reset counts beside it. A meter still opens its account's usage popup.
+    /// CDXC:AgentProviders 2026-09-09 DECISION:
+    /// User wants the same account-label font centered over a larger provider icon as its background. Account icons always use original provider colors; labels and adjacent usage figures share the chat indicator's monospace font. Claude keeps its label color; Codex uses #7db8fb. The background icon is 19.2px (20% smaller) and the label is 9.9px (10% bigger). This replaces the label-underneath design. Sidebar icons and account menus have no indicator. Labels accept up to two letters or digits; - hides the label and an empty setting uses the slot number.
     /// The host owns the geometry so the meter has one implementation wherever it is drawn.
     pub(crate) fn render_account_usage_meter(
         &self,

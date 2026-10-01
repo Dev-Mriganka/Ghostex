@@ -122,6 +122,8 @@ impl ExtensionsTab {
     }
 
     /// The editor inside its list card.
+    /// CDXC:Settings 2026-09-09 DECISION:
+    /// User: the custom view editor reuses the new settings look and shared controls. Keep Cancel bordered like the other editor actions.
     pub(crate) fn render_view_editor(
         &mut self,
         p: &SettingsPalette,

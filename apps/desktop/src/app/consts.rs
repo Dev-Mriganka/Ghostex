@@ -765,16 +765,6 @@ pub(crate) const APP_MODAL_HOST_EXPORT_TRANSCRIPT_RESULT_WINDOW_HEIGHT: f32 = 52
 pub(crate) const APP_MODAL_HOST_RENAME_SESSION_WINDOW_HEIGHT: f32 = 440.0;
 
 /*
- * CDXC:AppModal 2026-07-28:
- * Bounds for the one-shot `contentHeightMeasured` window fit. The floor keeps
- * a broken measurement from collapsing the window below a usable dialog; the
- * ceiling keeps it inside the smallest supported display height.
- */
-pub(crate) const APP_MODAL_HOST_FIT_CONTENT_MIN_WINDOW_HEIGHT: f32 = 200.0;
-
-pub(crate) const APP_MODAL_HOST_FIT_CONTENT_MAX_WINDOW_HEIGHT: f32 = 850.0;
-
-/*
  * CDXC:AppModal 2026-07-26-07:20:
  * Every app-modal child window is a fitted, non-resizable frame. The compact
  * form and list modals below were measured against the real modal-host React
@@ -831,17 +821,6 @@ pub(crate) const APP_MODAL_HOST_UPDATE_AVAILABLE_WINDOW_HEIGHT: f32 = 560.0;
 pub(crate) const APP_MODAL_HOST_ADD_PROJECT_WINDOW_WIDTH: f32 = 640.0;
 
 pub(crate) const APP_MODAL_HOST_ADD_PROJECT_WINDOW_HEIGHT: f32 = 460.0;
-
-pub(crate) const APP_MODAL_HOST_READY_TIMEOUT: Duration = Duration::from_secs(3);
-
-/// CDXC:Onboarding 2026-09-28 WHY:
-/// On a fresh Windows install (cold disk cache, Defender scanning the new files, no GPU in a VM) the modal page needed far more than 3 s to boot, both tries timed out, and the first-run setup and Settings windows closed before they ever painted. A page that is still loading is waited for (up to `APP_MODAL_HOST_LOADING_LIMIT`); the retry of a page that loaded but never answered gets this longer timeout.
-pub(crate) const APP_MODAL_HOST_READY_RETRY_TIMEOUT: Duration = Duration::from_secs(30);
-
-pub(crate) const APP_MODAL_HOST_LOADING_LIMIT: Duration = Duration::from_secs(120);
-
-/// How long the retry waits after removing the modal window that never became ready before it opens the replacement, so the old window is destroyed first (see `handle_gpui_app_modal_ready_timeout`).
-pub(crate) const APP_MODAL_HOST_RETRY_REOPEN_DELAY: Duration = Duration::from_millis(100);
 
 pub(crate) const BROWSER_ICON_CHEVRON_RIGHT: &str = "titlebar/chevron-right.svg";
 

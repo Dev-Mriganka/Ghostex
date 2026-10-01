@@ -45,6 +45,8 @@ pub(super) struct CliCatalogEntry {
 }
 
 /// `AGENT_CLI_CATALOG`.
+/// CDXC:AgentProviders 2026-09-14 DECISION:
+/// User: install and update agent CLIs from the Agents page, using each CLI's own commands, and link to each agent's installation docs. ZCode uses npm install -g zcode-app-cli@latest, launches with zcode, and links to https://github.com/kingsword09/zcode-cli (packages/shared/agent-cli-catalog.json, which server/src/agent_cli/catalog.rs embeds).
 pub(super) fn cli_catalog() -> &'static [CliCatalogEntry] {
     static CATALOG: OnceLock<Vec<CliCatalogEntry>> = OnceLock::new();
     CATALOG.get_or_init(|| {

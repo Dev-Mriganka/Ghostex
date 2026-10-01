@@ -442,7 +442,6 @@ impl GhostexGpuiApp {
                 app_modal_window: None,
                 app_modal_window_id: app_modal_window_id_for_app,
                 app_modal_open_attempt_id: 0,
-                app_modal_ready_retry_used: false,
                 app_modal_gxserver_hydrate: None,
                 app_modal_gxserver_hydrate_refreshing: false,
                 app_modal_command_return_focus_target: None,

@@ -773,6 +773,8 @@ impl GpuiExportTranscriptModalWindow {
             .into_any_element()
     }
 
+    /// CDXC:TranscriptExport 2026-09-15 DECISION:
+    /// User: Handoff / Export is one page, not an options page followed by a result page, and "Handoff to an agent" and "Export to Markdown" are two explicit choices on it. The mode cards sit above the include-toggles; Handoff writes the file and starts the follow-up conversation in one click, while Export swaps the toggles for the saved path with Copy and Reveal. Starting a conversation never sends a prompt for the user: the mention is typed into the new agent's input and left unsubmitted. Reveal is omitted, not disabled, when the file lives on another machine.
     fn render_body(&self, cx: &mut Context<Self>) -> AnyElement {
         let mut body = v_flex()
             .w_full()

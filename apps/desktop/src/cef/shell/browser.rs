@@ -52,8 +52,6 @@ pub struct CefBrowser {
     motion_hidden: Cell<bool>,
     pub(crate) uses_system_page_appearance: bool,
     pub(crate) extension_bridge_installed: bool,
-    session_chat_bootstrap: StdRc<RefCell<Option<SidebarGxserverBootstrap>>>,
-    trusted_gxserver_entry_identity: Option<String>,
     /// CDXC:Browser 2026-09-23 WHY:
     /// Remote reconnect disposes CEF surfaces while retaining their tabs. Mark app-owned disposal before releasing the native view so synchronous or deferred DoClose callbacks cannot turn that teardown into a user-requested tab close.
     app_initiated_close: StdRc<Cell<bool>>,
@@ -70,11 +68,8 @@ impl CefBrowser {
         popup_open_handler: Option<BrowserPopupOpenHandler>,
         page_metadata_handler: Option<BrowserPageMetadataHandler>,
         media_access_handler: Option<BrowserMediaAccessHandler>,
-        sidebar_gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
         project_workarea_bridge_event_handler: Option<ProjectWorkareaBridgeEventHandler>,
         manage_docs_resource_scope: Option<ManageDocsResourceScope>,
-        app_modal_host_bridge_surface: Option<AppModalHostBridgeSurface>,
-        app_modal_host_bridge_event_handler: Option<AppModalHostBridgeEventHandler>,
         extension_bridge_surface: Option<ExtensionBridgeSurfaceSpec>,
         extension_bridge_event_handler: Option<ExtensionBridgeEventHandler>,
         page_load_end_handler: Option<PageLoadEndHandler>,
@@ -138,21 +133,12 @@ impl CefBrowser {
         let trusted_clipboard_origin = trusted_clipboard_origin
             .as_deref()
             .and_then(cef_normalized_origin);
-        let allow_first_party_loopback_requests = sidebar_gxserver_bootstrap.is_some();
         let mut browser_settings = cef::BrowserSettings::default();
         if trusted_clipboard_origin.is_some() {
             browser_settings.javascript_access_clipboard = State::ENABLED;
             browser_settings.javascript_dom_paste = State::ENABLED;
         }
         let requested_url = url.to_string();
-        let trusted_gxserver_entry_identity = (allow_first_party_loopback_requests
-            && app_modal_host_bridge_surface_for_frame_url(&requested_url).is_some())
-        .then(|| sidebar_page_entry_identity(&requested_url));
-        if let Some(expected_surface) = app_modal_host_bridge_surface
-            && app_modal_host_bridge_surface_for_frame_url(&requested_url) != Some(expected_surface)
-        {
-            return Err("app-modal CEF surface does not match its first-party entry URL".into());
-        }
         /*
         CDXC:Extensions 2026-08-28:
         A `server.url` extension's surface is pinned to a third-party HTTPS
@@ -192,16 +178,13 @@ impl CefBrowser {
         access. Install it when any is in play, and keep the decisions
         independent inside the handler.
         */
-        let permission_handler = (allow_first_party_loopback_requests
-            || trusted_clipboard_origin.is_some()
-            || media_access_handler.is_some())
-        .then(|| {
-            GhostexGpuiPermissionHandler::new(
-                trusted_gxserver_entry_identity.clone(),
-                trusted_clipboard_origin.clone(),
-                media_access_handler,
-            )
-        });
+        let permission_handler =
+            (trusted_clipboard_origin.is_some() || media_access_handler.is_some()).then(|| {
+                GhostexGpuiPermissionHandler::new(
+                    trusted_clipboard_origin.clone(),
+                    media_access_handler,
+                )
+            });
         let context_menu_handler = GhostexGpuiContextMenuHandler::new(popup_open_handler.clone());
         let display_handler = page_metadata_handler.as_ref().map(|handler| {
             GhostexGpuiDisplayHandler::new(handler.clone(), Cell::new(uses_system_page_appearance))
@@ -226,28 +209,12 @@ impl CefBrowser {
             surface_keyboard_handler(keyboard_zoom_enabled, page_metadata_handler.clone());
         let browser_lifecycle_handler = page_metadata_handler.clone();
         let app_initiated_close = StdRc::new(Cell::new(false));
-        let session_chat_bootstrap = StdRc::new(RefCell::new(sidebar_gxserver_bootstrap.clone()));
         let load_handler = if let Some(surface) = extension_bridge_surface
             .clone()
             .filter(|_| extension_bridge_installed)
         {
             Some(GhostexGpuiExtensionBridgeLoadHandler::new(
                 surface,
-                page_load_end_handler,
-            ))
-        } else if sidebar_gxserver_bootstrap.is_some() {
-            /*
-            CDXC:SessionChat 2026-09-21 WHY:
-            A bootstrap without the sidebar bridge handler identifies a
-            bootstrap-only first-party page (Search by Prompt, gxserver-backed
-            modal pages): it gets only the bootstrap install message so the
-            bundled page can reach the local gxserver, while Browser and
-            workarea clients keep passing no bootstrap at all. The per-session
-            chat.html page this was written for is gone from the desktop app.
-            */
-            Some(GhostexGpuiSessionChatGxserverBootstrapLoadHandler::new(
-                session_chat_bootstrap.clone(),
-                trusted_gxserver_entry_identity.clone(),
                 page_load_end_handler,
             ))
         } else if project_workarea_bridge_event_handler.is_some() {
@@ -286,7 +253,6 @@ impl CefBrowser {
             find_handler,
             load_handler,
             project_workarea_bridge_event_handler,
-            app_modal_host_bridge_event_handler,
             extension_bridge_surface,
             extension_bridge_event_handler,
             request_handler,
@@ -352,8 +318,6 @@ impl CefBrowser {
             motion_hidden: Cell::new(false),
             uses_system_page_appearance,
             extension_bridge_installed,
-            session_chat_bootstrap,
-            trusted_gxserver_entry_identity,
             app_initiated_close,
         })
     }
@@ -629,40 +593,8 @@ impl CefBrowser {
         true
     }
 
-    pub fn refresh_session_chat_gxserver_bootstrap(
-        &self,
-        gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
-    ) {
-        /*
-        CDXC:SessionChat 2026-07-31:
-        Session Chat surfaces refresh through their dedicated bootstrap
-        message: app-owned snapshot only, main frame only, never logged or
-        persisted.
-        */
-        // CDXC:SessionChat 2026-09-12 WHY:
-        // Revocation must replace the load-replay snapshot too; keeping its old token made a later reload silently reauthenticate.
-        *self.session_chat_bootstrap.borrow_mut() = gxserver_bootstrap.clone();
-        let Some(entry_identity) = self.trusted_gxserver_entry_identity.as_deref() else {
-            return;
-        };
-        let browser = self.browser.borrow();
-        let Some(mut frame) = browser.main_frame() else {
-            return;
-        };
-        send_session_chat_gxserver_bootstrap_process_message(
-            &mut frame,
-            entry_identity,
-            gxserver_bootstrap,
-        );
-    }
-
     pub fn can_go_back(&self) -> bool {
         self.browser.borrow().can_go_back() != 0
-    }
-
-    /// The main frame is still loading its document or subresources.
-    pub fn is_loading(&self) -> bool {
-        self.browser.borrow().is_loading() != 0
     }
 
     pub fn go_back(&self) {

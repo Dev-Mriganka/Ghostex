@@ -59,6 +59,8 @@ fn close_select<V: SettingsPage>(page: &mut V, cx: &mut Context<V>) {
     cx.notify();
 }
 
+/// CDXC:DesignSystem 2026-09-09 DECISION:
+/// User: select rows carry no check mark. The selected row is marked by a different background instead, so the popup can match the trigger width exactly.
 /// The trigger and, while open, its popup. `on_change` runs with the chosen option's value.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn settings_select<V: SettingsPage>(

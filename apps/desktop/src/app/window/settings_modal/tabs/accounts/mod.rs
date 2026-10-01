@@ -43,6 +43,9 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// Creates the Accounts page view.
+///
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: account management has its own Accounts page in Settings, replacing the Accounts section under Agents. Claude uses cswap and Codex uses xswap.
 pub(crate) fn accounts_tab_view(
     store: &Entity<SettingsStore>,
     window: &mut Window,
@@ -108,8 +111,7 @@ impl AccountsTab {
             cx.notify();
         })
         .detach();
-        // CDXC:Settings 2026-09-08 DECISION (see accounts/manager.tsx (deleted 2026-10-01)): accounts are refreshed
-        // every time the Accounts page opens.
+        // CDXC:Settings 2026-09-08 DECISION: Refresh accounts every time the Accounts page opens and show loading on the Refresh accounts button itself.
         let client = cx.new(|cx| AccountsClient::new(store.clone(), true, cx));
         cx.observe(&client, |_, _, cx| cx.notify()).detach();
         cx.observe_window_activation(window, |page: &mut Self, window, cx| {
@@ -185,6 +187,10 @@ impl AccountsTab {
 
     /// The manager's watch: the sign-in in progress, and a finished one highlights and opens its
     /// account.
+    ///
+    /// CDXC:AgentProviders 2026-09-08 DECISION:
+    /// Finishing login reopens Settings at Accounts, even if the user left Settings while the browser was open. The account is already registered before this completion is announced.
+    /// This watch runs only while the Accounts page is open, so nothing reopens Settings after it is closed; React's `monitorAccountSetup` (accounts/setup-monitor.ts) had no caller either when it was deleted on 2026-10-01.
     fn poll_setup_jobs(&mut self, cx: &mut Context<Self>) {
         let this = cx.weak_entity();
         let params = json!({ "operation": "setupStatus", "owner": client::ACCOUNT_SETUP_OWNER });
@@ -283,6 +289,9 @@ impl AccountsTab {
     }
 
     /// The Accounts section.
+    ///
+    /// CDXC:Settings 2026-09-20 DECISION:
+    /// User: recommend adding even a single account so usage stats are easy to find in the sidebar usage strip and the status lines. This is the 2026-09-09 decision with the meters' new home named; the titlebar row they used to sit in is gone.
     fn render_accounts_section(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let p = self.store.read(cx).palette();
         let hide = self.hide_emails(cx);

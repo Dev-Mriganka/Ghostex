@@ -153,6 +153,9 @@ pub fn account_headline_windows(account: &AgentAccount) -> Vec<usize> {
 }
 
 /// `` `${accountUsageLabel(window)}: ${Math.round(window.usedPercent)}%` ``.
+///
+/// CDXC:AgentProviders 2026-09-09 DECISION:
+/// User: usage labels use the compact 7d: 50% and 5h: 50% format throughout the app, without "used" after percentages.
 pub(crate) fn usage_percent(window: &AccountUsageWindow) -> String {
     format!(
         "{}: {}%",

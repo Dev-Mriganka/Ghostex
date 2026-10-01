@@ -195,6 +195,8 @@ impl ExtensionsTab {
         )
     }
 
+    /// CDXC:Extensions 2026-09-24 DECISION:
+    /// User: the built-in extensions are grouped by category, each category a labelled grid of cards. The Refresh action (component status for the Code editor and CEF) stays on the Built-in section header.
     /// Built-in: the category groups and the Shared runtime (CEF) card.
     pub(crate) fn render_built_in_section(
         &mut self,
@@ -604,6 +606,8 @@ impl ExtensionsTab {
         v_flex().w_full().children(groups).into_any_element()
     }
 
+    /// CDXC:Extensions 2026-09-18 DECISION:
+    /// User: an installed extension gets the same Edit button and the same scope editor as a built-in view, so it can be limited to selected projects or spaces.
     /// `InstalledExtensionCard`.
     fn installed_card(
         &mut self,
