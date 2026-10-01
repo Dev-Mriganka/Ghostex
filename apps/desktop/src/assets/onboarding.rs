@@ -131,7 +131,7 @@ const ICON_PATHS: &[(&str, &str)] = &[
 ];
 
 /// The agent cursor drawn over the Browser and Computer Use previews (`.agent-cursor` in
-/// packages/core-ui/onboarding/styles/workspace.css).
+/// packages/core-ui/onboarding/styles/workspace.css, deleted 2026-10-01).
 const AGENT_CURSOR: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.6L9.5 21z" fill="#fff" stroke="#2d5ae8" stroke-width="1.6" stroke-linejoin="round"/></svg>"##;
 
 pub(crate) fn asset(key: &str) -> Option<Cow<'static, [u8]>> {

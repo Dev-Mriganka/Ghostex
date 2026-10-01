@@ -1,6 +1,6 @@
 //! The Quick Access design tokens, ported from the `.quick-access-surface` block in
 //! packages/core-ui/styles.css (plus its light overrides in styles/modals-light.css and the shared
-//! `.raised-tab-rail` in packages/components/ui/raised-tab-rail.css).
+//! `.raised-tab-rail` in packages/components/ui/raised-tab-rail.css, deleted 2026-10-01).
 //!
 //! Quick Access sits one elevation step below the `.gx-app-modal` language that
 //! `native_modal_kit::ModalPalette` encodes: its raised tone is `--settings-raised` (#161616), not

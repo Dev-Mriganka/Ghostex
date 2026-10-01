@@ -14,7 +14,7 @@ pub(crate) struct ModalSegmentedItem {
 }
 
 /// `SegmentedControl variant='raised' stretch` (packages/components/ui/segmented-control.tsx (deleted 2026-10-01)
-/// skinned by packages/components/ui/raised-tab-rail.css, ink washes under glass per
+/// skinned by packages/components/ui/raised-tab-rail.css (deleted 2026-10-01), ink washes under glass per
 /// [`raised_rail_colors`]): a 32px inset track
 /// (`light-dark(#ededed, #202020)`, 14% hairline, 8px radius, 3px padding and
 /// gap) whose segments split the width at 13px/400 in `light-dark(#525252, #b8b8b8)`,
@@ -113,7 +113,7 @@ pub(crate) struct ModalRailItem {
     pub(crate) trailing: Option<SharedString>,
 }
 
-/// The `.raised-tab-rail` tokens (packages/components/ui/raised-tab-rail.css) shared by every
+/// The `.raised-tab-rail` tokens (packages/components/ui/raised-tab-rail.css, deleted 2026-10-01) shared by every
 /// raised rail and segmented control: the modal kit's, Settings' Remote page and the chat's
 /// account menu.
 #[derive(Clone, Copy)]

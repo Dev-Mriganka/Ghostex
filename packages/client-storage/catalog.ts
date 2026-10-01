@@ -92,7 +92,7 @@ export const storageCatalog = Object.freeze({
   launcher: define(
     'launcher',
     'Agent launcher',
-    core + 'primary-agent-launcher.ts',
+    'apps/desktop/src/app/gx_store/primary_launcher.rs',
     'ghostex-sidebar-project-terminal-launcher',
     textCodec
   ),

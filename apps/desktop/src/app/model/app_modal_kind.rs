@@ -290,7 +290,7 @@ impl GpuiAppModalKind {
             Self::Onboarding => size(px(1400.0), px(788.0)),
             // CDXC:SessionChat 2026-09-06 DECISION:
             // User: start only the diagram dialog 20% wider and taller (1248x912, previously 1040x760).
-            // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size; packages/core-ui/mermaid/mermaid.css keeps it for the React viewer's in-page dialog.
+            // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size.
             Self::MermaidDiagram => size(px(1248.0), px(912.0)),
             Self::MarkdownTable => size(px(1248.0), px(912.0)),
         }

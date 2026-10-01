@@ -143,7 +143,7 @@ pub(super) fn client_storage_path() -> PathBuf {
         .join("client-storage.sqlite3")
 }
 
-/// `PRIMARY_AGENT_LAUNCHER_STORAGE_KEY` (packages/core-ui/primary-agent-launcher.ts).
+/// `PRIMARY_AGENT_LAUNCHER_STORAGE_KEY` (apps/desktop/src/app/gx_store/primary_launcher.rs).
 const PRIMARY_AGENT_LAUNCHER_STORAGE_KEY: &str = "ghostex-sidebar-project-terminal-launcher";
 /// `SIDEBAR_KEEP_AWAKE_RUNTIME_STORAGE_KEY` (packages/core-ui/sidebar-app/collapse-state.ts).
 const KEEP_AWAKE_RUNTIME_STORAGE_KEY: &str = "ghostex.titlebar.keepAwakeRuntime";

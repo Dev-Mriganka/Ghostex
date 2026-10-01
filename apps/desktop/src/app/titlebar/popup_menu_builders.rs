@@ -29,7 +29,7 @@ use crate::*;
 /// User: GPUI context menus use the same style as the shared React sidebar menu.
 /// Panel corners are 8px, rows 6px, panel padding 6px, and horizontal row padding 10px, with neutral theme-aware colors.
 /// User: remove GPUI menu shadows because they are cut off by the popup window.
-/// SEE-ALSO: packages/components/ui/app-menu-panel.css, app/consts.rs menu geometry, app/context_menu.rs label sizing.
+/// SEE-ALSO: packages/components/ui/app-menu-panel.css (deleted 2026-10-01), app/consts.rs menu geometry, app/context_menu.rs label sizing.
 pub(crate) fn titlebar_popup_menu_with_scroll_behavior(
     menu: PopupMenu,
     width: f32,

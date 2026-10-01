@@ -41,7 +41,7 @@ use crate::GhostexGpuiApp;
 use crate::app::remote_conn::sidebar_rpc::GpuiRemoteSidebarRpcMode;
 use crate::shared_settings;
 
-/// `ghostex-sidebar-project-terminal-launcher` (packages/core-ui/primary-agent-launcher.ts), which
+/// `ghostex-sidebar-project-terminal-launcher` (apps/desktop/src/app/gx_store/primary_launcher.rs), which
 /// the project header's agent name and the launcher's highlighted row are read from.
 const PRIMARY_AGENT_LAUNCHER_STORAGE_KEY: &str = "ghostex-sidebar-project-terminal-launcher";
 /// `installAgentHooks` on a remote machine waited this long.
