@@ -53,15 +53,22 @@ pub(super) fn hermes_input_region(lines: &[String]) -> Option<Range<usize>> {
     super::is_profiled_marker_line(&lines[start], '❯').then_some(start..region.end)
 }
 
+/// CDXC:AgentScreenDetection 2026-10-01 WHY:
+/// OMP's box composer draws its statusline into the top border, and that line changes with the symbol preset (`π >` with Unicode symbols, `󰵗` and powerline glyphs with Nerd Font) and turns into a spinner mid-turn. Requiring `π` and `>` there read a Nerd Font OMP as never ready, so its first chat message waited in the queue forever.
+/// The frame is the signature instead: OMP merges the input's last row into the foot (`╰─ text ─╯`), while its dialogs and welcome card close with a solid box rule.
 pub(super) fn omp_input_region(lines: &[String]) -> Option<Range<usize>> {
     let foot = lines.iter().rposition(|line| !line.trim().is_empty())?;
-    let bottom = lines[foot].trim();
-    if !bottom.starts_with('╰') || !bottom.ends_with('╯') {
+    let interior = lines[foot].trim().strip_prefix('╰')?.strip_suffix('╯')?;
+    if !interior.starts_with('─')
+        || interior
+            .chars()
+            .all(|c| ('\u{2500}'..='\u{257f}').contains(&c))
+    {
         return None;
     }
     let head = lines[..foot].iter().rposition(|line| {
         let line = line.trim();
-        line.starts_with('╭') && line.ends_with('╮') && line.contains('π') && line.contains('>')
+        line.starts_with('╭') && line.ends_with('╮')
     })?;
     if !lines[head + 1..foot].iter().all(|line| {
         let line = line.trim();
@@ -70,6 +77,28 @@ pub(super) fn omp_input_region(lines: &[String]) -> Option<Range<usize>> {
         return None;
     }
     Some(head + 1..foot + 1)
+}
+
+/// CDXC:AgentScreenDetection 2026-10-01 WHY:
+/// OMP's empty composer shows one right-aligned gesture hint in its foot (`╰─  ⇧⇥ to change thinking effort ─╯`, or `󰘶 󰌒 …` with Nerd Font symbols): the key as one accent-colored span, the label italic. Reading it as a draft failed every send with "could not be cleared". Typed input is never italic, so an italic label with only one key span before it is the hint.
+fn omp_hint_only(line: &StyledLine) -> bool {
+    let is_chrome = |ch: char| ch.is_whitespace() || ('\u{2500}'..='\u{257f}').contains(&ch);
+    let Some(label) = line
+        .chars
+        .iter()
+        .position(|(ch, style)| style.italic && !is_chrome(*ch))
+    else {
+        return false;
+    };
+    let mut key = line.chars[..label]
+        .iter()
+        .filter(|(ch, _)| !is_chrome(*ch))
+        .map(|(_, style)| (style.foreground_rgb, style.foreground_index));
+    let key_color = key.next();
+    key.all(|color| Some(color) == key_color)
+        && line.chars[label..]
+            .iter()
+            .all(|(ch, style)| style.italic || is_chrome(*ch))
 }
 
 /// CDXC:AgentScreenDetection 2026-09-09 WHY:
@@ -501,7 +530,7 @@ pub fn session_chat_composer_input(agent: &str, screen: &str) -> Option<SessionC
             text,
             rows: region.len(),
             shell_mode: false,
-            placeholder: false,
+            placeholder: agent == "omp" && region.len() == 1 && omp_hint_only(&lines[region.start]),
         });
     }
     let region = match agent {

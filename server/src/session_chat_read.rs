@@ -5,7 +5,8 @@ use crate::server::{
     RoutedResponse,
 };
 use crate::session_chat_follower::{
-    is_session_chat_followable_session, session_chat_agent_for_session, session_chat_hook_working,
+    is_session_chat_followable_session, session_chat_display_agent_for_session,
+    session_chat_hook_working,
 };
 use crate::session_chat_options::{
     cached_session_chat_screen_state, cached_session_chat_terminal_notice,
@@ -83,7 +84,7 @@ pub(crate) fn resolve_session_chat_read_state(
             code: "notFound",
             message: "The session no longer exists.".to_string(),
         })?;
-    let agent = session_chat_agent_for_session(&session);
+    let agent = session_chat_display_agent_for_session(&session);
     /*
     CDXC:Drafts 2026-08-28:
     The session's OWN launch agent id, which `agent` above is not: that one is

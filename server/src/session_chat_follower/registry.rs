@@ -31,6 +31,19 @@ pub(crate) fn session_chat_agent_for_session(session: &Value) -> Option<String> 
     crate::session_chat::session_chat_transcript_agent_id(agent_icon).map(str::to_string)
 }
 
+/// CDXC:SessionChat 2026-10-01 DECISION:
+/// User: "In the chat view we show Pi when I pick OMP, which is wrong." OMP writes Pi's transcript format and is decoded as Pi, but the chat's `agent` names the CLI the session runs, so every client labels it OMP and offers OMP's model picker. Transcript readers fold `omp` back to Pi.
+pub(crate) fn session_chat_display_agent_for_session(session: &Value) -> Option<String> {
+    let agent = session_chat_agent_for_session(session)?;
+    if agent == "pi"
+        && crate::session_chat_composer::session_chat_composer_agent_id(session).as_deref()
+            == Some("omp")
+    {
+        return Some("omp".to_string());
+    }
+    Some(agent)
+}
+
 pub(crate) fn session_chat_identity_fingerprint(session: &Value) -> String {
     format!(
         "{}|{}|{}",
@@ -142,7 +155,7 @@ pub(crate) fn sync_session_chat_follower_for_session(
             read().unwrap_or_default()
         })
     };
-    let agent = session_chat_agent_for_session(session);
+    let agent = session_chat_display_agent_for_session(session);
     let terminal_agent = crate::session_chat_composer::session_chat_composer_agent_id(session)
         .or_else(|| agent.clone());
     // Detection source for snapshot/replaced frames (cached) and the follower's
