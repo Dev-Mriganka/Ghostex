@@ -31,14 +31,17 @@ use ghostex_gx_core::{
     CHATS_GROUP_ID, ProjectKey, SessionKey, TitleGenerationSettings, agent_session_default_title,
     created_session, default_agent_id_for_icon, first_prompt_title_runtime_settings,
     is_agentbox_run_location, local_agent_launch_params, open_remote_session_terminal,
-    remote_agent_launch_params, resolve_sidebar_agent, start_provider_params, with_run_location,
+    remote_agent_launch_params, remote_launch_agent_id, resolve_sidebar_agent,
+    start_provider_params, with_run_location,
 };
 use serde_json::{Value, json};
 
 use super::super::gx_rpc;
 use super::terminal::REMOTE_TIMEOUT;
 use crate::GhostexGpuiApp;
-use crate::app::remote_conn::sidebar_rpc::GpuiRemoteSidebarRpcMode;
+use crate::app::remote_conn::sidebar_rpc::{
+    GpuiRemoteSidebarRpcMode, gpui_remote_sidebar_rpc_failure_reason,
+};
 use crate::shared_settings;
 
 /// `ghostex-sidebar-project-terminal-launcher` (apps/desktop/src/app/gx_store/primary_launcher.rs), which
@@ -554,7 +557,7 @@ impl GhostexGpuiApp {
         // The remote machine's own gxserver runs agentbox for a box launch there.
         let params = with_run_location(
             remote_agent_launch_params(
-                &normalized,
+                &remote_launch_agent_id(hud.as_deref(), &normalized),
                 &project.project_id,
                 title_settings,
                 account_id,
@@ -575,14 +578,20 @@ impl GhostexGpuiApp {
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
-                let Ok(response) = result else {
-                    this.gx_store_create_toast(
-                        "warning",
-                        "Remote agent failed",
-                        Some("The remote gxserver could not create that agent session."),
-                        cx,
-                    );
-                    return;
+                let response = match result {
+                    Ok(response) => response,
+                    Err(error) => {
+                        this.gx_store_create_toast(
+                            "warning",
+                            "Remote agent failed",
+                            Some(&gpui_remote_sidebar_rpc_failure_reason(
+                                &error,
+                                "The remote gxserver could not create that agent session.",
+                            )),
+                            cx,
+                        );
+                        return;
+                    }
                 };
                 let Some((created_project, session_id)) =
                     created_session(&response, Some(&project.project_id))
@@ -615,12 +624,15 @@ impl GhostexGpuiApp {
                     cx,
                 );
                 cx.spawn(async move |this, cx| {
-                    if start.await.is_err() {
+                    if let Err(error) = start.await {
                         let _ = this.update(cx, |this, cx| {
                             this.gx_store_create_toast(
                                 "warning",
                                 "Remote agent failed",
-                                Some("The remote gxserver could not start that agent session."),
+                                Some(&gpui_remote_sidebar_rpc_failure_reason(
+                                    &error,
+                                    "The remote gxserver could not start that agent session.",
+                                )),
                                 cx,
                             );
                         });

@@ -17,9 +17,22 @@ use std::time::Duration;
 use crate::app::helpers::*;
 use crate::*;
 
-/// The sentence a failed remote request answers with. The machine's own body never crosses this
-/// boundary, so this is also what a waited caller's failure toast says.
+/// The sentence a refused or unanswered remote request answers with. A request the machine
+/// rejected answers with its gxserver's own `message` instead (`gpui_gxserver_rejection_message`);
+/// no transport error, raw body, host, port or token crosses this boundary.
 pub(crate) const GPUI_REMOTE_GXSERVER_REQUEST_FAILED: &str = "Remote gxserver request failed.";
+
+/// What a waited caller's failure toast says: the machine's own reason when it rejected the
+/// request, else the caller's `fallback`, which names what did not happen.
+///
+/// CDXC:RemoteMachines 2026-10-01 WHY: A remote agent create the machine refused toasted only "The remote gxserver could not create that agent session." while the machine's gxserver had said exactly why ("no launch command for agent …"). Only that structured, bounded `message` crosses, as Add Project's rejections do.
+pub(crate) fn gpui_remote_sidebar_rpc_failure_reason(error: &str, fallback: &str) -> String {
+    if error == GPUI_REMOTE_GXSERVER_REQUEST_FAILED {
+        fallback.to_string()
+    } else {
+        error.to_string()
+    }
+}
 
 /// Who reads the answer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,8 +51,8 @@ impl GhostexGpuiApp {
     /// the call has come back when the path is one that changes it.
     ///
     /// The task resolves to the machine's raw answer, which a caller must shape before any of it
-    /// reaches a renderer (`gpui_remote_sidebar_response_payload`), or to
-    /// [`GPUI_REMOTE_GXSERVER_REQUEST_FAILED`].
+    /// reaches a renderer (`gpui_remote_sidebar_response_payload`), or to the machine's rejection
+    /// message, or to [`GPUI_REMOTE_GXSERVER_REQUEST_FAILED`].
     pub(crate) fn start_gpui_remote_sidebar_rpc(
         &mut self,
         remote_machine_id: &str,
@@ -90,10 +103,20 @@ impl GhostexGpuiApp {
             let refreshes = gpui_remote_sidebar_request_refreshes_presentation(path.as_str());
             let result = background
                 .spawn(async move {
-                    gpui_remote_gxserver_rpc_result(&target, path.as_str(), &params, timeout)
+                    let failed = || GPUI_REMOTE_GXSERVER_REQUEST_FAILED.to_string();
+                    let (status_code, body) = gpui_remote_gxserver_post_typed_operation(
+                        &target,
+                        path.as_str(),
+                        &params,
+                        timeout,
+                    )
+                    .map_err(|_| failed())?;
+                    if !(200..300).contains(&status_code) {
+                        return Err(gpui_gxserver_rejection_message(&body).unwrap_or_else(failed));
+                    }
+                    parse_gpui_gxserver_rpc_result(&body).map_err(|_| failed())
                 })
-                .await
-                .map_err(|_| GPUI_REMOTE_GXSERVER_REQUEST_FAILED.to_string());
+                .await;
             let _ = this.update(cx, |this, cx| {
                 if result.is_err() && mode == GpuiRemoteSidebarRpcMode::FireAndForget {
                     this.dispatch_gpui_app_modal_toast(

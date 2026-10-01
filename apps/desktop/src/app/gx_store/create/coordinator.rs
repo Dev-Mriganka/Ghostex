@@ -8,14 +8,16 @@
 use ghostex_gx_core::{
     ProjectKey, SessionKey, created_session, default_agent_id_for_icon, local_agent_launch_params,
     open_remote_session_terminal, queue_startup_prompt_params, remote_agent_launch_params,
-    resolve_sidebar_agent, start_provider_params,
+    remote_launch_agent_id, resolve_sidebar_agent, start_provider_params,
 };
 use serde_json::{Map, Value, json};
 
 use super::super::gx_rpc;
 use super::terminal::REMOTE_TIMEOUT;
 use crate::GhostexGpuiApp;
-use crate::app::remote_conn::sidebar_rpc::GpuiRemoteSidebarRpcMode;
+use crate::app::remote_conn::sidebar_rpc::{
+    GpuiRemoteSidebarRpcMode, gpui_remote_sidebar_rpc_failure_reason,
+};
 use crate::app::window::{NewCoordinatorAgent, NewCoordinatorModel};
 
 /// The agent families a coordinator can run on (gxserver `coordinator_agent_family_supported`).
@@ -135,7 +137,13 @@ impl GhostexGpuiApp {
         let first_request = first_request.trim().to_string();
         if let Some(machine_id) = project.machine.remote_id().map(str::to_string) {
             let params = coordinator_params(
-                remote_agent_launch_params(agent_id, &project.project_id, Map::new(), None, name),
+                remote_agent_launch_params(
+                    &remote_launch_agent_id(hud.as_deref(), agent_id),
+                    &project.project_id,
+                    Map::new(),
+                    None,
+                    name,
+                ),
                 goal,
                 model,
                 effort,
@@ -152,17 +160,26 @@ impl GhostexGpuiApp {
             cx.spawn(async move |this, cx| {
                 let result = task.await;
                 let _ = this.update(cx, |this, cx| {
-                    let Some((created_project, session_id)) = result
-                        .ok()
-                        .and_then(|response| created_session(&response, Some(&project_id)))
-                    else {
-                        this.gx_store_create_toast(
-                            "warning",
-                            "Coordinator not created",
-                            Some("The remote computer could not create it. Its Ghostex may need an update."),
-                            cx,
-                        );
-                        return;
+                    const NOT_CREATED: &str =
+                        "The remote computer could not create it. Its Ghostex may need an update.";
+                    let created = match result {
+                        Ok(response) => created_session(&response, Some(&project_id))
+                            .ok_or_else(|| NOT_CREATED.to_string()),
+                        Err(error) => {
+                            Err(gpui_remote_sidebar_rpc_failure_reason(&error, NOT_CREATED))
+                        }
+                    };
+                    let (created_project, session_id) = match created {
+                        Ok(created) => created,
+                        Err(reason) => {
+                            this.gx_store_create_toast(
+                                "warning",
+                                "Coordinator not created",
+                                Some(&reason),
+                                cx,
+                            );
+                            return;
+                        }
                     };
                     let created_project = created_project.unwrap_or(project_id.clone());
                     if !first_request.is_empty() {

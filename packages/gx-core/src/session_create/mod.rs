@@ -18,7 +18,7 @@ mod target;
 
 pub use agents::{
     agent_session_default_title, default_agent_id_for_icon, first_prompt_title_runtime_settings,
-    resolve_sidebar_agent, SidebarAgent, TitleGenerationSettings,
+    remote_launch_agent_id, resolve_sidebar_agent, SidebarAgent, TitleGenerationSettings,
 };
 pub use board_links::{
     bead_conversation_link_id, bead_conversation_link_match_key, board_session_id,

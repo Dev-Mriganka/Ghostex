@@ -7,6 +7,11 @@ use crate::GhostexGpuiApp;
 pub(crate) const WEB_REMOTE_MACHINES_UNAVAILABLE: &str =
     "Remote machines are not available in the browser.";
 
+/// What a waited caller's failure toast says, as on the desktop: here always the refusal.
+pub(crate) fn gpui_remote_sidebar_rpc_failure_reason(error: &str, _fallback: &str) -> String {
+    error.to_string()
+}
+
 /// Who reads the answer, as on the desktop.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(dead_code)] // matched by the shared executor files

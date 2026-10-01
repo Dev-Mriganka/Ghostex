@@ -64,6 +64,13 @@ pub(crate) fn gpui_add_project_dialog_restore_recent_project(
 }
 
 pub(crate) fn gpui_add_project_dialog_error_message(body: &str) -> String {
+    gpui_gxserver_rejection_message(body)
+        .unwrap_or_else(|| "gxserver rejected the request.".to_string())
+}
+
+/// The structured `message` of a gxserver rejection, without control characters and bounded;
+/// `None` when the body carries none.
+pub(crate) fn gpui_gxserver_rejection_message(body: &str) -> Option<String> {
     serde_json::from_str::<serde_json::Value>(body)
         .ok()
         .as_ref()
@@ -79,7 +86,6 @@ pub(crate) fn gpui_add_project_dialog_error_message(body: &str) -> String {
                 .collect::<String>()
         })
         .filter(|message| !message.is_empty())
-        .unwrap_or_else(|| "gxserver rejected the request.".to_string())
 }
 
 pub(crate) fn gpui_repository_clone_rpc_result(

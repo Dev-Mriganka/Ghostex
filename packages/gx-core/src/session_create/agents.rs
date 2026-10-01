@@ -93,6 +93,19 @@ pub fn default_agent_id_for_icon(icon: Option<&str>) -> Option<&'static str> {
     })
 }
 
+/// The agent id a launch on ANOTHER computer sends: that computer's gxserver resolves the command
+/// from its own agents, so a custom agent of this computer travels as the built-in agent its icon
+/// names. Any other id, and a custom agent with no built-in icon, is sent as it is.
+///
+/// CDXC:RemoteMachines 2026-10-01 WHY: Custom agent ids (`custom-claude-70-…`) are generated per computer and never exist on a remote machine, so sending one made the remote gxserver refuse the create ("no launch command for agent"): the Mac's "Claude" button, a custom agent running `claude`, could not start Claude on the Windows machine. The remote still picks its own command for that agent, as `CDXC:RemoteMachines 2026-06-24-17:19` requires.
+pub fn remote_launch_agent_id(hud: Option<&Value>, agent_id: &str) -> String {
+    let agent_id = js_trim(agent_id);
+    resolve_sidebar_agent(hud, agent_id)
+        .filter(|agent| agent.agent_id.starts_with("custom-"))
+        .and_then(|agent| default_agent_id_for_icon(agent.icon.as_deref()))
+        .map_or_else(|| agent_id.to_string(), str::to_string)
+}
+
 /// `DEFAULT_SESSION_AGENT_TITLE_NAMES`.
 fn default_session_agent_title_name(lowercased: &str) -> Option<&'static str> {
     Some(match lowercased {
