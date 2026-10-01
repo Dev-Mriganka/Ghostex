@@ -35,6 +35,8 @@ mod terminal_model;
 mod terminal_native_view;
 mod terminal_osc_title;
 mod terminal_scrollbar_reveal;
+#[cfg(target_os = "macos")]
+mod terminal_shaders;
 mod terminal_surface_host;
 mod terminal_surface_lifecycle;
 mod terminal_wheel;

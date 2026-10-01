@@ -318,6 +318,7 @@ pub(crate) fn select_field<V: SettingsPage>(
     window: &mut Window,
     cx: &mut Context<V>,
 ) -> AnyElement {
+    let disabled = spec.disabled_reason.is_some();
     let control = settings_select(
         page,
         p,
@@ -325,11 +326,11 @@ pub(crate) fn select_field<V: SettingsPage>(
         options,
         value,
         Some(width.unwrap_or(super::row::SELECT_WIDTH)),
-        false,
-        None,
+        disabled,
+        spec.disabled_reason.clone(),
         on_change,
         window,
         cx,
     );
-    setting_row(p, id, spec, on_reset, control, cx)
+    setting_row(p, id, spec, on_reset.filter(|_| !disabled), control, cx)
 }

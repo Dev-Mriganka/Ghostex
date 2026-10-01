@@ -1023,6 +1023,16 @@ export function getSettingsSearchSectionDefinitions() {
           subtitle: `Choose which editor ${formatSidebarHotkeyLabel('ctrl+g')} uses when a terminal prompt asks for $EDITOR.`,
           title: `${formatSidebarHotkeyLabel('ctrl+g')} prompt editor`,
         },
+        ...(IS_MAC_HOST
+          ? [
+              {
+                key: 'terminalShadersEnabled',
+                title: 'Custom shaders (experimental)',
+                subtitle:
+                  'Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions.',
+              },
+            ]
+          : []),
       ],
     },
     terminalBehavior: {
@@ -1151,7 +1161,7 @@ export function getSettingsSearchSectionDefinitions() {
 
 export type SettingsSearchSectionId = keyof ReturnType<typeof getSettingsSearchSectionDefinitions>;
 
-export function getSettingsSearchSections(settingsSearchQuery: string, _draft: ghostexSettings) {
+export function getSettingsSearchSections(settingsSearchQuery: string, draft: ghostexSettings) {
   /**
    * CDXC:Settings 2026-05-04-02:30
    * Settings search must be fuzzy and cover section titles, setting subtitles,
@@ -1162,7 +1172,11 @@ export function getSettingsSearchSections(settingsSearchQuery: string, _draft: g
   const settingsSearch = Object.fromEntries(
     Object.entries(definitions).map(([sectionId, definition]) => [
       sectionId,
-      getSettingsSectionSearch(settingsSearchQuery, definition.title, definition.settings),
+      getSettingsSectionSearch(
+        settingsSearchQuery,
+        definition.title,
+        definition.settings.filter((row) => row.key !== 'terminalShadersEnabled' || draft.showBetaFeatures)
+      ),
     ])
   ) as Record<SettingsSearchSectionId, SettingsSectionSearchResult>;
 
