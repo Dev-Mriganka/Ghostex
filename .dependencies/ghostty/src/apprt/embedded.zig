@@ -2521,5 +2521,24 @@ pub const CAPI = struct {
                 ptr.backend = null;
             }
         }
+
+        /// Translate a Shadertoy-style custom shader file into the MSL
+        /// Ghostty's Metal renderer compiles for its post-processing
+        /// pipelines, including Ghostty's uniform prefix. Requires
+        /// ghostty_init. Returns an empty string on failure; otherwise
+        /// the caller must free the result with ghostty_string_free.
+        export fn ghostty_custom_shader_load_msl(path: [*:0]const u8) String {
+            const path_slice = std.mem.sliceTo(path, 0);
+            const msl = renderer.shadertoy.loadFromFile(
+                global.alloc(),
+                path_slice,
+                .msl,
+            ) catch |err| {
+                log.warn("error loading custom shader path={s} err={}", .{ path_slice, err });
+                return .empty;
+            };
+
+            return .fromSlice(msl);
+        }
     };
 };

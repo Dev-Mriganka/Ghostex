@@ -2,6 +2,8 @@
 //! the Windows environment rows), Terminal Behavior and Terminal Scrolling.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::catalog::{SettingOption, module, settings_catalog};
+#[cfg(target_os = "macos")]
+use super::super::super::fields::toggle_field_with;
 use super::super::super::fields::{
     ButtonVariant, card_inset, color_field, icon, reset_key, select_field, settings_button,
     settings_icon, settings_section, text_field, tooltip_text,
@@ -19,6 +21,7 @@ use serde_json::{Value, json};
 
 /// The colour Terminal background starts from when Follow theme is turned off.
 const TERMINAL_BACKGROUND_STARTING_COLOR: &str = "#111111";
+const SHADER_BACKGROUND_OVERRIDE_REASON: &str = "Custom shaders use the background from your Ghostty config. To edit this override, turn Custom shaders off (enable Experimental Features first if the switch is hidden); your saved choice will return.";
 
 fn option(label: &str, value: &str) -> SettingOption {
     SettingOption {
@@ -247,7 +250,7 @@ fn terminal_section(
             "terminalBackgroundMode",
             "Terminal background",
             "Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.",
-        );
+        ).disabled_reason((cfg!(target_os = "macos") && g.values.bool("terminalShadersEnabled")).then(|| SHADER_BACKGROUND_OVERRIDE_REASON.into()));
         let options = vec![
             option("Black / white", "pure"),
             option("Follow theme", "theme"),
@@ -291,7 +294,8 @@ fn terminal_section(
                 "Terminal background color",
                 "Painted behind terminal text in dark mode. Light mode and window glass keep the theme.",
             )
-            .dependent();
+            .dependent()
+            .disabled_reason((cfg!(target_os = "macos") && g.values.bool("terminalShadersEnabled")).then(|| SHADER_BACKGROUND_OVERRIDE_REASON.into()));
         let value = g.values.string("workspaceBackgroundColor");
         rows.push(color_field(
             page,
@@ -551,6 +555,24 @@ fn terminal_section(
             None,
             false,
             window,
+            cx,
+        ));
+    }
+    #[cfg(target_os = "macos")]
+    if g.values.bool("showBetaFeatures") && g.visible(s, "terminalShadersEnabled") {
+        rows.push(toggle_field_with(
+            &p,
+            "terminalShadersEnabled",
+            g.spec(
+                "terminalShadersEnabled",
+                "Custom shaders (experimental)",
+                "Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions.",
+            ).experimental(),
+            g.values.bool("terminalShadersEnabled"),
+            Some(reset_key::<GeneralTab>("terminalShadersEnabled")),
+            |page: &mut GeneralTab, enabled, _window, cx| {
+                save(page, "terminalShadersEnabled", json!(enabled), cx);
+            },
             cx,
         ));
     }

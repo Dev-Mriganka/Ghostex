@@ -512,6 +512,7 @@ export const DEFAULT_ghostex_SETTINGS: ghostexSettings = {
    */
   terminalCursorStyle: 'bar',
   terminalCursorStyleBlink: true,
+  terminalShadersEnabled: false,
   /** CDXC:PlatformSupport 2026-09-14 DECISION: User: make PowerShell the default Windows environment. */
   windowsTerminalBackend: 'powershell',
   windowsWslDistribution: '',
