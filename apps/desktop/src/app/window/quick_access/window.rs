@@ -34,7 +34,7 @@ use gpui::{
     div, point, px,
 };
 use gpui_component::input::{InputEvent, InputState, TextareaState};
-use gpui_component::v_flex;
+use gpui_component::{h_flex, v_flex};
 use serde_json::json;
 use std::rc::Rc;
 
@@ -70,6 +70,10 @@ pub(crate) struct GpuiQuickAccessWindow {
     /// keyboard moves and re-ranked queries reveal their row.
     suppress_scroll: bool,
     last_load_more: Option<web_time::Instant>,
+    /// The tab's spinner-and-text loading state is due: loading has been pending for
+    /// `QUICK_ACCESS_LOADING_DELAY`, which `loading_timer` counts down.
+    loading_revealed: bool,
+    loading_timer: Option<gpui::Task<()>>,
     /// Window glass was on when the window opened, so its window blurs what is behind it
     /// (`open_native_app_modal`) and the palette is frosted to match.
     glass: bool,
@@ -125,6 +129,8 @@ impl GpuiQuickAccessWindow {
             tag_composer_anchor: None,
             suppress_scroll: false,
             last_load_more: None,
+            loading_revealed: false,
+            loading_timer: None,
             glass: crate::app::helpers::window_glass_active(),
             menu_frames: QuickAccessMenuFrames::default(),
             focus_handle: cx.focus_handle(),
@@ -239,6 +245,7 @@ impl GpuiQuickAccessWindow {
             }
             _ => {}
         }
+        self.track_loading(snapshot.loading, cx);
         let mut snapshot = snapshot;
         self.keep_newer_local_selection(&mut snapshot);
         let selection_changed = self
@@ -251,6 +258,28 @@ impl GpuiQuickAccessWindow {
             self.pending_scroll = self.selected_flat_index();
         }
         cx.notify();
+    }
+
+    /// CDXC:DesignSystem 2026-09-09 DECISION:
+    /// User: every Quick Access page appears immediately, then shows its shared spinner-and-text state only if loading is still pending after 500ms. This supersedes hiding Projects and Sessions until their first request resolves.
+    fn track_loading(&mut self, loading: bool, cx: &mut Context<Self>) {
+        if !loading {
+            self.loading_timer = None;
+            self.loading_revealed = false;
+            return;
+        }
+        if self.loading_revealed || self.loading_timer.is_some() {
+            return;
+        }
+        self.loading_timer = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(QUICK_ACCESS_LOADING_DELAY)
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.loading_revealed = true;
+                cx.notify();
+            });
+        }));
     }
 
     /// The scroll index of the selected row, counting headings as rows because
@@ -1003,7 +1032,11 @@ impl GpuiQuickAccessWindow {
                 row_index += 1;
             }
         }
-        if children.is_empty() {
+        if children.is_empty() && snapshot.loading {
+            if self.loading_revealed {
+                children.push(quick_access_loading(&p, &snapshot.loading_label));
+            }
+        } else if children.is_empty() {
             children.push(
                 div()
                     .w_full()
@@ -1012,11 +1045,7 @@ impl GpuiQuickAccessWindow {
                     .text_size(px(QUICK_ACCESS_ITEM_FONT_SIZE))
                     .text_color(hsla(p.muted))
                     .text_center()
-                    .child(SharedString::from(if snapshot.loading {
-                        snapshot.loading_label.clone()
-                    } else {
-                        snapshot.empty.clone()
-                    }))
+                    .child(SharedString::from(snapshot.empty.clone()))
                     .into_any_element(),
             );
         }
@@ -1050,6 +1079,44 @@ impl GpuiQuickAccessWindow {
             .children(children)
             .into_any_element()
     }
+}
+
+/// How long a tab may load before its loading state shows (React's `DelayedLoadingIndicator`).
+const QUICK_ACCESS_LOADING_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// The spinner-and-text loading state (`.ghostex-delayed-loading-indicator`, deleted 2026-10-01).
+fn quick_access_loading(p: &QuickAccessPalette, label: &str) -> AnyElement {
+    use gpui::{Animation, AnimationExt as _, Transformation, radians};
+    h_flex()
+        .w_full()
+        .min_h(px(76.0))
+        .py(px(24.0))
+        .px(px(16.0))
+        .gap(px(9.0))
+        .justify_center()
+        .items_center()
+        .text_size(px(12.0))
+        .line_height(px(18.0))
+        .text_color(hsla(p.muted))
+        .child(
+            crate::app::window::native_modal_kit::modal_icon(
+                crate::app::window::native_modal_kit::ICON_LOADER,
+                16.0,
+                p.foreground,
+            )
+            .flex_shrink_0()
+            .with_animation(
+                "quick-access-loading-spinner",
+                Animation::new(std::time::Duration::from_millis(800)).repeat(),
+                |svg, delta| {
+                    svg.with_transformation(Transformation::rotate(radians(
+                        delta * std::f32::consts::TAU,
+                    )))
+                },
+            ),
+        )
+        .child(SharedString::from(label.to_string()))
+        .into_any_element()
 }
 
 /// The search line's pickers and the editor's, in the order their menus stack.
