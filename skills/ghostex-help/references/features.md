@@ -232,7 +232,13 @@ view from the strip.
   Escape, or click outside it. Cmd+F, or Ctrl+F on Windows and Linux, opens the
   search: inside a Markdown document it shows Find and Replace with the caret
   ready, and anywhere else it reveals the files list and focuses its search.
-  Escape closes the document search.
+  Escape closes the document search. To open an HTML, Markdown, or Excalidraw
+  file in your web browser, use the open-in-browser button in the file's header
+  or Open Externally at the top right of the view: HTML pages open as they are,
+  Markdown opens as a formatted page, and drawings open in an Excalidraw editor
+  that saves back to the file. The arrow beside the button, and Open With in a file's right-click
+  menu, list your other browsers and the apps that open that kind of file.
+  Browser links stop working when Ghostex restarts; open the file again for a new one.
 - **Terminal**: a command terminal in the view panel that works like the
   Commands pane, only on the right beside your sessions instead of below them.
   It has its own tab bar with a **+** for new terminals, Cmd+Shift+T for another
