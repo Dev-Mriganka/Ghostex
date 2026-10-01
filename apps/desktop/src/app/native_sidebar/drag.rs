@@ -94,6 +94,12 @@ impl GhostexGpuiApp {
             cx.notify();
             return;
         }
+        let after = if target_kind == "space" {
+            position.x > bounds.center().x
+        } else {
+            position.y > bounds.center().y
+        };
+        let position = if after { "after" } else { "before" };
         // A session aimed at another section of its project moves there (section_move.rs); a
         // section heading takes nothing else.
         if source.kind == "session" && matches!(target_kind, "section" | "session") {
@@ -102,11 +108,9 @@ impl GhostexGpuiApp {
                 target_kind,
                 target_id,
                 group_id,
+                position,
             ) {
-                if self.native_sidebar.drop_command.as_ref() != Some(&command) {
-                    self.native_sidebar.drop_command = Some(command);
-                    cx.notify();
-                }
+                self.set_native_sidebar_session_drop(Some(command), cx);
                 return;
             }
         }
@@ -116,65 +120,20 @@ impl GhostexGpuiApp {
             }
             return;
         }
-        if source.kind == "session" && matches!(target_kind, "session" | "group" | "session-group")
-        {
-            let Some(snapshot) = self.native_sidebar.snapshot.as_ref() else {
-                return;
+        if source.kind == "session" {
+            let command = match target_kind {
+                "session" => Some(
+                    json!({"type": "moveSession", "sessionId": source.id, "groupId": group_id, "targetSessionId": target_id, "position": position}),
+                ),
+                "group" | "session-group" => Some(
+                    json!({"type": "moveSession", "sessionId": source.id, "groupId": target_id, "position": "before"}),
+                ),
+                _ => None,
             };
-            let origin = snapshot.groups.iter().find_map(|group| {
-                group
-                    .sessions
-                    .iter()
-                    .find(|session| session.session_id == source.id)
-                    .map(|session| (group, session))
-            });
-            let target = snapshot.groups.iter().find_map(|group| {
-                if target_kind != "session" && group.group_id == target_id {
-                    Some((group, None))
-                } else if target_kind == "session" {
-                    group
-                        .sessions
-                        .iter()
-                        .find(|session| session.session_id == target_id)
-                        .map(|session| (group, Some(session)))
-                } else {
-                    None
-                }
-            });
-            let valid = match (origin, target) {
-                (Some((origin, session)), Some((target, target_session))) => {
-                    !session.is_browser()
-                        && !origin.is_stale
-                        && !target.is_stale
-                        && if session.is_pinned {
-                            origin.remote_machine_context.is_none()
-                                && origin.group_id == target.group_id
-                                && target_session.is_some_and(|session| session.is_pinned)
-                        } else {
-                            origin.remote_machine_context.is_none()
-                                && target.remote_machine_context.is_none()
-                                && snapshot.hud["activeSessionsSortMode"] == "manual"
-                        }
-                }
-                _ => false,
-            };
-            if !valid {
-                self.native_sidebar.drop_command = None;
-                cx.notify();
-                return;
-            }
+            self.set_native_sidebar_session_drop(command, cx);
+            return;
         }
-        let after = if target_kind == "space" {
-            position.x > bounds.center().x
-        } else {
-            position.y > bounds.center().y
-        };
-        let position = if after { "after" } else { "before" };
-        let command = if source.kind == "session"
-            && matches!(target_kind, "group" | "session-group")
-        {
-            json!({"type": "moveSession", "sessionId": source.id, "groupId": target_id, "position": "before"})
-        } else if target_kind == "space"
+        let command = if target_kind == "space"
             && matches!(source.kind, "group" | "collection")
             // Bots belong to no Space (gx-core `assemble`), so a Space tile takes no bot.
             && !self
@@ -190,9 +149,6 @@ impl GhostexGpuiApp {
             json!({"type": "moveCollection", "sourceId": source.id, "targetKind": target_kind, "targetId": target_id, "position": position})
         } else if source.kind == target_kind {
             match target_kind {
-                "session" => {
-                    json!({"type": "moveSession", "sessionId": source.id, "groupId": group_id, "targetSessionId": target_id, "position": position})
-                }
                 "group" => {
                     json!({"type": "moveGroup", "groupId": source.id, "targetGroupId": target_id, "position": position})
                 }
@@ -203,10 +159,125 @@ impl GhostexGpuiApp {
             cx.notify();
             return;
         };
-        if self.native_sidebar.drop_command.as_ref() != Some(&command) {
-            self.native_sidebar.drop_command = Some(command);
+        let command = if matches!(
+            command["type"].as_str(),
+            Some("moveGroup" | "moveCollection" | "moveToCollection")
+        ) {
+            self.resolve_native_sidebar_drop_landing(command, |app, command| {
+                app.with_native_sidebar_project_drop_landing(command)
+            })
+        } else {
+            Some(command)
+        };
+        if self.native_sidebar.drop_command != command {
+            self.native_sidebar.drop_command = command;
             cx.notify();
         }
+    }
+
+    /// `land` for this target, or what it answered the last time the pointer was over it.
+    fn resolve_native_sidebar_drop_landing(
+        &mut self,
+        command: Value,
+        land: impl FnOnce(&mut Self, Value) -> Option<Value>,
+    ) -> Option<Value> {
+        if let Some((target, resolved)) = &self.native_sidebar.drop_memo {
+            if *target == command {
+                return resolved.clone();
+            }
+        }
+        let resolved = land(self, command.clone());
+        self.native_sidebar.drop_memo = Some((command, resolved.clone()));
+        resolved
+    }
+
+    /// A project or collection drop with the place its row lands, from the same plan the drop
+    /// performs (gx-core `sidebar_drag/project_drop.rs`); `None` for a drop that does nothing.
+    fn with_native_sidebar_project_drop_landing(&mut self, mut command: Value) -> Option<Value> {
+        let landing = self.gx_store_preview_project_drop(&command)?;
+        if landing.unchanged {
+            return None;
+        }
+        let row = |row: Option<ghostex_gx_core::ProjectDropRow>| {
+            row.map(|row| json!({"kind": row.kind, "id": row.id}))
+        };
+        command["landing"] = json!({
+            "collectionId": landing.collection_id,
+            "after": row(landing.after),
+            "before": row(landing.before),
+        });
+        Some(command)
+    }
+
+    /// Where a project or collection drop's line is drawn on this row's block: above the row the
+    /// dropped one lands right before, or below the one it lands right after when it becomes the
+    /// last among its siblings.
+    pub(crate) fn native_sidebar_project_drop_line(&self, kind: &str, id: &str) -> Option<&'static str> {
+        let landing = self.native_sidebar.drop_command.as_ref()?.get("landing")?;
+        let names = |row: &Value| row["kind"] == kind && row["id"] == id;
+        if names(&landing["before"]) {
+            return Some("before");
+        }
+        (landing["before"].is_null() && names(&landing["after"])).then_some("after")
+    }
+
+    /// A session drop and the line it draws, both from the store's one plan (gx-core
+    /// `sidebar_drag/session_drop.rs`): the line goes where the row will land, and a drop that is
+    /// refused or moves nothing keeps no command, so it draws nothing and releasing does nothing.
+    fn set_native_sidebar_session_drop(&mut self, command: Option<Value>, cx: &mut Context<Self>) {
+        let command = command.and_then(|command| {
+            self.resolve_native_sidebar_drop_landing(command, |app, command| {
+                app.with_native_sidebar_session_drop_landing(command)
+            })
+        });
+        if self.native_sidebar.drop_command != command {
+            self.native_sidebar.drop_command = command;
+            cx.notify();
+        }
+    }
+
+    fn with_native_sidebar_session_drop_landing(&mut self, mut command: Value) -> Option<Value> {
+        let stale = |session_id: &str| {
+            self.native_sidebar.snapshot.as_ref().is_some_and(|snapshot| {
+                snapshot.groups.iter().any(|group| {
+                    group.is_stale
+                        && group
+                            .sessions
+                            .iter()
+                            .any(|session| session.session_id == session_id)
+                })
+            })
+        };
+        {
+            let session_id = command["sessionId"].as_str()?;
+            let target = command["targetSessionId"].as_str();
+            if stale(session_id) || target.is_some_and(stale) {
+                return None;
+            }
+            let landing = self.gx_store_plan_sidebar_session_drop(&command)?.landing?;
+            if landing.unchanged {
+                return None;
+            }
+            command["landing"] = json!({
+                "groupId": landing.group_id,
+                "section": landing.section,
+                "afterSessionId": landing.after_session_id,
+                "beforeSessionId": landing.before_session_id,
+            });
+            Some(command)
+        }
+    }
+
+    /// Where a session drop's line is drawn on this row: above the row the dropped one lands right
+    /// before, or below the one it lands right after when it becomes the last of its section.
+    pub(crate) fn native_sidebar_session_drop_line(&self, session_id: &str) -> Option<&'static str> {
+        let landing = self.native_sidebar.drop_command.as_ref()?.get("landing")?;
+        let before = landing["beforeSessionId"].as_str();
+        if before == Some(session_id) {
+            return Some("before");
+        }
+        (before.is_none() && landing["afterSessionId"].as_str() == Some(session_id))
+            .then_some("after")
     }
 
     /// CDXC:Sidebar 2026-09-22 WHY:
@@ -289,6 +360,7 @@ pub(super) trait SidebarDropTarget:
             .on_drop::<SidebarDrag>(cx.listener(move |app, source, window, cx| {
                 // Resolve again at release: a fast drag can cross its start threshold on the final move before mouse-up.
                 app.native_sidebar.drop_command = None;
+                app.native_sidebar.drop_memo = None;
                 app.resolve_native_sidebar_drop(
                     source,
                     window.mouse_position(),

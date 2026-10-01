@@ -17,6 +17,7 @@ impl GhostexGpuiApp {
     ) -> AnyElement {
         if !cx.has_active_drag() {
             self.native_sidebar.drop_command = None;
+            self.native_sidebar.drop_memo = None;
             self.native_sidebar.dragging = None;
         }
         // CDXC:Sidebar 2026-09-21 WHY: Rows only carry their tooltip while the pointer is inside, no menu is open and nothing is dragged. The frame that drops it also drops the hover-leave listener that would have closed an open tooltip, so it stayed up with the pointer elsewhere; close it on that transition.

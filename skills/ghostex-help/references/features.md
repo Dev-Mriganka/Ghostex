@@ -425,7 +425,10 @@ where they are while you open, change and close views.
   `projectSessionListCollapsedCount`.
 - Drag a session onto another section of its project (its heading or any row
   in it) to move it there: Pinned pins it, Sessions unpins and unparks it, and
-  Parked parks it. While you drag, an empty Pinned, Sessions or Parked section
+  Parked parks it. Dropped between two pinned sessions, it is pinned right
+  there; dropped on the Pinned heading, it goes to the end of Pinned. Sessions
+  and Parked keep their own order, so the drop line shows where the session
+  will sit in them. While you drag, an empty Pinned, Sessions or Parked section
   shows its heading so you can drop onto it.
 - Sidebar section headings (Pinned, Sessions, Drafts, Parked, and
   Snoozed) show an orange dot when a session is working, a blue dot when
@@ -574,8 +577,10 @@ when you open it.
   wakes only when you click the pane or press a key
   (`wakeSleepingSessionsOnSelect`).
 - Drag pinned sessions to reorder them within their project. Rows stay in place
-  while an icon-and-title ghost follows the pointer; the insertion line marks
-  where the session moves when you drop it.
+  while an icon-and-title ghost follows just below and right of the pointer; the
+  insertion line marks where the session moves when you drop it, and no line
+  means the drop would change nothing. Projects and project groups show the same
+  line where they will land, after an open project's whole list of sessions.
 - Recent Sessions (Cmd+P) opens Quick Access to jump between sessions, and
   Cmd+Option+Shift+O opens it on recent projects.
   Its four tabs are Commands, Projects, Sessions, and Saved Prompts; they sit

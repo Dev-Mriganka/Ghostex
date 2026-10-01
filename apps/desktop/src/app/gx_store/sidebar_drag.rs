@@ -23,8 +23,9 @@
 use std::time::Duration;
 
 use ghostex_gx_core::{
-    Event, Intent, OrderWrite, ProjectKey, owns_order_write_message, owns_session_move_command,
-    plan_order_write, plan_project_order_write, plan_session_move,
+    Event, Intent, OrderWrite, ProjectKey, SessionDrop, owns_order_write_message,
+    owns_session_move_command, plan_order_write, plan_project_order_write, plan_session_drop,
+    plan_session_move,
 };
 use serde_json::{Value, json};
 
@@ -108,6 +109,23 @@ impl GhostexGpuiApp {
             }
         }
         true
+    }
+
+    /// What a session drop (`moveSession` or `moveSessionToSection`) would post and where the row
+    /// would land, for the drop line while dragging and for the drop itself (gx-core
+    /// `sidebar_drag/session_drop.rs`). `None` is a drop that does nothing.
+    pub(crate) fn gx_store_plan_sidebar_session_drop(&self, command: &Value) -> Option<SessionDrop> {
+        if !self.gx_store_sidebar_list_ready() {
+            return None;
+        }
+        let store = &self.gx_store;
+        plan_session_drop(
+            &store.core,
+            &store.sidebar_list.last_inputs,
+            store.sidebar_list.model(),
+            command,
+            super::host::now_ms(),
+        )
     }
 
     /// Answers `createGroupFromSession`, which arrives in the gxserver command envelope.

@@ -30,14 +30,15 @@ pub(super) fn session_parking_enabled() -> bool {
 }
 
 impl GhostexGpuiApp {
-    /// CDXC:Sidebar 2026-09-24 DECISION:
-    /// User: dragging a session in the sidebar moves it between the Pinned, Sessions and Parked sections. A session dropped on another section's heading, or on any row of that section, of its own project gets that section's flags: Pinned pins it (and unparks it), Sessions unpins and unparks it, Parked parks it, which keeps a pinned session's pin so Unpark brings it back to Pinned. The row then sits where that section's own order puts it. While a session is dragged, a section its project does not show yet (nothing pinned, nothing parked) draws its heading so there is somewhere to drop.
+    /// CDXC:Sidebar 2026-10-01 DECISION:
+    /// User: dragging a session in the sidebar moves it between the Pinned, Sessions and Parked sections. A session dropped on another section's heading, or on any row of that section, of its own project gets that section's flags: Pinned pins it (and unparks it), Sessions unpins and unparks it, Parked parks it, which keeps a pinned session's pin so Unpark brings it back to Pinned. While a session is dragged, a section its project does not show yet (nothing pinned, nothing parked) draws its heading so there is somewhere to drop. Supersedes the 2026-09-24 rule that the row then sits where the section's own order puts it, for Pinned: User: "When I drag a session between sessions into Pinned, it's not added to Pinned at the position I dropped it, and we don't show the drop line for it", so a drop on a pinned row pins it right there and a drop on the heading pins it last (gx-core `sidebar_drag/session_drop.rs`). Sessions and Parked keep their own order (Last Activity), and the drop line shows where that order puts the row.
     pub(super) fn native_sidebar_section_move_command(
         &self,
         session_id: &str,
         target_kind: &str,
         target_id: &str,
         group_id: Option<&str>,
+        position: &str,
     ) -> Option<Value> {
         let snapshot = self.native_sidebar.snapshot.as_ref()?;
         let group = snapshot.groups.iter().find(|group| {
@@ -63,80 +64,47 @@ impl GhostexGpuiApp {
         {
             return None;
         }
-        Some(json!({
+        let mut command = json!({
             "type": "moveSessionToSection",
             "sessionId": session_id,
             "groupId": group.group_id,
             "from": from,
             "section": to,
-        }))
+        });
+        // A drop on a row names the place in that section (gx-core `plan_section_move`).
+        if target_kind == "session" {
+            command["targetSessionId"] = json!(target_id);
+            command["position"] = json!(position);
+        }
+        Some(command)
     }
 
-    /// The section a session drag is aimed at, for the heading's highlight.
+    /// The section a session drag moves the row into, for the heading's highlight: the section it
+    /// lands in, which is not always the one dropped on (an unpinned row with a draft lands in
+    /// Drafts).
     pub(super) fn native_sidebar_section_drop_target(&self, group_id: &str, section: &str) -> bool {
         self.native_sidebar
             .drop_command
             .as_ref()
             .is_some_and(|command| {
                 command["type"] == "moveSessionToSection"
-                    && command["groupId"] == group_id
-                    && command["section"] == section
+                    && command["landing"]["groupId"] == group_id
+                    && command["landing"]["section"] == section
             })
     }
 
-    /// Performs a section drop as the pin and park commands the row's menu sends.
+    /// Performs a section drop as the pin, park and order messages the store plans for it, the
+    /// same plan the drop line was drawn from.
     pub(super) fn move_native_sidebar_session_to_section(
         &mut self,
         command: &Value,
         cx: &mut Context<Self>,
     ) {
-        let (Some(session_id), Some(from), Some(to)) = (
-            command["sessionId"].as_str(),
-            command["from"].as_str(),
-            command["section"].as_str(),
-        ) else {
+        let Some(drop) = self.gx_store_plan_sidebar_session_drop(command) else {
             return;
         };
-        let pinned = self
-            .native_sidebar
-            .snapshot
-            .as_ref()
-            .and_then(|snapshot| {
-                snapshot
-                    .groups
-                    .iter()
-                    .flat_map(|group| group.sessions.iter())
-                    .find(|session| session.session_id == session_id)
-            })
-            .is_some_and(|session| session.is_pinned);
-        let parked = from == "parked";
-        let mut messages = Vec::new();
-        match to {
-            "pinned" => {
-                if parked {
-                    messages.push(json!({"type": "setSessionParked", "sessionId": session_id, "parked": false}));
-                }
-                if !pinned {
-                    messages.push(json!({"type": "setSessionPinned", "sessionId": session_id, "pinned": true}));
-                }
-            }
-            "sessions" => {
-                if parked {
-                    messages.push(json!({"type": "setSessionParked", "sessionId": session_id, "parked": false}));
-                }
-                if pinned {
-                    messages.push(json!({"type": "setSessionPinned", "sessionId": session_id, "pinned": false}));
-                }
-            }
-            "parked" => {
-                messages.push(
-                    json!({"type": "setSessionParked", "sessionId": session_id, "parked": true}),
-                );
-            }
-            _ => {}
-        }
-        for message in messages {
-            self.dispatch_native_sidebar_ui(json!({"type": "command", "message": message}), cx);
+        for message in drop.messages {
+            self.dispatch_native_sidebar_command(message, cx);
         }
     }
 

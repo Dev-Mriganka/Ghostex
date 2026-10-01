@@ -34,6 +34,11 @@ pub(crate) struct NativeSidebarState {
     pub(crate) reveal_flash: Option<(String, web_time::Instant)>,
     pub(crate) dragging: Option<(&'static str, String)>,
     pub(crate) drop_command: Option<serde_json::Value>,
+    /// The last drop target resolved and what it resolved to (the command with its landing, or
+    /// nothing), so a drag that keeps moving over one row plans that drop once (drag.rs).
+    pub(crate) drop_memo: Option<(serde_json::Value, Option<serde_json::Value>)>,
+    /// The list's scroll offset the last frame of a drag drew (scroll.rs).
+    pub(crate) drag_scroll_offset: Option<gpui::Point<gpui::Pixels>>,
     pub(crate) name_editor: Option<super::rename::SidebarNameEditor>,
     pub(crate) pointer_inside: bool,
     /// Whether last frame's rows carried their hover tooltips; see `render_native_sidebar`.

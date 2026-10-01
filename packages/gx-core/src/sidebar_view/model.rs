@@ -195,6 +195,20 @@ impl SidebarViewModel {
             .collect()
     }
 
+    /// The built group with this id and the inputs it was built from, for a drop preview
+    /// (drop_landing.rs).
+    pub(super) fn cached_group(&self, group_id: &str) -> Option<(&GroupBuild, &SidebarInputs)> {
+        let state = self.state.as_ref()?;
+        Some((&state.groups.get(group_id)?.build, &state.inputs))
+    }
+
+    /// Every built group, for finding the row a cross-group drop carries.
+    pub(super) fn cached_groups(&self) -> impl Iterator<Item = &GroupBuild> {
+        self.state
+            .iter()
+            .flat_map(|state| state.groups.values().map(|cached| &cached.build))
+    }
+
     /// The next host time at which a row moves on its own (a new session stops leading the list, a
     /// snooze ends). The host re-runs the update then; nothing else has to.
     pub fn next_deadline_ms(&self) -> Option<u64> {

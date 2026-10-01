@@ -15,6 +15,23 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) {
+        // CDXC:Sidebar 2026-10-01 WHY:
+        // A drop target is chosen by the row under the pointer when the pointer moves, so a list that scrolls under a still pointer (the edge auto-scroll below, or the wheel) left the line on a row that had moved away, and a release over the gap then performed it. Any scroll during a drag drops the target until the pointer picks a row again.
+        if cx.has_active_drag() {
+            let offset = self.native_sidebar.scroll.offset();
+            if self
+                .native_sidebar
+                .drag_scroll_offset
+                .replace(offset)
+                .is_some_and(|last| last != offset)
+                && self.native_sidebar.drop_command.take().is_some()
+            {
+                self.native_sidebar.drop_memo = None;
+                cx.notify();
+            }
+        } else {
+            self.native_sidebar.drag_scroll_offset = None;
+        }
         if cx.has_active_drag() {
             let bounds = self.native_sidebar.scroll.bounds();
             let pointer = window.mouse_position();

@@ -47,6 +47,7 @@ impl GhostexGpuiApp {
                 appearance: appearance.clone(),
                 width: px(0.0),
                 pointer_x: px(0.0),
+                grab: gpui::Point::default(),
             }),
             id: session_id.clone(),
             title: session.title().to_owned(),
@@ -61,7 +62,7 @@ impl GhostexGpuiApp {
             .get("isMultiSelected")
             .and_then(Value::as_bool)
             == Some(true);
-        let drop_position = self.native_sidebar_drop_position("targetSessionId", &session_id);
+        let drop_position = self.native_sidebar_session_drop_line(&session_id);
         let scale = appearance.scale;
         let hovered = self.native_sidebar.hovered_session.as_deref() == Some(&session_id);
         // CDXC:Sidebar 2026-09-19 WHY: sidebar clicks and tab selections must show in the same frame (user decision in gx_store/local_focus.rs). The focused and visible fills of a local session row read the Rust store, which a selection changes in the same frame; the snapshot's flags arrive a sidebar projection later. This supersedes the click-only `optimistic_focus` mark and its 1.5 second timeout of earlier the same day.

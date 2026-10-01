@@ -30,7 +30,17 @@ pub(crate) struct RowDragPreview {
     pub(crate) appearance: SidebarAppearance,
     pub(crate) width: Pixels,
     pub(crate) pointer_x: Pixels,
+    /// Where in the row the pointer grabbed it.
+    pub(crate) grab: gpui::Point<Pixels>,
 }
+
+/// How far below the pointer the dragged row hangs, and how far right of it a dragged session
+/// starts.
+///
+/// CDXC:Sidebar 2026-10-01 WHY:
+/// GPUI paints the dragged row after everything else, and a drop line is never more than about half a row (plus the gap between projects) from the pointer, so a dragged row drawn under the pointer covered the line every time; that is how a drop into Pinned looked like it showed no line. The dragged row hangs just below the pointer instead, clear of the line next to the pointer. A session's line can also land farther away (Sessions and Parked keep their Last Activity order), so a dragged session also starts right of the pointer and the line's left end stays visible wherever it is drawn.
+const HANG_BELOW_POINTER: f32 = 26.0;
+const SESSION_RIGHT_OF_POINTER: f32 = 14.0;
 
 impl RowDragPreview {
     pub(crate) fn render(&self, title: &str, window: &Window) -> AnyElement {
@@ -103,6 +113,10 @@ impl RowDragPreview {
         let lock_x = !matches!(self.identity, RowDragIdentity::Session { .. });
         div()
             .relative()
+            .pt(self.grab.y + px(HANG_BELOW_POINTER * scale))
+            .when(!lock_x, |wrapper| {
+                wrapper.pl(self.grab.x + px(SESSION_RIGHT_OF_POINTER * scale))
+            })
             .when(lock_x, |wrapper| {
                 wrapper.left(self.pointer_x - window.mouse_position().x)
             })
