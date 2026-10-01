@@ -57,6 +57,9 @@ struct CachedRow {
     is_snoozed: bool,
     timer_label: Option<String>,
     last_interaction_label: Option<String>,
+    /// The coordinator tree moves without the row changing: a thread of it starts working, or the
+    /// user folds it.
+    nesting: ghostex_gx_core::RowNesting,
     element: Arc<NativeSidebarSession>,
 }
 
@@ -76,6 +79,7 @@ impl CachedRow {
             && self.is_multi_selected == session.is_multi_selected
             && self.timer_label == *timer_label
             && self.last_interaction_label == *last_interaction_label
+            && self.nesting == session.nesting
     }
 }
 
@@ -734,6 +738,7 @@ fn session_element(
             is_snoozed,
             timer_label,
             last_interaction_label,
+            nesting: session.nesting,
             element: element.clone(),
         },
     );
@@ -869,13 +874,22 @@ fn build_session(
             Value::Bool(session.nesting.last_child),
         );
     }
-    if session.nesting.thread_count > 0 {
+    if row.is_coordinator {
+        let badge = session.nesting.coordinator_badge();
         details.insert(
             "coordinatorThreads".to_string(),
             json!({
-                "count": session.nesting.thread_count,
-                "waiting": session.nesting.waiting_threads,
-                "working": session.nesting.working_threads,
+                "count": badge.count,
+                "tone": match badge.tone {
+                    ghostex_gx_core::CoordinatorBadgeTone::Waiting => "waiting",
+                    ghostex_gx_core::CoordinatorBadgeTone::Working => "working",
+                    ghostex_gx_core::CoordinatorBadgeTone::Idle => "idle",
+                },
+                "done": badge.done,
+                "sleeping": badge.sleeping,
+                "open": session.nesting.thread_count,
+                "collapsible": session.nesting.thread_count > 0,
+                "collapsed": session.nesting.collapsed,
             }),
         );
     }

@@ -65,6 +65,8 @@ pub struct SidebarRevealPlan {
     pub collapsed_section: Option<SectionId>,
     /// The group is collapsed.
     pub collapsed_group: bool,
+    /// The folded coordinators above the row, by sidebar row id.
+    pub collapsed_coordinators: Vec<String>,
     /// The group or its collection is hidden and Show Hidden is off.
     pub show_hidden: bool,
     /// The ticked tag filters leave the row out.
@@ -123,6 +125,11 @@ impl SidebarRevealPlan {
             intents.push(SidebarUiIntent::ToggleSection {
                 storage_id: self.storage_id.clone(),
                 section,
+            });
+        }
+        for sidebar_session_id in &self.collapsed_coordinators {
+            intents.push(SidebarUiIntent::ToggleCoordinatorCollapsed {
+                sidebar_session_id: sidebar_session_id.clone(),
             });
         }
         if self.expand_list
@@ -205,6 +212,7 @@ pub fn reveal_plan(
             .collapse
             .collapsed_groups
             .contains(&found.group_id),
+        collapsed_coordinators: found.folded_by.clone(),
         collapsed_collection_storage_id: collection_storage_id.clone().filter(|storage_id| {
             inputs
                 .ui
@@ -280,6 +288,13 @@ pub fn reveal_plan(
         .entry(found.storage_id.clone())
         .or_default()
         .set(found.section, false);
+    for sidebar_session_id in &found.folded_by {
+        probe
+            .ui
+            .collapse
+            .collapsed_coordinators
+            .remove(sidebar_session_id);
+    }
     let opened = SidebarViewModel::build_from_scratch(core, probe, now_ms);
     plan.expand_list = !opened
         .group(&plan.group_id)
@@ -424,6 +439,8 @@ struct Located {
     drawn: bool,
     /// The tag the row is filtered by.
     effective_tag: Option<String>,
+    /// The folded coordinators above the row, nearest first.
+    folded_by: Vec<String>,
 }
 
 fn locate(
@@ -433,12 +450,31 @@ fn locate(
     now_ms: u64,
 ) -> Option<Located> {
     let group = find_group(view, sidebar_session_id)?;
-    let row = group
-        .core
-        .sessions
+    let sessions = &group.core.sessions;
+    let index = sessions
         .iter()
-        .find(|session| session.row.sidebar_session_id == sidebar_session_id)
-        .map(|session| session.row.as_ref());
+        .position(|session| session.row.sidebar_session_id == sidebar_session_id);
+    let row = index.map(|index| sessions[index].row.as_ref());
+    // A thread under a folded coordinator: its ancestors up the tree, and the top one, whose
+    // heading is the thread's.
+    let mut folded_by = Vec::new();
+    let mut heading_row = sidebar_session_id;
+    if let Some(index) = index.filter(|index| sessions[*index].nesting.folded) {
+        let mut depth = sessions[index].nesting.depth;
+        for ancestor in sessions[..index].iter().rev() {
+            if ancestor.nesting.depth >= depth {
+                continue;
+            }
+            depth = ancestor.nesting.depth;
+            if ancestor.nesting.collapsed {
+                folded_by.push(ancestor.row.sidebar_session_id.clone());
+            }
+            if depth == 0 {
+                heading_row = &ancestor.row.sidebar_session_id;
+                break;
+            }
+        }
+    }
     let drawn = drawn_in_sections(group, sidebar_session_id);
     let section = group
         .core
@@ -448,7 +484,7 @@ fn locate(
             section
                 .session_ids
                 .iter()
-                .any(|session_id| session_id == sidebar_session_id)
+                .any(|session_id| session_id == heading_row)
         })
         .map(|section| section.id)
         // A row its heading does not draw is in no heading's list, so its heading is worked out
@@ -460,6 +496,7 @@ fn locate(
         section,
         drawn,
         effective_tag: row.and_then(|row| row.effective_tag.clone()),
+        folded_by,
     })
 }
 

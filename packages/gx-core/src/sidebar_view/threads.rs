@@ -2,13 +2,46 @@
 //!
 //! SEE-ALSO: server/src/coordinators/presentation.rs (the fields), view.rs `RowNesting`.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::Arc;
 
 use crate::keys::SessionKey;
 
 use super::inputs::SectionId;
 use super::ordering::{is_snoozed, section_of};
-use super::view::{RowNesting, SessionView};
+use super::view::{RowNesting, SessionRow, SessionView, ThreadTally};
+
+/// Every coordinator's threads among `rows`, by state. A row listed twice (a project's own rows and
+/// a group's members) counts once.
+pub(crate) fn tally_threads<'a>(
+    rows: impl Iterator<Item = &'a Arc<SessionRow>>,
+) -> HashMap<SessionKey, ThreadTally> {
+    let mut seen: BTreeSet<&str> = BTreeSet::new();
+    let mut tallies: HashMap<SessionKey, ThreadTally> = HashMap::new();
+    for row in rows {
+        let Some(parent) = row.coordinator_parent.as_ref() else {
+            continue;
+        };
+        if row.is_browser || !seen.insert(row.sidebar_session_id.as_str()) {
+            continue;
+        }
+        let tally = tallies.entry(parent.clone()).or_default();
+        let bump = |count: &mut u16| *count = count.saturating_add(1);
+        match row.thread_state.as_deref() {
+            Some("done") => bump(&mut tally.done),
+            state => {
+                bump(&mut tally.open);
+                match state {
+                    Some("waiting") => bump(&mut tally.waiting),
+                    Some("working") => bump(&mut tally.working),
+                    Some("sleeping") => bump(&mut tally.sleeping),
+                    _ => {}
+                }
+            }
+        }
+    }
+    tallies
+}
 
 /// Deeper trees are drawn flat past this, so a coordinator of coordinators still reads as a tree
 /// without running out of row width.
@@ -25,9 +58,15 @@ fn is_nestable_thread(session: &SessionView, enable_parking: bool, now_ms: u64) 
 
 /// Reorders a group's rows (already in display order) so each open thread follows its
 /// coordinator, and returns the section each row is drawn under: a thread takes its coordinator's.
+/// The threads of a coordinator in `collapsed` (sidebar row ids) stay in the list, marked folded,
+/// so the headers above still count them.
+///
+/// CDXC:Coordinators 2026-10-01 DECISION:
+/// User: "I want to be able to collapse the coordinator's row by clicking on a button next to it." A chevron on the coordinator row folds its threads away and unfolds them, remembered per coordinator across restarts with the rest of the sidebar's collapse state. A folded coordinator still shows its badge (count and tint), its threads still count toward the section and project headers, revealing one of its threads unfolds it, and for a drop the folded block is just the coordinator row.
 pub(crate) fn nest_threads(
     sessions: Vec<SessionView>,
     enable_parking: bool,
+    collapsed: &BTreeSet<String>,
     now_ms: u64,
 ) -> (Vec<SessionView>, Vec<SectionId>) {
     let base_sections: Vec<SectionId> = sessions
@@ -85,25 +124,46 @@ pub(crate) fn nest_threads(
         !list.is_empty()
     });
 
-    let mut order: Vec<(usize, u8, bool, SectionId)> = Vec::with_capacity(sessions.len());
-    fn emit(
+    let is_collapsed: Vec<bool> = sessions
+        .iter()
+        .enumerate()
+        .map(|(index, session)| {
+            children.contains_key(&index) && collapsed.contains(&session.row.sidebar_session_id)
+        })
+        .collect();
+
+    /// Where one row is emitted: its index, depth, whether it is the last child, its section, and
+    /// whether a folded coordinator hides it.
+    struct Placed {
         index: usize,
         depth: u8,
         last: bool,
         section: SectionId,
+        folded: bool,
+    }
+    let mut order: Vec<Placed> = Vec::with_capacity(sessions.len());
+    fn emit(
+        placed: Placed,
         children: &HashMap<usize, Vec<usize>>,
-        order: &mut Vec<(usize, u8, bool, SectionId)>,
+        is_collapsed: &[bool],
+        order: &mut Vec<Placed>,
     ) {
-        order.push((index, depth, last, section));
+        let (index, depth, section) = (placed.index, placed.depth, placed.section);
+        let folded = placed.folded || is_collapsed[index];
+        order.push(placed);
         if let Some(list) = children.get(&index) {
             let count = list.len();
             for (position, child) in list.iter().enumerate() {
                 emit(
-                    *child,
-                    (depth + 1).min(MAX_DEPTH),
-                    position + 1 == count,
-                    section,
+                    Placed {
+                        index: *child,
+                        depth: (depth + 1).min(MAX_DEPTH),
+                        last: position + 1 == count,
+                        section,
+                        folded,
+                    },
                     children,
+                    is_collapsed,
                     order,
                 );
             }
@@ -111,14 +171,32 @@ pub(crate) fn nest_threads(
     }
     for index in 0..sessions.len() {
         if parent_of[index].is_none() {
-            emit(index, 0, false, base_sections[index], &children, &mut order);
+            emit(
+                Placed {
+                    index,
+                    depth: 0,
+                    last: false,
+                    section: base_sections[index],
+                    folded: false,
+                },
+                &children,
+                &is_collapsed,
+                &mut order,
+            );
         }
     }
 
     let mut sessions: Vec<Option<SessionView>> = sessions.into_iter().map(Some).collect();
     let mut nested = Vec::with_capacity(order.len());
     let mut sections = Vec::with_capacity(order.len());
-    for (index, depth, last, section) in order {
+    for Placed {
+        index,
+        depth,
+        last,
+        section,
+        folded,
+    } in order
+    {
         let Some(mut session) = sessions[index].take() else {
             continue;
         };
@@ -128,38 +206,12 @@ pub(crate) fn nest_threads(
             thread_count: children
                 .get(&index)
                 .map_or(0, |list| u16::try_from(list.len()).unwrap_or(u16::MAX)),
-            waiting_threads: 0,
-            working_threads: 0,
+            collapsed: is_collapsed[index],
+            folded,
+            ..RowNesting::default()
         };
         nested.push(session);
         sections.push(section);
     }
-    fill_thread_counts(&mut nested);
     (nested, sections)
-}
-
-/// Counts, on each coordinator row, the threads drawn directly under it by state.
-fn fill_thread_counts(nested: &mut [SessionView]) {
-    for index in 0..nested.len() {
-        if nested[index].nesting.thread_count == 0 {
-            continue;
-        }
-        let depth = nested[index].nesting.depth;
-        let (mut waiting, mut working) = (0u16, 0u16);
-        for child in nested.iter().skip(index + 1) {
-            if child.nesting.depth <= depth {
-                break;
-            }
-            if child.nesting.depth != depth + 1 {
-                continue;
-            }
-            match child.row.thread_state.as_deref() {
-                Some("waiting") => waiting += 1,
-                Some("working") => working += 1,
-                _ => {}
-            }
-        }
-        nested[index].nesting.waiting_threads = waiting;
-        nested[index].nesting.working_threads = working;
-    }
 }

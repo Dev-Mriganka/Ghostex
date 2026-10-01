@@ -160,6 +160,13 @@ impl SidebarUiStore {
                 toggle(&mut self.state.collapse.collapsed_collections, storage_id);
                 changed(SidebarPersistSet::collapse())
             }
+            SidebarUiIntent::ToggleCoordinatorCollapsed { sidebar_session_id } => {
+                toggle(
+                    &mut self.state.collapse.collapsed_coordinators,
+                    sidebar_session_id,
+                );
+                changed(SidebarPersistSet::collapse())
+            }
             SidebarUiIntent::SelectSpace { space_id } => {
                 let section_key = self.state.section_key();
                 // A Space shows projects, so picking one from Bots mode goes back to Projects.

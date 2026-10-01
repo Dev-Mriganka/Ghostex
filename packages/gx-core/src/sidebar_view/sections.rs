@@ -31,7 +31,11 @@ pub(crate) fn project_session_sections(
     let lone_sessions = section_by_session
         .iter()
         .all(|section| *section == SectionId::Sessions);
-    let is_collapsed = |index: usize| !lone_sessions && collapse.get(section_by_session[index]);
+    // A thread under a folded coordinator is hidden like a row under a closed heading.
+    let is_collapsed = |index: usize| {
+        sessions[index].nesting.folded
+            || (!lone_sessions && collapse.get(section_by_session[index]))
+    };
     let countable: Vec<usize> = (0..sessions.len())
         .filter(|index| !is_collapsed(*index))
         .collect();

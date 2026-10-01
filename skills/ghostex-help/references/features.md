@@ -1374,11 +1374,15 @@ version of the Projects features in Cursor and Claude Code.
   work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo (on the phone's session list too), and a crew icon
-  with the number of open threads (light blue when one waits on you, orange while one
-  works), and its threads sit indented right under it with their own status
-  dots. Click a thread to watch it or talk to it directly; answer its
-  questions and approvals there. Pinning the coordinator takes its threads
-  along. A thread the coordinator marks done is parked and leaves the tree.
+  with a number: how many threads are working while any are (orange, or light
+  blue when one waits on you), otherwise how many of its threads are not done,
+  followed by a moon with the sleeping threads and a check with the done ones. Its
+  threads sit indented right under it with their own status dots; the chevron
+  beside the crown folds them away and back (remembered across restarts), and a
+  folded coordinator keeps its counts and colour. Click a thread to watch it or
+  talk to it directly; answer its questions and approvals there. Pinning the
+  coordinator takes its threads along. A thread the coordinator marks done is
+  parked and leaves the tree.
 - **Threads panel in the chat**: above the coordinator's message box, the
   Threads panel lists its threads under Waiting on you, Working and Finished,
   each with one line (what it asks, what it is doing, or how its last report

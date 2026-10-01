@@ -32,6 +32,10 @@ pub enum SidebarUiIntent {
     ToggleCollectionCollapsed {
         storage_id: String,
     },
+    /// Fold or unfold the threads drawn under a coordinator, by the coordinator's sidebar row id.
+    ToggleCoordinatorCollapsed {
+        sidebar_session_id: String,
+    },
     /// Filter the section the machine tab is on by a Space. The renderer's `selectSpace`.
     SelectSpace {
         space_id: String,

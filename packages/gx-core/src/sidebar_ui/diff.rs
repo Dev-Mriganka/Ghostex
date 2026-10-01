@@ -28,6 +28,7 @@ pub struct SidebarCollapseDiff {
     collapsed_collections: SetDiff,
     expanded_session_lists: SetDiff,
     expanded_hover_actions: SetDiff,
+    collapsed_coordinators: SetDiff,
     section_collapse: BTreeMap<String, Option<SectionCollapse>>,
     selected_space_by_section: BTreeMap<String, Option<String>>,
     /// Per SECTION, not per Space: `rememberSidebarSpaceSession` rebuilds a whole section's object
@@ -88,6 +89,10 @@ impl SidebarCollapseDiff {
                 &base.expanded_hover_actions,
                 &next.expanded_hover_actions,
             ),
+            collapsed_coordinators: SetDiff::between(
+                &base.collapsed_coordinators,
+                &next.collapsed_coordinators,
+            ),
             section_collapse: map_diff(&base.section_collapse, &next.section_collapse),
             selected_space_by_section: map_diff(
                 &base.selected_space_by_section,
@@ -106,6 +111,7 @@ impl SidebarCollapseDiff {
             && self.collapsed_collections.is_empty()
             && self.expanded_session_lists.is_empty()
             && self.expanded_hover_actions.is_empty()
+            && self.collapsed_coordinators.is_empty()
             && self.section_collapse.is_empty()
             && self.selected_space_by_section.is_empty()
             && self.recent_sessions_by_space.is_empty()
@@ -147,6 +153,11 @@ impl SidebarCollapseDiff {
             &mut object,
             "expandedSessionCardHoverActionsById",
             &self.expanded_hover_actions,
+        );
+        apply_set(
+            &mut object,
+            "collapsedCoordinatorsById",
+            &self.collapsed_coordinators,
         );
         if !self.section_collapse.is_empty() {
             let mut sections = match object.get("collapsedProjectSessionSectionsById") {

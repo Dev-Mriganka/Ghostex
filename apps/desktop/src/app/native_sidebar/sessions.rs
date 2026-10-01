@@ -160,6 +160,7 @@ impl GhostexGpuiApp {
                 .when_some(question_fill, |row, fill| row.bg(fill).hover(move |row| row.bg(fill)))
                 .children(super::threads::thread_connector(session, appearance))
                 .child(self.render_native_session_identity(session, icon, appearance, cx))
+                .children(self.render_coordinator_chevron(session, appearance, cx))
                 .children(self.render_native_session_decorations(session, appearance, cx))
                 .when_some(self.native_sidebar.reveal_flash.as_ref().filter(|(id, _)| id == &session.session_id).map(|(_, start)| *start), |row, start| row.child(super::scroll::reveal_flash(start, scale)))
                 .child(div().id(format!("native-session-title-{session_id}")).flex_1().min_w_0().h_full().flex().items_center().child(div().min_w_0().truncate().child(session.title().to_owned())).when(self.native_sidebar.pointer_inside && self.native_sidebar.menu.is_none() && !cx.has_active_drag(), |row| row.managed_discrete_tooltip_with_placement(tooltip_span.placement(), appearance.tooltip_delay, move |window, cx| super::tooltips::sidebar_tooltip(tooltip.clone(), tooltip_span, scale, window, cx))))

@@ -25,6 +25,7 @@ export type NativeSidebarCommand =
   | { type: 'renameGroup'; groupId: string }
   | { type: 'confirmCloseGroup'; groupId: string }
   | { type: 'toggleHoverActions'; groupId: string }
+  | { type: 'toggleCoordinator'; sessionId: string }
   | { type: 'toggleGroup'; groupId: string }
   | { type: 'toggleSection'; groupId: string; section: NativeSidebarSection['id'] }
   | { type: 'toggleList'; groupId: string }

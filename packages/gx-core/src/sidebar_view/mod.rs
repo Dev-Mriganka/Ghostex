@@ -65,7 +65,7 @@ pub use space_switch::{plan_space_switch_restore, SpaceSwitchFocus};
 pub use spaces::{Space, SpacesState, OTHER_SPACE_ID};
 pub use tags::{TagListItem, TagListItemKind, TagPresentation, UNTAGGED_TAG_FILTER};
 pub use view::{
-    CollectionView, DelayedSendView, EmptyState, GroupCore, GroupSummary, GroupView, LabelDeadline,
+    CollectionView, CoordinatorBadge, CoordinatorBadgeTone, DelayedSendView, RowNesting, ThreadTally, EmptyState, GroupCore, GroupSummary, GroupView, LabelDeadline,
     MachineSummary, MachineTabView, OrderItem, OrderKind, ProjectContextView, RemoteMachineView,
     SectionView, SessionMenuFacts, SessionRow, SessionTiming, SessionView, SidebarView, SpaceView,
     WorktreeView,

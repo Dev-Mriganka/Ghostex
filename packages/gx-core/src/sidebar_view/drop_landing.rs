@@ -179,7 +179,8 @@ impl SidebarViewModel {
         let end = (root + 1..rows.len())
             .find(|index| rows[*index].nesting.depth == 0)
             .unwrap_or(rows.len());
-        if end == root + 1 {
+        // A folded coordinator's block is just its own row.
+        if end == root + 1 || rows[root].nesting.collapsed {
             return TreeDropTarget::Row;
         }
         let root_id = &rows[root].row.sidebar_session_id;

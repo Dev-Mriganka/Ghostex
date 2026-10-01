@@ -5,7 +5,10 @@
 //!
 //! SEE-ALSO: packages/core-ui/group-session-summary.ts.
 
+use std::collections::HashMap;
 use std::sync::Arc;
+
+use crate::keys::SessionKey;
 
 use super::inputs::{SectionId, SidebarSettings, SidebarUiState};
 use super::ordering::{order_rows_for_display, row_deadline_ms};
@@ -14,7 +17,7 @@ use super::tags::matches_tag_filters;
 use super::threads::nest_threads;
 use super::view::{
     GroupCore, GroupSummary, ProjectContextView, RemoteMachineView, SessionRow, SessionView,
-    WorktreeView,
+    ThreadTally, WorktreeView,
 };
 
 /// Where a group's rows come from.
@@ -115,6 +118,7 @@ pub(crate) fn build_group(
     focus: &FocusKey,
     ui: &SidebarUiState,
     settings: &SidebarSettings,
+    thread_tallies: &HashMap<SessionKey, ThreadTally>,
     now_ms: u64,
 ) -> GroupBuild {
     let rows: Vec<Arc<SessionRow>> = plan.rows.iter().map(|row| row.row.clone()).collect();
@@ -170,7 +174,7 @@ pub(crate) fn build_group(
         .expanded_session_lists
         .contains(&plan.storage_id);
     let GroupLayout {
-        sessions,
+        mut sessions,
         layout,
         tag_filtered_out,
         ..
@@ -183,6 +187,17 @@ pub(crate) fn build_group(
         settings,
         now_ms,
     );
+    for session in &mut sessions {
+        if let Some(tally) = session
+            .row
+            .key
+            .as_ref()
+            .filter(|_| session.row.is_coordinator)
+            .and_then(|key| thread_tallies.get(key))
+        {
+            session.nesting.threads = *tally;
+        }
+    }
     let summary = group_summary(&sessions);
     let core = GroupCore {
         group_id: plan.group_id.clone(),
@@ -279,8 +294,12 @@ pub(crate) fn lay_out_group_rows(
         })
         .collect();
     let tag_filtered_out = !ui.selected_tag_filters.is_empty() && sessions.is_empty();
-    let (sessions, section_by_session) =
-        nest_threads(sessions, settings.enable_session_parking, now_ms);
+    let (sessions, section_by_session) = nest_threads(
+        sessions,
+        settings.enable_session_parking,
+        &ui.collapse.collapsed_coordinators,
+        now_ms,
+    );
     let section_collapse = ui
         .collapse
         .section_collapse

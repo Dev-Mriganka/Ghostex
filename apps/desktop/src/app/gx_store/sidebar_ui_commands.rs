@@ -56,6 +56,9 @@ impl GhostexGpuiApp {
                 storage_id: text("groupId")?,
                 section: section_id(command.get("section").and_then(Value::as_str)?)?,
             }),
+            "toggleCoordinator" => Some(SidebarUiIntent::ToggleCoordinatorCollapsed {
+                sidebar_session_id: text("sessionId")?,
+            }),
             "selectMachine" => Some(SidebarUiIntent::SelectMachine {
                 machine_id: text("machineId")?,
             }),
