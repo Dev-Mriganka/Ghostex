@@ -728,7 +728,7 @@ Use Cmd+P (Recent Sessions) to jump between chats across projects, or
 Cmd+[ and Cmd+] to go back and forward through visited sessions, the same keys
 Chrome uses (Ctrl+Alt+Shift+[ and Ctrl+Alt+Shift+] on Windows and Linux).
 On Windows and macOS, the mouse Back/Forward buttons follow the same visited
-sessions and projects as the header arrows. Inside Settings on Windows, they move through
+sessions and projects as the header arrows. Inside Settings, they move through
 the pages you visited since opening Settings and restore each page's scroll
 position. Choosing a new page after going back replaces the forward history.
 Recently visited chats show their loaded messages while catching up with the
