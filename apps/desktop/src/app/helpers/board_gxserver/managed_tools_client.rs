@@ -25,7 +25,7 @@ pub(crate) fn gpui_managed_tools_request(
     }
 }
 
-/// The tool's current state (`ManagedToolState` in packages/shared/managed-tools.ts).
+/// The tool's current state (`ManagedToolState` in packages/shared/managed-tools.ts (deleted 2026-10-01)).
 pub(crate) fn gpui_managed_tool_read(
     remote: Option<&GpuiRemoteGxserverRequestTarget>,
     tool: &str,

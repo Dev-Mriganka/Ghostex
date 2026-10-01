@@ -16,7 +16,7 @@
 //! what the shipped code did and a port that wrote nothing there would make one fewer push per drag.
 //! The TypeScript was frozen in the deleted `tooling/gx-core/sidebar-page-frozen/reorder.ts`.
 //!
-//! SEE-ALSO: packages/core-ui/sidebar-dnd.ts (`moveSessionIdsByDropTarget`),
+//! SEE-ALSO: packages/core-ui/sidebar-dnd.ts (deleted 2026-10-01) (`moveSessionIdsByDropTarget`),
 //! apps/desktop/src/app/gx_store/sidebar_drag.rs.
 
 use serde_json::{json, Value};

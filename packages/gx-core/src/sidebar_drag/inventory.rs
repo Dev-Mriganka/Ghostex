@@ -13,7 +13,7 @@
 //! plans from rather than read off the view.
 //!
 //! SEE-ALSO: packages/gx-core/src/sidebar_view/membership.rs,
-//! packages/core-ui/sidebar-store-model.ts (`sessionIdsByGroup`, `sessionsById`, `groupsById`).
+//! packages/core-ui/sidebar-store-model.ts (deleted 2026-10-01) (`sessionIdsByGroup`, `sessionsById`, `groupsById`).
 
 use crate::core::Core;
 use crate::keys::{parse_workspace_subgroup_id, MachineId, ProjectKey, SessionKey, CHATS_GROUP_ID};

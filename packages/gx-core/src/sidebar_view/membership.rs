@@ -1,7 +1,7 @@
 //! Which sessions belong to which sidebar group: a project's own list, its user-made groups, and
 //! the machine's Chats collection.
 //!
-//! SEE-ALSO: packages/shared/gxserver-presentation-sidebar-projection.ts
+//! SEE-ALSO: packages/shared/gxserver-presentation-sidebar-projection.ts (deleted 2026-10-01)
 //! (`createGxserverPresentationSessionsByProjectFromGroups`). `spliceWorkspaceSubgroups` was ported
 //! from the deleted `gxserver-runtime/sidebar-groups.ts` (see git history).
 

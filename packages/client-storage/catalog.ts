@@ -77,14 +77,14 @@ export const storageCatalog = Object.freeze({
   hiddenItems: define(
     'hiddenItems',
     'Sidebar visibility',
-    core + 'sidebar-hidden-items.ts',
+    'packages/gx-core/src/sidebar_ui/persist.rs',
     'ghostex.sidebar.hidden-items.v1',
     objectCodec
   ),
   collections: define(
     'collections',
     'Project collections',
-    core + 'project-collections.ts',
+    'apps/desktop/src/app/gx_store/project_docs.rs',
     'ghostex.sidebar.projectCollections.v1',
     objectCodec,
     { maxEntryBytes: 256 * KiB, maxBytes: 256 * KiB }
@@ -115,7 +115,7 @@ export const storageCatalog = Object.freeze({
   collapse: define(
     'collapse',
     'Sidebar disclosure',
-    core + 'sidebar-app/collapse-state.ts',
+    'packages/gx-core/src/sidebar_ui/persist.rs',
     'ghostex-sidebar-ui-collapse-state',
     objectCodec,
     { ...collection, maxBytes: 256 * KiB }

@@ -22,22 +22,6 @@ const gxserverProtocolHealthSource = readFileSync(
   new URL('../../../packages/shared/gxserver-protocol-health.ts', import.meta.url),
   'utf8'
 );
-const nativeHostProtocolSource = readFileSync(
-  new URL('../../../packages/shared/native-ghostty-host-protocol.ts', import.meta.url),
-  'utf8'
-);
-// session-grid-contract-sidebar.ts is a barrel over per-concern
-// session-grid-contract-sidebar-*.ts modules; check them as one text.
-const sidebarContractSource = [
-  'session-grid-contract-sidebar.ts',
-  'session-grid-contract-sidebar-tooling.ts',
-  'session-grid-contract-sidebar-sessions.ts',
-  'session-grid-contract-sidebar-hud.ts',
-  'session-grid-contract-sidebar-messages.ts',
-  'session-grid-contract-sidebar-commands.ts',
-]
-  .map((file) => readFileSync(new URL(`../../../packages/shared/${file}`, import.meta.url), 'utf8'))
-  .join('\n');
 // server/src/portless.rs was split into server/src/portless/{mod,types,status,
 // sync,admin,slug,launchd,listener_discovery,repository,tests}.rs. The
 // assertions below span struct/fn definitions that now live in types.rs and
@@ -156,34 +140,6 @@ describe('Portless Phase 12 protocol plumbing source contract', () => {
     expect(presentationPayload).not.toContain('stderr');
     expect(presentationPayload).not.toContain('env');
     expect(presentationPayload).not.toContain('url');
-  });
-
-  test('native sidebar exposes local-only action availability and sanitized admin results through HUD', () => {
-    /*
-    CDXC:Portless 2026-06-23-00:25:
-    Native-sidebar is the first local-Mac action boundary. Its HUD projection may make recommended setup actions available only when the native bridge exists, while remote/non-native gxserver metadata remains localMacOnly.
-    */
-    const sidebarPortlessStateSource = sourceBetween(
-      sidebarContractSource,
-      'export type SidebarPortlessState =',
-      'export type SidebarHudState ='
-    );
-    expect(sidebarPortlessStateSource).toContain('health: GxserverPortlessStatus');
-    expect(sidebarPortlessStateSource).toContain('presentation?: GxserverPortlessPresentation');
-    expect(sidebarPortlessStateSource).toContain('lastResult?: NativePortlessAdminResult');
-    expect(sidebarPortlessStateSource).not.toContain('stdout');
-    expect(sidebarPortlessStateSource).not.toContain('stderr');
-
-    expect(nativeHostProtocolSource).toContain('export type NativePortlessAdminResult = Extract<');
-    const sharedNativeResult = sourceBetween(
-      nativeHostProtocolSource,
-      'Native Portless admin results are structured and sanitized.',
-      'protocolVersion: typeof NATIVE_GHOSTTY_HOST_PROTOCOL_VERSION;'
-    );
-    expect(sharedNativeResult).toContain('requestId: string');
-    expect(sharedNativeResult).toContain('status: string');
-    expect(sharedNativeResult).not.toContain('stdout');
-    expect(sharedNativeResult).not.toContain('stderr');
   });
 
   test('Phase 16 state update contract covers protocol change, failure, retry, disable, and remove', () => {

@@ -1,1 +1,0 @@
-export const SIDEBAR_REORDER_DISTANCE_PX = 8;

@@ -10,7 +10,7 @@
 //! User: pruning `.skill-lock.json` is an opt-in plan group, off by default (4A).
 //! User: gxserver bundled skill installs link into agents instead of copying (5A).
 //! SEE-ALSO: apps/desktop/src/app/helpers/agents_hub/sync.rs, server/src/ghostex_cli/agent_sync.rs,
-//! packages/shared/agent-sync.ts, packages/core-ui/agents-hub-sync/.
+//! packages/shared/agent-sync.ts (deleted 2026-10-01), packages/core-ui/agents-hub-sync/.
 
 pub mod apply;
 pub mod catalog;

@@ -1,7 +1,7 @@
 //! Worktrees nest under their parent project, and a project drag carries its family with it.
 //!
 //! CDXC:Worktrees 2026-09-21 WHY:
-//! `packages/shared/project-worktree-order.ts` is generic over an ITEM (`{orderId, projectId,
+//! `packages/shared/project-worktree-order.ts` (deleted 2026-10-01) is generic over an ITEM (`{orderId, projectId,
 //! worktree, isChat}`) and the sidebar list only ever needed it over PROJECT IDS, so M4a ported the
 //! id-shaped half into `sidebar_view/projects.rs`. The project moves need the item-shaped half,
 //! because a drag is keyed by GROUP id and several groups (a project and each of its user-made
@@ -10,7 +10,7 @@
 //! own metadata. The user drags worktrees constantly, so a difference between "how the list nests
 //! them" and "where a drop puts them" would be visible immediately and attributed to the drag.
 //!
-//! SEE-ALSO: packages/shared/project-worktree-order.ts,
+//! SEE-ALSO: packages/shared/project-worktree-order.ts (deleted 2026-10-01),
 //! packages/gx-core/src/sidebar_view/projects.rs, packages/gx-core/src/sidebar_drag/project_move.rs.
 
 use std::collections::BTreeSet;

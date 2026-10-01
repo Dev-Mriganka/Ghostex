@@ -1,6 +1,6 @@
 //! Agent Sync as the Hub's fifth tab reads it: the report, plan and apply result that
 //! packages/agent-sync serializes (camelCase fields, camelCase enum strings), plus the display
-//! rules packages/shared/agent-sync.ts and packages/core-ui/agents-hub-sync/problem-copy.ts (deleted 2026-10-01)
+//! rules packages/shared/agent-sync.ts (deleted 2026-10-01) and packages/core-ui/agents-hub-sync/problem-copy.ts (deleted 2026-10-01)
 //! applied to them.
 //!
 //! CDXC:AgentSync 2026-09-16 SEE-ALSO:

@@ -25,7 +25,7 @@
 //! there is no overlay here and no echo guard to write; the one optimistic value in the whole
 //! feature is the sleep, and that belongs to `lifecycle.rs`.
 //!
-//! SEE-ALSO: packages/shared/session-snooze.ts (`resolveSessionSnoozeWakeTime`,
+//! SEE-ALSO: packages/shared/session-snooze.ts (deleted 2026-10-01) (`resolveSessionSnoozeWakeTime`,
 //! `isSidebarSessionSnoozed`), apps/desktop/src/app/gx_store/sidebar_snooze.rs. Ported from the
 //! sidebar page's session actions (frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/session-actions.ts`) and `snoozeSession` /

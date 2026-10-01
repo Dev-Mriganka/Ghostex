@@ -1,6 +1,6 @@
 //! The edits the project moves make to the collections document.
 //!
-//! Every one of these is a function of `packages/core-ui/project-collections.ts` and returns the
+//! Every one of these is a function of `packages/core-ui/project-collections.ts` (deleted 2026-10-01) and returns the
 //! document it produced. None of them decides a refusal: the planners do that, with the reason at
 //! the refusal, so that "this drop does nothing" and "this edit is a no-op" stay different things.
 //!
@@ -12,7 +12,7 @@
 //! parity gate saw while the TypeScript still ran. That TypeScript was frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/membership.ts` and `project-drag.ts` (see git history).
 //!
-//! SEE-ALSO: packages/core-ui/project-collections.ts.
+//! SEE-ALSO: packages/core-ui/project-collections.ts (deleted 2026-10-01).
 
 use crate::sidebar_view::text::js_trim;
 use crate::sidebar_view::{Collection, CollectionsState};

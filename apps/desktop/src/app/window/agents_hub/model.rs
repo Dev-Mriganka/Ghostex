@@ -1,5 +1,5 @@
 //! The Agents Hub catalog as the modal holds it: the four file tabs of `agentsHubCatalog`
-//! (packages/shared/session-grid-contract.ts, built by apps/desktop/src/app/helpers/agents_hub/catalog_builder.rs),
+//! (packages/shared/session-grid-contract.ts (deleted 2026-10-01), built by apps/desktop/src/app/helpers/agents_hub/catalog_builder.rs),
 //! the per-file content answers, and the pure rules the React surface applied to them
 //! (search filter, first file, profile badge).
 use serde::Deserialize;

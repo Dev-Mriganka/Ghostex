@@ -1,6 +1,6 @@
 //! The title a row draws and the tooltip it shows, plus its two clock labels.
 //!
-//! SEE-ALSO: packages/core-ui/session-card-presentation.ts and packages/core-ui/relative-time.ts (deleted 2026-10-01).
+//! SEE-ALSO: packages/core-ui/session-card-presentation.ts (deleted 2026-10-01) and packages/core-ui/relative-time.ts (deleted 2026-10-01).
 
 use super::agents::tooltip_strip_labels;
 use super::inputs::CloseAfterDoneInput;

@@ -2,7 +2,7 @@
 //! name to an icon key, the display name of an icon, and the labels a row tooltip strips.
 //!
 //! SEE-ALSO: packages/shared/sidebar-agents.ts (`DEFAULT_SIDEBAR_AGENT_DEFINITIONS`) and
-//! packages/core-ui/session-card-presentation.ts (`AGENT_SECONDARY_LABELS`); the three tables must
+//! packages/core-ui/session-card-presentation.ts (deleted 2026-10-01) (`AGENT_SECONDARY_LABELS`); the three tables must
 //! list the same agents.
 
 /// `(agentId, icon, name)` in catalog order.

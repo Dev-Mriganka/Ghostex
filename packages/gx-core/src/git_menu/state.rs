@@ -1,7 +1,7 @@
 //! The Git state one project shows: the facts gxserver read (`/api/readProjectGitState`) plus the
 //! three preferences the project's `gitConfig` carries.
 //!
-//! The field names are the TypeScript `SidebarGitState`'s (packages/shared/sidebar-git.ts), so a
+//! The field names are the TypeScript `SidebarGitState`'s (packages/shared/sidebar-git.ts (deleted 2026-10-01)), so a
 //! state serializes to the same JSON the old runtime published and the parity harness can diff
 //! the two byte for byte.
 

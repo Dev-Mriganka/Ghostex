@@ -10,8 +10,8 @@
 //! state by hand, which is what keeps a member id the daemon still holds from being dropped by a
 //! sanitizer pass the TypeScript never makes.
 //!
-//! SEE-ALSO: packages/core-ui/spaces.ts (`applySidebarSpaceEditorResult`),
-//! packages/core-ui/space-colors.ts, apps/desktop/src/app/gx_store/space_editor.rs. (The sidebar
+//! SEE-ALSO: packages/core-ui/spaces.ts (deleted 2026-10-01) (`applySidebarSpaceEditorResult`),
+//! packages/core-ui/space-colors.ts (deleted 2026-10-01), apps/desktop/src/app/gx_store/space_editor.rs. (The sidebar
 //! page's half was frozen in the deleted `tooling/gx-core/sidebar-page-frozen/metadata.ts`.)
 
 use serde_json::Value;
@@ -28,7 +28,7 @@ const DEFAULT_SPACE_ICON: &str = "stack";
 
 /// `SIDEBAR_SPACE_COLORS`: the collection palette with the dark-theme gray taken out, because a
 /// Space offers one Gray that draws as either hex depending on the theme
-/// (`CDXC:Spaces 2026-09-21 DECISION` in packages/core-ui/space-colors.ts).
+/// (`CDXC:Spaces 2026-09-21 DECISION` in apps/desktop/src/app/window/space_editor_modal.rs).
 const SPACE_COLORS: &[&str] = &[
     "#4f5663", "#7c6df2", "#3aa675", "#d6873f", "#d75b72", "#3f8fc7", "#b36ad4", "#8c9b45",
     "#c95353", "#c4a23d", "#2f9b95", "#596fd1",

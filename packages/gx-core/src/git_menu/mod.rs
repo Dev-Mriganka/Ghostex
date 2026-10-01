@@ -10,7 +10,7 @@
 //! here reads a clock or performs I/O.
 //!
 //! SEE-ALSO: apps/desktop/src/app/gx_store/git/ (the host), server/src/project_git_state.rs,
-//! server/src/git_ship_workflow.rs, tooling/gx-core/git-menu-parity.ts (the gate).
+//! server/src/git_ship_workflow.rs, tooling/gx-core/git-menu-parity.ts (deleted 2026-10-01) (the gate).
 
 mod memo;
 mod menu;

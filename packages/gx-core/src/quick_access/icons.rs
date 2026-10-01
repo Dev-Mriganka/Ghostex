@@ -1,4 +1,4 @@
-//! Project icons as Quick Access draws them (packages/shared/workspace-project-appearance.ts).
+//! Project icons as Quick Access draws them (packages/shared/workspace-project-appearance.ts (deleted 2026-10-01)).
 
 use serde_json::Value;
 

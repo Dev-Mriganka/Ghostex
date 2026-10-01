@@ -1,6 +1,6 @@
 //! One sidebar row from one daemon session, and one from a browser tab.
 //!
-//! SEE-ALSO: packages/shared/gxserver-presentation-sidebar-projection.ts
+//! SEE-ALSO: packages/shared/gxserver-presentation-sidebar-projection.ts (deleted 2026-10-01)
 //! (`createGxserverPresentationSidebarSession`) and the deleted sidebar page's `model.ts`
 //! (`projectNativeSidebarSession`).
 

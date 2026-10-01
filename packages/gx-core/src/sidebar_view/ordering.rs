@@ -1,7 +1,15 @@
 //! The display order of a group's rows, and which section heading each row sits under.
 //!
-//! SEE-ALSO: packages/shared/active-sessions-sort.ts, packages/shared/session-drafts.ts,
-//! packages/shared/session-snooze.ts, packages/core-ui/sidebar-app/project-session-section-model.ts.
+//! CDXC:Drafts 2026-09-15 DECISION:
+//! User: new sessions lead Sessions for 10 minutes, then move into a collapsed-by-default DRAFTS section below Pinned and above Sessions if they contain text and have not been sent yet.
+//! User: pinning a draft moves it into Pinned, retaining its unsent text.
+//! This replaces keeping drafts at the top of Sessions indefinitely; empty sessions stay in Sessions.
+//!
+//! Ported from `active-sessions-sort.ts`, `session-drafts.ts` and `session-snooze.ts` in
+//! packages/shared and `sidebar-app/project-session-section-model.ts` in packages/core-ui (all
+//! deleted 2026-10-01; see git history).
+//!
+//! SEE-ALSO: apps/mobile/app/src/contract/grouping.ts mirrors the parked ordering.
 
 use super::inputs::{SectionId, SessionSortMode};
 use super::view::SessionRow;
@@ -225,8 +233,12 @@ fn sort_by_activity(rows: &[std::sync::Arc<SessionRow>], indices: &mut [usize]) 
 
 /// `sortParkedSessionIdsByLastActivity`: latest active first, ties by sidebar session id.
 ///
+/// CDXC:Sessions 2026-09-12 DECISION:
+/// User: every sidebar and session list on GPUI, mobile and web shows parked sessions from latest active to oldest, regardless of the active-session sort mode.
+/// Parked rows use the activity timestamp alone, without attention or working priority.
+///
 /// CDXC:StateSync 2026-09-20 SEE-ALSO:
-/// packages/shared/active-sessions-sort.ts breaks the tie with `localeCompare`; see the note in projects.rs on why byte order was the same order in the desktop's QuickJS and is not in V8.
+/// packages/shared/active-sessions-sort.ts (deleted 2026-10-01) broke the tie with `localeCompare`; see the note in projects.rs on why byte order was the same order in the desktop's QuickJS and is not in V8.
 fn sort_parked_by_last_activity(rows: &[std::sync::Arc<SessionRow>], indices: &mut [usize]) {
     indices.sort_by(|left, right| {
         let time = |index: &usize| rows[*index].timing.last_interaction_ms.unwrap_or(0);

@@ -295,7 +295,7 @@ fn item_label(item: &TagListItem, custom: &[CustomTag]) -> String {
     }
 }
 
-/// The glyph and colour of a built-in tag (packages/core-ui/session-tag-ui.tsx, tag-presentation).
+/// The glyph and colour of a built-in tag (packages/core-ui/session-tag-ui.tsx (deleted 2026-10-01), tag-presentation).
 fn builtin_presentation(tag: &str) -> (&'static str, u32) {
     match tag {
         "favorite" => ("modals/settings/star-filled.svg", 0xf3cd5f),

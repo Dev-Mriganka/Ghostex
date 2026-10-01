@@ -1,5 +1,5 @@
 //! The Git menu: its rows, their labels and why a row is disabled. Ported from
-//! packages/shared/sidebar-git.ts (`buildSidebarGitMenuItems`, `getSidebarGitDisabledReason`,
+//! packages/shared/sidebar-git.ts (deleted 2026-10-01) (`buildSidebarGitMenuItems`, `getSidebarGitDisabledReason`,
 //! `resolveSidebarGitPrimaryActionState`) and the old runtime's
 //! `createGpuiTitlebarGitMenuStatePayload`, which the titlebar Git menu and the work area's Commit
 //! button draw verbatim.

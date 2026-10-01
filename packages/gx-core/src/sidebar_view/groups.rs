@@ -3,7 +3,7 @@
 //! Ported from the deleted sidebar page's `project-sections.ts` and `createSidebarGroups` (the focus
 //! and browser-row overrides) in the deleted `gxserver-runtime/sidebar-groups.ts`.
 //!
-//! SEE-ALSO: packages/core-ui/group-session-summary.ts.
+//! SEE-ALSO: packages/core-ui/group-session-summary.ts (deleted 2026-10-01).
 
 use std::collections::HashMap;
 use std::sync::Arc;

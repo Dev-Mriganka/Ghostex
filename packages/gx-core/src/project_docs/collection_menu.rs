@@ -9,7 +9,7 @@
 //! sanitizer that runs on every READ is what decides whether it is drawable. Sanitizing on the way
 //! out would write a document the daemon and the phone would then disagree with about one colour.
 //!
-//! SEE-ALSO: packages/core-ui/project-collections.ts,
+//! SEE-ALSO: packages/core-ui/project-collections.ts (deleted 2026-10-01),
 //! the deleted sidebar page's `collections.ts` (`runNativeCollectionAction`),
 //! apps/desktop/src/app/gx_store/collection_menu.rs.
 

@@ -10,11 +10,12 @@
 //!
 //! The SANITIZER is not written again here: `SpacesState` already ports
 //! `sanitizeSidebarSpacesState`, including the decision that a project belongs to at most one Space
-//! (`CDXC:Spaces 2026-09-07 DECISION`). This file adds the wire shape and the guard policy.
+//! (`CDXC:Spaces 2026-09-07 DECISION` in sidebar_view/spaces.rs). This file adds the wire shape and
+//! the guard policy.
 //!
-//! SEE-ALSO: packages/core-ui/spaces.ts, packages/gx-core/src/sidebar_view/spaces.rs,
-//! tooling/gx-core/project-docs-server-sync-typescript.ts (the runtime's frozen
-//! `queueSidebarSpacesServerSync`), packages/gx-core/src/doc_sync/sync.rs.
+//! SEE-ALSO: packages/gx-core/src/sidebar_view/spaces.rs, packages/gx-core/src/doc_sync/sync.rs.
+//! (The page's `spaces.ts` and the runtime's frozen `queueSidebarSpacesServerSync` were deleted on
+//! 2026-10-01; see git history.)
 
 use ghostex_gx_protocol::SidebarSpacesState as WireSpacesState;
 use serde_json::{json, Map, Value};

@@ -145,7 +145,7 @@ pub(super) fn client_storage_path() -> PathBuf {
 
 /// `PRIMARY_AGENT_LAUNCHER_STORAGE_KEY` (apps/desktop/src/app/gx_store/primary_launcher.rs).
 const PRIMARY_AGENT_LAUNCHER_STORAGE_KEY: &str = "ghostex-sidebar-project-terminal-launcher";
-/// `SIDEBAR_KEEP_AWAKE_RUNTIME_STORAGE_KEY` (packages/core-ui/sidebar-app/collapse-state.ts).
+/// `SIDEBAR_KEEP_AWAKE_RUNTIME_STORAGE_KEY` (packages/core-ui/sidebar-app/collapse-state.ts (deleted 2026-10-01)).
 const KEEP_AWAKE_RUNTIME_STORAGE_KEY: &str = "ghostex.titlebar.keepAwakeRuntime";
 
 fn collapse_key() -> String {

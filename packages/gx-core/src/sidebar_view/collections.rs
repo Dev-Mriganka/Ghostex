@@ -1,8 +1,8 @@
 //! Project collections: the coloured folders projects are grouped into, and the top-level row
 //! sequence they produce.
 //!
-//! SEE-ALSO: packages/core-ui/project-collections.ts and
-//! packages/core-ui/sidebar-app/project-collection-model.ts.
+//! SEE-ALSO: packages/core-ui/project-collections.ts (deleted 2026-10-01) and
+//! packages/core-ui/sidebar-app/project-collection-model.ts (deleted 2026-10-01).
 
 use std::collections::BTreeMap;
 

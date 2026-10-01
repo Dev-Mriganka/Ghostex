@@ -29,7 +29,7 @@
 //!
 //! Both rows return BEFORE `runNativeSidebarAction`'s `closeAppModal`, so there is no close either.
 //!
-//! SEE-ALSO: packages/shared/active-sessions-sort.ts (`createDisplaySessionLayout`),
+//! SEE-ALSO: packages/shared/active-sessions-sort.ts (deleted 2026-10-01) (`createDisplaySessionLayout`),
 //! packages/gx-core/src/sidebar_view/ordering.rs.
 
 use super::plan::SidebarActionPlan;

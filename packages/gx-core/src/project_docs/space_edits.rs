@@ -2,14 +2,14 @@
 //!
 //! None of these re-sanitizes. `withToggledMember` and `reorderSidebarSpaces` build the next state
 //! by hand and hand it straight to the host, so a member id this client cannot resolve survives
-//! until the daemon prunes it, which is what `packages/core-ui/spaces.ts` says clients must
+//! until the daemon prunes it, which is what `packages/core-ui/spaces.ts` (deleted 2026-10-01) says clients must
 //! tolerate. Re-sanitizing here would silently drop a member the server still holds and the next
 //! echo would put it back, which is an oscillation with no guard to stop it.
 //!
 //! Ported from the sidebar page's `moveSpace` and `moveToSpace` arms (frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/reorder.ts` and `project-drag.ts`; see git history).
 //!
-//! SEE-ALSO: packages/core-ui/spaces.ts.
+//! SEE-ALSO: packages/core-ui/spaces.ts (deleted 2026-10-01).
 
 use crate::sidebar_view::text::js_trim;
 use crate::sidebar_view::SpacesState;

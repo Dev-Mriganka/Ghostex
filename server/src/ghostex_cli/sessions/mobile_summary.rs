@@ -515,7 +515,7 @@ fn to_mobile_custom_session_tags(tags_state: Option<&Value>) -> Option<Value> {
 fn to_mobile_session_summary(session: &Value) -> Value {
     let s = |key: &str| session.get(key);
     let mut map = Map::new();
-    // CDXC:Drafts 2026-09-15 SEE-ALSO: packages/shared/session-drafts.ts and apps/mobile/app/src/contract/sessionDrafts.ts need the draft marker, composer-text flag and creation clock to move unsent sessions into Drafts after 10 minutes.
+    // CDXC:Drafts 2026-09-15 SEE-ALSO: packages/shared/session-drafts.ts (deleted 2026-10-01) and apps/mobile/app/src/contract/sessionDrafts.ts need the draft marker, composer-text flag and creation clock to move unsent sessions into Drafts after 10 minutes.
     insert_js(&mut map, "createdAt", &[s("createdAt")]);
     insert_js(&mut map, "isDraft", &[s("isDraft")]);
     insert_js(&mut map, "hasComposerDraft", &[s("hasComposerDraft")]);

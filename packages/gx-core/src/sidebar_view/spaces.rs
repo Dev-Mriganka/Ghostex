@@ -1,7 +1,13 @@
 //! Spaces: the saved sidebar filters, which projects each one claims, and the built-in Other view.
 //!
-//! SEE-ALSO: packages/core-ui/spaces.ts, packages/core-ui/sidebar-app/space-filtering.ts,
-//! packages/shared/sidebar-spaces-other.ts.
+//! CDXC:Spaces 2026-09-07 DECISION:
+//! User: each project belongs to at most one Space everywhere, including membership inherited from its group.
+//! Existing duplicates keep the first Space in sidebar order; assigning another Space moves the member.
+//!
+//! Ported from `spaces.ts` and `sidebar-app/space-filtering.ts` in packages/core-ui and
+//! `sidebar-spaces-other.ts` in packages/shared (all deleted 2026-10-01; see git history).
+//!
+//! SEE-ALSO: server/src/sidebar_spaces.rs normalizes the same invariant for every client and CLI write.
 
 use std::collections::{BTreeMap, BTreeSet};
 

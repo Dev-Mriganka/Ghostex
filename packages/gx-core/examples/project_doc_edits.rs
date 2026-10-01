@@ -9,10 +9,10 @@
 //!
 //! - `runNativeCollectionAction` (the deleted sidebar page's `collections.ts`) with
 //!   `updateSidebarProjectCollection` and `removeSidebarProjectCollection`
-//!   (packages/core-ui/project-collections.ts);
+//!   (packages/core-ui/project-collections.ts (deleted 2026-10-01));
 //! - `applySidebarSpaceEditorResult`, `createSidebarSpace`, `updateSidebarSpace`,
-//!   `deleteSidebarSpace` and `sanitizeSidebarSpacesState` (packages/core-ui/spaces.ts), with the
-//!   palette of packages/core-ui/space-colors.ts;
+//!   `deleteSidebarSpace` and `sanitizeSidebarSpacesState` (packages/core-ui/spaces.ts (deleted 2026-10-01)), with the
+//!   palette of packages/core-ui/space-colors.ts (deleted 2026-10-01);
 //! - `switchNativeSidebarSpace` (tooling/gx-core/sidebar-page-frozen/space-navigation.ts).
 //!
 //! This is tooling, not a test suite; it prints what it found and fails the process on a

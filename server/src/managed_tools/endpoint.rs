@@ -71,7 +71,7 @@ pub(crate) fn status(tool: ToolId, home: &Path) -> Status {
     }
 }
 
-/// The wire view of one tool (`ManagedToolState` in packages/shared/managed-tools.ts).
+/// The wire view of one tool (`ManagedToolState` in packages/shared/managed-tools.ts (deleted 2026-10-01)).
 pub(crate) fn state(tool: ToolId, home: &Path, fresh: bool) -> Value {
     let job = jobs::get(tool.id());
     let active = job.as_ref().is_some_and(jobs::Job::active);

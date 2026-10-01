@@ -34,7 +34,7 @@ const MAX_ID_CHARS: usize = 256;
 const MAX_NAME_CHARS: usize = 256;
 const MAX_ICON_CHARS: usize = 256;
 
-/// Mirrors SIDEBAR_PROJECT_COLLECTION_COLORS in packages/core-ui/project-collections.ts
+/// Mirrors SIDEBAR_PROJECT_COLLECTION_COLORS in packages/core-ui/project-collections.ts (deleted 2026-10-01)
 /// so server-side fallback colors rotate exactly like the sidebar's other
 /// user-colored overlay.
 const SIDEBAR_SPACE_COLORS: [&str; 13] = [
@@ -257,7 +257,7 @@ fn collection_project_ids(collections_state: &Value) -> Vec<(String, Vec<String>
 }
 
 /// CDXC:Spaces 2026-09-07 SEE-ALSO:
-/// packages/core-ui/spaces.ts owns the one-Space-per-project decision and optimistic moves.
+/// packages/core-ui/spaces.ts (deleted 2026-10-01) owns the one-Space-per-project decision and optimistic moves.
 /// Normalize reads and writes in sidebar order so older clients and CLI payloads cannot retain duplicate memberships.
 pub fn normalize_sidebar_spaces_state(state: &Value, collections_state: &Value) -> Value {
     let collections = collections_state

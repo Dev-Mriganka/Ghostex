@@ -501,7 +501,7 @@ The wire state is fully normalized by gxserver:
   - An EMPTY Space is valid and kept, unlike an empty project collection.
 Member project ids for a deleted project may linger as soft references, so
 clients must tolerate member ids they cannot resolve. Worktree inheritance and
-the built-in "Other" view (packages/shared/sidebar-spaces-other.ts) are pure
+the built-in "Other" view (packages/shared/sidebar-spaces-other.ts, deleted 2026-10-01) are pure
 client concerns and never stored.
 Clients write-through-sync the whole state via /api/updateSidebarSpaces and read
 it back from the same endpoint, the presentation snapshot, or the

@@ -16,7 +16,7 @@
 //! - `saveNativeCollections` and `runNativeMembershipAction`
 //!   (tooling/gx-core/sidebar-page-frozen/membership.ts) with
 //!   `getRemoteProjectCollectionFamilyProjectIds`
-//!   (packages/core-ui/sidebar-app/drag-drop-geometry.ts);
+//!   (packages/core-ui/sidebar-app/drag-drop-geometry.ts (deleted 2026-10-01));
 //! - `reorderNativeSidebar` and `runNativeProjectDrop` (reorder.ts, project-drag.ts), whose order
 //!   half posts the whole cross-machine `state.groupOrder` and is therefore refused by
 //!   `syncWorkspaceGroupOrder`;

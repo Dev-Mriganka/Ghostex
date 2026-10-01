@@ -8,9 +8,9 @@
 //! writes. A write therefore keeps every field it does not own (`isReferenceChatsCollapsed`, the
 //! per-Space session memory) exactly as it found it rather than re-deriving the object.
 //!
-//! SEE-ALSO: packages/core-ui/sidebar-app/collapse-state.ts,
-//! packages/core-ui/sidebar-app/machine-tab-selection.ts (deleted 2026-10-01), packages/core-ui/sidebar-hidden-items.ts,
-//! packages/core-ui/sidebar-app/project-session-section-model.ts.
+//! SEE-ALSO: packages/core-ui/sidebar-app/collapse-state.ts (deleted 2026-10-01),
+//! packages/core-ui/sidebar-app/machine-tab-selection.ts (deleted 2026-10-01), packages/core-ui/sidebar-hidden-items.ts (deleted 2026-10-01),
+//! packages/core-ui/sidebar-app/project-session-section-model.ts (deleted 2026-10-01).
 
 use std::collections::{BTreeMap, BTreeSet};
 

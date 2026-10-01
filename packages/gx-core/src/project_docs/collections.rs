@@ -17,8 +17,8 @@
 //! twin bugs start; this file adds the counter, the two shapes (the stored ordered array, the
 //! pushed map) and the guard policy around it.
 //!
-//! SEE-ALSO: packages/core-ui/project-collections.ts,
-//! tooling/gx-core/project-docs-server-sync-typescript.ts (the runtime's frozen
+//! SEE-ALSO: packages/core-ui/project-collections.ts (deleted 2026-10-01),
+//! tooling/gx-core/project-docs-server-sync-typescript.ts (deleted 2026-10-01) (the runtime's frozen
 //! `queueSidebarProjectCollectionsServerSync`), packages/gx-core/src/doc_sync/sync.rs. The
 //! sidebar page's `adoptCollections` was frozen in the deleted
 //! `tooling/gx-core/sidebar-page-frozen/metadata.ts` (see git history).

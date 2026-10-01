@@ -18,6 +18,10 @@
 //! The TypeScript was frozen in `tooling/gx-core/sidebar-page-frozen/` (`reorder.ts`,
 //! `project-drag.ts`, `membership.ts`), since deleted; see git history.
 //!
+//! CDXC:Spaces 2026-09-08 DECISION:
+//! User: dropping projects or groups onto a Space, including Other, moves them to its top.
+//! Projects and groups are ordered together in persisted project order, so a moved project can precede existing groups.
+//!
 //! SEE-ALSO: packages/gx-core/src/project_docs/, apps/desktop/src/app/gx_store/project_docs.rs.
 
 use serde_json::{json, Value};

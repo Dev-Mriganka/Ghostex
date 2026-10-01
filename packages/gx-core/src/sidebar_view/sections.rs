@@ -1,7 +1,14 @@
 //! The section headings of a project's session list, and the compact list rule.
 //!
-//! SEE-ALSO: packages/core-ui/sidebar-app/project-session-sections.ts and
-//! packages/core-ui/project-session-list-toggle.ts.
+//! CDXC:Projects 2026-09-12 DECISION:
+//! User: a project's session list has two modes. Compact shows only the first N rows (Compact Session Rows, 13 by default, up to 50) plus a "Show all" row; Full shows every row at natural height and the sidebar is the only scroller.
+//! Compact is the default for every project, so only the projects the user switched to Full are recorded; a project that was never switched, or that has no more rows than the cap, stays Compact. This supersedes the 2026-05-16 Show more / Show less model, which stored collapsed projects and turned the expanded body into a bounded inner scroller.
+//!
+//! CDXC:Projects 2026-09-12 DECISION:
+//! User: rows inside a collapsed section (Pinned, Browser, Parked, ...) do not count toward the Compact cap, so ten pinned sessions under a collapsed Pinned heading leave all N Compact rows for the sessions that are actually on screen. They start counting the moment their section is expanded.
+//!
+//! Ported from `project-session-sections.ts` and `project-session-list-toggle.ts` in
+//! packages/core-ui (deleted 2026-10-01; see git history).
 
 use std::sync::Arc;
 

@@ -2,7 +2,7 @@
 
 Referenced from `AGENTS.md` ("UX mockups"). Full conventions, moved here verbatim on 2026-09-18.
 
-When asked to mock up a UI or a flow, build it as static HTML, not as Storybook stories or product code:
+When asked to mock up a UI or a flow, build it as static HTML, not as product code:
 
 - **Location**: `docs/<today's date, YYYY-MM-DD>/<topic>/`, for example `docs/2026-09-03/mobile-setup/`. One folder per mockup topic.
 - **One screen per file.** Each screen or state the user should react to is its own `.html` file (`mobile-03-scan.html`, `desktop-remote-settings.html`), plus an `index.html` hub that links every screen in flow order. Shared styles and scripts go in `shared.css` / `shared.js` in the same folder. Keep the page one column: nav bar, then short design notes, then the phone or desktop frame (notes may also go below it). Never put notes beside the frame.

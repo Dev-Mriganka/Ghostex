@@ -7,7 +7,7 @@
 //! every shape is written here and nowhere else: that is both the inventory of what the menus can
 //! do and the one file to change when a payload moves into the store.
 //!
-//! SEE-ALSO: packages/shared/native-sidebar.ts (`NativeSidebarCommand`),
+//! SEE-ALSO: packages/shared/native-sidebar.ts (deleted 2026-10-01) (`NativeSidebarCommand`),
 //! the deleted sidebar page's `controller.ts` (the one dispatcher), and
 //! apps/desktop/src/app/native_sidebar/actions.rs.
 

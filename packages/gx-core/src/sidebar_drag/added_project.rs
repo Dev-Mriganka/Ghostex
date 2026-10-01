@@ -14,8 +14,8 @@
 //! directly, which would survive the group moving out of it.
 //!
 //! SEE-ALSO: the deleted sidebar page's `events.ts`,
-//! packages/core-ui/spaces.ts (`addSpaceProjectMember`),
-//! packages/core-ui/sidebar-app/drag-drop-geometry.ts (`moveProjectGroupFamilyToStart`),
+//! packages/core-ui/spaces.ts (deleted 2026-10-01) (`addSpaceProjectMember`),
+//! packages/core-ui/sidebar-app/drag-drop-geometry.ts (deleted 2026-10-01) (`moveProjectGroupFamilyToStart`),
 //! apps/desktop/src/app/gx_store/added_project.rs.
 
 use crate::core::Core;

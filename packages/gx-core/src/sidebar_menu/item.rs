@@ -1,6 +1,6 @@
 //! One row of a sidebar menu, and the JSON the renderer draws it from.
 //!
-//! SEE-ALSO: packages/shared/native-sidebar.ts (`NativeSidebarMenuItem`) and
+//! SEE-ALSO: packages/shared/native-sidebar.ts (deleted 2026-10-01) (`NativeSidebarMenuItem`) and
 //! apps/desktop/src/app/native_sidebar/menus.rs, which is the one reader of this shape.
 
 use serde_json::{Map, Value};

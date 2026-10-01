@@ -10,7 +10,7 @@
 //! `forwardSidebarProjectCollectionsFromGxserver` being a copy of the Spaces trio being a copy of
 //! the workspace-groups trio, and this port has hit "a fix in one function left its twin unfixed"
 //! five times already. (The two project trios were deleted as dead code on 2026-09-21 and are
-//! frozen in tooling/gx-core/project-docs-server-sync-typescript.ts.) So the guard is ONE generic, and what really differs between the three is
+//! frozen in tooling/gx-core/project-docs-server-sync-typescript.ts (deleted 2026-10-01).) So the guard is ONE generic, and what really differs between the three is
 //! named here as data rather than duplicated as code:
 //!
 //! - **Whether a stored key is written at all**, and what it holds. The workspace groups document

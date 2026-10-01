@@ -95,6 +95,7 @@ impl GhostexGpuiApp {
             .unwrap_or_else(|| {
                 super::tooltips::SidebarTooltipSpan::sidebar(self.sidebar_width, scale)
             });
+        // CDXC:Tooltips 2026-09-12 DECISION: User: session-card title tooltips must always show on hover, even when the session name is short and the visible title is not truncated.
         let tooltip = session
             .details
             .get("titleTooltip")
