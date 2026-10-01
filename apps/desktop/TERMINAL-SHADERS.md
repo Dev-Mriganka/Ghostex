@@ -45,8 +45,8 @@ No GLSL files are bundled.
   Darwin-only `ghostty_custom_shader_load_msl` export
   (`.dependencies/ghostty-patches/0008-embed-custom-shader-msl-api.patch`).
   Rebuild GhosttyKit from the vendored source after updating the checkout.
-- A GPUI effect API (`.dependencies/zed-patches/0001-terminal-shader-effects.patch`,
-  applied by `tooling/apply-zed-patches.mjs`) captures the terminal's paint
+- A GPUI effect API (`Window::paint_effect`, a commit on the `ghostex` branch
+  of the pinned `maddada/zed` fork) captures the terminal's paint
   into reusable Metal textures, runs the passes and composites the result
   inside the pane clip.
 - Translation is cached and bounded. A translation failure keeps the ordinary
@@ -78,7 +78,7 @@ Terminal background choice and Glass.
 
 A reviewer can check the feature with any public Ghostty shader:
 
-- Build: `bun tooling/apply-zed-patches.mjs`, rebuild GhosttyKit, then
+- Build: rebuild GhosttyKit, then
   `cargo check --bin ghostex-gpui` from `apps/desktop`. Run
   `bun run typecheck`, `bun run desktop:typecheck` and
   `packages/core-ui/settings-modal-source.test.ts`.
@@ -113,6 +113,5 @@ toolchain installed, run from the repository root:
  -Demit-macos-app=false -Doptimize=ReleaseSafe)
 ```
 
-Release Rust jobs apply the GPUI patch after verifying the clean pinned
-reference checkout and before compiling. The staged GhosttyKit release job
-builds the shader export from the tracked vendored source.
+The staged GhosttyKit release job builds the shader export from the tracked
+vendored source.

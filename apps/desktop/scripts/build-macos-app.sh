@@ -4,7 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GPUI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$GPUI_DIR/../.." && pwd)"
-bun "$REPO_ROOT/tooling/apply-zed-patches.mjs"
 APP_NAME="${GHOSTEX_GPUI_APP_NAME:-Ghostex}"
 # CDXC:Release 2026-06-28-16:18:
 # GPUI source and packaged helper identity should no longer carry the historical phase label. Use one stable GPUI bundle id so CEF helper bundle ids and the lid-sleep helper label match the app's current product identity.

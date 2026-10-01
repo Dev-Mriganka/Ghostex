@@ -88,8 +88,6 @@ runtime)
 		build/on-demand-components
 	;;
 rust)
-	# References were verified clean first; apply the reviewed effect before compiling GPUI.
-	node "$REPO_ROOT/tooling/apply-zed-patches.mjs"
 	export CEF_PATH="$REPO_ROOT/apps/desktop/build/cef-cache"
 	# cef-dll-sys uses CEF_PATH/<CEF build>/ only when that folder exists (see
 	# apps/desktop/scripts/cef-distribution.sh); stage from exactly that build.

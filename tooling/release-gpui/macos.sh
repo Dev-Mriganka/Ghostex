@@ -238,8 +238,6 @@ phase_stage_runtime() {
 # hands that script (keep the two lists identical) so every rerun-if-env-changed
 # input matches and the later build is a no-op.
 phase_build_desktop() {
-	# Keep the monolithic release path aligned with the separate Rust prerequisite job.
-	node "$REPO_ROOT/tooling/apply-zed-patches.mjs"
 	if [[ "$USE_PREBUILT_RUST" == "1" ]]; then
 		echo "Prebuilt GPUI Rust binaries are in use; nothing to pre-build for ghostex-gpui."
 		return 0

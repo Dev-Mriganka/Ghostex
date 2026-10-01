@@ -10,7 +10,6 @@ if (localStartOwnsLock) {
 }
 
 import { spawn, spawnSync } from 'node:child_process';
-import { ensureZedShaderEffectPatch } from './apply-zed-patches.mjs';
 import {
   accessSync,
   closeSync,
@@ -171,7 +170,6 @@ if (isWindows) {
   );
 }
 ensureLocalReferenceCheckouts();
-if (isDarwin) ensureZedShaderEffectPatch(repoRoot);
 logStartDetail('Reference checkouts are ready.');
 
 const windowsCodeServerIdentity = targetsWindows
