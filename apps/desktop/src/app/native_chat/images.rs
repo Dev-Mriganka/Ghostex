@@ -136,6 +136,16 @@ enum ChatImageTile {
     Unavailable(ChatImageFailure),
 }
 
+/// A label that is a whole path, cut to its file name: a stand-in names the picture, and the
+/// preview's card is where the folder is shown.
+fn file_name_of(label: &str) -> String {
+    label
+        .rsplit(['/', '\\'])
+        .find(|segment| !segment.is_empty())
+        .unwrap_or(label)
+        .to_string()
+}
+
 fn image_format(media_type: &str) -> Option<ImageFormat> {
     match media_type.trim().to_ascii_lowercase().as_str() {
         "image/png" => Some(ImageFormat::Png),
@@ -567,7 +577,7 @@ impl NativeChatView {
         let named = if label.is_empty() {
             format!("Image #{}", index + 1)
         } else {
-            label
+            file_name_of(&label)
         };
         let tooltip = gpui::SharedString::from(format!("{title}: {named}"));
         let tile = tile.tooltip(move |window, cx| {
@@ -703,7 +713,7 @@ impl NativeChatView {
                 let named = if label.is_empty() {
                     "Image".to_owned()
                 } else {
-                    label
+                    file_name_of(&label)
                 };
                 let tooltip = gpui::SharedString::from(format!("{title}: {named}"));
                 div()
