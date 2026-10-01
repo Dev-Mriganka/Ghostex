@@ -11,12 +11,12 @@ use serde_json::json;
 
 impl Render for TablePreviewWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (snapshot, source, pane) = {
+        let (snapshot, source, area) = {
             let chat = self.chat.read(cx);
             (
                 chat.snapshot.clone(),
                 chat.table_preview.source.clone().unwrap_or_default(),
-                chat.bounds.get(),
+                chat.expanded_area(),
             )
         };
         let glass = crate::app::helpers::window_glass_active();
@@ -24,7 +24,7 @@ impl Render for TablePreviewWindow {
         let s = p.scale;
         if glass {
             // The main window's content sits at minus this window's frame in its coordinates.
-            let frame = table_preview_frame(pane, s);
+            let frame = table_preview_frame(area, s);
             crate::app::helpers::sync_overlay_window_glass(
                 window,
                 gpui::point(-frame.origin.x, -frame.origin.y),
@@ -93,10 +93,8 @@ pub(crate) fn table_preview_content(
     let mut style = super::super::markdown_style::text_style(p);
     style.is_dark = !p.light;
     style.highlight_theme = super::super::markdown_style::highlight_theme(p.light);
-    // Room is what the preview is for: every cell wraps inside a column as wide as the
-    // component allows, and the table only scrolls sideways when the window is still too narrow.
-    style.table_cell_max_width = Some(px(480.0 * s));
-    style.table_wrap_cells = true;
+    // The transcript's adaptive layout with more room: columns share the window's width and wrap,
+    // and the table only scrolls sideways when the window is still too narrow for their floors.
     let table = TextView::markdown("chat-table-preview", source.clone())
         .min_w_0()
         .max_w(gpui::relative(1.0))

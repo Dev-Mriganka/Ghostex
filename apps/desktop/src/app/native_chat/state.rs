@@ -88,6 +88,8 @@ pub(crate) struct NativeChatView {
     pub(crate) main_window: Option<gpui::AnyWindowHandle>,
     /// The native view of `main_window`, which the chat's own child windows attach to and are placed in.
     pub(super) drawn_native_view: Option<*mut std::ffi::c_void>,
+    /// The content size of the window that drew the chat last, which an expanded table or picture opens over.
+    pub(in crate::app::native_chat) drawn_window_size: gpui::Size<gpui::Pixels>,
     /// Where the composer's model pill was last painted, which Option+P opens the model pop-up against.
     pub(super) model_pill_bounds: std::rc::Rc<std::cell::Cell<gpui::Bounds<gpui::Pixels>>>,
     /// Set while the next menu this view opens belongs to another surface (the terminal's model pill), not to its own pane.
@@ -328,6 +330,7 @@ impl NativeChatView {
             pane_hidden: false,
             main_window: None,
             drawn_native_view: None,
+            drawn_window_size: gpui::Size::default(),
             model_pill_bounds: Default::default(),
             menu_outside_pane: false,
             pending_model_menu: None,

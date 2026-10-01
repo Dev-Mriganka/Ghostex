@@ -1,4 +1,5 @@
-//! The full-size chat image preview, as a pane-sized native child window.
+//! The full-size chat image preview, as a native child window over the whole window the chat is
+//! drawn in (`expanded_area`).
 //!
 //! CDXC:SessionChat 2026-09-18 SEE-ALSO:
 //! React's session-chat-image-viewer.tsx (deleted 2026-10-01) overlay: a picture opens centred at its original aspect
@@ -136,14 +137,14 @@ impl NativeChatView {
             return;
         };
         self.image_viewer.opening = true;
-        let pane = self.bounds.get();
+        let area = self.expanded_area();
         let parent = self.child_window_parent(cx);
         let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let chat = cx.entity();
         cx.defer(move |cx| {
             let result = main
                 .update(cx, |_, window, cx| {
-                    let origin = window.bounds().origin + pane.origin;
+                    let origin = window.bounds().origin + area.origin;
                     // Chat Lab's regular macOS titlebar is outside GPUI's content coordinates.
                     #[cfg(target_os = "macos")]
                     let origin = origin
@@ -153,7 +154,7 @@ impl NativeChatView {
                                 .max(px(0.0)),
                         );
                     (
-                        gpui::Bounds::new(origin, pane.size),
+                        gpui::Bounds::new(origin, area.size),
                         window.display(cx).map(|display| display.id()),
                     )
                 })

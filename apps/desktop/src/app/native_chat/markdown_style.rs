@@ -93,8 +93,8 @@ pub(crate) fn text_style(p: &ChatAppearance) -> TextViewStyle {
         .border_1()
         .border_color(p.border)
         .rounded(px(12.0 * p.scale));
-    // A wide table scrolls sideways instead of squeezing its columns into the
-    // transcript's width, which is the only way a long row stays readable.
+    // The adaptive table layout: columns fit the transcript's width and wrap, and a table
+    // scrolls sideways only when its columns' floors cannot fit (see `text_view`).
     let mut table = StyleRefinement::default();
     table.overflow.x = Some(gpui::Overflow::Scroll);
     style.table = table;

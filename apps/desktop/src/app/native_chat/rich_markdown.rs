@@ -408,18 +408,7 @@ impl NativeChatView {
         let mut style = super::markdown_style::text_style(p);
         style.is_dark = !p.light;
         style.highlight_theme = super::markdown_style::highlight_theme(p.light);
-        // React's `--chat-table-cell-max`, min(24rem, 60cqw): one long cell cannot claim the
-        // whole row, and a narrow pane lowers the cap so a wide table usually just fits.
-        let pane_width = f32::from(self.bounds.get().size.width);
-        let mut cell_max = 384.0 * p.scale;
-        if pane_width > 0.0 {
-            cell_max = cell_max.min(pane_width * 0.6);
-        }
-        style.table_cell_max_width = Some(px(cell_max));
-        // CDXC:SessionChat 2026-09-25 DECISION: collapsed cells cut their text off, so the user
-        // took the option away: every table wraps its cells inside the capped columns, and a table
-        // wider than the pane scrolls sideways. Supersedes the 2026-09-24 collapse toggle.
-        style.table_wrap_cells = true;
+        // CDXC:SessionChat 2026-10-01 DECISION: "For larger tables that flow out of the screen, please add the ability for text to wrap. No need to scroll on VS Code (better)." A table fits the transcript's width: short columns (ids, refs) stay on one line, long ones share the rest and wrap, and it scrolls sideways only when even those floors are wider than the pane (the component's adaptive layout, set in `markdown_style::text_style`). Supersedes the 2026-09-25 capped columns that kept a wide table wider than the pane; cells still always wrap, never collapse.
         let references = super::markdown_links::presentations(references, p);
         let header_id = id.clone();
         let wrap_id = id.clone();
