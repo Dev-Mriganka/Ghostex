@@ -21,6 +21,7 @@ pub(crate) mod child_window;
 mod choice_rows;
 mod completed_work_row;
 mod composer_animation;
+mod composer_host;
 mod composer_not_ready;
 mod composer_references;
 mod composer_scroll;

@@ -436,7 +436,7 @@ impl NativeChatView {
                     let reduce_motion = cx.reduce_motion();
                     let _ = measured.update(cx, |chat, cx| {
                         if chat.composer_animation.measured(natural, reduce_motion) {
-                            cx.notify();
+                            chat.notify_composer(cx);
                         }
                     });
                 });

@@ -159,7 +159,7 @@ impl NativeChatView {
                             .await;
                         let _ = this.update(cx, |this, cx| {
                             this.composer_reference_retry = None;
-                            cx.notify();
+                            this.notify_composer(cx);
                         });
                     }));
                 }
