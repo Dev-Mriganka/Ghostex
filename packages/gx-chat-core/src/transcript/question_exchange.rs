@@ -111,7 +111,9 @@ fn parse_questions_with_ids(input: &Value, tool_name: &str) -> Option<Vec<Parsed
     }
     let normalized = normalized_tool_name(tool_name);
     let is_hermes_clarify = normalized == "clarify";
-    let is_cursor_ask_question = normalized == "askquestion";
+    // Antigravity's snake_case `ask_question` normalizes to Cursor's name but is not its
+    // always-checkbox panel; it says per question with `is_multi_select`.
+    let is_cursor_ask_question = normalized == "askquestion" && tool_name != "ask_question";
     let candidates: Vec<Value> = match input.get("questions") {
         Some(Value::Array(items)) if !items.is_empty() => items.clone(),
         _ => vec![input.clone()],
@@ -139,11 +141,12 @@ fn parse_questions_with_ids(input: &Value, tool_name: &str) -> Option<Vec<Parsed
         if text.is_empty() && options.is_empty() {
             continue;
         }
-        // `multi_select` is Hermes' spelling, `multi` is omp's; Hermes honors it only when choices
-        // exist.
+        // `multi_select` is Hermes' spelling, `multi` is omp's, `is_multi_select` Antigravity's;
+        // Hermes honors it only when choices exist.
         let multi_select = (is_cursor_ask_question
             || record.get("multiSelect") == Some(&Value::Bool(true))
             || record.get("multi_select") == Some(&Value::Bool(true))
+            || record.get("is_multi_select") == Some(&Value::Bool(true))
             || record.get("multi") == Some(&Value::Bool(true)))
             && !(is_hermes_clarify && options.is_empty());
         let mut value = Map::new();
@@ -480,6 +483,26 @@ fn parse_hermes_answers(entries: &[ParsedQuestion], trimmed: &str) -> Option<Vec
     None
 }
 
+/// Antigravity's `A<n>: <answer>` lines, `User Skipped` for a skipped question.
+fn parse_antigravity_answers(
+    entries: &[ParsedQuestion],
+    trimmed: &str,
+) -> Option<Vec<Option<Answer>>> {
+    let markers =
+        crate::questions::exchange_answers::antigravity_answer_markers(trimmed, entries.len())?;
+    Some(
+        markers
+            .iter()
+            .enumerate()
+            .map(|(index, (_, end))| {
+                let stop = markers.get(index + 1).map_or(trimmed.len(), |next| next.0);
+                let value = js_trim(&trimmed[*end..stop]);
+                (value != "User Skipped").then(|| match_answer_to_options(&entries[index], value))
+            })
+            .collect(),
+    )
+}
+
 /// `"…"` body between the known prefix and the closing sentence.
 fn strip_answer_envelope(output: &str) -> Option<&str> {
     let prefix = RESULT_PREFIXES
@@ -516,6 +539,9 @@ fn parse_answers(entries: &[ParsedQuestion], output: &str) -> Option<Vec<Option<
     }
     if let Some(hermes) = parse_hermes_answers(entries, trimmed) {
         return Some(hermes);
+    }
+    if let Some(antigravity) = parse_antigravity_answers(entries, trimmed) {
+        return Some(antigravity);
     }
     let body = strip_answer_envelope(trimmed)?;
     // Locate each question's `"question"="` marker in order; a question whose marker is missing was

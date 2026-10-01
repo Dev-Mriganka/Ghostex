@@ -169,6 +169,11 @@ pub fn is_ask_user_question_tool(tool_name: &str) -> bool {
     )
 }
 
+/// CDXC:SessionChat 2026-10-01 WHY: Antigravity's `ask_question` normalizes to the same name as Cursor Agent's `AskQuestion`, whose panel is always a checkbox list, so it read every Antigravity question as multi-select. Antigravity's own spelling is snake_case and carries its own `is_multi_select` flag.
+pub fn is_antigravity_ask_question_tool(tool_name: &str) -> bool {
+    tool_name == "ask_question"
+}
+
 fn truncate_approval_summary(value: &str) -> String {
     if value.chars().count() > APPROVAL_SUMMARY_MAX_CHARS {
         let mut truncated: String = value.chars().take(APPROVAL_SUMMARY_MAX_CHARS).collect();
@@ -223,8 +228,10 @@ pub fn parse_session_chat_questions(
         input
     };
     let record = input.as_object()?;
-    let is_cursor_ask_question = tool_name
-        .is_some_and(|tool_name| normalize_session_chat_tool_name(tool_name) == "askquestion");
+    let is_cursor_ask_question = tool_name.is_some_and(|tool_name| {
+        normalize_session_chat_tool_name(tool_name) == "askquestion"
+            && !is_antigravity_ask_question_tool(tool_name)
+    });
     let is_hermes_clarify =
         tool_name.is_some_and(|tool_name| normalize_session_chat_tool_name(tool_name) == "clarify");
     let raw_questions: Vec<&Value> = match record.get("questions").and_then(Value::as_array) {
@@ -269,12 +276,14 @@ pub fn parse_session_chat_questions(
         }
         if !text.is_empty() || !options.is_empty() {
             // The spec uses strict === true; anything else is single-select.
-            // `multi_select` is Hermes' spelling, `multi` is omp's; Hermes
-            // additionally honors it only when choices exist.
+            // `multi_select` is Hermes' spelling, `multi` is omp's,
+            // `is_multi_select` Antigravity's; Hermes additionally honors it
+            // only when choices exist.
             let multi_select = is_cursor_ask_question
                 || record
                     .get("multiSelect")
                     .or_else(|| record.get("multi_select"))
+                    .or_else(|| record.get("is_multi_select"))
                     .or_else(|| record.get("multi"))
                     .and_then(Value::as_bool)
                     == Some(true)

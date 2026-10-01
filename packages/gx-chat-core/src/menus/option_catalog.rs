@@ -376,12 +376,14 @@ impl SessionOptionCatalog {
             CatalogOptions::Antigravity { agent, catalog } => {
                 // The effort is typed together with the model, so it is only offered once
                 // gxserver has confirmed which catalog model is running.
-                match agent.model(model_value) {
+                let mut descriptors = match agent.model(model_value) {
                     Some(model) if !model.efforts.is_empty() => {
                         vec![antigravity_effort(agent, catalog, model)]
                     }
                     _ => Vec::new(),
-                }
+                };
+                descriptors.push(antigravity_mode());
+                sort_descriptors(descriptors)
             }
             CatalogOptions::OpenCode { agent, catalog } => {
                 let mut options = Vec::new();
@@ -792,6 +794,36 @@ fn antigravity_effort(
         )),
     );
     descriptor.choices = Some(effort_choices(catalog, &model.efforts));
+    descriptor
+}
+
+/// Shift+Tab cycles agy's mode in this order and the footer names the current one, which gxserver
+/// reports with these values (`match_antigravity_statusline` in
+/// `server/src/session_chat_options/agent_matchers.rs`).
+fn antigravity_mode() -> OptionDescriptor {
+    let mut descriptor = OptionDescriptor::new(
+        "mode",
+        "Mode",
+        OptionCategory::Mode,
+        OptionDispatch::CyclicKeySteps {
+            key: "shift-tab".to_string(),
+        },
+    );
+    descriptor.choices = Some(
+        [
+            ("default", "Default"),
+            ("accept-edits", "Accept edits"),
+            ("plan", "Plan"),
+        ]
+        .into_iter()
+        .map(|(value, label)| OptionChoice {
+            value: value.to_string(),
+            label: label.to_string(),
+            ..OptionChoice::default()
+        })
+        .collect(),
+    );
+    descriptor.description = Some("Select Antigravity CLI's mode.".to_string());
     descriptor
 }
 

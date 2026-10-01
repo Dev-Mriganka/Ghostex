@@ -1,7 +1,7 @@
 {
   "_readme": "Do not edit blind. docs/important/agent-model-catalog.md explains the schema, how every Ghostex client loads this file from GitHub (with the bundled copy as the offline source), how to publish a change, and how to re-collect models, efforts and fast mode from the agent CLIs' own /model pickers.",
   "schemaVersion": 1,
-  "updatedAt": "2026-09-29T20:54:25Z",
+  "updatedAt": "2026-10-01T00:38:26Z",
   "effortLabels": {
     "none": "None",
     "minimal": "Minimal",
@@ -541,7 +541,7 @@
     },
     "antigravity": {
       "name": "Antigravity CLI",
-      "cliVersion": "1.2.12",
+      "cliVersion": "1.2.14",
       "modelCommand": "/model <value>-<effort> for models with efforts, /model <value> otherwise; ids from `agy models`",
       "effortCommand": null,
       "efforts": ["low", "medium", "high"],
