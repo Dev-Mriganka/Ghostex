@@ -27,15 +27,15 @@ cargo install wasm-bindgen-cli --version 0.2.125 --locked   # must match the was
 # needs Zig 0.16 (the repo's Zig) for the first build, and bun
 
 # gxserver must be running. From the repository root:
-bun run start:web        # builds the wasm (release, ~2 min cold) and the page into www/dist, then serves it with `ghostex web` on http://127.0.0.1:4173
+cargo xtask start-web        # builds the wasm (release, ~2 min cold) and the page into www/dist, then serves it with `ghostex web` on http://127.0.0.1:4173
 
 # for iterating, keep `ghostex web --no-open` running (the page's bootstrap hands it the daemon URL and token), then:
-bun run web:dev          # rebuilds the wasm and starts Vite on http://localhost:4174, which proxies the bootstrap to :4173
+cargo xtask web-dev          # rebuilds the wasm and starts Vite on http://localhost:4174, which proxies the bootstrap to :4173
 ```
 
-`bun apps/gpui-web/build-wasm.mjs` without `--release` gives a debug build that works but is 100 MB and slow. The Bash entry point delegates to the same builder.
+`cargo xtask web-build --debug` (or `web-dev --debug`) builds the wasm without optimization: it works but is 100 MB and slow.
 
-On Windows, run `bun run web:build` from PowerShell with Zig 0.16, Rust 1.95.0's `wasm32-unknown-unknown` target and wasm-bindgen-cli 0.2.125 installed. The builder restores this crate's tracked symlinks when Git checked them out as text; Windows Developer Mode or symlink privileges are required. It invokes Rust directly on Windows because the web-sys feature list exceeds the command-line limit through sccache. Serve the result against the running Windows gxserver with `ghostex web --dist-dir C:/dev/Ghostex/apps/gpui-web/www/dist --no-open` (adjust the checkout path).
+On Windows, run `cargo xtask web-build` from PowerShell with Zig 0.16, Rust 1.95.0's `wasm32-unknown-unknown` target and wasm-bindgen-cli 0.2.125 installed. The build restores this crate's tracked symlinks when Git checked them out as text; Windows Developer Mode or symlink privileges are required. It invokes Rust directly on Windows because the web-sys feature list exceeds the command-line limit through sccache. Serve the result against the running Windows gxserver with `ghostex web --dist-dir C:/dev/Ghostex/apps/gpui-web/www/dist --no-open` (adjust the checkout path).
 
 - `http://localhost:4174/?session=<projectId>:<sessionId>&surface=terminal` opens a session directly (ids as in its zmx name, `S90-<projectId>-<sessionId>`).
 - `node shot.mjs out.png --wait 5000 --click 150,240 --type "text" --key Enter --key Control+a --pasteimage <base64 png> --eval "js" --rightclick 150,300 --move x,y --wheel x,y,deltaY --pause ms --timeout ms --url ...` drives the page in headless Chrome over the DevTools protocol, prints the page console and saves a screenshot. It waits in real time; Chrome's `--virtual-time-budget` never delivers the gxserver WebSocket frames. A run that stalls stops its own Chrome after `--timeout` (90 s). `--insert text` inserts text with no key events, the way browser automation and dictation do. When Chrome for Testing never commits a navigation (seen on a machine short of memory), point `SHOT_CHROME` at Playwright's `chrome-headless-shell`.

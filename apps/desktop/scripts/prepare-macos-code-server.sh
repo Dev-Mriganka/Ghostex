@@ -161,7 +161,7 @@ Restore the checkout:
   git -C $REPO_ROOT submodule update --init .dependencies/code-server
 
 If you moved the tree elsewhere, point the build at it instead:
-  GHOSTEX_CODE_SERVER_ROOT=/path/to/code-server bun run start
+  GHOSTEX_CODE_SERVER_ROOT=/path/to/code-server cargo xtask start
 EOF
 			exit 1
 		fi
@@ -177,7 +177,7 @@ gitlink, so your checkout stayed where it was and .dependencies/code-server is
 empty. Refusing to package an app whose Code tab cannot start.
 
 Unblock this build without moving anything:
-  GHOSTEX_CODE_SERVER_ROOT=$legacy_root bun run start
+  GHOSTEX_CODE_SERVER_ROOT=$legacy_root cargo xtask start
 
 Repair the checkout (keeps node_modules and the built VS Code payload):
   cd $REPO_ROOT
@@ -323,7 +323,7 @@ ensure_code_server_payload() {
 	commit="$(git -C "$CODE_SERVER_ROOT" rev-parse HEAD 2>/dev/null || printf 'development')"
 	payload_digest="$(code_server_vscode_payload_digest "$vscode_target" "$node_identity" "$npm_version" "$package_version" "$commit")"
 	payload_cache_key="code-server-vscode-payload-$GHOSTEX_MACOS_ARCH"
-	# CDXC:CodeEditor 2026-06-09-17:06: Embedded VS Code search depends on @vscode/ripgrep/bin/rg. Rebuild the generated REH web payload when code-server packaging inputs change, server-main.js is missing, or ripgrep is missing/wrong-arch so `bun run start` and release builds cannot reuse a stale payload that opens but fails search.
+	# CDXC:CodeEditor 2026-06-09-17:06: Embedded VS Code search depends on @vscode/ripgrep/bin/rg. Rebuild the generated REH web payload when code-server packaging inputs change, server-main.js is missing, or ripgrep is missing/wrong-arch so `cargo xtask start` and release builds cannot reuse a stale payload that opens but fails search.
 	if ! cache_matches "$payload_cache_key" "$payload_digest" "$vscode_release_root/out/server-main.js" "$vscode_ripgrep_bin" "$vscode_release_root/$(code_server_native_module_marker)" ||
 		! binary_supports_macos_arch "$vscode_ripgrep_bin" "$GHOSTEX_MACOS_ARCH"; then
 		(

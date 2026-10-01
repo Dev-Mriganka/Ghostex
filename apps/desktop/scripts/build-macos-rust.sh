@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Builds the two Rust binaries the macOS bundle ships: the app itself and the
 # CEF helper. build-macos-app.sh runs this in the foreground, and
-# tooling/start-gpui.mjs runs it in the background while
+# `cargo xtask start` runs it in the background while
 # prepare-macos-runtime.sh builds gxserver, then hands the result to
 # build-macos-app.sh through GHOSTEX_GPUI_USE_PREBUILT_RUST=1. Keeping the
 # cargo invocation in one file means both callers compile with identical
@@ -36,7 +36,7 @@ cargo_args=(build --release --bin ghostex-gpui --bin ghostex-gpui-cef-helper)
 if [[ "${GHOSTEX_LOCAL_START:-0}" == "1" ]]; then
 	cargo_args+=(--config 'profile.release.package.ghostex-gpui.incremental=true')
 	# CDXC:Build 2026-09-23 DECISION:
-	# User chose opt-level 0 for the app crate on local starts, with `bun run start --optimized` for performance work.
+	# User chose opt-level 0 for the app crate on local starts, with `cargo xtask start --optimized` for performance work.
 	# Measured on an M5 Pro: a one-line edit rebuilt in ~5s at opt-level 0, ~17s at 1 and ~20s at 3, and a cold compile used 71 vs 315 CPU-seconds.
 	# Only this crate changes: GPUI, CEF, tree-sitter and every other dependency keep release optimization, and debug assertions and overflow checks stay off as in release.
 	# SEE-ALSO: prepare-macos-runtime.sh applies the same rule to gxserver.

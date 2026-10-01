@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CDXC:PlatformSupport 2026-08-02:
-# Build and stage the native Win32 GPUI app from a WSL-owned `bun run start`
+# Build and stage the native Win32 GPUI app from a WSL-owned `cargo xtask start`
 # without routing any part of the workflow through PowerShell. Web resources
 # build with Windows Bun so Vite reads the NTFS checkout natively instead of
 # crawling thousands of modules through WSL's p9 mount. The pinned Windows
@@ -217,7 +217,7 @@ REPO_ROOT_WIN="$(wslpath -a -w "$REPO_ROOT")"
 report_build_phase "Building sidebar CSS and CEF web assets..."
 (
 	cd "$REPO_ROOT"
-	"$WINDOWS_BUN" run build:sidebar-css 2>&1 | cat
+	"$WINDOWS_BUN" x tailwindcss -i packages/core-ui/styles/shadcn.css -o packages/core-ui/styles/shadcn.generated.css --minify 2>&1 | cat
 	"$WINDOWS_BUN" apps/editor/scripts/build-editor-web.mjs 2>&1 | cat
 	"$REPO_ROOT/node_modules/.bin/vite.exe" build --config "$GPUI_DIR_WIN\\vite.config.ts" 2>&1 | cat
 )
@@ -280,7 +280,7 @@ trap - EXIT
 build_current_wsl_gxserver() {
 	# CDXC:PlatformSupport 2026-08-03:
 	# A WSL-owned Windows development build must package gxserver and zmx from
-	# the same checkout as the native shell. Previously `bun run start` rebuilt
+	# the same checkout as the native shell. Previously `cargo xtask start` rebuilt
 	# GPUI but retained runtime pieces from a cached Linux archive, so daemon and
 	# terminal-title protocol fixes could be missing from the installed app.
 	#

@@ -10,14 +10,14 @@ The browser app is `apps/gpui-web`: the desktop's own GPUI source compiled to wa
 serve it from the Ghostex root (gxserver must be running):
 
 ```sh
-bun run start:web
+cargo xtask start-web
 ```
 
 Its README covers the toolchain it needs (`wasm-bindgen-cli`, Zig 0.16) and the dev server.
 
 ### Building from source
 
-`bun run start` builds and launches the desktop app. On macOS, `bun run build` only packages it.
+`cargo xtask start` builds and launches the desktop app. On macOS, `cargo xtask build` only packages it.
 The desktop crate (`apps/desktop/`) and the gxserver crate (`server/`) both pin Rust 1.95.0 in
 their `rust-toolchain.toml` files. Besides Bun, Rust, CMake, Ninja, and Zig 0.16, local
 Rust builds require **sccache**:
@@ -34,15 +34,15 @@ Then run these commands from a native PowerShell window in the repository root:
 
 ```powershell
 bun install --frozen-lockfile
-bun run setup:windows
-bun run start
+cargo xtask setup-windows
+cargo xtask start
 ```
 
-`setup:windows` installs the pinned Rust toolchain without changing your global default,
+`setup-windows` installs the pinned Rust toolchain without changing your global default,
 downloads and verifies Zig 0.16.0 into `build/toolchains/`, and installs sccache through
 WinGet if it is missing. Without WinGet, install sccache with `cargo install sccache --locked`.
 It also prepares the pinned desktop submodules and downloads the published WSL components.
-It does not build, install, or launch the desktop app. Use `bun run start --prepare-only` to
+It does not build, install, or launch the desktop app. Use `cargo xtask start --prepare-only` to
 repeat source preparation without launching the app.
 Open a new PowerShell window after installing sccache if it is not yet on PATH.
 The build loads the installed Visual Studio environment, so a Developer PowerShell window
@@ -50,14 +50,14 @@ is not required. Set `GHOSTEX_ZIG` to use an existing Zig 0.16.0 executable.
 
 `start` initializes missing desktop submodules at their pinned revisions and preserves
 existing checkouts. It checks the build tools before downloading the WSL runtime components.
-`dev` is an alias for `start`; use `start:web` for the browser build.
+Use `cargo xtask start-web` for the browser build, and `cargo xtask help` to list every command.
 
 Windows normally installs the build in `C:\Program Files\Ghostex`. To keep a development
 installation inside the checkout, set `$env:GHOSTEX_INSTALL_DIR = "$PWD\build\local"` before
-`bun start` (Windows ignores the generic `INSTALL_DIR`, so a toolchain's value cannot move
+`cargo xtask start` (Windows ignores the generic `INSTALL_DIR`, so a toolchain's value cannot move
 the app). The app will run from `build/local/Ghostex`, with a current-user Start Menu
 shortcut. Keep this directory separate from `apps/desktop/build/windows/Ghostex`, which
-is the staging output replaced by the next build. To persist the choice for Bun commands,
+is the staging output replaced by the next build. To persist the choice for later starts,
 put `GHOSTEX_INSTALL_DIR=D:/Ghostex/build/local` (using your checkout path) in an untracked
 `.env.local` and exclude that file in `.git/info/exclude`.
 

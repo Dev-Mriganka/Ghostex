@@ -1,6 +1,6 @@
 /*
  * CDXC:Settings 2026-09-28 WHY:
- * The native GPUI Settings modal reads the same search rows, option tables, defaults and ranges as the React one, so nothing is hand-copied into Rust. This script prints them as JSON for one platform (`bun settings-catalog-export.ts macos|windows|linux`); `generate.ts` runs it for each platform and writes `apps/desktop/src/app/window/settings_modal/catalog/settings-catalog.generated.json` (the macOS catalog plus the leaf values that differ on Windows and Linux), and `bun run help:check` (part of `bun run typecheck`) fails when that file is stale.
+ * The native GPUI Settings modal reads the same search rows, option tables, defaults and ranges as the React one, so nothing is hand-copied into Rust. This script prints them as JSON for one platform (`bun settings-catalog-export.ts macos|windows|linux`); `generate.ts` runs it for each platform and writes `apps/desktop/src/app/window/settings_modal/catalog/settings-catalog.generated.json` (the macOS catalog plus the leaf values that differ on Windows and Linux), and `cargo xtask help-check` (part of `cargo xtask typecheck`) fails when that file is stale.
  * SEE-ALSO: packages/core-ui/settings-modal/search-catalog.ts, packages/core-ui/settings-modal/search.ts, apps/desktop/src/app/window/settings_modal/catalog.rs, docs/2026-09-28/gpui-modals-migration/SETTINGS-ARCH.md.
  */
 import './settings-catalog-platform';

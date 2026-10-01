@@ -38,7 +38,7 @@ GHOSTEX_REMOTE_GXSERVER_LINUX_ARM64_PACKAGE="${GHOSTEX_REMOTE_GXSERVER_LINUX_ARM
 GHOSTEX_REQUIRE_REMOTE_GXSERVER_LINUX_PACKAGES="${GHOSTEX_REQUIRE_REMOTE_GXSERVER_LINUX_PACKAGES:-0}"
 GHOSTEX_ON_DEMAND_ASSETS="${GHOSTEX_ON_DEMAND_ASSETS:-0}"
 GHOSTEX_GPUI_USE_PREBUILT_RUST="${GHOSTEX_GPUI_USE_PREBUILT_RUST:-0}"
-# Set by tooling/start-gpui.mjs. Local starts stage into the existing bundle and
+# Set by `cargo xtask start`. Local starts stage into the existing bundle and
 # compile the app crate incrementally; release packaging leaves it unset.
 GHOSTEX_LOCAL_START="${GHOSTEX_LOCAL_START:-0}"
 case "$(printf '%s' "$GHOSTEX_REQUIRE_REMOTE_GXSERVER_LINUX_PACKAGES" | tr '[:upper:]' '[:lower:]')" in
@@ -76,7 +76,7 @@ GHOSTEX_GPUI_BUILD_VERSION="${GHOSTEX_GPUI_BUILD_VERSION:-}"
 # Sparkle auto-update: the framework is staged only when the caller points
 # GHOSTEX_GPUI_SPARKLE_FRAMEWORK at a Sparkle.framework, which release
 # packaging (tooling/release-gpui/macos.sh) always does together with
-# GHOSTEX_REQUIRE_SPARKLE=1. Local `bun run start` bundles carry no updater.
+# GHOSTEX_REQUIRE_SPARKLE=1. Local `cargo xtask start` bundles carry no updater.
 # CDXC:Release 2026-09-04 DECISION:
 # User: installing a published update from the titlebar of a local dev build
 # replaced that build with the release bundle and broke the launch. Dev builds
@@ -102,8 +102,8 @@ esac
 # pipeline. GHOSTEX_GPUI_SIGN_IDENTITY=- forces ad-hoc signing.
 #
 # CDXC:Build 2026-09-22 WHY:
-# An unset identity used to mean ad-hoc, so a packager run outside `bun run start` (an agent working around a failed start built the bundle here and hand-installed it with ditto and mv) shipped an ad-hoc app, whose designated requirement is its cdhash, so macOS forgot the app's folder permissions and asked again after every rebuild.
-# The local start records the certificate it signs with per computer (tooling/local-start-utils.mjs); an unset identity now means that certificate when the record exists, and ad-hoc only on a computer that has never signed with one. A certificate that cannot sign from this shell fails the build instead of degrading it.
+# An unset identity used to mean ad-hoc, so a packager run outside `cargo xtask start` (an agent working around a failed start built the bundle here and hand-installed it with ditto and mv) shipped an ad-hoc app, whose designated requirement is its cdhash, so macOS forgot the app's folder permissions and asked again after every rebuild.
+# The local start records the certificate it signs with per computer (tooling/xtask/src/codesign.rs); an unset identity now means that certificate when the record exists, and ad-hoc only on a computer that has never signed with one. A certificate that cannot sign from this shell fails the build instead of degrading it.
 GHOSTEX_GPUI_SIGN_IDENTITY="${GHOSTEX_GPUI_SIGN_IDENTITY:-}"
 if [[ -z "$GHOSTEX_GPUI_SIGN_IDENTITY" ]]; then
 	remembered_identity_state_root="$HOME/.local/state"
@@ -203,7 +203,7 @@ validate_completion_sound_assets() {
 	done
 
 	if [[ "$missing" == "1" ]]; then
-		echo "Run \`bun run start\` from the repo root so GPUI-owned shared resources are refreshed before packaging." >&2
+		echo "Run \`cargo xtask start\` from the repo root so GPUI-owned shared resources are refreshed before packaging." >&2
 		exit 1
 	fi
 }
@@ -216,7 +216,7 @@ validate_cli_resources() {
 	# binary staged inside the app-owned gxserver package (no Node module or
 	# shell launcher sources are needed anymore).
 	if [[ ! -x "$GXSERVER_SOURCE_DIR/bin/ghostex" ]]; then
-		echo "Missing GPUI CLI binary: $GXSERVER_SOURCE_DIR/bin/ghostex (run bun run start to refresh shared resources)" >&2
+		echo "Missing GPUI CLI binary: $GXSERVER_SOURCE_DIR/bin/ghostex (run cargo xtask start to refresh shared resources)" >&2
 		missing=1
 	fi
 
@@ -281,7 +281,7 @@ validate_local_gxserver_runtime_resources() {
 	local required_path executable_path
 
 	# CDXC:Build 2026-07-08-04:55:
-	# `bun run start` refreshes apps/desktop/runtime/macos/Web through the GPUI-owned
+	# `cargo xtask start` refreshes apps/desktop/runtime/macos/Web through the GPUI-owned
 	# shared-resource build, then this packager seals the
 	# app-owned gxserver package into the GPUI bundle. Runtime should resolve
 	# Contents/Resources/Web/gxserver first instead of depending on the main
@@ -1102,9 +1102,9 @@ stage_local_start_code_server() {
 	local payload_digest runtime_dir staging_dir entry previous_kept=0
 
 	# CDXC:CodeEditor 2026-09-23 DECISION:
-	# User chose to keep code-server out of `bun run start` bundles. Each code-server build is cloned once (APFS copy-on-write, near free) into a content-named folder under build/dev-components.noindex/, and the bundle records that folder in Web/local-start-code-server-root.
+	# User chose to keep code-server out of `cargo xtask start` bundles. Each code-server build is cloned once (APFS copy-on-write, near free) into a content-named folder under build/dev-components.noindex/, and the bundle records that folder in Web/local-start-code-server-root.
 	# A rebuild gets a new folder, so a running app keeps its own copy until it restarts. Only lib/node stays in the bundle, where Portless and the signed runtime paths expect it.
-	# SEE-ALSO: source_code_server_repo_root_candidates in apps/desktop/src/app/helpers/source_server/code_server.rs, localStartCodeServerStoreRoot in tooling/start-gpui.mjs.
+	# SEE-ALSO: source_code_server_repo_root_candidates in apps/desktop/src/app/helpers/source_server/code_server.rs, code_server_store_root in tooling/xtask/src/start/mod.rs.
 	if [[ ! -f "$source_dir/out/node/entry.js" ]]; then
 		rm -f "$pointer_path"
 		return 0

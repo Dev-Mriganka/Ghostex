@@ -2,7 +2,7 @@
 //! Help generator writes from the React Settings sources.
 //!
 //! CDXC:Settings 2026-09-28 WHY:
-//! `packages/core-ui/settings-modal/search-catalog.ts` stays the one source of the Settings search rows (the Help generator reads it too), so the native modal embeds `catalog/settings-catalog.generated.json` instead of a Rust copy that could drift. `bun run help:generate` rewrites it and `bun run typecheck` fails while it is stale. The file keeps the macOS catalog whole and the leaf values that differ on Windows and Linux, which are applied here for the platform this binary was built for.
+//! `packages/core-ui/settings-modal/search-catalog.ts` stays the one source of the Settings search rows (the Help generator reads it too), so the native modal embeds `catalog/settings-catalog.generated.json` instead of a Rust copy that could drift. `cargo xtask help-generate` rewrites it and `cargo xtask typecheck` fails while it is stale. The file keeps the macOS catalog whole and the leaf values that differ on Windows and Linux, which are applied here for the platform this binary was built for.
 //! SEE-ALSO: tooling/ghostex-help/settings-catalog-export.ts, tooling/ghostex-help/generate.ts, docs/2026-09-28/gpui-modals-migration/SETTINGS-ARCH.md.
 use serde_json::{Map, Value};
 use std::collections::HashSet;

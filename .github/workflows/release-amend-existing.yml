@@ -196,7 +196,7 @@ jobs:
       - name: Install and typecheck
         run: |
           bun install --frozen-lockfile
-          bun run typecheck
+          cargo xtask typecheck
           bun run release:test
       - name: Resolve the change-aware release plan
         id: plan

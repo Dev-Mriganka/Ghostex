@@ -25,7 +25,7 @@ import {
 
 /*
  CDXC:Release 2026-07-02-14:10:
- The 5.4.0 release spent minutes on a root `bun run test` that discovers
+ The 5.4.0 release spent minutes on a root `cargo xtask test` that discovers
  bundled code-server trees, and it discovered late source edits only after
  expensive package builds had started. This remains an optional deep local
  audit for historical/local flows. The canonical Actions release runs these
@@ -96,7 +96,7 @@ Options:
   --release-branch <branch>  Branch being released. Defaults to main.
   --cargo                    Also run cargo check for server and gpui.
   --skip-tests               Skip bun run release:test.
-  --skip-typecheck           Skip bun run typecheck.
+  --skip-typecheck           Skip cargo xtask typecheck.
   --skip-build-scripts       Skip running the release JS build scripts locally.
   --rebuild-generated        Run the release build scripts first and keep their
                              regenerated tracked outputs (mobile chat bundle,
@@ -557,7 +557,7 @@ async function checkToolingImports() {
 }
 
 async function checkTypecheck() {
-  const result = await runCommand('bun run typecheck', { timeoutMs: 8 * 60 * 1000 });
+  const result = await runCommand('cargo xtask typecheck', { timeoutMs: 8 * 60 * 1000 });
   if (result.code !== 0) {
     return fail(shortOutput(result.stderr || result.stdout, 10));
   }

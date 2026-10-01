@@ -1592,7 +1592,7 @@ sessions, so any client can control agents on any machine.
   actions, the Git menu and Quick Access), chat and terminal running in a
   browser and talking to gxserver; remote machines, Settings and the commit
   review stay in the desktop app. It is built from a Ghostex source checkout
-  with `bun run start:web` and is not part of the installed app.
+  with `cargo xtask start-web` and is not part of the installed app.
 - **CLI**: `ghostex attach <selector>` attaches to a session from any terminal,
   including over SSH.
 

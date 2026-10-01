@@ -20,12 +20,12 @@ if (!$VsRoot) {
 if ($Missing.Count) { throw ($Missing -join "`n") }
 
 if (!(Get-Command sccache -ErrorAction SilentlyContinue) -and $Install) {
-    if (!(Get-Command winget -ErrorAction SilentlyContinue)) { throw 'Install sccache with cargo install sccache --locked, then run bun run setup:windows again.' }
+    if (!(Get-Command winget -ErrorAction SilentlyContinue)) { throw 'Install sccache with cargo install sccache --locked, then run cargo xtask setup-windows again.' }
     & winget install --id Mozilla.sccache --exact --source winget --scope user --accept-package-agreements --accept-source-agreements --disable-interactivity
     if ($LASTEXITCODE -ne 0) { throw 'sccache installation failed.' }
     $env:PATH += ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 }
-if (!(Get-Command sccache -ErrorAction SilentlyContinue)) { $Missing.Add('sccache is missing. Run bun run setup:windows, then open a new PowerShell window.') }
+if (!(Get-Command sccache -ErrorAction SilentlyContinue)) { $Missing.Add('sccache is missing. Run cargo xtask setup-windows, then open a new PowerShell window.') }
 
 $ToolchainFile = Join-Path $RepoRoot 'apps/desktop/rust-toolchain.toml'
 $RustVersion = [regex]::Match((Get-Content -Raw $ToolchainFile), '(?m)^channel\s*=\s*"([^"]+)"').Groups[1].Value
@@ -47,7 +47,7 @@ if (!$env:GHOSTEX_ZIG) {
 }
 $ZigCommand = if ($env:GHOSTEX_ZIG) { Get-Command $env:GHOSTEX_ZIG -CommandType Application -ErrorAction SilentlyContinue }
 if (!$ZigCommand) {
-    $Missing.Add('Zig 0.16.0 is missing. Run bun run setup:windows, or set GHOSTEX_ZIG to its executable.')
+    $Missing.Add('Zig 0.16.0 is missing. Run cargo xtask setup-windows, or set GHOSTEX_ZIG to its executable.')
 } elseif ((& $ZigCommand.Source version) -ne '0.16.0' -or $LASTEXITCODE -ne 0) {
     $Missing.Add('GHOSTEX_ZIG must point to Zig 0.16.0.')
 } else {

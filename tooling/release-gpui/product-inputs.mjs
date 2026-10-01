@@ -82,7 +82,7 @@ export const IGNORED_FOR_RELEASE = Object.freeze([
   },
   {
     path: 'apps/gpui-web',
-    why: 'GPUI web build; built from a checkout with `bun run web:build`, never part of a GPUI release artifact.',
+    why: 'GPUI web build; built from a checkout with `cargo xtask web-build`, never part of a GPUI release artifact.',
   },
   {
     path: 'vitest.config.ts',

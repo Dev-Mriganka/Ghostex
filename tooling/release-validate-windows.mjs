@@ -18,7 +18,7 @@
  * Still worth dispatching by hand for a cycle with heavy Windows-conditional Rust
  * churn — `#[cfg(windows)]` bodies, new Windows-only crates or FFI, a Cargo.lock
  * bump that moves a Windows-only dependency — because a Windows compile error is
- * likely there and neither the macOS/Linux jobs nor `bun run typecheck` can see it.
+ * likely there and neither the macOS/Linux jobs nor `cargo xtask typecheck` can see it.
  * It also `cargo check`s the gxserver tree targeting Windows, which nothing in the
  * release pipeline compiles (Windows ships gxserver through WSL as a Linux binary).
  *

@@ -94,8 +94,8 @@ if ($BuildPhase -ne "stage") {
     # 1) Sidebar bundle (same steps as the macOS script).
     Push-Location $RepoRoot
     try {
-        bun run build:sidebar-css
-        if ($LASTEXITCODE -ne 0) { throw "build:sidebar-css failed" }
+        bun x tailwindcss -i packages/core-ui/styles/shadcn.css -o packages/core-ui/styles/shadcn.generated.css --minify
+        if ($LASTEXITCODE -ne 0) { throw "tailwindcss (sidebar CSS) failed" }
         & (Join-Path $RepoRoot "node_modules/.bin/vite.exe") build --config (Join-Path $GpuiDir "vite.config.ts")
         if ($LASTEXITCODE -ne 0) { throw "vite build failed" }
     }

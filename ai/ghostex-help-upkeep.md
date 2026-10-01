@@ -12,7 +12,7 @@ Update in the same commit when you:
 - Add or change something a user does on purpose: a way to start or control agents, sessions, chats, worktrees, the board, automations, remote or mobile access, notifications, or the browser and editor.
 - Add or change a `ghostex` CLI verb that users or agents run by hand.
 - Change how one of the seven Help sample questions is answered (they are listed at the end of `skills/ghostex-help/references/features.md`).
-- Add, rename, or retire a setting, an option value, a default, or a hotkey. This part is generated: run `bun run help:generate` and commit the output (`bun run typecheck` fails when it is stale).
+- Add, rename, or retire a setting, an option value, a default, or a hotkey. This part is generated: run `cargo xtask help-generate` and commit the output (`cargo xtask typecheck` fails when it is stale).
 
 Where it goes:
 

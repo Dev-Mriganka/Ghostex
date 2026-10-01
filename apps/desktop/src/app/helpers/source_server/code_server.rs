@@ -297,8 +297,8 @@ pub(crate) fn source_code_server_repo_root_candidates() -> Vec<PathBuf> {
             append(resources_dir.join("code-server"));
             /*
             CDXC:CodeEditor 2026-09-23 DECISION:
-            User chose to keep code-server out of `bun run start` bundles: re-sealing, verifying, syncing and malware-scanning its 5.5k files cost every start even when it had not changed.
-            The local start copies each code-server build once into its own content-named folder outside the bundle and records that folder in this file; only lib/node stays in the bundle. Release and `bun run build` bundles never carry the file.
+            User chose to keep code-server out of `cargo xtask start` bundles: re-sealing, verifying, syncing and malware-scanning its 5.5k files cost every start even when it had not changed.
+            The local start copies each code-server build once into its own content-named folder outside the bundle and records that folder in this file; only lib/node stays in the bundle. Release and `cargo xtask build` bundles never carry the file.
             SEE-ALSO: stage_local_start_code_server in apps/desktop/scripts/build-macos-app.sh.
             */
             if let Ok(local_start_root) =

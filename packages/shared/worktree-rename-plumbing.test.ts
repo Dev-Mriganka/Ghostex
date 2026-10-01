@@ -29,7 +29,7 @@ import { describe, expect, test } from 'vitest';
  * the new form. Nothing else about what is asserted changed.
  *
  * There is also a real typecheck over this tree now — `apps/desktop/tsconfig.json`,
- * run by `bun run desktop:typecheck` — but it is not a substitute for this file:
+ * run by `cargo xtask desktop-typecheck` — but it is not a substitute for this file:
  * it cannot see the Rust bridge or the modal host, and a missing dispatch arm is
  * still valid TypeScript.
  *

@@ -3,3 +3,7 @@
 # Line tables retain file/line backtraces; dev-derived test profiles inherit this setting.
 [profile.dev]
 debug = "line-tables-only"
+
+# CDXC:Build 2026-10-01 SEE-ALSO: tooling/xtask/Cargo.toml (`cargo xtask <command>` runs the repository's dev, start and build commands).
+[alias]
+xtask = "run --quiet --manifest-path tooling/xtask/Cargo.toml --"

@@ -41,7 +41,7 @@ build_cef_sidebar_bundle_if_needed() {
 	fi
 	(
 		cd "$REPO_ROOT"
-		bun run build:sidebar-css
+		bunx tailwindcss -i packages/core-ui/styles/shadcn.css -o packages/core-ui/styles/shadcn.generated.css --minify
 		bunx vite build --config "$GPUI_DIR/vite.config.ts"
 	)
 	write_cache_stamp "cef-sidebar-bundle" "$bundle_digest"

@@ -30,7 +30,7 @@ export default defineConfig({
   test: {
     /*
      * CDXC:Release 2026-10-01 WHY: release:test runs only the release tooling's own suites (and the
-     * raw-source check of the published cask validator); the product suites stay in `bun run test`.
+     * raw-source check of the published cask validator); the product suites stay in `cargo xtask test`.
      */
     include: ['tooling/**/*.test.{mjs,ts}', 'apps/desktop/views/ghostex-cli-wrapper-source.test.ts'],
     /*

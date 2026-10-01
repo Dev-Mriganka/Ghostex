@@ -1,6 +1,6 @@
 /**
  * CDXC:CodeEditor 2026-09-30 WHY:
- * A Linux dev build (`bun run start`, `build-linux-app.sh` without GHOSTEX_ON_DEMAND_ASSETS) had no sealed manifest, and `.dependencies/code-server` is only a source checkout here, so the Code view had nothing to launch or install.
+ * A Linux dev build (`cargo xtask start`, `build-linux-app.sh` without GHOSTEX_ON_DEMAND_ASSETS) had no sealed manifest, and `.dependencies/code-server` is only a source checkout here, so the Code view had nothing to launch or install.
  * This seals a manifest naming the published code-server component whose identity matches the checkout, reading its size and digest from the release listing instead of downloading the 224 MB archive; the app then installs it on demand, or reuses the copy a packaged Ghostex already put in the shared component store.
  * SEE-ALSO: apps/desktop/scripts/build-linux-app.sh, tooling/release-gpui/code-server-component-identity.mjs, apps/desktop/src/app/helpers/source_server/code_server.rs.
  */

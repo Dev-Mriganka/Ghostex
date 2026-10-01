@@ -43,7 +43,7 @@ pub(crate) fn gxserver_post_typed_operation(
     gxserver_post_typed_operation_across_restart(path, params, timeout, Duration::ZERO)
 }
 
-/// CDXC:ServerDaemon 2026-09-29 WHY: `bun run start:server` and gxserver updates replace the daemon in place, leaving the port closed for about two seconds while the app stays open. A background caller that meets that gap waits up to `restart_wait` for the port to open again instead of failing, because a single refused connect put "gxserver is not reachable" on the chat's error line although gxserver was back a moment later. Only a refused connect is waited out: the request never reached gxserver, so sending it once the port opens cannot run it twice. UI-thread callers keep `Duration::ZERO`.
+/// CDXC:ServerDaemon 2026-09-29 WHY: `cargo xtask start-server` and gxserver updates replace the daemon in place, leaving the port closed for about two seconds while the app stays open. A background caller that meets that gap waits up to `restart_wait` for the port to open again instead of failing, because a single refused connect put "gxserver is not reachable" on the chat's error line although gxserver was back a moment later. Only a refused connect is waited out: the request never reached gxserver, so sending it once the port opens cannot run it twice. UI-thread callers keep `Duration::ZERO`.
 pub(crate) fn gxserver_post_typed_operation_across_restart(
     path: &str,
     params: &serde_json::Value,

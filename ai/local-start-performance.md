@@ -1,4 +1,4 @@
-# Local start performance (`bun run start`, macOS)
+# Local start performance (`cargo xtask start`, macOS)
 
 Measured on the maintainer's M5 Pro (18 cores, 64GB, macOS 27) on 2026-09-22/23. The build half of the start (everything except install and launch) was run directly with the start's environment.
 
@@ -9,9 +9,11 @@ Measured on the maintainer's M5 Pro (18 cores, 64GB, macOS 27) on 2026-09-22/23.
 | Cold compile of the app crate | 315 CPU-seconds (opt-level 3) | 71 CPU-seconds (opt-level 0) |
 | Dev bundle size | 1.7GB | 1.1GB |
 
+The launcher moved from `tooling/start-gpui.mjs` (bun) to `cargo xtask start` on 2026-10-01 without changing either case. Measured back to back with `--build-only` while other agents were building (load 10 to 15): unchanged build half 6.2 to 6.5s with bun, 5.9 to 6.6s with the xtask; one-line Rust edit 17.5 to 18.6s with bun, 17.6 to 18.2s with the xtask. `cargo xtask`'s own freshness check costs about 0.4s, which the old launcher spent starting bun twice (once under lockf) and loading its modules.
+
 ## What the start does
 
-`tooling/start-gpui.mjs` re-runs itself under `build/ghostex-gpui-local-start.lock`, then runs, on macOS:
+`cargo xtask start` (`tooling/xtask/src/start/`) takes an flock on `build/ghostex-gpui-local-start.lock`, then runs, on macOS:
 
 1. `apps/desktop/scripts/build-macos-rust.sh` and `build-macos-sidebar.sh` in the background.
 2. `prepare-macos-runtime.sh` in the foreground: zmx (Zig), code-server staging, Portless, gxserver (cargo), into `apps/desktop/runtime/macos/Web`.
@@ -29,8 +31,8 @@ Every expensive step sits behind a content-hash stamp in `build/<arch>/build-cac
 - **gxserver kept when unchanged.** The build identity hashes the whole staged package, so a match means the running daemon is already the code the start would launch.
 - **Linux gxserver packages** stay in dev bundles because remote install reads them from there; they are rsynced instead of deleted and re-copied.
 - **Installs stay in place, never hand-made.** On 2026-09-21 macOS App Management blocked the sync into `/Applications/Ghostex.app` halfway. An agent then hand-installed every later build as `Ghostex-new.app` and moved the old app aside as `Ghostex.old-<time>.app`, leaving five 1.7GB copies in two days. The start now probes write access before closing the app and stops with the App Management fix if it is blocked. It deletes leftover copies that carry the app's bundle id and are not running. It does not install by swapping in a new bundle because a kept gxserver and live zmx sessions run from files inside the installed one.
-- **Incremental cache pruning** (`CDXC:Build 2026-09-23 DECISION` in `start-gpui.mjs`). Every build configuration gets its own rustc incremental cache and nothing removed old ones: 26GB across 387 caches on 2026-09-23. Each start keeps the newest cache per crate in every `incremental` folder of both targets and leaves anything touched in the last 30 minutes alone. The trade-off is that switching between configurations (for example `--optimized` and back) starts that configuration's cache from cold.
-- Smaller items: the storage check and signing-identity probe run only in the locked child; app PIDs come from `lsappinfo` (~0.01s) instead of `osascript` + System Events (~0.27s) in the 100ms polls; the app icon is stamped; `reportCompressedSize` is off in `apps/desktop/vite.config.ts`.
+- **Incremental cache pruning** (`CDXC:Build 2026-09-23 DECISION` in `tooling/xtask/src/start/mod.rs`). Every build configuration gets its own rustc incremental cache and nothing removed old ones: 26GB across 387 caches on 2026-09-23. Each start keeps the newest cache per crate in every `incremental` folder of both targets and leaves anything touched in the last 30 minutes alone. The trade-off is that switching between configurations (for example `--optimized` and back) starts that configuration's cache from cold.
+- Smaller items: the storage check and signing-identity probe run once, under the lock; app PIDs come from `lsappinfo` (~0.01s) instead of `osascript` + System Events (~0.27s) in the 100ms polls; the app icon is stamped; `reportCompressedSize` is off in `apps/desktop/vite.config.ts`.
 
 ## Rejected or deferred (checked 2026-09-22)
 

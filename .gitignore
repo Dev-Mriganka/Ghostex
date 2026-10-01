@@ -100,3 +100,6 @@ __pycache__/
 server/NONE
 apps/gpui-web/www/public/
 apps/web/
+
+# Build output of the `cargo xtask` crate (tooling/xtask).
+tooling/xtask/target/

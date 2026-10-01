@@ -16,6 +16,7 @@ The full-repo formatting pass is:
 (cd apps/history-cli && cargo fmt)
 (cd packages/find && cargo fmt)
 (cd packages/paths && cargo fmt)
+cargo fmt --manifest-path tooling/xtask/Cargo.toml
 
 # TS/JS/JSON/MD/YAML — app-owned trees only, never .dependencies/ or generated output
 bunx prettier --write "apps/desktop/{sidebar,views,test,scripts}/**/*.{ts,tsx,mjs,md}" \

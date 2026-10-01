@@ -1,6 +1,6 @@
 # Managed client storage
 
-All first-party browser persistence goes through this package. `catalog.ts` owns every namespace, its feature owner and source, schema version, backend, byte/count limits, retention, and disposal policy. Direct browser storage access is confined to the two adapters and rejected by `bun run storage:check` in typechecks, builds, and CI.
+All first-party browser persistence goes through this package. `catalog.ts` owns every namespace, its feature owner and source, schema version, backend, byte/count limits, retention, and disposal policy. Direct browser storage access is confined to the two adapters and rejected by `cargo xtask storage-check` in typechecks, builds, and CI.
 
 ## Choosing a store
 

@@ -239,22 +239,20 @@ describe('active WSL2 code-server consumer contract', () => {
     expect(windowsConsumer).toContain('code_server_payload_shell_validation_script');
   });
 
-  test('routes start-gpui through the WSL builder and downloads the public component archive plus sidecar', () => {
-    const launcher = repoFile('tooling/start-gpui.mjs');
+  test('routes the start through the WSL builder and downloads the public component archive plus sidecar', () => {
+    const launcher = repoFile('tooling/xtask/src/start/mod.rs');
+    const windows = repoFile('tooling/xtask/src/start/windows.rs');
 
-    expect(launcher).toContain("isWsl\n        ? 'build-windows-app-wsl.sh'\n        : 'build-windows-app.ps1'");
-    expect(launcher).toContain(
-      "codeServerComponentIdentity({ codeServerRoot: path.join(repoRoot, '.dependencies/code-server') })"
-    );
-    expect(launcher).toContain(
-      'codeServerComponentNames(windowsCodeServerIdentity.componentVersion, `linux-${windowsArch}`)'
-    );
-    expect(launcher).toContain('windowsCodeServerNames.archiveName');
-    expect(launcher).toContain('windowsCodeServerNames.downloadTag');
-    expect(launcher).toContain('componentsGithubRepo(startEnvironment)');
-    expect(launcher).toContain('hasWindowsWslCodeServerArchive !== hasWindowsWslCodeServerSidecar');
-    expect(launcher).toContain('GHOSTEX_CODE_SERVER_COMPONENT_VERSION: windowsCodeServerIdentity.componentVersion');
-    expect(launcher).not.toContain('Windows WSL2 Source runtime extraction');
+    expect(launcher).toMatch(/if self\.is_wsl \{\s*"build-windows-app-wsl\.sh"\s*\} else \{\s*"build-windows-app\.ps1"/);
+    expect(windows).toContain('"tooling/release-gpui/code-server-component-identity.mjs"');
+    expect(windows).toContain('".dependencies/code-server"');
+    expect(windows).toContain('&format!("linux-{arch}")');
+    expect(windows).toContain('field("archive_name")');
+    expect(windows).toContain('field("download_tag")');
+    expect(windows).toContain('"tooling/release-gpui/components-repo.mjs"');
+    expect(windows).toContain('if has_archive != has_sidecar {');
+    expect(windows).toContain('"GHOSTEX_CODE_SERVER_COMPONENT_VERSION"');
+    expect(windows).not.toContain('Windows WSL2 Source runtime extraction');
   });
 
   test('authenticates the exact source-derived archive before WSL staging or component repackaging', () => {

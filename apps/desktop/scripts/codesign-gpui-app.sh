@@ -341,7 +341,7 @@ codesign \
 	--sign "$CODE_SIGN_IDENTITY" \
 	"$APP_PATH"
 
-# Local starts skip this: tooling/start-gpui.mjs deep-verifies the installed copy right after the sync and re-signs it if that fails.
+# Local starts skip this: `cargo xtask start` deep-verifies the installed copy right after the sync and re-signs it if that fails.
 if [[ "${GHOSTEX_LOCAL_START:-0}" != "1" ]]; then
 	codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 fi

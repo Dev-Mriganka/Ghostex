@@ -281,7 +281,7 @@ impl GhostexGpuiApp {
                     this.show_gpui_gxserver_bootstrap_toast(
                         "error",
                         "gxserver unavailable",
-                        "Bundled gxserver binary is missing. Run `bun run build` for development, or reinstall Ghostex so Web/gxserver is present.",
+                        "Bundled gxserver binary is missing. Run `cargo xtask build` for development, or reinstall Ghostex so Web/gxserver is present.",
                         true,
                         cx,
                     );

@@ -17,4 +17,4 @@ jobs:
         with:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
-      - run: bun run storage:check
+      - run: bun tooling/client-storage/check.mjs

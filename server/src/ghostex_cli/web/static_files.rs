@@ -185,7 +185,7 @@ pub(crate) fn is_hashed_asset(path: &Path) -> bool {
 }
 
 pub(crate) fn web_not_built_response() -> Response<Body> {
-    let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Ghostex Web</title></head><body><h1>The Ghostex web app is not built</h1><p>Run <code>bun run web:build</code> from the Ghostex checkout.</p></body></html>";
+    let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>Ghostex Web</title></head><body><h1>The Ghostex web app is not built</h1><p>Run <code>cargo xtask web-build</code> from the Ghostex checkout.</p></body></html>";
     let mut response = Response::new(Body::from(html));
     response.headers_mut().insert(
         header::CONTENT_TYPE,

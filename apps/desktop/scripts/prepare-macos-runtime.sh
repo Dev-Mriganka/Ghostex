@@ -44,7 +44,7 @@ GHOSTEX_APP_VARIANT="${GHOSTEX_APP_VARIANT:-prod}"
 case "$GHOSTEX_APP_VARIANT" in
 prod) ;;
 dev)
-	# CDXC:Build 2026-06-09-09:27: Ghostex-dev builds were removed because agents were invoking the dev app path by mistake. Fail before toolchain checks or Xcode generation so direct build commands cannot create Ghostex-dev outside `bun run start`.
+	# CDXC:Build 2026-06-09-09:27: Ghostex-dev builds were removed because agents were invoking the dev app path by mistake. Fail before toolchain checks or Xcode generation so direct build commands cannot create Ghostex-dev outside `cargo xtask start`.
 	echo "Ghostex-dev builds were removed. Use GHOSTEX_APP_VARIANT=prod or unset it." >&2
 	exit 1
 	;;
@@ -111,7 +111,7 @@ case "$(printf '%s' "$GHOSTEX_ON_DEMAND_ASSETS" | tr '[:upper:]' '[:lower:]')" i
 	GHOSTEX_ON_DEMAND_ASSETS=0
 	;;
 esac
-# CDXC:Build 2026-06-22-23:23: `bun run start` should stay stable for full maintainer checkouts while allowing contributor clones that omit optional submodules. Enable missing-optional-submodule skips only for local starts by default; release and direct strict builds must keep failing when Source resources are absent.
+# CDXC:Build 2026-06-22-23:23: `cargo xtask start` should stay stable for full maintainer checkouts while allowing contributor clones that omit optional submodules. Enable missing-optional-submodule skips only for local starts by default; release and direct strict builds must keep failing when Source resources are absent.
 GHOSTEX_ALLOW_MISSING_OPTIONAL_SUBMODULES="${GHOSTEX_ALLOW_MISSING_OPTIONAL_SUBMODULES:-${GHOSTEX_LOCAL_START:-0}}"
 case "$(printf '%s' "$GHOSTEX_ALLOW_MISSING_OPTIONAL_SUBMODULES" | tr '[:upper:]' '[:lower:]')" in
 1 | true | yes | on)
@@ -140,7 +140,7 @@ acquire_local_start_lock_if_needed() {
 	fi
 	local lock_file="$REPO_ROOT/build/ghostex-local-start.lock"
 	mkdir -p "$(dirname "$lock_file")"
-	# CDXC:Build 2026-06-11-18:59: Direct native builds mutate the same DerivedData app bundle that `bun run start` later mirrors into /Applications. Re-enter under the local-start lock unless the launcher already owns it, so a direct build cannot remove generated CEF payloads while another process installs the signed app.
+	# CDXC:Build 2026-06-11-18:59: Direct native builds mutate the same DerivedData app bundle that `cargo xtask start` later mirrors into /Applications. Re-enter under the local-start lock unless the launcher already owns it, so a direct build cannot remove generated CEF payloads while another process installs the signed app.
 	exec /usr/bin/lockf -k "$lock_file" /usr/bin/env GHOSTEX_BUILD_LOCK_HELD=1 /bin/bash "$0" "$@"
 }
 
@@ -485,7 +485,7 @@ EOF
 	# Cargo tracks the whole dependency graph and its warm freshness check takes about 0.2 seconds.
 
 	# CDXC:Build 2026-06-24-20:22: Local start must fail before packaging when server no longer compiles. This function is called outside command substitution so `set -e` can abort on Cargo errors instead of stamping the current source digest and copying a stale daemon binary.
-	# CDXC:Build 2026-09-02: cargo discovers `.cargo/config.toml` from its working directory, not from `--manifest-path`, and `bun run start` runs this script from the repo root. Build from inside the server crate so `server/.cargo/config.toml` (sccache rustc-wrapper) applies; the target dir is still `$GXSERVER_RS_ROOT/target`, so the output paths above are unchanged.
+	# CDXC:Build 2026-09-02: cargo discovers `.cargo/config.toml` from its working directory, not from `--manifest-path`, and `cargo xtask start` runs this script from the repo root. Build from inside the server crate so `server/.cargo/config.toml` (sccache rustc-wrapper) applies; the target dir is still `$GXSERVER_RS_ROOT/target`, so the output paths above are unchanged.
 	# CDXC:Build 2026-09-04 WHY:
 	# gxserver is one 168k-line leaf crate, so every local start that touched
 	# server/ paid a full non-incremental release compile (~27s). The per-package
@@ -496,7 +496,7 @@ EOF
 	local -a cargo_profile_args=()
 	if [[ "${GHOSTEX_LOCAL_START:-0}" == "1" ]]; then
 		cargo_profile_args+=(--config 'profile.release.package.gxserver.incremental=true')
-		# CDXC:Build 2026-09-23 DECISION: local starts build the gxserver crate at opt-level 0 unless `bun run start --optimized`; dependencies keep release optimization. SEE-ALSO: build-macos-rust.sh.
+		# CDXC:Build 2026-09-23 DECISION: local starts build the gxserver crate at opt-level 0 unless `cargo xtask start --optimized`; dependencies keep release optimization. SEE-ALSO: build-macos-rust.sh.
 		if [[ "${GHOSTEX_START_OPTIMIZED:-0}" != "1" ]]; then
 			cargo_profile_args+=(--config 'profile.release.package.gxserver.opt-level=0')
 		fi
@@ -734,7 +734,7 @@ package_gxserver_rust_package() {
 	local package_dir="$1"
 	local rust_bin="$2"
 	local package_version="$3"
-	# CDXC:Release 2026-06-22-16:17: Local and release macOS builds no longer keep the deleted gxserver/ TypeScript source tree. Assemble the Rust daemon package directly from server, packages/shared/gxserver-protocol.ts, and app-owned tool binaries so `bun run start` never cds into gxserver/ for the default packaged daemon.
+	# CDXC:Release 2026-06-22-16:17: Local and release macOS builds no longer keep the deleted gxserver/ TypeScript source tree. Assemble the Rust daemon package directly from server, packages/shared/gxserver-protocol.ts, and app-owned tool binaries so `cargo xtask start` never cds into gxserver/ for the default packaged daemon.
 	# CDXC:Build 2026-06-22-23:23: zmx remains required.
 	rm -rf "$package_dir"
 	mkdir -p "$package_dir/bin"
@@ -1129,10 +1129,10 @@ if [[ "${GHOSTEX_MACOS_CODE_SERVER_COMPONENT_ONLY:-0}" == "1" ]]; then
 fi
 
 # CDXC:Build 2026-09-24 SEE-ALSO:
-# `bun run start:server` (tooling/start-gxserver.mjs) rebuilds only the gxserver package through this mode and installs it into the running app. It packages the zmx binary the last full start staged; building zmx stays the full start's job.
+# `cargo xtask start-server` (tooling/xtask/src/start_server.rs) rebuilds only the gxserver package through this mode and installs it into the running app. It packages the zmx binary the last full start staged; building zmx stays the full start's job.
 if [[ "${GHOSTEX_MACOS_GXSERVER_ONLY:-0}" == "1" ]]; then
 	if [[ ! -x "$WEB_DIR/bin/zmx" ]]; then
-		echo "The staged zmx binary is missing: $WEB_DIR/bin/zmx. Run \`bun run start\` once first." >&2
+		echo "The staged zmx binary is missing: $WEB_DIR/bin/zmx. Run \`cargo xtask start\` once first." >&2
 		exit 1
 	fi
 	package_gxserver_if_needed
@@ -1144,7 +1144,7 @@ if [[ "${GHOSTEX_MACOS_GXSERVER_ONLY:-0}" == "1" ]]; then
 	exit 0
 fi
 
-# CDXC:Build 2026-05-29-11:24: `bun run start` builds zmx and its Ghostty Zig dependency.
+# CDXC:Build 2026-05-29-11:24: `cargo xtask start` builds zmx and its Ghostty Zig dependency.
 # Both are on Zig 0.16 now (zmx was re-ported onto upstream/main for 0.16, matching the
 # vendored ghostty pin), so the repo needs exactly one Zig toolchain. An explicit `ZIG` still
 # wins; otherwise prefer a 0.16 binary from PATH/Homebrew/mise instead of blindly taking the
@@ -1187,7 +1187,7 @@ Selected Zig:
 Install a 0.16 toolchain or set ZIG explicitly:
   brew install zig
   mise install zig@0.16.0
-  ZIG=/opt/homebrew/bin/zig bun run start
+  ZIG=/opt/homebrew/bin/zig cargo xtask start
 EOF
 	exit 1
 fi
@@ -1217,7 +1217,7 @@ Git cannot move a submodule working tree with the gitlink, so your checkout
 stayed at the old path and .dependencies/zmx is empty.
 
 Unblock this build without moving anything:
-  ZMX_ROOT=$ZMX_LEGACY_ROOT bun run start
+  ZMX_ROOT=$ZMX_LEGACY_ROOT cargo xtask start
 
 Repair the checkout (keeps the built zig-out payload):
   cd $REPO_ROOT

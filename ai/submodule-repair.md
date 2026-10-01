@@ -7,7 +7,7 @@ The restructure also moved the `code-server` and `zmx` **submodule** gitlinks in
 Fast unblock, no move needed (`ZMX_ROOT=` for zmx):
 
 ```sh
-GHOSTEX_CODE_SERVER_ROOT=$PWD/code-server bun run start
+GHOSTEX_CODE_SERVER_ROOT=$PWD/code-server cargo xtask start
 ```
 
 Proper repair — move the tree and fix its git pointers. code-server needs **four** fixes because of the nested `lib/vscode` submodule; repairing them is not cosmetic, since a broken gitdir degrades `rev-parse HEAD` to `development` in the build fingerprint and forces a full VS Code rebuild:

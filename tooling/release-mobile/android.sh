@@ -33,7 +33,7 @@ export ORG_GRADLE_PROJECT_ghostexReleaseKeyPassword="$GHOSTEX_ANDROID_SIGNING_KE
 # packages/shared/session-chat-agents.ts. Regenerate it from the release checkout so a
 # committed list from an earlier revision can never reach the APK.
 cd "$REPO_ROOT"
-bun run generate:mobile-chat-agents
+node apps/mobile/app/scripts/generate-chat-agents.mjs
 
 cd "$MOBILE_ROOT"
 bunx expo prebuild --platform android --no-install

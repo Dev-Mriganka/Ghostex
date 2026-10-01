@@ -72,7 +72,7 @@ pub(crate) fn gpui_finish_desktop_control_setup(
 
 pub(crate) fn gpui_repair_ghostex_cli_commands() -> Result<String, String> {
     if gpui_uses_isolated_storage() {
-        return Err("This isolated app does not replace the shared ghostex or gx commands. Use bun run gx:isolated from its checkout.".to_string());
+        return Err("This isolated app does not replace the shared ghostex or gx commands. Use cargo xtask gx-isolated from its checkout.".to_string());
     }
     /*
     CDXC:Cli 2026-06-24-12:56:

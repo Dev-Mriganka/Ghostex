@@ -1,6 +1,6 @@
 /**
  * CDXC:RemoteMachines 2026-10-01 WHY:
- * A macOS `bun run start` bundled whatever Linux gxserver package it found, and nothing on a Mac rebuilds one, so the dev app kept uploading a package from 2026-08-05 whose `gxserver setup` rejected `--analytics-role` and every Linux Connect failed with "Remote gxserver install failed". When no locally built package matches the checkout, the local start stages the published package of the checkout's release (the latest release when that version is not out yet), verified against GitHub's asset digest and cached per tag, and never the leftover copy.
+ * A macOS `cargo xtask start` bundled whatever Linux gxserver package it found, and nothing on a Mac rebuilds one, so the dev app kept uploading a package from 2026-08-05 whose `gxserver setup` rejected `--analytics-role` and every Linux Connect failed with "Remote gxserver install failed". When no locally built package matches the checkout, the local start stages the published package of the checkout's release (the latest release when that version is not out yet), verified against GitHub's asset digest and cached per tag, and never the leftover copy.
  * SEE-ALSO: `resolve_local_start_remote_gxserver_linux_package` in apps/desktop/scripts/build-macos-app.sh.
  */
 import { spawnSync } from 'node:child_process';
