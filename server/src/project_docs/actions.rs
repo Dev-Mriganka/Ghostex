@@ -159,19 +159,6 @@ pub(super) fn run_action(
                 "requestId": request_id,
             }))
         }
-        "openLink" => {
-            let path = docs_path(context, string_param(params, "path").as_deref())?;
-            let target = existing_path(&path)?;
-            validate_accessible_path(&path, context)?;
-            if path.inner.is_empty() || !target.is_file() {
-                return Err("Select a file to open.".to_string());
-            }
-            Ok(json!({
-                "action": action,
-                "linkPath": crate::file_links::link_path(path.root, &path.inner),
-                "requestId": request_id,
-            }))
-        }
         _ => Err("Unsupported Files action.".to_string()),
     }
 }

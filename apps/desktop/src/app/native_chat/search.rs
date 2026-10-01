@@ -6,10 +6,9 @@
 //! `extras/transcript_search.rs` in gx-chat-core), so GPUI only draws the bar,
 //! scrolls the list to the selected row and tints the rows that matched.
 //!
-//! Every occurrence of the query in a matching row's text is highlighted, the
-//! selected one more strongly, and the row is tinted too (every matching row
-//! faintly, the selected one more), which is what still marks a match in text
-//! the row does not show as Markdown (a tool name, a folded group).
+//! GPUI's markdown TextView cannot highlight a range inside its own layout, so
+//! the highlight is row-level: every matching row takes a faint tint and the
+//! selected one a stronger one. React highlighted the exact characters.
 
 use super::{appearance::ChatAppearance, state::NativeChatView, transcript::text};
 use crate::app::native_chat::cursor::ChatCursor as _;
@@ -52,16 +51,6 @@ impl NativeChatView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.open_search(window, cx);
-        cx.stop_propagation();
-        window.prevent_default();
-    }
-
-    /// Shows the find bar with its query selected and gives it the keyboard.
-    ///
-    /// CDXC:SessionChat 2026-10-01 WHY:
-    /// The bar is drawn by the chat itself, and since keystrokes repaint only the composer's own view (composer_host.rs) nothing else draws the chat until the core's next snapshot, so the field Cmd+F focused stayed off screen for that round trip. The chat draws again at once.
-    pub(crate) fn open_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.invoke(json!({"type":"searchOpen"}), cx);
         self.search_pending_open = Some(true);
         self.ensure_search_input(window, cx);
@@ -72,7 +61,8 @@ impl NativeChatView {
                 input.set_selected_range(0..end, cx);
             });
         }
-        cx.notify();
+        cx.stop_propagation();
+        window.prevent_default();
     }
 
     /// Enter / Shift+Enter, the arrows and Escape while the field has focus.
@@ -139,44 +129,6 @@ impl NativeChatView {
         }
         self.search_scrolled_revision = revision;
         self.list.scroll_to_reveal_item(item as usize);
-        // CDXC:SessionChat 2026-10-01 WHY: `scroll_to_reveal_item` leaves a list that follows its tail following it, so a chat sitting at the bottom snapped straight back on its next layout and the selected match never came into view. `scroll_to` the same offset stops the following, and scrolling back to the bottom resumes it as usual.
-        self.list.scroll_to(self.list.logical_scroll_top());
-    }
-
-    /// Starts drawing row `index` of the main transcript: when it holds a match, its text views
-    /// highlight the query, numbering the occurrences across the row so the selected one (the
-    /// core's `activeInRow`) is marked and scrolled into view once per navigation.
-    ///
-    /// CDXC:SessionChat 2026-10-01 DECISION:
-    /// User: "Can we please highlight the word that was found in the message?" The tinted row alone did not show where the query was in a long reply. Every occurrence gets a background behind its letters, the selected one (n of the total) a stronger one, the way a browser's find does.
-    pub(super) fn begin_row_find(&mut self, index: usize, main: bool, p: &ChatAppearance) {
-        self.row_find = None;
-        let search = &self.snapshot["transcriptSearch"];
-        if !main || !search.is_object() {
-            return;
-        }
-        let row = index as u64;
-        if !search["items"]
-            .as_array()
-            .is_some_and(|items| items.iter().any(|value| value.as_u64() == Some(row)))
-        {
-            return;
-        }
-        let query = text(search, "query");
-        if query.trim().is_empty() {
-            return;
-        }
-        let (background, active_background) = search_highlight_colors(p);
-        let active = (search["activeItem"].as_u64() == Some(row))
-            .then(|| search["activeInRow"].as_u64())
-            .flatten()
-            .map(|occurrence| occurrence as usize);
-        self.row_find = Some(
-            gpui_component::text::TextFind::new(query, background, active_background)
-                .counter(Default::default())
-                .active(active)
-                .reveal(search["revision"].as_u64().unwrap_or(0)),
-        );
     }
 
     pub(super) fn search_row_tint(&self, index: usize, p: &ChatAppearance) -> Option<gpui::Hsla> {
@@ -325,17 +277,5 @@ impl NativeChatView {
                 )
                 .into_any_element(),
         )
-    }
-}
-
-/// The find highlight behind each occurrence and the stronger one behind the selected occurrence:
-/// a browser find's yellow and orange, kept translucent so the text stays readable on either theme.
-fn search_highlight_colors(p: &ChatAppearance) -> (gpui::Hsla, gpui::Hsla) {
-    let yellow = gpui::Hsla::from(gpui::rgb(0xfacc15));
-    let orange = gpui::Hsla::from(gpui::rgb(0xf97316));
-    if p.light {
-        (yellow.opacity(0.45), orange.opacity(0.45))
-    } else {
-        (yellow.opacity(0.3), orange.opacity(0.6))
     }
 }

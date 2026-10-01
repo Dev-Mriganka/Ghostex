@@ -23,7 +23,6 @@ pub mod delayed_sends;
 pub mod domain;
 pub mod events;
 pub mod extensions;
-pub(crate) mod file_links;
 pub mod ghostex_cli;
 pub mod git_ship_workflow;
 pub mod global_project_defaults;

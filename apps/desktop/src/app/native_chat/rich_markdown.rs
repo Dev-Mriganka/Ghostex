@@ -1,6 +1,5 @@
 use super::{appearance::ChatAppearance, state::NativeChatView};
 use crate::app::native_chat::cursor::ChatCursor as _;
-use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, ClipboardItem, FontWeight, InteractiveElement as _, IntoElement,
     ParentElement as _, StatefulInteractiveElement as _, Styled as _, div, px, rgb, svg,
@@ -423,7 +422,6 @@ impl NativeChatView {
         };
         let header_wraps = wraps.clone();
         TextView::markdown(id, content)
-            .when_some(self.row_find.clone(), |view, find| view.find(find))
             .min_w_0()
             .max_w(gpui::relative(1.0))
             .link_presentation(move |href, label| {

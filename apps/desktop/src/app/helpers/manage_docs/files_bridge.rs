@@ -60,8 +60,7 @@ pub(crate) enum ManageFilesBridgeSideEffect {
     AddToSessionContext(String),
     CopyFullPath(String),
     OpenInCodeView(PathBuf),
-    /// The file, and the app to open it with when the user picked one under Open With.
-    OpenWithSystemApp(PathBuf, Option<PathBuf>),
+    OpenWithSystemApp(PathBuf),
     RevealInFinder(PathBuf),
 }
 
@@ -102,15 +101,10 @@ pub(crate) fn manage_files_bridge_outcome(
                 .and_then(|object| object.remove("codeViewPath"))
                 .and_then(|value| value.as_str().map(PathBuf::from))
                 .map(ManageFilesBridgeSideEffect::OpenInCodeView),
-            "openWithSystemApp" => object.and_then(|object| {
-                let app = object
-                    .remove("appPath")
-                    .and_then(|value| value.as_str().map(PathBuf::from));
-                object
-                    .remove("openPath")
-                    .and_then(|value| value.as_str().map(PathBuf::from))
-                    .map(|path| ManageFilesBridgeSideEffect::OpenWithSystemApp(path, app))
-            }),
+            "openWithSystemApp" => object
+                .and_then(|object| object.remove("openPath"))
+                .and_then(|value| value.as_str().map(PathBuf::from))
+                .map(ManageFilesBridgeSideEffect::OpenWithSystemApp),
             _ => None,
         }
     };
@@ -219,7 +213,6 @@ pub(crate) fn manage_files_bridge_result(
             }
             return Ok(serde_json::json!({
                 "action": action,
-                "appPath": manage_request_string(request, "appPath"),
                 "openPath": target.to_string_lossy(),
                 "requestId": request_id,
             }));

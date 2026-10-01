@@ -148,6 +148,7 @@ impl GhostexGpuiApp {
             && docked_frame.opening
             && self.native_docs_drawer_shown();
         self.native_docs_sync_drawer(layout.overlay || pinning, !layout.docked, view, cx);
+        let restore = (!layout.visible()).then(|| self.render_native_docs_restore_button(&p, cx));
         let header_bottom = super::document_view::HEADER_BOUNDS
             .with(|cell| cell.get())
             .bottom();
@@ -202,6 +203,7 @@ impl GhostexGpuiApp {
                 .child(probe)
                 .child(div().flex_1().min_w_0().h_full().child(document))
                 .children(docked_files)
+                .children(restore)
                 .children(toolbar)
                 .children(notes_list)
                 .children(note_preview)
@@ -291,9 +293,8 @@ impl GhostexGpuiApp {
         self.native_docs_notify(cx);
     }
 
-    /// The header's Show files button, shown while the list is hidden: hovering peeks, clicking
-    /// shows it.
-    pub(super) fn render_native_docs_restore_button(
+    /// The corner button shown while the list is hidden: hovering peeks, clicking shows it.
+    fn render_native_docs_restore_button(
         &mut self,
         p: &DocsPalette,
         cx: &mut Context<Self>,
@@ -301,8 +302,9 @@ impl GhostexGpuiApp {
         let hover = p.control_hover;
         div()
             .id("native-docs-restore")
-            .relative()
-            .flex_none()
+            .absolute()
+            .top(px((35.0 - 27.0) / 2.0))
+            .right(px(9.0))
             .w(px(32.0))
             .h(px(27.0))
             .flex()

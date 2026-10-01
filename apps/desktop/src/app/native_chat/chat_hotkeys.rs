@@ -94,12 +94,8 @@ impl NativeChatView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.focus_requested = true;
         self.ensure_input(window, cx);
-        // An explicit request: it takes the keyboard even from the find bar or a note, which the
-        // queued `focus_requested` path leaves alone.
-        if let Some(input) = &self.input {
-            gpui::Focusable::focus_handle(input.read(cx), cx).focus(window, cx);
-        }
         cx.notify();
     }
 

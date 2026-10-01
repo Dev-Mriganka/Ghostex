@@ -148,8 +148,13 @@ impl GhostexGpuiApp {
             kind,
             DocsFileKind::Image | DocsFileKind::Video | DocsFileKind::Audio
         );
-        // CDXC:Docs 2026-10-01 WHY: the Show files button is the header row's last control, not a corner overlay drawn over the row's right end; a guessed reserve for the overlay let it cover the actions (the Open With arrow and Reload) whenever the row and the overlay disagreed.
-        let restore = (!layout.visible()).then(|| self.render_native_docs_restore_button(p, cx));
+        // The corner restore button sits over the header's right end while the list is not
+        // docked, so the actions keep clear of it.
+        let reserve = if layout.docked {
+            WORKAREA_HEADER_EDGE_PADDING
+        } else {
+            WORKAREA_HEADER_EDGE_PADDING + 32.0 + 13.0
+        };
         let copy_title = title.clone();
         let tooltip: SharedString = if copied {
             "Copied!".into()
@@ -177,7 +182,7 @@ impl GhostexGpuiApp {
             .gap(px(9.0))
             .h(px(ROW_STRIP_HEIGHT))
             .pl(px(13.0))
-            .pr(px(WORKAREA_HEADER_EDGE_PADDING))
+            .pr(px(reserve))
             .border_b_1()
             .border_color(p.border)
             .bg(p.chrome)
@@ -251,14 +256,9 @@ impl GhostexGpuiApp {
                     })),
             )
             .child(
-                // The meta strip gives way before the actions do, so a narrow view never pushes
-                // a button out of the row.
                 div()
                     .flex()
-                    .flex_shrink(1.0)
-                    .min_w_0()
-                    .overflow_hidden()
-                    .whitespace_nowrap()
+                    .flex_none()
                     .items_center()
                     .gap(px(9.0))
                     .text_size(px(10.5))
@@ -277,55 +277,6 @@ impl GhostexGpuiApp {
                     .items_center()
                     .gap(px(2.0))
                     .children(note_actions)
-                    .when(kind.opens_externally() && review.is_none(), |this| {
-                        let (open_path, menu_path) = (path.clone(), path.clone());
-                        this.child(
-                            header_tile(
-                                "native-docs-open-externally",
-                                header_icon("titlebar/external-link.svg", false, p),
-                                false,
-                                false,
-                                p,
-                            )
-                            .tooltip(|window, cx| titlebar_tooltip("Open in browser", window, cx))
-                            .on_click(cx.listener(
-                                move |this, _, _, cx| {
-                                    this.native_docs_open_externally(&open_path, None, cx);
-                                },
-                            )),
-                        )
-                        .child(
-                            header_tile(
-                                "native-docs-open-with",
-                                titlebar_svg_icon(
-                                    "titlebar/chevron-down.svg",
-                                    12.0,
-                                    p.toolbar_icon,
-                                ),
-                                false,
-                                false,
-                                p,
-                            )
-                            .w(px(16.0))
-                            .child(
-                                gpui::canvas(
-                                    |bounds, _, _| {
-                                        super::open_externally::OPEN_WITH_MENU_ANCHOR
-                                            .with(|cell| cell.set(bounds))
-                                    },
-                                    |_, _, _, _| {},
-                                )
-                                .absolute()
-                                .size_full(),
-                            )
-                            .tooltip(|window, cx| titlebar_tooltip("Open with", window, cx))
-                            .on_click(cx.listener(
-                                move |this, _, window, cx| {
-                                    this.show_native_docs_open_with_menu(&menu_path, window, cx);
-                                },
-                            )),
-                        )
-                    })
                     .when(kind == DocsFileKind::Html, |this| {
                         let annotate = html_annotate;
                         let toggle_path = path.clone();
@@ -474,8 +425,7 @@ impl GhostexGpuiApp {
                                 )),
                             )
                         },
-                    )
-                    .children(restore),
+                    ),
             )
             .into_any_element()
     }

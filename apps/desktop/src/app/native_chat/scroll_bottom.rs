@@ -105,17 +105,13 @@ pub(super) fn register(cx: &mut App) {
         .0
         .insert(shortcut.clone())
     {
-        // Bound in the focused field's context too, the way search and zoom are: a binding on
-        // `NativeChat` alone loses by depth to any binding of the same chord on the chat box.
-        cx.bind_keys(["NativeChat", "NativeChat > Input"].map(|context| {
-            KeyBinding::new(
-                &shortcut,
-                ScrollChatToBottom {
-                    shortcut: shortcut.clone(),
-                },
-                Some(context),
-            )
-        }));
+        cx.bind_keys([KeyBinding::new(
+            &shortcut,
+            ScrollChatToBottom {
+                shortcut: shortcut.clone(),
+            },
+            Some("NativeChat"),
+        )]);
     }
 }
 

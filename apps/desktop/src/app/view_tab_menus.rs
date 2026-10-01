@@ -176,7 +176,7 @@ impl GhostexGpuiApp {
         };
         menu = menu.menu_with_disabled(
             "Open externally",
-            !self.view_can_pop_out(mode),
+            self.view_pop_out_url(mode).is_none(),
             Box::new(PopOutGpuiViewTab { mode_index }),
         );
 

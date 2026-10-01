@@ -79,13 +79,6 @@ pub(super) async fn route_http(
         return crate::project_views::serve(path).await;
     }
 
-    if matches!(method, Method::GET | Method::PUT)
-        && path.starts_with(crate::file_links::FILE_LINK_ROUTE_PREFIX)
-    {
-        let query = parts.uri.query().map(str::to_string);
-        return crate::file_links::serve(method, path, query, parts.headers, body).await;
-    }
-
     let endpoint = endpoint_for(&path);
 
     /*

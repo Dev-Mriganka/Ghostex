@@ -57,18 +57,6 @@ pub struct CefBrowser {
     app_initiated_close: StdRc<Cell<bool>>,
 }
 
-/// The Files embed page (`manage.html?embed=1&path=…`) showing an Excalidraw drawing.
-#[cfg(target_os = "macos")]
-fn files_embed_shows_drawing(url: &str) -> bool {
-    url::Url::parse(url).is_ok_and(|url| {
-        url.query_pairs()
-            .any(|(key, value)| key == "embed" && value == "1")
-            && url.query_pairs().any(|(key, value)| {
-                key == "path" && value.to_ascii_lowercase().ends_with(".excalidraw")
-            })
-    })
-}
-
 impl CefBrowser {
     pub fn new(
         parent_native_view: *mut c_void,
@@ -109,13 +97,13 @@ impl CefBrowser {
         let keyboard_zoom_enabled =
             page_metadata_handler.is_some() || project_workarea_bridge_event_handler.is_some();
         /*
-        CDXC:CefRuntime 2026-10-01 DECISION:
-        User: disable two-finger zoom in every built-in CEF view and modal, including Code, but preserve it in browser pages and custom views (2026-09-09); and "please allow me to pinch zoom in/out in Excalidraw" (2026-10-01). The Files embed showing a drawing lets the pinch reach the page, which cancels the browser's page zoom and leaves the pinch to Excalidraw's own canvas zoom (apps/desktop/views/manage/embed.tsx). Browser pages and custom views use system page appearance; extension payloads also keep their own gesture behavior.
+        CDXC:CefRuntime 2026-09-09 DECISION:
+        User: disable two-finger zoom in every built-in CEF view and modal, including Code, but preserve it in browser pages and custom views.
+        Browser pages and custom views use system page appearance; extension payloads also keep their own gesture behavior.
         */
         #[cfg(target_os = "macos")]
-        let pinch_zoom_disabled = !uses_system_page_appearance
-            && extension_bridge_surface.is_none()
-            && !(manage_docs_resource_scope.is_some() && files_embed_shows_drawing(url));
+        let pinch_zoom_disabled =
+            !uses_system_page_appearance && extension_bridge_surface.is_none();
         /*
         CDXC:CefRuntime 2026-07-11:
         CreateBrowserSync returns null when the per-profile request context's
