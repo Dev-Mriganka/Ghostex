@@ -1,5 +1,5 @@
 //! The onboarding's own pictures: its line icon set (`ICON_PATHS` in
-//! packages/core-ui/onboarding/primitives.tsx), the Ghostex logo and the agent cursor. Icons are asked for as `icon/<name>/<stroke width x10>.svg` because the React icons take
+//! packages/core-ui/onboarding/primitives.tsx (deleted 2026-10-01)), the Ghostex logo and the agent cursor. Icons are asked for as `icon/<name>/<stroke width x10>.svg` because the React icons take
 //! a stroke width per use and GPUI tints an SVG by its alpha, so each width is its own picture.
 use std::borrow::Cow;
 

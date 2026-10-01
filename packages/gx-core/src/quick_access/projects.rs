@@ -1,5 +1,5 @@
 //! The Projects tab: the sorting, day grouping, search, rows and context menu of
-//! packages/core-ui/recent-projects-modal.tsx.
+//! packages/core-ui/recent-projects-modal.tsx (deleted 2026-10-01).
 //!
 //! Ported from `apps/desktop/sidebar/native-quick-access/projects.ts` (deleted with QuickJS on
 //! 2026-09-25; see git history).

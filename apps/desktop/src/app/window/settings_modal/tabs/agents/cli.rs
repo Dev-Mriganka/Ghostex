@@ -1,8 +1,8 @@
 //! The agent CLI install and update controls of Settings > Agents: the job lifecycle of
-//! packages/core-ui/agent-cli/use-agent-cli-job.ts (read, poll every 1.5s while a job is queued or
+//! packages/core-ui/agent-cli/use-agent-cli-job.ts (deleted 2026-10-01) (read, poll every 1.5s while a job is queued or
 //! running, `onInstalled` once per succeeded job id, a start whose reply failed still re-reads),
-//! the one `list` read of use-agent-cli-list.ts, the expanded row's `AgentCliControls`
-//! (controls.tsx) and the collapsed row's `AgentCliRowAction` (row-action.tsx), all over gxserver's
+//! the one `list` read of use-agent-cli-list.ts (deleted 2026-10-01), the expanded row's `AgentCliControls`
+//! (controls.tsx) and the collapsed row's `AgentCliRowAction` (row-action.tsx (deleted 2026-10-01)), all over gxserver's
 //! `/api/agentCliMaintenance` (server/src/agent_cli/endpoint.rs).
 //!
 //! CDXC:AgentProviders 2026-09-28 SEE-ALSO:
@@ -107,7 +107,7 @@ impl CliMethod {
         })
     }
 
-    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts).
+    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts (deleted 2026-10-01)).
     pub(super) fn tooltip(&self) -> String {
         self.unavailable_reason
             .clone()
@@ -434,7 +434,7 @@ impl AgentsTab {
             Err(error) => job.error = Some(error),
         }
         job.loading = false;
-        // CDXC:AgentProviders 2026-09-28 WHY (use-agent-cli-job.ts): polling is keyed on finished reads, so a queued job or a quiet installer keeps being re-read until the job ends.
+        // CDXC:AgentProviders 2026-09-28 WHY (use-agent-cli-job.ts (deleted 2026-10-01)): polling is keyed on finished reads, so a queued job or a quiet installer keeps being re-read until the job ends.
         job.poll = None;
         if job.state.as_ref().is_some_and(CliState::job_active) {
             let agent = agent_id.to_string();

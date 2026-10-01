@@ -7,8 +7,8 @@
  * CDXC:AppModal 2026-09-20 SEE-ALSO:
  * Both halves of this contract must change together: packages/gx-core/src/quick_access/wire.rs (the Rust structs that
  * build these snapshots) and apps/desktop/src/app/window/quick_access/model.rs (the Rust structs that read them).
- * The retained React twins are packages/core-ui/command-palette.tsx, recent-projects-modal.tsx,
- * previous-sessions-modal.tsx and stashed-prompts-modal.tsx, which still render Quick Access on web and mobile.
+ * The React twins (command-palette.tsx, recent-projects-modal.tsx, previous-sessions-modal.tsx and
+ * stashed-prompts-modal.tsx in packages/core-ui) were deleted on 2026-10-01 with the React modal host; see git history.
  */
 
 export type QuickAccessTabId = 'commands' | 'recentProjects' | 'recentSessions' | 'savedPrompts';

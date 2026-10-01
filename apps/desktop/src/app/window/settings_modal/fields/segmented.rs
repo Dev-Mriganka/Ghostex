@@ -1,4 +1,4 @@
-//! The Settings list-row `SegmentedControl` (packages/components/ui/segmented-control.tsx as
+//! The Settings list-row `SegmentedControl` (packages/components/ui/segmented-control.tsx (deleted 2026-10-01) as
 //! `.settings-list-row-control [data-slot='segmented-control']` restyles it: a transparent tray
 //! with a hairline edge, 9px radius and 3px inset, 2px between segments, and the pressed segment
 //! as its own 6px-rounded 13% foreground fill), and the fields built on it.

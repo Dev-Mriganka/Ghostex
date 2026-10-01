@@ -26,9 +26,8 @@ import { pathToFileURL } from 'node:url';
  resolves inside the apps/mobile/app submodule) is not an import of the
  generator itself, and reporting it here would be a false positive.
  The cost is that source assembled from template strings and handed to a
- bundler - tooling/shiki-classic-assets.mjs builds an esbuild stdin entry that
- imports `@shikijs/themes` - is outside this scan; that package is declared in
- the root package.json by hand for the same reason esbuild is.
+ bundler is outside this scan; such packages have to be declared in the root
+ package.json by hand, the same as esbuild.
 */
 
 const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);

@@ -1,4 +1,4 @@
-//! The Agents panel's scan console (previews/agent-scan-log.tsx, `.term` in styles/agents.css).
+//! The Agents panel's scan console (previews/agent-scan-log.tsx (deleted 2026-10-01), `.term` in styles/agents.css).
 //!
 //! CDXC:Onboarding 2026-09-11 WHY:
 //! The prototype replayed a scripted scan with fake timestamps. Every line here is stamped with the

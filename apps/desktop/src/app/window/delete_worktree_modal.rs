@@ -1,9 +1,9 @@
 //! Native GPUI Delete Worktree confirmation, the desktop twin of the React
-//! `WorktreeDeleteModal` in packages/core-ui/worktree-delete-modal.tsx.
+//! `WorktreeDeleteModal` in packages/core-ui/worktree-delete-modal.tsx (deleted 2026-10-01).
 //!
 //! CDXC:Worktrees 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt as native GPUI windows and each one must match its React twin 1 to 1 (layout, copy, colors, spacing, states and keys) in both appearances. This dialog keeps the legacy `.ghostex-settings-shadcn command-config-modal-shadcn` skin the React one wears rather than the newer `.gx-app-modal` shell: a 720px dialog centered at the top of the 760px window, square checkboxes, 650/700 weights and hairline dividers.
-//! SEE-ALSO: packages/core-ui/worktree-delete-modal.tsx and the `.worktree-delete-*` rules in packages/core-ui/styles/modals.css (the React twin mirrored below), apps/desktop/src/app/window/native_modal_kit/ (`ModalLegacyPalette` and the legacy shell, checkbox and buttons), apps/desktop/src/app/delete_worktree_modal_lifecycle.rs (open, close, sidebar bridge), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/worktree-delete-modal.tsx (deleted 2026-10-01) and the `.worktree-delete-*` rules in packages/core-ui/styles/modals.css (the React twin mirrored below), apps/desktop/src/app/window/native_modal_kit/ (`ModalLegacyPalette` and the legacy shell, checkbox and buttons), apps/desktop/src/app/delete_worktree_modal_lifecycle.rs (open, close, sidebar bridge), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
 use super::native_modal_kit::*;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{

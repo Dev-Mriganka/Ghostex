@@ -1,11 +1,11 @@
 //! The Actions page's data: the hydrate's `SidebarCommandButton`s, the editor draft
 //! (`SettingsCommandDraft`), the title rules and the draft order kept while a reorder is in
-//! flight (packages/core-ui/settings-modal/tabs/actions.tsx and drag-data.ts).
+//! flight (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01) and drag-data.ts).
 use serde_json::{Map, Value, json};
 
 /// `SettingsCommandScope`.
 ///
-/// CDXC:AgentLauncher 2026-08-01 SEE-ALSO: Global Actions (gxserver) and Project Actions (project metadata) are one implementation that differs only in the bridge message types and the copy (packages/core-ui/settings-modal/tabs/actions.tsx).
+/// CDXC:AgentLauncher 2026-08-01 SEE-ALSO: Global Actions (gxserver) and Project Actions (project metadata) are one implementation that differs only in the bridge message types and the copy (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum CommandScope {
     Global,

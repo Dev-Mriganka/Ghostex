@@ -1,4 +1,4 @@
-//! `TitlebarAccountUsageSection` (accounts/titlebar-settings-section.tsx): which saved accounts
+//! `TitlebarAccountUsageSection` (accounts/titlebar-settings-section.tsx (deleted 2026-10-01)): which saved accounts
 //! show their usage at the bottom of the sidebar, the same stars as Settings > Accounts.
 //!
 //! CDXC:Extensions 2026-09-10 DECISION (see the React twin): the Extensions page also controls

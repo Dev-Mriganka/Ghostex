@@ -205,7 +205,7 @@ fn table_row_cells(line: &str) -> Vec<String> {
 
 /// A cell's words with the inline markers taken off, which is what a spreadsheet wants.
 ///
-/// React reads the rendered cell instead (session-chat-table-clipboard.ts), because its chips know
+/// React reads the rendered cell instead (session-chat-table-clipboard.ts (deleted 2026-10-01)), because its chips know
 /// their own source text; the native table renders the Markdown itself, so the source is read here.
 fn table_cell_text(cell: &str) -> String {
     let mut text = cell.replace("**", "").replace('`', "");
@@ -380,7 +380,7 @@ impl NativeChatView {
     ///
     /// Only that block reflows, so the blocks already on screen keep the reader's place; the choice
     /// becomes the one every block mounted after it starts with, which is what React remembers in
-    /// session-chat-code-wrap.ts.
+    /// session-chat-code-wrap.ts (deleted 2026-10-01).
     pub(super) fn set_code_wrap(
         &mut self,
         key: String,
@@ -463,7 +463,7 @@ impl NativeChatView {
                 )
             })
             // React's fences scroll sideways until the reader asks for wrapping
-            // (session-chat-code-wrap.ts); the native ones follow the same choice.
+            // (session-chat-code-wrap.ts (deleted 2026-10-01)); the native ones follow the same choice.
             .code_block_wrap(wraps)
             .selectable(true)
             .style(style)

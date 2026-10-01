@@ -1,4 +1,4 @@
-//! Preview host for the native Onboarding, mirroring packages/core-ui/onboarding/onboarding-modal.stories.tsx.
+//! Preview host for the native Onboarding, mirroring packages/core-ui/onboarding/onboarding-modal.stories.tsx (deleted 2026-10-01).
 //! States (`GHOSTEX_NATIVE_MODAL_DEMO_STATE`), each the story of the same name: `welcome` (default),
 //! `welcome-chat`, `welcome-mobile`, `agents`, `agents-scanning`, `agents-already-connected`,
 //! `agents-none-installed`, `agents-install-available`, `agents-install-partial`,

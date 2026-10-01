@@ -1,5 +1,5 @@
 //! The Agent Sync tab's frame and its agent list (packages/core-ui/agents-hub-sync/
-//! agent-sync-surface.tsx and sync-agent-list.tsx).
+//! agent-sync-surface.tsx (deleted 2026-10-01) and sync-agent-list.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:AgentSync 2026-09-16 WHY:
 //! The tab keeps no filesystem state of its own: the report, the plan and the apply result all arrive from the app, and every action is one command, so the Hub, the CLI and a remote host behave identically. The plan sheet always precedes an apply.

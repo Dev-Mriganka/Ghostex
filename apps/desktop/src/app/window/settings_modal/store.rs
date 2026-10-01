@@ -1,7 +1,7 @@
 //! The Settings modal's shared state: the settings draft and how it is saved
-//! (packages/core-ui/settings-modal/settings-persistence.ts), the search results every page reads,
+//! (packages/core-ui/settings-modal/settings-persistence.ts (deleted 2026-10-01)), the search results every page reads,
 //! the latest hydrate and host payloads, page and scroll memory
-//! (settings-modal/navigation-memory.ts), and the scroll anchors each page registers.
+//! (settings-modal/navigation-memory.ts (deleted 2026-10-01)), and the scroll anchors each page registers.
 //!
 //! Every page is its own entity holding an `Entity<SettingsStore>`; it reads values here and
 //! writes through `update_setting` / `update_setting_debounced` / `apply_patch`, and it re-renders
@@ -514,7 +514,7 @@ impl SettingsStore {
         cx.notify();
     }
 
-    /// The answers the React modal applied at the modal level (use-app-icon-settings.ts), whatever
+    /// The answers the React modal applied at the modal level (use-app-icon-settings.ts (deleted 2026-10-01)), whatever
     /// page is open: a picked terminal background image or glass picture or video lands in the
     /// draft like a typed path (a refused video's error stays in its payload for the Theme page),
     /// and an `appIconState` confirms the icon a `setAppIcon` asked for, or reports why it failed.

@@ -1,5 +1,5 @@
 //! Panel 3, Workspace: the view toggles and the mock workspace window whose titlebar tabs follow
-//! them (panels/workspace.tsx, previews/workspace-window.tsx, styles/workspace.css).
+//! them (panels/workspace.tsx (deleted 2026-10-01), previews/workspace-window.tsx (deleted 2026-10-01), styles/workspace.css).
 use super::GpuiOnboardingWindow;
 use super::OnboardingCommand;
 use super::agents::window_tab;

@@ -30,7 +30,7 @@ const AGENT_LOGO_SIZE: f32 = 28.0;
 /// compensate: that trades a width difference for a cap-height one.
 const TITLE_TEXT_SIZE: f32 = 22.0;
 
-/// Port of `getBrandAgentLogoStyle` (packages/core-ui/agent-logos.ts) against the
+/// Port of `getBrandAgentLogoStyle` (packages/core-ui/agent-logos.ts (deleted 2026-10-01)) against the
 /// chat's own theme tokens rather than the app chrome's.
 pub(super) fn brand_logo_color(icon: &str, p: &ChatAppearance) -> Hsla {
     match icon {

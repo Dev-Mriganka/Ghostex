@@ -1,4 +1,4 @@
-//! The theme colour squares (`ThemeSwatchGrid` in theme-simple-controls.tsx, `.theme-colour-*` in
+//! The theme colour squares (`ThemeSwatchGrid` in theme-simple-controls.tsx (deleted 2026-10-01), `.theme-colour-*` in
 //! packages/core-ui/styles/settings-theme.css). GPUI has no radial gradients, so each square's
 //! `swatchStyle` background (two accent glows over a 150deg gradient) and its 160deg white sheen are
 //! drawn into a small bitmap once per colour, appearance and Colourfulness step.

@@ -372,7 +372,7 @@ pub(crate) struct ModalSearchableSelectRow {
     pub(crate) disabled: bool,
 }
 
-/// The searchable shadcn Select popup (`packages/components/ui/select.tsx`
+/// The searchable shadcn Select popup (`packages/components/ui/select.tsx` (deleted 2026-10-01)
 /// with `searchable-dropdown.css`): trigger-wide, 8px radius, `0 12px 28px`
 /// shadow, a filter `InputGroup` (32px, 6px radius, `--input` border, ring
 /// colored with a 3px 20% halo while focused, search icon at half opacity or a

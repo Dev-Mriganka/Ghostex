@@ -164,7 +164,7 @@ static MAIN_WINDOW_ID: AtomicU64 = AtomicU64::new(u64::MAX);
 
 /// Default coverage of the sidebar's and the work area's tints over the blurred desktop: point 20
 /// of the Transparency strength slider (`transparencyStrengthPatch` in
-/// packages/core-ui/settings-modal/theme-simple-controls.tsx), which keeps the sidebar 7 points
+/// packages/core-ui/settings-modal/theme-simple-controls.tsx (deleted 2026-10-01)), which keeps the sidebar 7 points
 /// more solid than the work area. SEE-ALSO: the CDXC:Theming 2026-09-25 DECISION on
 /// `DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT` in packages/shared/ghostex-settings/types.ts.
 const SIDEBAR_GLASS_ALPHA_DARK: f32 = 0.88;

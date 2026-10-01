@@ -1,5 +1,5 @@
 //! Native GPUI Agents Hub, the desktop twin of the React `AgentsHubModal` in
-//! packages/core-ui/agents-hub-modal.tsx and its Agent Sync tab in packages/core-ui/agents-hub-sync/.
+//! packages/core-ui/agents-hub-modal.tsx (deleted 2026-10-01) and its Agent Sync tab in packages/core-ui/agents-hub-sync/.
 //!
 //! CDXC:AgentLauncher 2026-09-28 DECISION:
 //! User: migrate every React modal to GPUI with GPUI-Kit components, looking and working exactly as now, so the app runs without CEF. The Hub keeps its five tabs (Skills, MDs, Hooks, Configs & MCPs on Cmd/Ctrl+1..4, Agent Sync on Cmd/Ctrl+5), the searchable grouped file list, the file editor with Copy path, Open containing folder, Open in built-in editor, Refresh and Save, and Agent Sync's agent list, overview, per-agent cards and plan sheet, in both appearances and under window glass. It still does not close when clicked away (CDXC:AppModal 2026-09-27).

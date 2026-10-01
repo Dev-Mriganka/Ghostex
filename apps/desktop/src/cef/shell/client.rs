@@ -411,7 +411,7 @@ wrap_render_process_handler! {
             };
             /*
             CDXC:AppModal 2026-06-24-11:09:
-            Install the CEF-compatible `window.webkit.messageHandlers.ghostexAppModalHost` shim at V8 context creation for only the bundled entries in the bridge manifest (modal-host.html). The shared React modal host posts `ready` during mount, so waiting for load-end would race real presentation. Only native-window entries in the shared bridge manifest receive the native-window identity fields; Browser tabs, project workareas, arbitrary pages, raw URLs, titles, logs, persistence, and generic IPC do not receive these bridges.
+            Install the CEF-compatible `window.webkit.messageHandlers.ghostexAppModalHost` shim at V8 context creation for only the bundled entries in the bridge manifest (modal-host.html (deleted 2026-10-01)). The shared React modal host posts `ready` during mount, so waiting for load-end would race real presentation. Only native-window entries in the shared bridge manifest receive the native-window identity fields; Browser tabs, project workareas, arbitrary pages, raw URLs, titles, logs, persistence, and generic IPC do not receive these bridges.
 
             CDXC:Diagnostics 2026-06-28-17:06:
             App-modal CEF setup keeps only the functional host message bridge. Do not emit lifecycle diagnostic IPC or renderer logging events from bridge installation while GPUI logging is intentionally removed.

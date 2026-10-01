@@ -5,8 +5,8 @@
 //! risk of the account pages (rounding, the tightest-two choice, the mask's matching), so the
 //! account gate enumerates them apart from the pages that use them.
 //!
-//! SEE-ALSO: packages/shared/account-usage-label.ts, packages/shared/account-usage-windows.ts,
-//! packages/shared/account-display.ts, apps/desktop/src/app/titlebar/account_usage.rs
+//! SEE-ALSO: packages/shared/account-usage-label.ts (deleted 2026-10-01), packages/shared/account-usage-windows.ts (deleted 2026-10-01),
+//! packages/shared/account-display.ts (deleted 2026-10-01), apps/desktop/src/app/titlebar/account_usage.rs
 //! (`claude_headline_windows`, the titlebar's own copy of the headline rule).
 
 use crate::presentation_store::js_number;

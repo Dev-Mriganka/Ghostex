@@ -1,4 +1,4 @@
-//! Remote page preview: `createRemoteStoryRpc` of packages/core-ui/settings-modal.stories.tsx as a
+//! Remote page preview: `createRemoteStoryRpc` of packages/core-ui/settings-modal.stories.tsx (deleted 2026-10-01) as a
 //! scripted gxserver (Easy Connect running with a pairing code and two paired devices, Tailscale
 //! detected, SSH access on), answering from in-memory state so toggles, Turn on SSH access and
 //! Remove behave like the real daemon.

@@ -7,7 +7,7 @@
 //!
 //! CDXC:AgentBox 2026-10-01 DECISION:
 //! User: Cloud Boxes "has a new page in settings", and "we need explanation in the app on how to configure it (or a prompt to an agent that configures it with computer use would be even better)". The page explains boxes in plain words, shows what is set up, runs each setup step in a terminal, and offers "Set it up for me", which hands the whole setup to an agent.
-//! SEE-ALSO: docs/2026-10-01/agentbox/PLAN.md (wire contract 3), server/src (the `/api/agentbox` endpoint), apps/desktop/src/app/os_integration/agentbox_settings.rs (the terminal commands and the setup chat), packages/core-ui/settings-modal/tabs/cloud-boxes.tsx (the React twin that feeds search, Help and Storybook).
+//! SEE-ALSO: docs/2026-10-01/agentbox/PLAN.md (wire contract 3), server/src (the `/api/agentbox` endpoint), apps/desktop/src/app/os_integration/agentbox_settings.rs (the terminal commands and the setup chat), packages/core-ui/settings-modal/tabs/cloud-boxes.tsx (deleted 2026-10-01) (the React twin that feeds search, Help and Storybook).
 use super::super::fields::{
     ButtonVariant, FieldStates, ListItemStatus, SettingsPage, card_inset, description_info_button,
     settings_button, settings_icon, settings_list_item, settings_section,
@@ -275,7 +275,7 @@ impl SettingsPage for CloudBoxesTab {
 /// row, an optional one-line live state under it (the item's own data, like the Tools rows'
 /// versions), and the controls.
 ///
-/// CDXC:Settings 2026-10-01 SEE-ALSO: rows show no subtitle text (the 2026-09-09 decision in packages/core-ui/settings-modal/fields/primitives.tsx); every explanation on this page sits behind the info icon, and a row's detail line carries only its short state.
+/// CDXC:Settings 2026-10-01 SEE-ALSO: rows show no subtitle text (the 2026-09-09 decision in packages/core-ui/settings-modal/fields/primitives.tsx (deleted 2026-10-01)); every explanation on this page sits behind the info icon, and a row's detail line carries only its short state.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn info_row(
     p: &SettingsPalette,

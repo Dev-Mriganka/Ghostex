@@ -85,7 +85,7 @@
 .gx-onboarding .opt:hover:not(.sel) {
   border-color: rgba(255, 255, 255, 0.18);
 }
-/* Get started card (see MAX_TILE_ROW in panels/get-started.tsx): flow layout so the card grows with its content. */
+/* Get started card (see MAX_TILE_ROW in panels/get-started.tsx (deleted 2026-10-01)): flow layout so the card grows with its content. */
 .gx-onboarding .pcol {
   display: flex;
   flex-direction: column;
@@ -501,7 +501,7 @@
   font-size: 13px;
   color: #c9d0dc;
 }
-/* Get started: the project card and the look card side by side (LookCard in panels/get-started.tsx). */
+/* Get started: the project card and the look card side by side (LookCard in panels/get-started.tsx (deleted 2026-10-01)). */
 .gx-onboarding .pcol .pcards {
   display: flex;
   align-items: stretch;

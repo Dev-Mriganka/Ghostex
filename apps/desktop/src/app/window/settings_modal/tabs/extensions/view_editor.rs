@@ -1,4 +1,4 @@
-//! `CustomViewEditor` and `ProjectViewTemplates` (settings-modal/project-views/editor.tsx and
+//! `CustomViewEditor` and `ProjectViewTemplates` (settings-modal/project-views/editor.tsx (deleted 2026-10-01) and
 //! templates.tsx): the custom view form laid out as setting rows inside a list card (Name,
 //! Source, Available in, Spaces, Destination and URL, or the dev server and report fields,
 //! Startup timeout, Enabled), its notice and error, Save as template / Cancel / Save; and the

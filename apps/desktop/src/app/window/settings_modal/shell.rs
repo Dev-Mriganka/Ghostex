@@ -1,5 +1,5 @@
 //! The Settings window: the rail on the left, the search field over the content column, and the
-//! active page's view (`packages/core-ui/settings-modal.tsx`, layout from
+//! active page's view (`packages/core-ui/settings-modal.tsx` (deleted 2026-10-01), layout from
 //! `.ghostex-settings-shadcn .settings-modal-*` in packages/core-ui/styles.css).
 use super::super::native_modal_kit::*;
 use super::fields::{icon, settings_icon};

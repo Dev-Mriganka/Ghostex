@@ -1226,7 +1226,7 @@ export function getMainSettingsSectionNavigation(mainSettingsGroupSearch: MainSe
      */
     /*
      * CDXC:Theming 2026-09-23 DECISION:
-     * User: "make theme into it's own page in settings below General". The Theme and App Icon sections render on the Theme page (settings-modal/tabs/theme.tsx), so General's rail starts at Sidebar; their search rows and the `appearance` group stay in this catalog so one query still finds them.
+     * User: "make theme into it's own page in settings below General". The Theme and App Icon sections render on the Theme page (settings-modal/tabs/theme.tsx (deleted 2026-10-01)), so General's rail starts at Sidebar; their search rows and the `appearance` group stay in this catalog so one query still finds them.
      */
     { id: 'sidebar', searchResult: mainSettingsGroupSearch.sidebar, title: 'Sidebar' },
     { id: 'chat', searchResult: mainSettingsGroupSearch.chat, title: 'Chat' },

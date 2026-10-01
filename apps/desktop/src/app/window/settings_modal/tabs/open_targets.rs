@@ -1,4 +1,4 @@
-//! The Open In page (packages/core-ui/settings-modal/tabs/open-targets.tsx): a switch per built-in
+//! The Open In page (packages/core-ui/settings-modal/tabs/open-targets.tsx (deleted 2026-10-01)): a switch per built-in
 //! editor target (disabled while it is not installed) and the custom targets with their editor.
 //! The targets come from `BUILT_IN_WORKSPACE_OPEN_TARGETS` in the generated catalog
 //! (packages/shared/workspace-open-targets.ts); saves are whole-settings saves, as React made them.

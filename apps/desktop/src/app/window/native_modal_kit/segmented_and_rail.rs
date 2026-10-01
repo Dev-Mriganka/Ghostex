@@ -13,7 +13,7 @@ pub(crate) struct ModalSegmentedItem {
     pub(crate) label: &'static str,
 }
 
-/// `SegmentedControl variant='raised' stretch` (packages/components/ui/segmented-control.tsx
+/// `SegmentedControl variant='raised' stretch` (packages/components/ui/segmented-control.tsx (deleted 2026-10-01)
 /// skinned by packages/components/ui/raised-tab-rail.css, ink washes under glass per
 /// [`raised_rail_colors`]): a 32px inset track
 /// (`light-dark(#ededed, #202020)`, 14% hairline, 8px radius, 3px padding and
@@ -166,7 +166,7 @@ pub(crate) fn raised_rail_colors(light: bool, glass: bool) -> RaisedRailColors {
     }
 }
 
-/// `TabsList variant='raised'` stretched over the modal width (packages/components/ui/tabs.tsx
+/// `TabsList variant='raised'` stretched over the modal width (packages/components/ui/tabs.tsx (deleted 2026-10-01)
 /// with raised-tab-rail.css): a 40px inset track (8px radius, 3px padding and gap) whose equal
 /// tabs carry a 13px label and an 11px/500 trailing hint 6px after it, `trailing` at rest and
 /// `trailing_active` on the pressed tab. The pressed tab is raised exactly like
@@ -270,7 +270,7 @@ pub(crate) fn modal_raised_tab_rail<V: 'static>(
         .into_any_element()
 }
 
-/// The default `SegmentedControl` (packages/components/ui/segmented-control.tsx and its
+/// The default `SegmentedControl` (packages/components/ui/segmented-control.tsx (deleted 2026-10-01) and its
 /// canonical rules in packages/core-ui/styles.css): one `border` (8px radius) around equal
 /// segments split by the same hairline, 14px labels at 78% foreground, a 6% foreground wash on
 /// hover and a 14% one on the pressed segment, which also takes the full foreground. A

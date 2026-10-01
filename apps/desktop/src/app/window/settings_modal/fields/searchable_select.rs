@@ -1,5 +1,5 @@
 //! A `SelectField` with eight or more options: Base UI's select turns into the searchable dropdown
-//! there (packages/components/ui/select.tsx, `searchable ?? items.length >= 8`), with a chevron on
+//! there (packages/components/ui/select.tsx (deleted 2026-10-01), `searchable ?? items.length >= 8`), with a chevron on
 //! its trigger instead of the up-down selector. The Theme page's terminal palettes use it.
 //!
 //! The page keeps a [`DropdownState`] per field and passes an accessor for it (the dropdown

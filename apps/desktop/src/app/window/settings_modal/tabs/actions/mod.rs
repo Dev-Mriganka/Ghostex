@@ -1,4 +1,4 @@
-//! The Actions page (packages/core-ui/settings-modal/tabs/actions.tsx): the "set frequently used
+//! The Actions page (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)): the "set frequently used
 //! commands here" note while nothing is configured, Global Actions and Project Actions (each a
 //! drag-to-reorder list with Terminal Action / Browser Action buttons, or an empty state), and Tab
 //! Strip Buttons. Adding or editing an action replaces the lists with the one editor
@@ -456,7 +456,7 @@ impl ActionsTab {
 
 /// The note above the lists while no action has a command or URL.
 ///
-/// CDXC:Projects 2026-06-15-15:29 SEE-ALSO: with nothing configured, the page explains that frequent commands can be set here for one click or a hotkey (packages/core-ui/settings-modal/tabs/actions.tsx).
+/// CDXC:Projects 2026-06-15-15:29 SEE-ALSO: with nothing configured, the page explains that frequent commands can be set here for one click or a hotkey (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)).
 fn unconfigured_note(p: &SettingsPalette) -> AnyElement {
     h_flex()
         .w_full()

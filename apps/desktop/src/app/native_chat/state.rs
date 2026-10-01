@@ -166,7 +166,7 @@ pub(crate) struct NativeChatView {
     pub(crate) collapsed: HashSet<String>,
     /// How each fenced block the reader has touched wraps; the rest follow `code_wrap_default`.
     pub(super) code_wrap: HashMap<String, bool>,
-    /// React's remembered last choice (session-chat-code-wrap.ts): the blocks that
+    /// React's remembered last choice (session-chat-code-wrap.ts (deleted 2026-10-01)): the blocks that
     /// scroll into view after a toggle start the way the reader last asked for.
     pub(super) code_wrap_default: bool,
     pub(crate) list: gpui::ListState,

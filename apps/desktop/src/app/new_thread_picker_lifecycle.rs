@@ -86,9 +86,9 @@ pub(crate) fn order_new_thread_picker_agents(
     agents
 }
 
-/// Port of `accountUsageLabel` in packages/shared/account-usage-label.ts.
+/// Port of `accountUsageLabel` in packages/shared/account-usage-label.ts (deleted 2026-10-01).
 /// CDXC:AgentProviders 2026-09-12 SEE-ALSO:
-/// packages/shared/account-usage-label.ts owns the shared Fable percentage label decision.
+/// packages/shared/account-usage-label.ts (deleted 2026-10-01) owns the shared Fable percentage label decision.
 fn usage_window_label(window: &Value) -> Option<String> {
     if window["model"]
         .as_str()

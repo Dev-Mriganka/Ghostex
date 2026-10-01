@@ -32,7 +32,7 @@ impl GhostexGpuiApp {
     User: a titlebar button is scoped exactly like a workarea, so "hidden" means either the
     Extensions page switch is off OR the button's view scope hides it in the active project.
     Every button and every ⋯ menu row asks this one question, so they stay one behaviour.
-    SEE-ALSO: apps/desktop/src/app/view_scopes.rs, apps/desktop/src/app/titlebar/more_menu.rs, packages/core-ui/settings-modal/tabs/extensions.tsx.
+    SEE-ALSO: apps/desktop/src/app/view_scopes.rs, apps/desktop/src/app/titlebar/more_menu.rs, packages/core-ui/settings-modal/tabs/extensions.tsx (deleted 2026-10-01).
     */
     pub(crate) fn titlebar_button_hidden(
         &self,

@@ -1,6 +1,6 @@
 //! Actions and Projects page preview: the Storybook sidebar store's default actions
 //! (`createDefaultSidebarCommandButtons`), no Global Actions, and the Projects story's four
-//! projects (`storyProjects` of packages/core-ui/settings-modal.stories.tsx).
+//! projects (`storyProjects` of packages/core-ui/settings-modal.stories.tsx (deleted 2026-10-01)).
 //!
 //! States: `actions` (Settings > Actions, the story's unconfigured defaults), `actions-empty` (no
 //! actions: the note and both empty states), `actions-configured` (a Global Action and a

@@ -1,4 +1,4 @@
-//! Settings > Remote (packages/core-ui/settings-modal/tabs/remote.tsx and its `remote-*` parts).
+//! Settings > Remote (packages/core-ui/settings-modal/tabs/remote.tsx (deleted 2026-10-01) and its `remote-*` parts).
 //!
 //! CDXC:RemotePairing 2026-09-03:
 //! Settings → Remote reads top to bottom as: this computer from a phone (the Easy Connect and Tailscale path cards), this computer reaching other machines (the compact saved-machine grid), then one Advanced collapsible. The Remote Setup modal deep-links into a path card through `initialRemoteSection`, which expands and scrolls to that card; `initialRemoteMachineId` scrolls to a saved machine's tile and opens its edit dialog.
@@ -12,7 +12,7 @@
 //! active page, a fast poll (4s: the Easy Connect status and the pairing code, which rotates after
 //! a phone pairs) and a slow one (10s: SSH access, Tailscale and the paired devices, which shell
 //! out on the daemon), each guarded so a slow daemon never stacks requests; both stop as soon as
-//! the page is left or Settings closes (`use-remote-access.ts`).
+//! the page is left or Settings closes (`use-remote-access.ts` (deleted 2026-10-01)).
 mod advanced;
 mod easy_connect;
 mod machines;

@@ -1,4 +1,4 @@
-//! The Hotkeys page (packages/core-ui/settings-modal/tabs/hotkeys.tsx): the six sections of
+//! The Hotkeys page (packages/core-ui/settings-modal/tabs/hotkeys.tsx (deleted 2026-10-01)): the six sections of
 //! `HOTKEY_SETTINGS_SECTIONS`, one recorder per action (duplicates marked), the Jump to Project
 //! and Skip sleeping sessions toggles, and Reset Hotkeys. The same top search filters the rows
 //! (`rail::hotkey_section_searches`), and the rail jumps to a section by its id.

@@ -1,5 +1,5 @@
-//! Remote machines: the compact tile grid (remote-machine-grid.tsx) and the Add a machine / edit
-//! dialog with its fields (remote-machine-dialog.tsx, remote-machine-fields.tsx).
+//! Remote machines: the compact tile grid (remote-machine-grid.tsx (deleted 2026-10-01)) and the Add a machine / edit
+//! dialog with its fields (remote-machine-dialog.tsx (deleted 2026-10-01), remote-machine-fields.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:RemotePairing 2026-09-03 DECISION:
 //! User: "simplify the machines area here like we simplified it in the mobile app exactly. It has too much info here. No need to show all available machines and a card for creating a new machine. just make it show 4 compact cards with ability to hide a machine from sidebar (disable toggle). and when i click on one of the machines then show that machine's details as a pop up in settings so i can edit it. First compact card needs to be 'Add a machine'".

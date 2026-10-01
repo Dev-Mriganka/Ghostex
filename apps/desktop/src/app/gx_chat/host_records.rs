@@ -8,8 +8,8 @@
 //! CDXC:Drafts 2026-09-22 DECISION:
 //! User: a user's existing drafts, queued prompts, history and outbox must survive the switch to the
 //! Rust brain. Every key format, field name and cap below is the TypeScript's, from
-//! `packages/core-ui/chat/session-chat-draft-recovery.ts`, `session-chat-draft-outbox.ts` and
-//! `session-chat-sent-history.ts`, so a record written before the switch reads back unchanged and
+//! `packages/core-ui/chat/session-chat-draft-recovery.ts` (deleted 2026-10-01), `session-chat-draft-outbox.ts` (deleted 2026-10-01) and
+//! `session-chat-sent-history.ts` (deleted 2026-10-01), so a record written before the switch reads back unchanged and
 //! the Stashed Prompts modal, which still uses those files, reads what this host writes.
 
 // One item here has no caller: `DRAFT_SAVE_FAILURE`, the composer's save-failure line, which no

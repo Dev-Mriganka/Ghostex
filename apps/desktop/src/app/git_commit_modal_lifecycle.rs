@@ -9,7 +9,7 @@ use crate::*;
 /// The React host's `PROMPT_AGENT_MODAL_STORAGE_KEYS.gitCommit` (client-storage store `commitAgent`).
 ///
 /// CDXC:AgentLauncher 2026-09-28 SEE-ALSO:
-/// The React modal host still clears this key when Settings' Default Prompt Agent changes (`clearPromptAgentModalOverrides` in apps/desktop/views/modal-host.tsx); a native Settings has to keep doing that.
+/// The React modal host still clears this key when Settings' Default Prompt Agent changes (`clearPromptAgentModalOverrides` in apps/desktop/views/modal-host.tsx (deleted 2026-10-01)); a native Settings has to keep doing that.
 const PROMPT_AGENT_STORAGE_KEY: &str = "ghostex.promptAgent.gitCommit";
 thread_local! {
     /// The Default Prompt Agent the open review resolved its agent with

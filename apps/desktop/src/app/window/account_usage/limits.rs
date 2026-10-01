@@ -5,7 +5,7 @@ use serde_json::Value;
 impl AccountUsagePanel {
     /// CDXC:AgentProviders 2026-09-12 DECISION:
     /// User: Claude's Fable limit must stay visible beside the five-hour and weekly limits; additional models start collapsed.
-    /// SEE-ALSO: packages/shared/account-usage-windows.ts and apps/desktop/src/app/titlebar/account_usage.rs select the two tightest headline limits.
+    /// SEE-ALSO: packages/shared/account-usage-windows.ts (deleted 2026-10-01) and apps/desktop/src/app/titlebar/account_usage.rs select the two tightest headline limits.
     pub(super) fn render_limits(&self, cx: &mut gpui::Context<Self>) -> AnyElement {
         let p = self.palette;
         let windows = array(&self.account, "usage");

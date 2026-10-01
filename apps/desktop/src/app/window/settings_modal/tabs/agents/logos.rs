@@ -1,8 +1,8 @@
-//! `getBrandAgentLogoStyle` (packages/core-ui/agent-logos.ts): an agent's logo as a 16px mask in
+//! `getBrandAgentLogoStyle` (packages/core-ui/agent-logos.ts (deleted 2026-10-01)): an agent's logo as a 16px mask in
 //! its brand tint (`AGENT_LOGO_COLORS`), except OMP, whose artwork is multicolour and drawn as an
 //! image. The white and near-white logos take the foreground in light themes, Codex follows
 //! `--ghostex-codex-logo`, and Z.ai is black on light UI (CDXC:Icons 2026-09-15 DECISION in
-//! agent-logos.ts). The icon tile around it is `.settings-management-icon`.
+//! agent-logos.ts (deleted 2026-10-01)). The icon tile around it is `.settings-management-icon`.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::fields::settings_icon;
 use super::super::super::palette::SettingsPalette;

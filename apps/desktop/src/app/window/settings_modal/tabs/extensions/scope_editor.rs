@@ -1,5 +1,5 @@
-//! `ViewScopeEditor` and `ScopeMultiSelect` (settings-modal/project-views/scope-editor.tsx,
-//! scope-multi-select.tsx and scope-editor.css): "Show <view> [Everywhere | Only in selected
+//! `ViewScopeEditor` and `ScopeMultiSelect` (settings-modal/project-views/scope-editor.tsx (deleted 2026-10-01),
+//! scope-multi-select.tsx (deleted 2026-10-01) and scope-editor.css): "Show <view> [Everywhere | Only in selected
 //! places]", then "Except in" / "Show in" with the picked spaces and projects, then "But keep in" /
 //! "But not in" once a space is picked, and a sentence stating the result, with Reset, Cancel and
 //! Save. Picks are chips in a searchable multi-select.

@@ -1,4 +1,4 @@
-//! `useAccountHelperTools` and `AccountHelperToolRow` (accounts/helper-tools.tsx): Claude Swap and
+//! `useAccountHelperTools` and `AccountHelperToolRow` (accounts/helper-tools.tsx (deleted 2026-10-01)): Claude Swap and
 //! Codex Swap as installed on this computer, with Update (or Check for updates), Reinstall and
 //! Uninstall icon buttons whose tooltips carry the versions, a confirmation before Uninstall, a
 //! poll while one runs, and its result as a toast.
@@ -6,7 +6,7 @@
 //! CDXC:AgentProviders 2026-09-28 DECISION (see the React twin): each provider's helper gets these
 //! three icon buttons, with update checking like the Trycua row, and Uninstall asks first.
 //!
-//! CDXC:ManagedTools 2026-09-29 SEE-ALSO: `AccountHelperInstallButton` (accounts/helper-tools.tsx)
+//! CDXC:ManagedTools 2026-09-29 SEE-ALSO: `AccountHelperInstallButton` (accounts/helper-tools.tsx (deleted 2026-10-01))
 //! holds the user's "1 click installs it for them" decision; `render_helper_install_button` is its
 //! twin, used by the helper row, the Add account flow (manager.rs) and the guide (guide.rs).
 use super::super::super::fields::{

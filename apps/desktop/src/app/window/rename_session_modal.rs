@@ -1,9 +1,9 @@
 //! Native GPUI Rename Session dialog, the desktop twin of the React
-//! `SessionRenameModal` in packages/core-ui/session-rename-modal.tsx.
+//! `SessionRenameModal` in packages/core-ui/session-rename-modal.tsx (deleted 2026-10-01).
 //!
 //! CDXC:SessionTitles 2026-09-15 DECISION:
 //! User: "make sure the new gpui modal is EXACTLY 1 to 1 matching the react one": the same layout, copy, colors, states, keyboard behaviour and `renameSession` command as the React dialog, in both appearances. The React twin is pinned to the child window's full height (`.rename-session-modal-shadcn` at 100vh), so this dialog keeps its 570 x 440 frame and stretches the name editor between the header and the footer instead of fitting the window to its content.
-//! SEE-ALSO: packages/core-ui/session-rename-modal.tsx and the `.session-rename-modal-shadcn` rules in packages/core-ui/styles/modals.css (the React twin), packages/shared/session-grid-contract-session.ts (`normalizeSessionRenameTitle`, ported below), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/rename_session_modal_lifecycle.rs (open, close, the `renameSession` command), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/session-rename-modal.tsx (deleted 2026-10-01) and the `.session-rename-modal-shadcn` rules in packages/core-ui/styles/modals.css (the React twin), packages/shared/session-grid-contract-session.ts (`normalizeSessionRenameTitle`, ported below), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/rename_session_modal_lifecycle.rs (open, close, the `renameSession` command), apps/desktop/src/bin/native_modal_demo.rs (standalone preview).
 use super::native_modal_kit::*;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{

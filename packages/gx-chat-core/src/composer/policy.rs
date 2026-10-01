@@ -132,7 +132,7 @@ pub fn send_blocked_toast_request(reason: &str) -> OrderedMap {
     app_toast_request("error", SEND_BLOCKED_TITLE, description)
 }
 
-/// `createAppToastRequest` from `packages/shared/app-toast-contract.ts`, with no options.
+/// `createAppToastRequest` from `packages/shared/app-toast-contract.ts` (deleted 2026-10-01), with no options.
 ///
 /// The key order is the object literal's: the optional description, then `level`, `title`, `type`.
 fn app_toast_request(level: &str, title: &str, description: &str) -> OrderedMap {

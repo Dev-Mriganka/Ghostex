@@ -1,7 +1,7 @@
 //! The agent CLI install rows: one gxserver `/api/agentCliMaintenance` job lifecycle per row
 //! (read, poll every 1.5s while a job runs, install through the first runnable method, add to
-//! PATH), and the events a row narrates to the scan log. Port of packages/core-ui/agent-cli/use-agent-cli-job.ts
-//! and packages/core-ui/onboarding/agent-install.ts.
+//! PATH), and the events a row narrates to the scan log. Port of packages/core-ui/agent-cli/use-agent-cli-job.ts (deleted 2026-10-01)
+//! and packages/core-ui/onboarding/agent-install.ts (deleted 2026-10-01).
 //!
 //! CDXC:Onboarding 2026-09-15 WHY:
 //! The scan log must only ever print real job state, so every event is derived from the polled
@@ -39,7 +39,7 @@ pub(crate) struct CliMethod {
 }
 
 impl CliMethod {
-    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts).
+    /// `agentCliMethodTooltip` (packages/shared/agent-cli-maintenance.ts (deleted 2026-10-01)).
     pub(crate) fn tooltip(&self) -> String {
         self.unavailable_reason
             .clone()

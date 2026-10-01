@@ -51,7 +51,7 @@ pub(crate) fn gpui_onboarding_settings() -> OnboardingSettings {
 }
 
 /// The look card's colour squares and Colourfulness patches, from the same theme math the window
-/// paints its chrome with (`presetChromeAtStep`, `colourfulnessPatch` in theme-simple-controls.tsx).
+/// paints its chrome with (`presetChromeAtStep`, `colourfulnessPatch` in theme-simple-controls.tsx (deleted 2026-10-01)).
 fn gpui_onboarding_theme_table() -> ThemeTable {
     let points = [4.0, 0.0, -4.0, -8.0, -12.0];
     let dark = DARK_THEME_PRESET_CONTROLS

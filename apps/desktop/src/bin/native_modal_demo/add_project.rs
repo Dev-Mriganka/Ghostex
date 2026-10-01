@@ -1,5 +1,5 @@
 //! Add Project preview. The host answers every gxserver round trip from the fixture tree of
-//! packages/core-ui/add-project-modal/add-project-modal-mocks.ts, after `latency`.
+//! packages/core-ui/add-project-modal/add-project-modal-mocks.ts (deleted 2026-10-01), after `latency`.
 //! States (`GHOSTEX_NATIVE_MODAL_DEMO_STATE`): default (Sources, one machine), `machines`,
 //! `remote` (preselected remote machine), `noproviders`, `browse`, `highlight` (two rows down),
 //! `create` (an unknown leaf: Create & Add), `newfolder`, `repository` (GitHub), `destination`,

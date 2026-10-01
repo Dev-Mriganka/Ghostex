@@ -25,7 +25,7 @@ struct InlineCodeVisual {
     radius: f32,
 }
 
-/// CDXC:SessionChat 2026-09-17 SEE-ALSO: Markdown typography and inline code metrics come from markdown-visual.json, also consumed by session-chat-markdown.tsx.
+/// CDXC:SessionChat 2026-09-17 SEE-ALSO: Markdown typography and inline code metrics come from markdown-visual.json, also consumed by session-chat-markdown.tsx (deleted 2026-10-01).
 static VISUAL: LazyLock<MarkdownVisual> = LazyLock::new(|| {
     serde_json::from_str(include_str!(
         "../../../../../packages/gx-chat-core/visual/markdown-visual.json"
@@ -47,7 +47,7 @@ struct CodeThemes {
 /// CDXC:SessionChat 2026-09-18 SEE-ALSO:
 /// The two themes are the GitHub palettes React highlights with through Shiki
 /// (`SESSION_CHAT_SHIKI_DARK_THEME` / `_LIGHT_THEME` in
-/// packages/core-ui/chat/session-chat-code-highlight.ts), written out in
+/// packages/core-ui/chat/session-chat-code-highlight.ts (deleted 2026-10-01)), written out in
 /// packages/gx-chat-core/visual/code-theme.json for the Rust
 /// highlighter. Change the Shiki themes and these colours together.
 static CODE_THEMES: LazyLock<CodeThemes> = LazyLock::new(|| {

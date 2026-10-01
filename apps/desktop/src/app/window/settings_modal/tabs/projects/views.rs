@@ -1,4 +1,4 @@
-//! `ProjectViewSettings` (packages/core-ui/settings-modal/project-views/project-settings.tsx): one
+//! `ProjectViewSettings` (packages/core-ui/settings-modal/project-views/project-settings.tsx (deleted 2026-10-01)): one
 //! section per custom view with a `source`, holding this project's binding for it (the website
 //! URL or repository override, the command, working directory and ready URL overrides, Start
 //! when project opens, Use for worktrees, and Available in this project for a view shown only in

@@ -7,7 +7,7 @@
 //! appearance over the native modal surface, which is frosted under window glass. It keeps the
 //! React viewer's controls: Diagram/Source, zoom out, fit, zoom in, copy source, and dragging to pan.
 //! SEE-ALSO: apps/desktop/src/app/mermaid_diagram_modal_lifecycle.rs (open and close),
-//! packages/core-ui/mermaid/mermaid-diagram.tsx (the React viewer the Docs page and chat Markdown
+//! packages/core-ui/mermaid/mermaid-diagram.tsx (deleted 2026-10-01) (the React viewer the Docs page and chat Markdown
 //! still draw inline).
 use super::native_modal_kit::*;
 use crate::app::native_docs::blocks::{mermaid_svg, rasterize_svg_scaled, svg_natural_size};

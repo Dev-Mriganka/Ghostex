@@ -1,5 +1,5 @@
 //! A Mermaid diagram inside a Markdown document, drawn the way the Docs page drew it
-//! (`packages/core-ui/mermaid/mermaid-diagram.tsx` and `mermaid.css`): a bordered card with a
+//! (`packages/core-ui/mermaid/mermaid-diagram.tsx` (deleted 2026-10-01) and `mermaid.css`): a bordered card with a
 //! toolbar (Diagram / Source, zoom out, fit, zoom in, copy source, expand) over a viewport that
 //! fits the diagram to 416px high, scrolls when zoomed and pans by dragging. The editor keeps a
 //! gap for it (`EditorState::set_mermaid_view_provider`, see `blocks.rs`).

@@ -1,5 +1,5 @@
 //! The Add Project dialog's labels, provider readiness, source order, placeholders and
-//! empty-state copy: the Rust twin of packages/core-ui/add-project-modal/add-project-modal-logic.ts.
+//! empty-state copy: the Rust twin of packages/core-ui/add-project-modal/add-project-modal-logic.ts (deleted 2026-10-01).
 use super::model::{
     AddProjectMachineOption, AddProjectProviderAuthStatus, AddProjectSourceControlDiscovery,
     AddProjectSourceId,

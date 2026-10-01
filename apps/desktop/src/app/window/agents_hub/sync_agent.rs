@@ -1,4 +1,4 @@
-//! One agent in Agent Sync (packages/core-ui/agents-hub-sync/sync-agent-pane.tsx).
+//! One agent in Agent Sync (packages/core-ui/agents-hub-sync/sync-agent-pane.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:AgentSync 2026-09-22 WHY:
 //! Every agent shows the same three cards in the same order as the overview's coverage cards (Skills, Instructions, Hook scripts). Each card is one sentence on the current state, then what Sync will do and what it leaves alone; the full per-skill list sits behind a disclosure because it is reference material, not something to act on.

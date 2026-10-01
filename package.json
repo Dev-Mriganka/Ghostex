@@ -57,7 +57,6 @@
     "web:dev": "bun apps/gpui-web/build-wasm.mjs --release && vite --config apps/gpui-web/www/vite.config.js",
     "web:build": "bun apps/gpui-web/build-wasm.mjs --release && vite build --config apps/gpui-web/www/vite.config.js",
     "desktop:typecheck": "bun run storage:check && tsc -p apps/desktop/tsconfig.json --noEmit",
-    "sandbox:onboarding": "vite --config apps/desktop/test/onboarding-sandbox/vite.config.ts",
     "help:generate": "bun tooling/ghostex-help/generate.ts",
     "help:check": "bun tooling/ghostex-help/generate.ts --check",
     "typecheck": "bun run storage:check && bun run help:check && tsc --noEmit --pretty false && (test ! -f apps/mobile/app/views/find/tsconfig.json || tsc -p apps/mobile/app/views/find/tsconfig.json --noEmit --pretty false)",

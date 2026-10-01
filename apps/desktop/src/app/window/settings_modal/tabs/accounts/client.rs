@@ -1,4 +1,4 @@
-//! `useAccounts` (packages/core-ui/accounts/use-accounts.ts) for this computer's gxserver: the last
+//! `useAccounts` (packages/core-ui/accounts/use-accounts.ts (deleted 2026-10-01)) for this computer's gxserver: the last
 //! `AgentAccountsState`, the error of the last read, busy and refreshing flags, a read when the page
 //! opens (refreshed when `refresh_on_open`), and a quiet re-read every 30 seconds while it is open.
 //! A newer request supersedes an older one's answer (`generation`).

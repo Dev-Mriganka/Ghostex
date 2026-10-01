@@ -1,7 +1,7 @@
 //! The two dropdowns of the Agents page the field library does not draw:
 //!
 //! - the searchable select the shadcn `Select` becomes at 8+ items (CDXC:DesignSystem 2026-09-08
-//!   DECISION in packages/components/ui/select.tsx): a chevron trigger and a popup under it with a
+//!   DECISION in packages/components/ui/select.tsx (deleted 2026-10-01)): a chevron trigger and a popup under it with a
 //!   search field on top (packages/components/ui/searchable-dropdown.css), used by Default Prompt
 //!   Agent and the editor's Agent type (whose rows carry the agent logos,
 //!   `AgentTypeSelectOption`);

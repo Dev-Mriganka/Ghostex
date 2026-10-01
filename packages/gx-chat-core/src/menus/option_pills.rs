@@ -17,8 +17,8 @@ use crate::menus::option_values::{option_value_label, options_pill_label, Option
 /// mark, and a session with no bound account (or an agent that has no accounts) leaves the logo
 /// plain.
 ///
-/// SEE-ALSO: packages/core-ui/project-agent-launcher-icon.tsx,
-/// packages/core-ui/accounts/indicator.tsx, apps/desktop/src/app/native_chat/option_pills.rs.
+/// SEE-ALSO: packages/core-ui/project-agent-launcher-icon.tsx (deleted 2026-10-01),
+/// packages/core-ui/accounts/indicator.tsx (deleted 2026-10-01), apps/desktop/src/app/native_chat/option_pills.rs.
 pub fn account_indicator(accounts: Option<&AccountsState>) -> Option<String> {
     let accounts = accounts?;
     let session_account_id = accounts

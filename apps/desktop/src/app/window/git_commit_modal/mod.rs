@@ -1,6 +1,6 @@
 //! Native GPUI Git commit review and its file diff, the desktop twins of the React
-//! `GitCommitModal` (packages/core-ui/git-commit-modal.tsx) and `GitFileDiffModal`
-//! (packages/core-ui/git-file-diff-modal.tsx). The decision record is on `window.rs`.
+//! `GitCommitModal` (packages/core-ui/git-commit-modal.tsx (deleted 2026-10-01)) and `GitFileDiffModal`
+//! (packages/core-ui/git-file-diff-modal.tsx (deleted 2026-10-01)). The decision record is on `window.rs`.
 //!
 //! This module depends only on gpui, gpui-component (with its gpui-base text selection) and
 //! `native_modal_kit/` (plus the shared prompt-text trim in `create_worktree_modal.rs`) so the

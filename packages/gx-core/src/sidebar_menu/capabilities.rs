@@ -1,6 +1,6 @@
 //! Which actions a sidebar row offers.
 //!
-//! SEE-ALSO: packages/core-ui/session-card-capabilities.ts, the one resolver both the React card
+//! SEE-ALSO: packages/core-ui/session-card-capabilities.ts (deleted 2026-10-01), the one resolver both the React card
 //! menu and the native row menu read, so the two menus cannot disagree. Every rule below is that
 //! file's, including the CDXC decisions it records (a draft hides Fork and Full Reload; Sleep
 //! Below targets running rows only; a remote row must opt in to the host-timer actions).

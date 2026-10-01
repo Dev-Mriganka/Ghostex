@@ -1,5 +1,5 @@
 //! The onboarding's three families: Manrope for the headings, DM Sans for the copy and IBM Plex
-//! Mono for the eyebrows, labels and the scan console (packages/core-ui/onboarding/fonts.ts).
+//! Mono for the eyebrows, labels and the scan console (packages/core-ui/onboarding/fonts.ts (deleted 2026-10-01)).
 use gpui::App;
 
 pub(crate) const MANROPE: &str = "Manrope";

@@ -83,23 +83,6 @@ const gxCoreWorktreeSource = readFileSync(
   new URL('../../packages/gx-core/src/git_menu/worktree.rs', import.meta.url),
   'utf8'
 );
-// modal-host.tsx keeps AppModalHost and the page mount; its state types, native bridge,
-// request helpers, message guards and useModalStateFromNative live in views/modal-host/.
-const modalHostSource = [
-  'modal-host.tsx',
-  'modal-host/modal-state.ts',
-  'modal-host/native-fit-height.ts',
-  'modal-host/host-messages.ts',
-  'modal-host/bridge.ts',
-  'modal-host/settings-routing.ts',
-  'modal-host/first-launch.ts',
-  'modal-host/add-project-requests.ts',
-  'modal-host/use-modal-state-from-native.ts',
-  'modal-host/message-guards.ts',
-]
-  .map((file) => readFileSync(new URL(`../../apps/desktop/views/${file}`, import.meta.url), 'utf8'))
-  .join('\n');
-
 function sourceBetweenIn(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
   const endIndex = source.indexOf(end, startIndex + start.length);
@@ -199,14 +182,5 @@ describe('gx_store/git rename handlers', () => {
 
     expect(reader).toContain('message.contains("/api/renameWorktreeProject")');
     expect(reader).toContain('Quit Ghostex fully, reopen it, and try again.');
-  });
-});
-
-describe('native/sidebar/modal-host.tsx rename modal', () => {
-  test('registers the modal kind, its fit-height selector, and its open arm', () => {
-    expect(modalHostSource).toContain('renameWorktree: ".worktree-rename-modal-shadcn"');
-    expect(modalHostSource).toContain('message.modal === "renameWorktree"');
-    expect(modalHostSource).toContain('worktreeRenameDraft?: WorktreeRenameModalDraft');
-    expect(modalHostSource).toContain('type: "confirmRenameWorktree"');
   });
 });

@@ -489,7 +489,7 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
   /*
    * CDXC:AgentBox 2026-10-01 SEE-ALSO:
    * Settings > Cloud Boxes (apps/desktop/src/app/window/settings_modal/tabs/cloud_boxes.rs and
-   * tabs/cloud-boxes.tsx). `agentboxDefaultLocation` is the page's one setting; the other rows are
+   * tabs/cloud-boxes.tsx (deleted 2026-10-01)). `agentboxDefaultLocation` is the page's one setting; the other rows are
    * keyed by UI ids so the search and Ghostex Help can find every part of the page.
    */
   cloudBoxes: {

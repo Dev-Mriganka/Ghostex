@@ -1,5 +1,5 @@
 //! Open, gxserver, and Settings handoff plumbing for the native Remote Setup dialog.
-//! SEE-ALSO: apps/desktop/src/app/window/remote_setup_modal.rs (the window entity and its decision record), packages/core-ui/remote-setup-modal/connect-section.tsx (the Easy Connect flow mirrored by `gpui_remote_setup_connect_easy_connect`), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path).
+//! SEE-ALSO: apps/desktop/src/app/window/remote_setup_modal.rs (the window entity and its decision record), packages/core-ui/remote-setup-modal/connect-section.tsx (deleted 2026-10-01) (the Easy Connect flow mirrored by `gpui_remote_setup_connect_easy_connect`), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path).
 use crate::app::helpers::*;
 use crate::app::window::*;
 use crate::*;

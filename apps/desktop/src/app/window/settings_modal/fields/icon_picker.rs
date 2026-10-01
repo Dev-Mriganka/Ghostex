@@ -1,11 +1,11 @@
-//! `CommandIconPicker` (packages/core-ui/command-icon-picker.tsx), the labelled field of the
+//! `CommandIconPicker` (packages/core-ui/command-icon-picker.tsx (deleted 2026-10-01)), the labelled field of the
 //! action editor: an uppercase "ICON" label over the `.group-title-input` trigger (the chosen
 //! glyph, its label and a chevron) and the searchable popover of the 59 command icons
 //! (`SIDEBAR_COMMAND_ICON_IDS`, filtered by label with cmdk's scorer). The glyphs are the Tabler
 //! icons `SidebarCommandIconGlyph` draws (filled where packages/core-ui/sidebar-command-icon.tsx
 //! uses the filled variant).
 //!
-//! CDXC:Icons 2026-06-16-07:48 SEE-ALSO: action glyphs take the surrounding foreground colour, never a per-action colour (packages/core-ui/command-icon-picker.tsx).
+//! CDXC:Icons 2026-06-16-07:48 SEE-ALSO: action glyphs take the surrounding foreground colour, never a per-action colour (packages/core-ui/command-icon-picker.tsx (deleted 2026-10-01)).
 use super::super::super::native_modal_kit::*;
 use super::super::super::space_editor_modal::SPACE_EDITOR_ICONS;
 use super::super::palette::SettingsPalette;

@@ -1,5 +1,5 @@
-//! Agent Sync's overview (packages/core-ui/agents-hub-sync/sync-overview-pane.tsx and
-//! sync-fix-list.tsx): one status with one action, what is shared, the fix list, and the
+//! Agent Sync's overview (packages/core-ui/agents-hub-sync/sync-overview-pane.tsx (deleted 2026-10-01) and
+//! sync-fix-list.tsx (deleted 2026-10-01)): one status with one action, what is shared, the fix list, and the
 //! optional cleanup.
 use super::super::native_modal_kit::{hsla, modal_switch, rgba_of};
 use super::palette::HubPalette;

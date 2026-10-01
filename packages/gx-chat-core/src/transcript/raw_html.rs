@@ -4,7 +4,7 @@
 //! The GPUI transcript's Markdown view renders HTML it knows and drops every tag it does not, so
 //! "reply with COLOR=<my answer>" lost `<my answer>` and "returns Option<String>" lost `<String>`.
 //! A transcript is untrusted text (agents quote web pages, repositories and tool output), and the
-//! React chat's contract was that raw HTML is never markup (`session-chat-details.ts`). Every HTML
+//! React chat's contract was that raw HTML is never markup (`session-chat-details.ts` (deleted 2026-10-01)). Every HTML
 //! node is escaped to literal text unless it is only formatting tags the view draws safely; links
 //! and images stay text so a transcript can never load a remote picture or smuggle a link.
 //! SEE-ALSO: apps/desktop/src/app/native_chat/rich_markdown.rs applies this to card text too.

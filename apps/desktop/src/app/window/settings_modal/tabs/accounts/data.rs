@@ -1,7 +1,7 @@
 //! The account data the Accounts page reads, from gxserver's `AgentAccountsState`
-//! (packages/shared/agent-accounts.ts), with the presentation helpers of accounts/presentation.ts,
-//! shared/account-usage-windows.ts, shared/account-display.ts (Hide emails) and
-//! shared/reset-countdown.ts.
+//! (packages/shared/agent-accounts.ts), with the presentation helpers of accounts/presentation.ts (deleted 2026-10-01),
+//! shared/account-usage-windows.ts (deleted 2026-10-01), shared/account-display.ts (deleted 2026-10-01) (Hide emails) and
+//! shared/reset-countdown.ts (deleted 2026-10-01).
 use super::super::super::catalog::{module, settings_catalog};
 use serde_json::Value;
 

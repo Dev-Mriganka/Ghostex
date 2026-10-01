@@ -1,4 +1,4 @@
-//! `TitlebarViewOrderDialog` (settings-modal/tabs/titlebar-view-order-dialog.tsx): the nested
+//! `TitlebarViewOrderDialog` (settings-modal/tabs/titlebar-view-order-dialog.tsx (deleted 2026-10-01)): the nested
 //! "Arrange views" dialog over Settings. Every built-in, extension and custom view in one list,
 //! dragged by its grip or moved with the arrows, with its numbered shortcut while it is one of the
 //! first nine visible views; Reset order and Done.

@@ -1,8 +1,8 @@
 //! An extension's page, drawn in place of the whole Extensions page
-//! (extensions-modal/extension-detail.tsx and preferences-form.tsx): the header with Back, then
+//! (extensions-modal/extension-detail.tsx (deleted 2026-10-01) and preferences-form.tsx (deleted 2026-10-01)): the header with Back, then
 //! for an installed extension its placement, preferences, permissions, status (enabled, pinned,
 //! author, version, update) and Uninstall; for a Store entry its screenshots, README, changelog,
-//! details, permissions and Install. The install consent (install-consent.tsx) sits over either.
+//! details, permissions and Install. The install consent (install-consent.tsx (deleted 2026-10-01)) sits over either.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::catalog::SettingOption;
 use super::super::super::fields::{

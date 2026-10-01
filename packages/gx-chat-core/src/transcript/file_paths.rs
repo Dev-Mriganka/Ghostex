@@ -6,7 +6,7 @@
 //!
 //! CDXC:SessionChat 2026-09-18 SEE-ALSO:
 //! The GPUI transcript consumes these through native_markdown.rs; React consumes them through
-//! session-chat-file-paths.ts and session-chat-code-fence-meta.ts.
+//! session-chat-file-paths.ts (deleted 2026-10-01) and session-chat-code-fence-meta.ts (deleted 2026-10-01).
 
 use std::collections::HashSet;
 use std::sync::OnceLock;

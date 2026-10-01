@@ -1,4 +1,4 @@
-//! `QrCode` (packages/components/ui/qr-code.tsx): the `qrcode` library's canvas render of a
+//! `QrCode` (packages/components/ui/qr-code.tsx (deleted 2026-10-01)): the `qrcode` library's canvas render of a
 //! payload, error correction M, a 2-module quiet zone, `#111113` modules on `#f4f4f5`, at a square
 //! pixel size. Modules are painted as runs of squares snapped to the pixel edges the canvas
 //! renderer uses (`floor(pixel / scale)` picks the module), as the Remote Setup dialog's QR does.

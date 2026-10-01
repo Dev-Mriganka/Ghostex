@@ -1,4 +1,4 @@
-//! The patch model the diff panel draws (`packages/core-ui/git-file-diff-modal.tsx`): patch lines
+//! The patch model the diff panel draws (`packages/core-ui/git-file-diff-modal.tsx` (deleted 2026-10-01)): patch lines
 //! classified by kind, the display options, and the token kinds of the per-row syntax colouring.
 use super::model::{GitChangedFile, GitFileDiffDraft, summarize_changed_files};
 use std::collections::HashMap;

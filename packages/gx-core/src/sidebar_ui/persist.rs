@@ -2,14 +2,14 @@
 //!
 //! CDXC:Sidebar 2026-09-20 WHY:
 //! The keys, the envelope, the version number and every field name here are the ones
-//! `collapse-state.ts`, `machine-tab-selection.ts` and `sidebar-hidden-items.ts` wrote before this
+//! `collapse-state.ts`, `machine-tab-selection.ts` (deleted 2026-10-01) and `sidebar-hidden-items.ts` wrote before this
 //! port, because an installation that upgrades must keep its collapsed groups, its Space, its
 //! hidden items and its filters, and a build that predates the port must still read what this
 //! writes. A write therefore keeps every field it does not own (`isReferenceChatsCollapsed`, the
 //! per-Space session memory) exactly as it found it rather than re-deriving the object.
 //!
 //! SEE-ALSO: packages/core-ui/sidebar-app/collapse-state.ts,
-//! packages/core-ui/sidebar-app/machine-tab-selection.ts, packages/core-ui/sidebar-hidden-items.ts,
+//! packages/core-ui/sidebar-app/machine-tab-selection.ts (deleted 2026-10-01), packages/core-ui/sidebar-hidden-items.ts,
 //! packages/core-ui/sidebar-app/project-session-section-model.ts.
 
 use std::collections::{BTreeMap, BTreeSet};

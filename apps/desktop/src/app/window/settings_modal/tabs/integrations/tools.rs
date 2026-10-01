@@ -1,5 +1,5 @@
-//! `ManagedToolsSection` (packages/core-ui/settings-modal/tabs/managed-tools-section.tsx) and
-//! `useManagedTools` (packages/core-ui/managed-tools/use-managed-tools.ts): the Tools section of
+//! `ManagedToolsSection` (packages/core-ui/settings-modal/tabs/managed-tools-section.tsx (deleted 2026-10-01)) and
+//! `useManagedTools` (packages/core-ui/managed-tools/use-managed-tools.ts (deleted 2026-10-01)): the Tools section of
 //! the Integrations page, listing what Ghostex installs for the user from gxserver's
 //! `/api/managedTools`, re-read every 1.5 s while a job runs, each finished job toasted once.
 //!

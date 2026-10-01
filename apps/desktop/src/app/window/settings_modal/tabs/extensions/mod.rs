@@ -1,4 +1,4 @@
-//! The Extensions page (packages/core-ui/settings-modal/tabs/extensions.tsx): Views (Arrange views),
+//! The Extensions page (packages/core-ui/settings-modal/tabs/extensions.tsx (deleted 2026-10-01)): Views (Arrange views),
 //! one filter bar over every extension, the Built-in cards grouped by category, the Extensions
 //! Store (installed and available cards, the detail page that replaces the whole page, the install
 //! consent), Your views (custom views with their editor and templates), and Account usage in the

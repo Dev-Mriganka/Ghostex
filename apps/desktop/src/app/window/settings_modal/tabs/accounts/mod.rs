@@ -1,4 +1,4 @@
-//! The Accounts page (settings-modal/tabs/accounts.tsx wrapping accounts/manager.tsx): the Accounts
+//! The Accounts page (settings-modal/tabs/accounts.tsx (deleted 2026-10-01) wrapping accounts/manager.tsx (deleted 2026-10-01)): the Accounts
 //! section (Refresh accounts, Hide emails, the read state), then one section per provider with its
 //! saved accounts (expandable into their editor), New session defaults, the add-account setup, the
 //! sign-in flow in progress, Claude Swap / Codex Swap maintenance, and the Connect your accounts
@@ -106,7 +106,7 @@ impl AccountsTab {
             cx.notify();
         })
         .detach();
-        // CDXC:Settings 2026-09-08 DECISION (see accounts/manager.tsx): accounts are refreshed
+        // CDXC:Settings 2026-09-08 DECISION (see accounts/manager.tsx (deleted 2026-10-01)): accounts are refreshed
         // every time the Accounts page opens.
         let client = cx.new(|cx| AccountsClient::new(store.clone(), true, cx));
         cx.observe(&client, |_, _, cx| cx.notify()).detach();

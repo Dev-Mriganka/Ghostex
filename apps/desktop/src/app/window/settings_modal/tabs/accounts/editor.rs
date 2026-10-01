@@ -1,4 +1,4 @@
-//! `AccountEditor` (accounts/manager.tsx): an expanded saved account's name, indicator, session
+//! `AccountEditor` (accounts/manager.tsx (deleted 2026-10-01)): an expanded saved account's name, indicator, session
 //! icon preview, automatic switching, slot swap, and its actions (Remove, Sign in again, Cancel,
 //! Save changes), with the reconnect flow and the remove confirmation under them.
 use super::super::super::super::native_modal_kit::*;

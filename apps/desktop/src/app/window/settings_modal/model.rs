@@ -89,7 +89,7 @@ impl SettingsTabId {
         }
     }
 
-    /// The rail icon (the Tabler icon `sidebar-pages.ts` draws).
+    /// The rail icon (the Tabler icon `sidebar-pages.ts` (deleted 2026-10-01) draws).
     pub(crate) fn icon(self) -> &'static str {
         match self {
             SettingsTabId::General => "modals/settings/settings.svg",
@@ -111,7 +111,7 @@ impl SettingsTabId {
     }
 }
 
-/// The deep-link fields of a Settings `open` message (`modal-host.tsx`), kept for the pages that
+/// The deep-link fields of a Settings `open` message (`modal-host.tsx` (deleted 2026-10-01)), kept for the pages that
 /// honour them. Only an open of the `settings` kind carries them; the other kinds pick the start
 /// page (`getSettingsInitialTab`).
 #[derive(Clone, Debug, Default)]
@@ -150,7 +150,7 @@ fn optional_text(message: &Value, key: &str) -> Option<String> {
 
 impl SettingsOpenRequest {
     /// Reads an `open` message for one of the Settings kinds (`settings`, `hotkeys`,
-    /// `configureAgents`, `configureActions`, `openTargets`), the way modal-host.tsx does.
+    /// `configureAgents`, `configureActions`, `openTargets`), the way modal-host.tsx (deleted 2026-10-01) does.
     pub(crate) fn from_open_message(modal_id: &str, message: &Value) -> Self {
         let kind_tab = match modal_id {
             "configureAgents" => Some(SettingsTabId::Agents),

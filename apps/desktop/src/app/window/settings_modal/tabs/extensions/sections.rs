@@ -1,7 +1,7 @@
 //! The Extensions page's sections: Views (Arrange views), Built-in (`BuiltInExtensionGroups` of
-//! tabs/extensions/built-in-cards.tsx), Extensions Store (`ExtensionsBrowserList` / `StoreTab` of
+//! tabs/extensions/built-in-cards.tsx (deleted 2026-10-01)), Extensions Store (`ExtensionsBrowserList` / `StoreTab` of
 //! extensions-modal/), and Your views (`CustomViewCard`, `AddCustomViewCard` of
-//! tabs/extensions/custom-view-cards.tsx, sortable by drag).
+//! tabs/extensions/custom-view-cards.tsx (deleted 2026-10-01), sortable by drag).
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::fields::{
     ButtonVariant, ReorderOptions, SizedButtonSize, SizedButtonVariant, icon, reorder_handle,

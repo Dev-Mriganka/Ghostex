@@ -1,5 +1,5 @@
 //! The Commands tab: the command population, ranking, grouping and rows of
-//! packages/core-ui/command-palette.tsx, and what running a row does.
+//! packages/core-ui/command-palette.tsx (deleted 2026-10-01), and what running a row does.
 //!
 //! Ported from `apps/desktop/sidebar/native-quick-access/commands.ts` (deleted; see git history).
 //!

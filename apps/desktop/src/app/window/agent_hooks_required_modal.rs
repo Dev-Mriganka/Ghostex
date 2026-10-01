@@ -1,9 +1,9 @@
 //! Native GPUI Install Hooks prompt, the desktop twin of the React
-//! `AgentHooksRequiredModal` in packages/core-ui/agent-hooks-required-modal.tsx.
+//! `AgentHooksRequiredModal` in packages/core-ui/agent-hooks-required-modal.tsx (deleted 2026-10-01).
 //!
 //! CDXC:AgentHooks 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt in native GPUI one at a time, and each native modal must be EXACTLY 1 to 1 with its React twin: the same layout, copy, colors, radii, spacing, states, keyboard behaviour and bridge messages in both appearances. The hero tile, benefit chips and top glow take the agent's logo color; white-logo agents fall back to the foreground so the tint follows the theme.
-//! SEE-ALSO: packages/core-ui/agent-hooks-required-modal.tsx and packages/core-ui/agent-hook-benefits.tsx (the React twin), the `.agent-hooks-required-*` rules in packages/core-ui/styles/modals.css and modals-light.css, packages/core-ui/agent-logos.ts and packages/shared/sidebar-agents.ts (the agent id, logo file and brand color table mirrored below), apps/desktop/src/app/agent_hooks_required_modal_lifecycle.rs (open, close, sidebar bridge).
+//! SEE-ALSO: packages/core-ui/agent-hooks-required-modal.tsx (deleted 2026-10-01) and packages/core-ui/agent-hook-benefits.tsx (deleted 2026-10-01) (the React twin), the `.agent-hooks-required-*` rules in packages/core-ui/styles/modals.css and modals-light.css, packages/core-ui/agent-logos.ts (deleted 2026-10-01) and packages/shared/sidebar-agents.ts (the agent id, logo file and brand color table mirrored below), apps/desktop/src/app/agent_hooks_required_modal_lifecycle.rs (open, close, sidebar bridge).
 use super::native_modal_kit::*;
 use gpui::StyledImage as _;
 use gpui::{
@@ -29,7 +29,7 @@ const ICON_PLUG_CONNECTED: &str = "modals/install-hooks/plug-connected.svg";
 const NOT_NOW: &str = "Not now";
 const INSTALL_HOOKS: &str = "Install hooks";
 
-/// `AGENT_HOOK_BENEFITS` in packages/core-ui/agent-hook-benefits.tsx, in order.
+/// `AGENT_HOOK_BENEFITS` in packages/core-ui/agent-hook-benefits.tsx (deleted 2026-10-01), in order.
 const BENEFITS: [(&str, &str, &str); 4] = [
     (
         ICON_CIRCLE_CHECK,
@@ -84,7 +84,7 @@ const fn logo(asset: &'static str, color: u32) -> AgentHooksLogo {
 }
 
 /// `getSidebarAgentIconById` (packages/shared/sidebar-agents.ts) joined with
-/// `AGENT_LOGO_COLORS` (packages/core-ui/agent-logos.ts): default sidebar agent
+/// `AGENT_LOGO_COLORS` (packages/core-ui/agent-logos.ts (deleted 2026-10-01)): default sidebar agent
 /// id, trimmed and lowercased, to its logo file and brand color.
 pub(crate) fn agent_hooks_logo_for_agent_id(agent_id: &str) -> Option<AgentHooksLogo> {
     let agent_id = agent_id.trim().to_ascii_lowercase();

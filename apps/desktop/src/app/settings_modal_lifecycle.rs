@@ -21,7 +21,7 @@ const PROMPT_AGENT_OVERRIDE_KEYS: [&str; 2] = [
     "ghostex.promptAgent.renameSession",
 ];
 
-/// `clearPromptAgentModalOverrides` of apps/desktop/views/modal-host.tsx, run when a save changes
+/// `clearPromptAgentModalOverrides` of apps/desktop/views/modal-host.tsx (deleted 2026-10-01), run when a save changes
 /// `defaultPromptAgentId` from a set value, so both dialogs show the new default next time.
 ///
 /// CDXC:AgentLauncher 2026-09-28 SEE-ALSO:

@@ -1,5 +1,5 @@
-//! The Easy Connect path card (remote-easy-connect.tsx) and its Enlarge QR dialog
-//! (remote-pairing-qr-preview.tsx).
+//! The Easy Connect path card (remote-easy-connect.tsx (deleted 2026-10-01)) and its Enlarge QR dialog
+//! (remote-pairing-qr-preview.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:RemotePairing 2026-09-03 DECISION:
 //! User: show Easy Connect and Tailscale "as expandible cards so the user clicks to expand the one they want to use. i dont want the user confused by seeing 2 qr codes in front of themselves".

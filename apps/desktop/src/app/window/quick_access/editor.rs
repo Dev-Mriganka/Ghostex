@@ -1,6 +1,6 @@
 //! Saved Prompts' two write surfaces: the add/edit form that replaces the list
 //! (`.ghostex-stashed-prompt-editor`) and the create-tag popover
-//! (`.ghostex-stashed-prompt-tag-popover`), ported from packages/core-ui/stashed-prompts-modal.tsx.
+//! (`.ghostex-stashed-prompt-tag-popover`), ported from packages/core-ui/stashed-prompts-modal.tsx (deleted 2026-10-01).
 use super::chrome::{QuickAccessMenuState, asset_icon_path, quick_access_select_trigger};
 use super::model::{QuickAccessPromptEditor, QuickAccessTagComposer};
 use super::palette::{

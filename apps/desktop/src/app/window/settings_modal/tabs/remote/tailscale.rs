@@ -1,4 +1,4 @@
-//! The Tailscale path card (remote-tailscale-card.tsx).
+//! The Tailscale path card (remote-tailscale-card.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:RemotePairing 2026-09-03:
 //! Four steps, the first two self-checking from `/api/remoteAccessStatus`, the last one a QR built from `/api/remotePairingCode.tailscale` that the app recognises by its prefix. Scanning only fills the form on the phone; the connection stays SSH over the tailnet with host, user, and password, so the typed values stay reachable behind "Or type these in".

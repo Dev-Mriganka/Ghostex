@@ -28,7 +28,7 @@ type Slot = Rc<RefCell<Option<(WindowHandle<Root>, Entity<GpuiSettingsModalWindo
 
 fn story_settings(state: &str) -> serde_json::Map<String, Value> {
     let mut settings = serde_json::Map::new();
-    // `modalSettings` of packages/core-ui/settings-modal.stories.tsx.
+    // `modalSettings` of packages/core-ui/settings-modal.stories.tsx (deleted 2026-10-01).
     settings.insert("agentManagerZoomPercent".into(), json!(95));
     settings.insert(
         "sessionCardHoverButtons".into(),

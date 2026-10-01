@@ -1,6 +1,6 @@
 //! The theme colour math the Theme page draws its colour squares and its Colourfulness preview
 //! with, and the simple controls' settings mappings (packages/core-ui/settings-modal/
-//! theme-simple-controls.tsx, packages/shared/ghostex-settings/titlebar-color.ts).
+//! theme-simple-controls.tsx (deleted 2026-10-01), packages/shared/ghostex-settings/titlebar-color.ts).
 //!
 //! CDXC:Theming 2026-09-28 SEE-ALSO:
 //! This is the third copy of the chrome scale: packages/shared/ghostex-settings/titlebar-color.ts owns it and apps/desktop/src/app/helpers/titlebar/ paints the app with it. The Settings view cannot reach the app helpers (the preview binary includes it alone), so it ports the functions and reads every table (presets, calibrated tints) from the generated catalog; keep the functions in lockstep with titlebar-color.ts.

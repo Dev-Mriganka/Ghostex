@@ -1,4 +1,4 @@
-//! The General page (the `settings` tab of packages/core-ui/settings-modal.tsx): Sidebar,
+//! The General page (the `settings` tab of packages/core-ui/settings-modal.tsx (deleted 2026-10-01)): Sidebar,
 //! Session Cards, Sidebar Tags, Chat, Status Indicators, Browser, Dev Servers, Editor, File
 //! opening, Terminal, Terminal Behavior, Terminal Scrolling, Auto Sleep, Power, Sounds, Sleeping
 //! Sessions and Experimental, in that order (CDXC:Settings 2026-08-24: each rail group's sections stay

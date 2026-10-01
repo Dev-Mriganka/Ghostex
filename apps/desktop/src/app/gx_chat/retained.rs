@@ -1,6 +1,6 @@
 //! The retained transcript cache: the record a reopened chat draws before its snapshot arrives.
 //!
-//! The port of `persistence.ts` from the deleted `apps/desktop/sidebar/session-chat-runtime/`. The
+//! The port of `persistence.ts` (deleted 2026-10-01) from the deleted `apps/desktop/sidebar/session-chat-runtime/`. The
 //! RECORD is the core's to encode, decode and judge fresh; what is left here is building the key,
 //! which only the host can do because it knows the machine id, and the write's one rule.
 //!

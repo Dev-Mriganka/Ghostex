@@ -1,5 +1,5 @@
 //! The mock workspace window's views (Agents session, Browser, Files, Code, Kanban, Automate) on
-//! the Workspace panel (previews/workspace-window.tsx, styles/workspace.css).
+//! the Workspace panel (previews/workspace-window.tsx (deleted 2026-10-01), styles/workspace.css).
 use super::GpuiOnboardingWindow;
 use super::fonts::{MANROPE, PLEX_MONO};
 use super::interact;
