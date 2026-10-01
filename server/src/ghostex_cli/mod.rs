@@ -9,6 +9,7 @@ pub mod args;
 pub mod attach;
 pub mod automations;
 pub mod board;
+mod built_in_extensions;
 pub mod browser_mcp;
 pub mod diagnostics;
 pub mod editors;
@@ -411,11 +412,24 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
         ),
         "create-agent" => run_bridge_action("createAgentSession", Parser::Agent, plain, args),
         "run-agent" => run_bridge_action("runAgent", Parser::Agent, plain, args),
-        "run-command" => run_bridge_action("runCommand", Parser::CommandButton, plain, args),
-        "run-action" => sessions::run_quick_action_command(args),
+        "run-command" => {
+            require_actions()?;
+            run_bridge_action("runCommand", Parser::CommandButton, plain, args)
+        }
+        "run-action" => {
+            require_actions()?;
+            sessions::run_quick_action_command(args)
+        }
         "quick-actions" => quick_actions_command(args),
-        "click-button" => run_bridge_action("clickButton", Parser::ClickButton, plain, args),
+        "click-button" => {
+            // `click-button command <id>` runs an Action; `click-button agent <id>` does not.
+            if args.first().map(String::as_str) == Some("command") {
+                require_actions()?;
+            }
+            run_bridge_action("clickButton", Parser::ClickButton, plain, args)
+        }
         "save-command" => {
+            require_actions()?;
             run_bridge_action("saveCommand", Parser::SaveCommand, fail_on_not_ok, args)
         }
         "save-agent" => run_bridge_action("saveAgent", Parser::SaveAgent, fail_on_not_ok, args),
@@ -487,14 +501,18 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
             args,
         ),
         "read-sidebar-spaces" => {
+            require_built_in(ghostex_settings_catalog::built_in_extensions::SPACES)?;
             run_bridge_action("readSidebarSpaces", Parser::None, fail_on_not_ok, args)
         }
-        "update-sidebar-spaces" => run_bridge_action(
-            "updateSidebarSpaces",
-            Parser::SidebarSpacesState,
-            fail_on_not_ok,
-            args,
-        ),
+        "update-sidebar-spaces" => {
+            require_built_in(ghostex_settings_catalog::built_in_extensions::SPACES)?;
+            run_bridge_action(
+                "updateSidebarSpaces",
+                Parser::SidebarSpacesState,
+                fail_on_not_ok,
+                args,
+            )
+        }
         "read-custom-session-tags" => {
             run_bridge_action("readCustomSessionTags", Parser::None, fail_on_not_ok, args)
         }
@@ -835,6 +853,15 @@ fn run_command(name: &str, args: &[String]) -> CliResult<()> {
         }
         other => Err(CliError::Other(format!("Unknown command: {other}"))),
     }
+}
+
+/// A verb of a built-in extension that is off (Actions, Spaces) answers "turned off".
+fn require_built_in(id: &str) -> CliResult<()> {
+    built_in_extensions::require_built_in_extension(id)
+}
+
+fn require_actions() -> CliResult<()> {
+    require_built_in(ghostex_settings_catalog::built_in_extensions::ACTIONS)
 }
 
 fn quick_actions_command(args: &[String]) -> CliResult<()> {

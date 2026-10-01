@@ -16,9 +16,8 @@ How to use this file:
 #### Sidebar
 
 - **Preset** `sidebarSettingsPreset` (Settings UI row without a settings key; use `ghostex settings open`): Apply a sidebar UI preset or show Custom when controlled settings diverge.
-- **Spaces** `sidebarSpacesEnabled` (boolean, default false): Show a row of Space filter buttons in each server's sidebar section.
-- **When switching to a Space** `sidebarSpaceSwitchBehavior` (one of restore | keep; default restore): Reopen the session you last had open in a Space when you switch to it, in the view its project was in. Requires Spaces. Option labels: restore = Restore the Space's projects, keep = Don't switch projects.
-- **Follow the active session's Space** `sidebarSpaceFollowActiveSession` (boolean, default false): Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward or Search by Prompt. Requires Spaces.
+- **When switching to a Space** `sidebarSpaceSwitchBehavior` (one of restore | keep; default restore): Reopen the session you last had open in a Space when you switch to it, in the view its project was in. Shown while the Spaces extension is on. Option labels: restore = Restore the Space's projects, keep = Don't switch projects.
+- **Follow the active session's Space** `sidebarSpaceFollowActiveSession` (boolean, default false): Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward or Search by Prompt. Shown while the Spaces extension is on.
 - **Keep the previous project live for** `projectSwitchKeepAliveMinutes` (number 0 to 60 default 10): After you switch to another project or Space, keep the terminals, chats, and view that were open in the previous project running for this many minutes so switching back is instant. 0 releases them right away.
 - **Sidebar visibility memory** `sidebarVisibilityMemory` (one of shared | perView; default shared) [advanced]: Keep one sidebar state everywhere, or remember it separately for Agents and for the wide views (Browser, Code, Files, Kanban, Automate). Option labels: shared = Same in every view, perView = Remembered per view.
 - **Show project icons** `showProjectIcons` (boolean, default true) [advanced]: Show project artwork or a square with the project’s first letter beside project names.
@@ -38,6 +37,8 @@ How to use this file:
 - **Command Pane Side** `commandsPanelSide` (one of bottom | right; default bottom): Dock the command pane below the workspace or to its right. Option labels: bottom = Bottom, right = Right.
 - **Auto-minimize Commands pane** `commandsPanelAutoMinimize` (boolean, default true): Minimize the Commands pane after you stop using it and move focus elsewhere. Commands keep running.
 - **Minimize after** `commandsPanelAutoMinimizeDelaySeconds` (number one of 15 | 30 | 60 | 120 | 300; default 60): How long the Commands pane stays open after focus and the pointer leave it. Option labels: 15 = 15 seconds, 30 = 30 seconds, 60 = 1 minute, 120 = 2 minutes, 300 = 5 minutes.
+- **Hide New Terminal button** `hideTabStripNewTerminalButton` (boolean, default false): Hide the New Terminal button from the tab strip.
+- **Hide New Browser Tab button** `hideTabStripNewBrowserButton` (boolean, default false): Hide the New Browser Tab button from the tab strip.
 - **Compact Session Rows** `projectSessionListCollapsedCount` (number 1 to 50 default 13) [advanced]: Rows a project shows in Compact mode before its "Show all" row. Rows in collapsed sections do not count.
 - **Sidebar Interface Size** `agentManagerZoomPercent` (number 50 to 200 default 100): Scale the sidebar interface.
 - **Double-click empty sidebar space to create a session** `createSessionOnSidebarDoubleClick` (boolean, default false) [advanced]: Create a session from empty sidebar space.
@@ -265,8 +266,6 @@ How to use this file:
 - **Browser Action** `browserAction` (Settings UI row without a settings key; use `ghostex settings open`): Add browser actions to open saved URLs in browser panes.
 - **Custom actions** `actionShortcuts` (Settings UI row without a settings key; use `ghostex settings open`): Actions are custom shortcuts for repeat work, shared between a main project and its worktrees.
 - **Global Actions** `globalActions` (Settings UI row without a settings key; use `ghostex settings open`): Global actions apply to every project, are stored by the Ghostex daemon, and appear in the tab strip above your tabs.
-- **Hide New Terminal button** `hideTabStripNewTerminalButton` (boolean, default false): Hide the New Terminal button from the tab strip.
-- **Hide New Browser Tab button** `hideTabStripNewBrowserButton` (boolean, default false): Hide the New Browser Tab button from the tab strip.
 ## Accounts (tab `accounts`)
 
 ### Accounts
@@ -360,8 +359,6 @@ How to use this file:
 - **Hide Dev Servers button** `devServersTitlebarButtonHidden` (boolean, default false): Hide Dev servers from the header ⋯ menu.
 - **Hide Extensions button** `extensionsTitlebarButtonHidden` (boolean, default false): Hide Extensions from the header ⋯ menu.
 - **Hide Git button** `gitActionsTitlebarButtonHidden` (boolean, default false): Hide the Commit button from the work area header.
-- **Hide Actions button** `quickActionsTitlebarButtonHidden` (boolean, default false): Hide the Start button from the work area header.
-- **Hide Open In button** `openInTitlebarButtonHidden` (boolean, default false): Hide the Open button from the work area header.
 ### Built-in
 
 - **Linear** `linear` (Settings UI row without a settings key; use `ghostex settings open`): Open your team's issues and projects. Choose a home URL for each project or worktree.
@@ -388,12 +385,16 @@ How to use this file:
 - **Dev servers** `devServers` (Settings UI row without a settings key; use `ghostex settings open`): A ⋯ menu panel listing development servers running on this computer. A new Browser tab shows the same list.
 - **Resources** `resources` (Settings UI row without a settings key; use `ghostex settings open`): A ⋯ menu panel listing what Ghostex is running right now, with the CPU and memory each part is using.
 - **Git actions** `gitActions` (Settings UI row without a settings key; use `ghostex settings open`): A work area header button for commit, branch, and worktree helpers on the active project.
-- **Quick Actions** `quickActions` (Settings UI row without a settings key; use `ghostex settings open`): A work area header button that runs your saved terminal and browser actions in one click.
-- **Open In** `openIn` (Settings UI row without a settings key; use `ghostex settings open`): A work area header button that opens the active project in another app.
+- **Actions** `quickActions` (Settings UI row without a settings key; use `ghostex settings open`): Saved terminal commands and web pages you start in one click from the Start button, a hotkey, Quick Access or a project row.
+- **Open In** `openIn` (Settings UI row without a settings key; use `ghostex settings open`): Open the active project or a session's folder in your editor, terminal or file manager from the Open button and the Open In menus.
+- **Spaces** `spaces` (Settings UI row without a settings key; use `ghostex settings open`): Group projects into Spaces and switch between them from a row of icons at the top of the sidebar, or by swiping.
 - **Extensions** `extensionsButton` (Settings UI row without a settings key; use `ghostex settings open`): An entry in the work area header’s ⋯ menu that opens this Extensions page.
 - **Chromium runtime (CEF)** `cef` (Settings UI row without a settings key; use `ghostex settings open`): Install, reinstall or uninstall the optional web runtime used by the Browser, the Code view, website and extension views, and HTML files in Files.
 - **Hide Bots** `botsHidden` (boolean, default true): Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.
 - **Hide Bot automations** `botAutomationsHidden` (boolean, default true): Stop offering Bot automations, the Automations row in the Bots sidebar that opens a feed of every Hermes cron run. Hidden by default; needs Bots.
+- **Turn off Actions** `actionsHidden` (boolean, default true): Turn off Actions everywhere: the Start button, the Actions page in Settings, Actions pinned to project rows, the Start Action hotkeys and the Quick Access rows. Off by default; your saved actions are kept.
+- **Turn off Open In** `openInTitlebarButtonHidden` (boolean, default false): Turn off Open In everywhere: the Open button, the Open In page in Settings and the Open In menus. Your apps and custom commands are kept.
+- **Spaces** `sidebarSpacesEnabled` (boolean, default false): Turn on Spaces: a row of Space icons at the top of the sidebar, Space menus, and the Space settings. Off by default; your saved Spaces are kept while it is off.
 ### Extensions Store
 
 - **Extension store** `store` (Settings UI row without a settings key; use `ghostex settings open`): Browse audited extensions, install them, and manage what is already installed.

@@ -616,12 +616,6 @@ pub const SESSION_TITLE_GENERATION_AGENT_OPTIONS: &[Opt] = &[
     opt("Custom", "custom"),
 ];
 
-/// CDXC:Spaces 2026-08-28:
-/// The Spaces feature switch is a boolean rendered as a combined button, so its
-/// two segments are named once here for both the settings row and settings
-/// search.
-pub const SIDEBAR_SPACES_ENABLED_OPTIONS: &[Opt] = &[opt("Off", "off"), opt("On", "on")];
-
 /// CDXC:Spaces 2026-09-11 DECISION:
 /// User: the default, "Restore the Space's projects", is the first entry so the dropdown opens on it.
 pub const SIDEBAR_SPACE_SWITCH_BEHAVIOR_OPTIONS: &[Opt] = &[

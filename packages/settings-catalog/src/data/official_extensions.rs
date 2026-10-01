@@ -209,21 +209,41 @@ pub const GHOSTEX_OFFICIAL_EXTENSIONS: J = J::Arr(&[
         ("settingsKey", J::Str("gitActionsTitlebarButtonHidden")),
         ("title", J::Str("Git actions")),
     ]),
+    // CDXC:Extensions 2026-10-01 DECISION:
+    // User: "I want Actions to be an extension, and if I disable it then it should hide it from the settings and hide the button at the top of the screen (disables this whole feature), default to off." The switch is a new key (`actionsHidden`, default on = hidden) rather than the old `quickActionsTitlebarButtonHidden`, because the settings file stores every default, so the old key's saved `false` cannot tell a user who turned Actions on from one who never touched it; everyone starts with Actions off and their saved actions are kept.
     J::Obj(&[
-        ("description", J::Str("A work area header button that runs your saved terminal and browser actions in one click.")),
-        ("category", J::Str("header-buttons")),
+        ("description", J::Str("Saved terminal commands and web pages you start in one click from the Start button, a hotkey, Quick Access or a project row.")),
+        ("category", J::Str("features")),
         ("id", J::Str("quickActions")),
-        ("placement", J::Str("titlebar-button")),
-        ("settingsKey", J::Str("quickActionsTitlebarButtonHidden")),
-        ("title", J::Str("Quick Actions")),
+        ("placement", J::Str("feature")),
+        ("settingsKey", J::Str("actionsHidden")),
+        ("title", J::Str("Actions")),
+        ("settingsPages", J::Arr(&[J::Str("actions")])),
+        ("hotkeys", J::Arr(&[J::Str("runActionSlot1"), J::Str("runActionSlot2"), J::Str("runActionSlot3"), J::Str("runActionSlot4"), J::Str("runActionSlot5")])),
     ]),
+    // CDXC:Extensions 2026-10-01 DECISION:
+    // User: "Same for 'Open in': when turned off we need to turn it off in settings, default to on." It keeps its old `openInTitlebarButtonHidden` key, so a user who had hidden the Open button keeps Open In off.
     J::Obj(&[
-        ("description", J::Str("A work area header button that opens the active project in another app.")),
-        ("category", J::Str("header-buttons")),
+        ("description", J::Str("Open the active project or a session's folder in your editor, terminal or file manager from the Open button and the Open In menus.")),
+        ("category", J::Str("features")),
         ("id", J::Str("openIn")),
-        ("placement", J::Str("titlebar-button")),
+        ("placement", J::Str("feature")),
         ("settingsKey", J::Str("openInTitlebarButtonHidden")),
         ("title", J::Str("Open In")),
+        ("settingsPages", J::Arr(&[J::Str("openTargets")])),
+    ]),
+    // CDXC:Extensions 2026-10-01 DECISION:
+    // User: Spaces becomes a built-in extension on the same page, default off, "the app's defaults simpler". Off hides everything about Spaces (the sidebar row, Space menus and drop targets, Space settings, Quick Access rows) and views behave as if there were one Space; saved Spaces are kept. It reuses `sidebarSpacesEnabled`, which already meant "Spaces on" and defaulted to off, so the switch's saved value carries over.
+    J::Obj(&[
+        ("description", J::Str("Group projects into Spaces and switch between them from a row of icons at the top of the sidebar, or by swiping.")),
+        ("category", J::Str("features")),
+        ("id", J::Str("spaces")),
+        ("placement", J::Str("feature")),
+        ("settingsKey", J::Str("sidebarSpacesEnabled")),
+        ("settingsKeyEnables", J::Bool(true)),
+        ("appWide", J::Bool(true)),
+        ("title", J::Str("Spaces")),
+        ("settingKeys", J::Arr(&[J::Str("sidebarSpaceSwitchBehavior"), J::Str("sidebarSpaceFollowActiveSession")])),
     ]),
     J::Obj(&[
         ("description", J::Str("An entry in the work area header’s ⋯ menu that opens this Extensions page.")),
@@ -236,6 +256,11 @@ pub const GHOSTEX_OFFICIAL_EXTENSIONS: J = J::Arr(&[
 ]);
 
 pub const GHOSTEX_OFFICIAL_EXTENSION_CATEGORIES: J = J::Arr(&[
+    J::Obj(&[
+        ("id", J::Str("features")),
+        ("label", J::Str("Features")),
+        ("typeLabel", J::Str("Feature")),
+    ]),
     J::Obj(&[
         ("id", J::Str("project-websites")),
         ("label", J::Str("Project websites")),

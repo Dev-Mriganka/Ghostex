@@ -38,33 +38,9 @@
       "agentWritable": false
     },
     {
-      "key": "sidebarSpacesEnabled",
-      "title": "Spaces",
-      "subtitle": "Show a row of Space filter buttons in each server's sidebar section.",
-      "tab": "settings",
-      "tabTitle": "General",
-      "group": "sidebar",
-      "groupTitle": "Sidebar",
-      "section": "sidebar",
-      "sectionTitle": "Sidebar",
-      "type": "boolean",
-      "default": false,
-      "options": [
-        {
-          "label": "Off",
-          "value": "off"
-        },
-        {
-          "label": "On",
-          "value": "on"
-        }
-      ],
-      "agentWritable": true
-    },
-    {
       "key": "sidebarSpaceSwitchBehavior",
       "title": "When switching to a Space",
-      "subtitle": "Reopen the session you last had open in a Space when you switch to it, in the view its project was in. Requires Spaces.",
+      "subtitle": "Reopen the session you last had open in a Space when you switch to it, in the view its project was in. Shown while the Spaces extension is on.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "sidebar",
@@ -88,7 +64,7 @@
     {
       "key": "sidebarSpaceFollowActiveSession",
       "title": "Follow the active session's Space",
-      "subtitle": "Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward or Search by Prompt. Requires Spaces.",
+      "subtitle": "Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward or Search by Prompt. Shown while the Spaces extension is on.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "sidebar",
@@ -446,6 +422,34 @@
           "value": "300"
         }
       ],
+      "agentWritable": true
+    },
+    {
+      "key": "hideTabStripNewTerminalButton",
+      "title": "Hide New Terminal button",
+      "subtitle": "Hide the New Terminal button from the tab strip.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "sidebar",
+      "groupTitle": "Sidebar",
+      "section": "sidebar",
+      "sectionTitle": "Sidebar",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": true
+    },
+    {
+      "key": "hideTabStripNewBrowserButton",
+      "title": "Hide New Browser Tab button",
+      "subtitle": "Hide the New Browser Tab button from the tab strip.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "sidebar",
+      "groupTitle": "Sidebar",
+      "section": "sidebar",
+      "sectionTitle": "Sidebar",
+      "type": "boolean",
+      "default": false,
       "agentWritable": true
     },
     {
@@ -8012,30 +8016,6 @@
       "agentWritable": false
     },
     {
-      "key": "hideTabStripNewTerminalButton",
-      "title": "Hide New Terminal button",
-      "subtitle": "Hide the New Terminal button from the tab strip.",
-      "tab": "actions",
-      "tabTitle": "Actions",
-      "section": "actions",
-      "sectionTitle": "Actions",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
-      "key": "hideTabStripNewBrowserButton",
-      "title": "Hide New Browser Tab button",
-      "subtitle": "Hide the New Browser Tab button from the tab strip.",
-      "tab": "actions",
-      "tabTitle": "Actions",
-      "section": "actions",
-      "sectionTitle": "Actions",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
       "key": "accounts",
       "title": "Accounts, usage stats and automatic continuation",
       "subtitle": "Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.",
@@ -9095,30 +9075,6 @@
       "agentWritable": true
     },
     {
-      "key": "quickActionsTitlebarButtonHidden",
-      "title": "Hide Actions button",
-      "subtitle": "Hide the Start button from the work area header.",
-      "tab": "extensions",
-      "tabTitle": "Extensions",
-      "section": "viewOrder",
-      "sectionTitle": "Views",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
-      "key": "openInTitlebarButtonHidden",
-      "title": "Hide Open In button",
-      "subtitle": "Hide the Open button from the work area header.",
-      "tab": "extensions",
-      "tabTitle": "Extensions",
-      "section": "viewOrder",
-      "sectionTitle": "Views",
-      "type": "boolean",
-      "default": false,
-      "agentWritable": true
-    },
-    {
       "key": "linear",
       "title": "Linear",
       "subtitle": "Open your team's issues and projects. Choose a home URL for each project or worktree.",
@@ -9384,8 +9340,8 @@
     },
     {
       "key": "quickActions",
-      "title": "Quick Actions",
-      "subtitle": "A work area header button that runs your saved terminal and browser actions in one click.",
+      "title": "Actions",
+      "subtitle": "Saved terminal commands and web pages you start in one click from the Start button, a hotkey, Quick Access or a project row.",
       "tab": "extensions",
       "tabTitle": "Extensions",
       "section": "official",
@@ -9396,7 +9352,18 @@
     {
       "key": "openIn",
       "title": "Open In",
-      "subtitle": "A work area header button that opens the active project in another app.",
+      "subtitle": "Open the active project or a session's folder in your editor, terminal or file manager from the Open button and the Open In menus.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "spaces",
+      "title": "Spaces",
+      "subtitle": "Group projects into Spaces and switch between them from a row of icons at the top of the sidebar, or by swiping.",
       "tab": "extensions",
       "tabTitle": "Extensions",
       "section": "official",
@@ -9448,6 +9415,42 @@
       "sectionTitle": "Built-in",
       "type": "boolean",
       "default": true,
+      "agentWritable": true
+    },
+    {
+      "key": "actionsHidden",
+      "title": "Turn off Actions",
+      "subtitle": "Turn off Actions everywhere: the Start button, the Actions page in Settings, Actions pinned to project rows, the Start Action hotkeys and the Quick Access rows. Off by default; your saved actions are kept.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true
+    },
+    {
+      "key": "openInTitlebarButtonHidden",
+      "title": "Turn off Open In",
+      "subtitle": "Turn off Open In everywhere: the Open button, the Open In page in Settings and the Open In menus. Your apps and custom commands are kept.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": true
+    },
+    {
+      "key": "sidebarSpacesEnabled",
+      "title": "Spaces",
+      "subtitle": "Turn on Spaces: a row of Space icons at the top of the sidebar, Space menus, and the Space settings. Off by default; your saved Spaces are kept while it is off.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "boolean",
+      "default": false,
       "agentWritable": true
     },
     {

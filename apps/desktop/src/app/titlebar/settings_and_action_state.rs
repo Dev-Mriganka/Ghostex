@@ -233,7 +233,13 @@ impl GhostexGpuiApp {
         );
     }
 
+    /// Empty while the Actions extension is off, so the Start menu, the Start Action hotkeys and
+    /// every other runner find nothing to run; the saved actions themselves stay in gxserver.
     pub(crate) fn visible_gpui_titlebar_actions(&self) -> Vec<GpuiTitlebarAction> {
+        if !self.built_in_extension_enabled(ghostex_settings_catalog::built_in_extensions::ACTIONS)
+        {
+            return Vec::new();
+        }
         self.titlebar_actions_snapshot.clone()
     }
 
@@ -387,7 +393,10 @@ impl GhostexGpuiApp {
         window: &mut Window,
         cx: &mut gpui::Context<Self>,
     ) {
-        if self.titlebar_quick_action_button_on_cooldown() {
+        if self.titlebar_quick_action_button_on_cooldown()
+            || !self
+                .built_in_extension_enabled(ghostex_settings_catalog::built_in_extensions::ACTIONS)
+        {
             return;
         }
         let Some(action) = self.active_gpui_titlebar_action() else {

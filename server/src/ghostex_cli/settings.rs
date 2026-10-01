@@ -718,6 +718,11 @@ fn open_command(args: &[String]) -> CliResult<()> {
     let tab = explicit_tab
         .or_else(|| entry.map(|entry| entry.tab.clone()))
         .unwrap_or_else(|| "settings".to_string());
+    // A page of a built-in extension that is off (Actions, Open In) is not in Settings to open.
+    if let Some(feature) = ghostex_settings_catalog::built_in_extensions::feature_owning_page(&tab)
+    {
+        super::built_in_extensions::require_built_in_extension(feature)?;
+    }
     let search_query = entry.map(|entry| entry.title.clone());
     let mut payload = Map::new();
     payload.insert("tab".into(), json!(tab));

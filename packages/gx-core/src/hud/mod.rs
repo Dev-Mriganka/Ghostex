@@ -122,12 +122,20 @@ pub fn compose_sidebar_hud(core: &Core, sources: &HudSources) -> Value {
         &theme,
     );
     let parked = parked_projects(&recent_projects);
+    // The Actions extension is off: the HUD carries no Actions, so the sidebar's pinned Actions,
+    // a sidebar Action run and Quick Access find none. They stay saved in gxserver.
+    let actions_on = ghostex_settings_catalog::built_in_extensions::enabled(
+        raw_settings,
+        ghostex_settings_catalog::built_in_extensions::ACTIONS,
+    );
     let sidebar_hud = sources.sidebar_hud.as_ref();
+    let actions_hud = sidebar_hud.filter(|_| actions_on);
     // A remote machine's Actions count only while its stream is live: the runtime dropped a
     // machine's HUD with its presentation when the machine went away.
     let remote_huds: BTreeMap<String, Value> = sources
         .remote_sidebar_huds
         .iter()
+        .filter(|_| actions_on)
         .filter(|(machine_id, _)| {
             store
                 .loaded_live(&MachineId::Remote((*machine_id).clone()))
@@ -140,9 +148,19 @@ pub fn compose_sidebar_hud(core: &Core, sources: &HudSources) -> Value {
     if let Some(active) = &sources.active_project_id {
         hud.insert("activeProjectId".into(), Value::from(active.as_str()));
     }
+    // With the Spaces extension off there is one Space: the active project resolves into none, so
+    // per-Space view rules do not apply and the scope editor offers no Space to pick.
+    let spaces_on = ghostex_settings_catalog::built_in_extensions::enabled(
+        raw_settings,
+        ghostex_settings_catalog::built_in_extensions::SPACES,
+    );
     hud.insert(
         "activeProjectSpaceRefs".into(),
-        scopes::active_project_space_refs(store, sources.active_project_id.as_deref()),
+        if spaces_on {
+            scopes::active_project_space_refs(store, sources.active_project_id.as_deref())
+        } else {
+            Value::Array(Vec::new())
+        },
     );
     hud.insert("activeSessionsSortMode".into(), Value::from("lastActivity"));
     hud.insert(
@@ -150,7 +168,7 @@ pub fn compose_sidebar_hud(core: &Core, sources: &HudSources) -> Value {
         settings::agent_manager_zoom_percent(raw_settings),
     );
     hud.insert("agents".into(), actions::agents(sidebar_hud));
-    if let Some(commands_by_project) = actions::commands_by_project(sidebar_hud, &remote_huds) {
+    if let Some(commands_by_project) = actions::commands_by_project(actions_hud, &remote_huds) {
         hud.insert("commandsByProject".into(), commands_by_project);
     }
     hud.insert(
@@ -160,7 +178,7 @@ pub fn compose_sidebar_hud(core: &Core, sources: &HudSources) -> Value {
     hud.insert("debuggingMode".into(), Value::Bool(sources.debugging_mode));
     hud.insert(
         "globalCommands".into(),
-        actions::global_commands(sidebar_hud),
+        actions::global_commands(actions_hud),
     );
     hud.insert(
         "projectViewProjects".into(),
@@ -168,7 +186,11 @@ pub fn compose_sidebar_hud(core: &Core, sources: &HudSources) -> Value {
     );
     hud.insert(
         "projectViewSpaces".into(),
-        scopes::project_view_spaces(store, &machine_names),
+        if spaces_on {
+            scopes::project_view_spaces(store, &machine_names)
+        } else {
+            Value::Array(Vec::new())
+        },
     );
     hud.insert("recentProjects".into(), recent_projects);
     hud.insert(

@@ -274,7 +274,11 @@ impl Render for HotkeysTab {
             )
         };
         let expand_collapsed = values.bool("expandCollapsedProjectsOnJump");
-        let searches = hotkey_section_searches(&query, expand_collapsed);
+        let searches = hotkey_section_searches(&query, expand_collapsed, &|id| {
+            ghostex_settings_catalog::built_in_extensions::hotkey_shown_with(id, |key| {
+                Some(values.bool(key))
+            })
+        });
         let hotkeys = self.current_hotkeys(cx);
         // `normalizeghostexHotkeySettings(DEFAULT_GHOSTEX_HOTKEYS)`: the macOS defaults, moved to the
         // Windows/Linux chord where an action has one.

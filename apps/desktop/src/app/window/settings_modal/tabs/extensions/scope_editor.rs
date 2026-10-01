@@ -181,7 +181,10 @@ fn scope_options(
         })
         .collect();
     for (key, _) in &scope.spaces {
-        if spaces.iter().any(|space| space.key() == *key)
+        // With the Spaces extension off the HUD lists no Space, and a saved Space rule is kept
+        // but not offered (built_in_extensions.rs).
+        if spaces.is_empty()
+            || spaces.iter().any(|space| space.key() == *key)
             || parse_view_scope_space_key(key).is_none()
         {
             continue;
@@ -313,8 +316,11 @@ impl ExtensionsTab {
         let scope = &editor.draft;
         let title = editor.title.clone();
         let everywhere = scope.default_shown;
-        let selection = scope_selection(scope);
+        let mut selection = scope_selection(scope);
         let (projects, spaces) = scope_projects_and_spaces(self.store.read(cx).hud());
+        if spaces.is_empty() {
+            selection.targets.retain(|id| !id.starts_with("space:"));
+        }
         let (space_options, project_options) = scope_options(scope, &projects, &spaces);
         let all_options: Vec<ScopeOption> = space_options
             .iter()

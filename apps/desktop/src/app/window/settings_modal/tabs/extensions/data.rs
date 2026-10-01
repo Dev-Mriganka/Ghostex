@@ -130,9 +130,20 @@ pub(crate) fn official_category(
         .find(|category| category.id == extension.category)
 }
 
-/// `isOfficialExtensionEnabled`: on while its inverted "hidden" key is not true.
+/// `isOfficialExtensionEnabled`: the catalog's one rule (an inverted "hidden" key, or a
+/// `settingsKeyEnables` key such as Spaces').
 pub(crate) fn is_official_enabled(values: &SettingsValues, extension: &OfficialExtension) -> bool {
-    !values.bool(&extension.settings_key)
+    ghostex_settings_catalog::built_in_extensions::enabled_with(&extension.id, |key| {
+        Some(values.bool(key))
+    })
+}
+
+/// The value the switch writes to `extension.settings_key` to turn it on (`next`) or off.
+pub(crate) fn official_switch_value(extension: &OfficialExtension, next: bool) -> bool {
+    match ghostex_settings_catalog::built_in_extensions::switch_key(&extension.id) {
+        Some((_, true)) => next,
+        _ => !next,
+    }
 }
 
 /// `officialExtensionBlockedBy`: the entry that must be enabled first, while it is off.
@@ -156,6 +167,7 @@ pub(crate) fn official_icon(id: &str) -> &'static str {
         "vercel" => "modals/settings/cloud.svg",
         "supabase" => "modals/settings/database.svg",
         "github-actions" | "kanban" | "quickActions" => icon::PLAYER_PLAY,
+        "spaces" => "modals/settings/stack-2.svg",
         "posthog" => "modals/settings/chart-bar.svg",
         "automate" => "modals/settings/bolt.svg",
         "botAutomations" => "modals/settings/rss.svg",

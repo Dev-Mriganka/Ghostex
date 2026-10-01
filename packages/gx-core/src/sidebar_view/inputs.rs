@@ -2,6 +2,7 @@
 //! settings it depends on, and the facts only the host knows (browser tabs, git diff stats, the
 //! close-after-done and delayed-send timers it owns).
 
+use ghostex_settings_catalog::built_in_extensions;
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
@@ -273,6 +274,10 @@ pub struct SidebarSettings {
     pub bots_enabled: bool,
     /// The Bot automations extension is on (`botAutomationsHidden` is false). It needs Bots too.
     pub bot_automations_enabled: bool,
+    /// The Actions extension is on: project headers show pinned Actions.
+    pub actions_enabled: bool,
+    /// The Open In extension is on: menus offer Open In.
+    pub open_in_enabled: bool,
 }
 
 impl Default for SidebarSettings {
@@ -296,6 +301,8 @@ impl Default for SidebarSettings {
             show_less_for_expanded_project_jumps: false,
             bots_enabled: false,
             bot_automations_enabled: false,
+            actions_enabled: false,
+            open_in_enabled: true,
         }
     }
 }
@@ -324,9 +331,9 @@ impl SidebarSettings {
                 defaults.enable_session_parking,
             ),
             project_session_list_collapsed_count: count,
-            sidebar_spaces_enabled: boolean(
-                "sidebarSpacesEnabled",
-                defaults.sidebar_spaces_enabled,
+            sidebar_spaces_enabled: built_in_extensions::enabled_in_value(
+                Some(settings),
+                built_in_extensions::SPACES,
             ),
             sidebar_space_follow_active_session: boolean(
                 "sidebarSpaceFollowActiveSession",
@@ -373,6 +380,14 @@ impl SidebarSettings {
             bot_automations_enabled: !boolean(
                 "botAutomationsHidden",
                 !defaults.bot_automations_enabled,
+            ),
+            actions_enabled: built_in_extensions::enabled_in_value(
+                Some(settings),
+                built_in_extensions::ACTIONS,
+            ),
+            open_in_enabled: built_in_extensions::enabled_in_value(
+                Some(settings),
+                built_in_extensions::OPEN_IN,
             ),
         }
     }

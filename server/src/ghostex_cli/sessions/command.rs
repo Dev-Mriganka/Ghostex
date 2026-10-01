@@ -77,7 +77,15 @@ fn fetch_mobile_sidebar_hud(flags: &Flags) -> CliResult<Value> {
         }
     }
     let mut quick_actions_by_project = Map::new();
-    if let Some(by_project) = hud.get("commandsByProject").and_then(Value::as_object) {
+    // The phone lists no Actions while the Actions extension is off on this computer.
+    let actions_on = super::super::built_in_extensions::built_in_extension_enabled(
+        ghostex_settings_catalog::built_in_extensions::ACTIONS,
+    );
+    if let Some(by_project) = hud
+        .get("commandsByProject")
+        .and_then(Value::as_object)
+        .filter(|_| actions_on)
+    {
         for (project_id, commands) in by_project {
             let mut actions_list: Vec<Value> = Vec::new();
             if let Some(commands) = commands.as_array() {

@@ -1,16 +1,17 @@
 //! The Actions page (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)): the "set frequently used
 //! commands here" note while nothing is configured, Global Actions and Project Actions (each a
-//! drag-to-reorder list with Terminal Action / Browser Action buttons, or an empty state), and Tab
-//! Strip Buttons. Adding or editing an action replaces the lists with the one editor
+//! drag-to-reorder list with Terminal Action / Browser Action buttons, or an empty state). The Tab
+//! Strip Buttons switches moved to General > Sidebar, because this page hides while the Actions
+//! extension is off. Adding or editing an action replaces the lists with the one editor
 //! (editor.rs), so a second edit can never start while a draft is open.
 mod editor;
 mod model;
 
 use super::super::super::native_modal_kit::*;
 use super::super::fields::{
-    ButtonVariant, FieldStates, RowSpec, SearchableList, SettingsPage, card_inset, command_icon,
+    ButtonVariant, FieldStates, SearchableList, SettingsPage, card_inset, command_icon,
     icon, move_index, reorder_handle, reorder_order, reorder_row, reorder_scroll_container,
-    settings_button, settings_icon, settings_icon_button, settings_section, toggle_field,
+    settings_button, settings_icon, settings_icon_button, settings_section,
 };
 use super::super::model::SettingsTabId;
 use super::super::page::{PageBlock, settings_page};
@@ -482,7 +483,7 @@ fn unconfigured_note(p: &SettingsPalette) -> AnyElement {
 
 impl Render for ActionsTab {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (p, values, search, commands, global_commands, matching) = {
+        let (p, search, commands, global_commands, matching) = {
             let store = self.store.read(cx);
             let matching: Vec<SettingsTabId> = if store.is_searching() {
                 rail_pages(store).into_iter().map(|page| page.tab).collect()
@@ -491,7 +492,6 @@ impl Render for ActionsTab {
             };
             (
                 store.palette(),
-                store.values(),
                 store.tab_search(SettingsTabId::Actions),
                 commands_from_hud(store.hud(), "commands"),
                 commands_from_hud(store.hud(), "globalCommands"),
@@ -552,41 +552,6 @@ impl Render for ActionsTab {
                 cx,
             ) {
                 blocks.push(PageBlock::section("actions", section));
-            }
-            // CDXC:AgentLauncher 2026-08-01 SEE-ALSO: the built-in tab strip buttons are toggled next to the Global Actions that share the strip with them.
-            let rows = vec![
-                toggle_field(
-                    self,
-                    &p,
-                    "hideTabStripNewTerminalButton",
-                    RowSpec::new("Hide New Terminal button")
-                        .description("Hide the New Terminal button from the tab strip.")
-                        .keyed(&values, "hideTabStripNewTerminalButton"),
-                    values.bool("hideTabStripNewTerminalButton"),
-                    cx,
-                ),
-                toggle_field(
-                    self,
-                    &p,
-                    "hideTabStripNewBrowserButton",
-                    RowSpec::new("Hide New Browser Tab button")
-                        .description("Hide the New Browser Tab button from the tab strip.")
-                        .keyed(&values, "hideTabStripNewBrowserButton"),
-                    values.bool("hideTabStripNewBrowserButton"),
-                    cx,
-                ),
-            ];
-            if let Some(section) = settings_section(
-                &p,
-                "Tab Strip Buttons",
-                Some(
-                    "Global actions share the tab strip with these built-in buttons. Hide the ones you do not use to make room."
-                        .into(),
-                ),
-                None,
-                rows,
-            ) {
-                blocks.push(PageBlock::section("tabStrip", section));
             }
         }
         settings_page(&self.store, SettingsTabId::Actions, &p, blocks, cx)

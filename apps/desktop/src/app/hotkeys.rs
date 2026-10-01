@@ -551,6 +551,19 @@ pub(crate) fn gpui_native_hotkey_text(
     Some(parts.join("+"))
 }
 
+/// The hotkey's built-in extension is on (or it belongs to none). A hotkey of a feature that is off
+/// (the Start Action hotkeys while Actions is off) resolves to nothing, so its chord reaches the
+/// terminal or page like any unbound key.
+pub(crate) fn gpui_hotkey_feature_enabled(action_id: &str) -> bool {
+    let snapshot = shared_settings::shared_sidebar_settings_snapshot();
+    ghostex_settings_catalog::built_in_extensions::hotkey_shown_with(action_id, |key| {
+        snapshot
+            .object()
+            .get(key)
+            .and_then(serde_json::Value::as_bool)
+    })
+}
+
 #[cfg(target_os = "macos")]
 pub(crate) fn gpui_configured_hotkey_action_id_for_native_text(
     hotkey_text: &str,
@@ -569,7 +582,7 @@ pub(crate) fn gpui_configured_hotkey_action_id_for_native_text(
     for (action_id, default_key) in GPUI_DEFAULT_GHOSTEX_HOTKEYS {
         // Chat owns these chords (see GPUI_DEFAULT_GHOSTEX_HOTKEYS), so the key
         // travels onward to the page instead of resolving to a native action.
-        if gpui_chat_owned_hotkey_action_id(action_id) {
+        if gpui_chat_owned_hotkey_action_id(action_id) || !gpui_hotkey_feature_enabled(action_id) {
             continue;
         }
         let key = match persisted_hotkeys
@@ -943,6 +956,9 @@ impl GhostexGpuiApp {
         window: &mut gpui::Window,
         cx: &mut gpui::Context<Self>,
     ) -> bool {
+        if !gpui_hotkey_feature_enabled(action_id) {
+            return false;
+        }
         if action_id == "openModelPicker" {
             return self.request_focused_session_model_picker(window, cx);
         }

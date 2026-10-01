@@ -18,7 +18,7 @@ use super::text::{
 use super::wire::{QuickAccessGroup, QuickAccessIcon, QuickAccessRow};
 use crate::app_lifecycle::{AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE};
 use crate::sidebar_view::text::js_trim;
-use ghostex_settings_catalog::{hotkey_definitions, HotkeyDefinition, J};
+use ghostex_settings_catalog::{built_in_extensions, hotkey_definitions, HotkeyDefinition, J};
 
 const GHOSTEX_CHANGELOG_URL: &str = "https://github.com/maddada/ghostex/releases";
 const DEFAULT_SIDEBAR_COMMAND_ICON: &str = "playerPlay";
@@ -208,6 +208,12 @@ fn flag(settings: &Value, key: &str) -> bool {
         Value::Null => false,
         value => *value == Value::Bool(true),
     }
+}
+
+/// Built-in extension `id` is on in the HUD's settings (`built_in_extensions`, the one rule every
+/// surface reads); its Quick Access rows are left out while it is off.
+fn built_in_on(data: &QuickAccessData, id: &str) -> bool {
+    built_in_extensions::enabled_in_value(Some(data.settings()), id)
 }
 
 /// `isViewScopeVisible` for an official view: project override, then space, then default.
@@ -404,9 +410,16 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
         })
         .map(to_hotkey)
         .collect();
+    let actions_on = built_in_on(data, built_in_extensions::ACTIONS);
+    let open_in_on = built_in_on(data, built_in_extensions::OPEN_IN);
     built_in.extend(
         APP_MODAL_COMMANDS
             .iter()
+            .filter(|(command_id, ..)| match *command_id {
+                "actions" => actions_on,
+                "openTargets" => open_in_on,
+                _ => true,
+            })
             .map(
                 |(command_id, modal, search_text, title)| PaletteCommand::AppModal {
                     command_id,
@@ -428,7 +441,9 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
                 },
             ),
     );
-    built_in.extend(open_target_commands(data));
+    if open_in_on {
+        built_in.extend(open_target_commands(data));
+    }
     if data.app_lifecycle {
         built_in.extend(
             APP_LIFECYCLE_ACTIONS
@@ -463,6 +478,7 @@ pub(crate) fn populations(data: &QuickAccessData) -> Populations {
         .as_array()
         .into_iter()
         .flatten()
+        .filter(|_| actions_on)
         .enumerate()
         .filter_map(|(index, command)| {
             let slot_number = index + 1;

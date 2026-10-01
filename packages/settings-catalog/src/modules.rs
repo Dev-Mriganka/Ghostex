@@ -431,10 +431,6 @@ pub fn exports(module: &str, platform: Platform) -> Vec<(&'static str, Json)> {
                 SIDEBAR_SETTINGS_PRESET_KEYS.to_json(),
             ),
             (
-                "SIDEBAR_SPACES_ENABLED_OPTIONS",
-                SIDEBAR_SPACES_ENABLED_OPTIONS.to_json(),
-            ),
-            (
                 "SIDEBAR_SPACE_SWITCH_BEHAVIOR_OPTIONS",
                 SIDEBAR_SPACE_SWITCH_BEHAVIOR_OPTIONS.to_json(),
             ),

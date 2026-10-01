@@ -47,7 +47,10 @@ pub fn project_header_actions(
     for (scope, commands) in [
         ("global", host.global_commands.as_slice()),
         ("project", project_commands),
-    ] {
+    ]
+    .into_iter()
+    .filter(|_| settings.actions_enabled)
+    {
         for command in commands
             .iter()
             .filter(|command| command.show_on_project_row)

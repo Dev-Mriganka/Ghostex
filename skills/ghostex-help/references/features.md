@@ -278,7 +278,11 @@ Top chrome holds the Quick section (projectless Quick chats and terminals),
 tag filters, Spaces, and More Options: Settings, Search by
 Prompt, Previous Sessions, Mobile & Remote, Extensions, Tips.
 Spaces group projects or groups together; they are not saved filters, and a
-filter cannot be saved as a Space. Create one with the "Create space" button
+filter cannot be saved as a Space. Spaces is a built-in extension, off by
+default: turn it on with its switch in Settings > Extensions (Features). While
+it is off the sidebar has no Space row or Space menus, the Space settings are
+hidden, and a view limited to some Spaces shows everywhere; your Spaces are
+kept and come back when you turn it on (`sidebarSpacesEnabled`). Create one with the "Create space" button
 that fills the Space row while you have none, by right-clicking the Other
 button or a Space icon and choosing New Space, or from the More menu when
 Spaces overflow.
@@ -1281,6 +1285,12 @@ are saved terminal commands or browser URLs shown on project headers and in
 the header’s Quick Actions button, which shows the name and icon of the Action
 you used last and runs it again on click (its caret opens the full list; it
 reads Start until an Action exists); Global Actions apply to every project.
+Actions is a built-in extension, off by default: turn it on with its switch in
+Settings > Extensions (Features). While it is off the Start button, the Actions
+page in Settings, Actions pinned to project rows, the Start Action hotkeys and
+Quick Access's Action rows are gone, and `ghostex run-action`, `run-command`,
+`save-command` and `click-button command` say Actions is turned off. Your saved
+Actions are kept and come back when you turn it on (`actionsHidden`).
 
 Agents Hub lets you browse and edit agent files in Skills, MDs, Hooks,
 Configs & MCPs, and Agent Sync. In MDs, expand Shared agent markdown to see the
@@ -1811,8 +1821,9 @@ docs directory), `hideProjectHeaderDiffStats`,
 ## Extensions, Open In, and integrations
 
 - Settings > Extensions shows every extension as a card, three to a row: the
-  built-in ones, grouped by category (Project websites, Code and files,
-  Planning and automation, Header buttons, Menus and panels, Shared runtime),
+  built-in ones, grouped by category (Features, Project websites, Code and
+  files, Planning and automation, Header buttons, Menus and panels, Shared
+  runtime),
   then the Extensions Store (installed extensions first, then the audited
   third-party ones you can install), then Your views (custom URLs, Linear,
   GitHub Issues, dev server commands, HTML reports). One filter bar above them
@@ -1822,6 +1833,12 @@ docs directory), `hideProjectHeaderDiffStats`,
   it. Extension commands use the active local project's folder unless the
   extension supplies a folder; relative folders are resolved inside the active
   project.
+  Features are whole parts of Ghostex you can switch off to keep the app
+  simple: Actions (off by default), Open In (on by default) and Spaces (off by
+  default). Turning one off removes it everywhere at once (its header button,
+  Settings pages and rows, hotkeys, Quick Access rows and menus) and turning it
+  back on restores everything you had set up. Settings: `actionsHidden`,
+  `openInTitlebarButtonHidden`, `sidebarSpacesEnabled`.
   The Edit (pencil) button on a card chooses where that view, header button, or
   extension appears. Pick **Everywhere** or **Only in selected places**, then
   choose projects and spaces from the dropdown next to **Except in** (or
@@ -1870,7 +1887,11 @@ docs directory), `hideProjectHeaderDiffStats`,
   the live limits; the shared history remains the same. Totals come from saved
   conversation logs, so they may omit usage whose logs are missing.
 - Settings > Open In chooses which apps appear on session and project Open In
-  menus and adds custom open targets.
+  menus and adds custom open targets. Open In is a built-in extension, on by
+  default: switching it off in Settings > Extensions (Features) removes the
+  header's Open button, the Open In page and the Open In rows in Quick Access
+  and menus, and keeps your apps and custom targets for when you turn it back
+  on (`openInTitlebarButtonHidden`).
 - Settings > Integrations installs the bundled agent skills (Ghostex CLI,
   Ghostex Help, Computer Use and Browser Use through Fast Computer Use, SpaceO
   through SpaceO, Embedded Browser Use, Project Board Beads) and shows their

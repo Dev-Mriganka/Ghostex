@@ -650,13 +650,22 @@ impl SettingsStore {
     fn refresh_search(&mut self) {
         let show_advanced = self.show_advanced();
         let show_experimental = self.bool("showBetaFeatures");
+        let hidden_keys =
+            ghostex_settings_catalog::built_in_extensions::hidden_setting_keys_with(|key| {
+                Some(self.bool(key))
+            });
         if self.general_search.query != self.search_query
             || self.general_search.show_advanced != show_advanced
             || self.general_search.show_experimental != show_experimental
+            || self.general_search.hidden_keys != hidden_keys
             || self.general_search.sections.is_empty()
         {
-            self.general_search =
-                GeneralSearch::new(&self.search_query, show_advanced, show_experimental);
+            self.general_search = GeneralSearch::new(
+                &self.search_query,
+                show_advanced,
+                show_experimental,
+                hidden_keys,
+            );
         }
         let debugging_mode = self.bool("debuggingMode");
         self.tab_searches = settings_catalog()
@@ -699,9 +708,19 @@ impl SettingsStore {
         self.bool("showBetaFeatures")
     }
 
+    /// A page a whole-feature built-in extension owns (Actions, Open In) leaves the rail and the
+    /// search while that extension is off (`built_in_extensions::page_shown_with`).
+    pub(crate) fn built_in_extension_allows_page(&self, tab: SettingsTabId) -> bool {
+        ghostex_settings_catalog::built_in_extensions::page_shown_with(tab.id(), |key| {
+            Some(self.bool(key))
+        })
+    }
+
     /// `resolveSettingsModalTabForVisibility`.
     pub(crate) fn resolve_tab(&self, tab: SettingsTabId) -> SettingsTabId {
-        if tab == SettingsTabId::OsIntegration && !self.os_integration_visible() {
+        if (tab == SettingsTabId::OsIntegration && !self.os_integration_visible())
+            || !self.built_in_extension_allows_page(tab)
+        {
             SettingsTabId::General
         } else {
             tab
@@ -758,6 +777,7 @@ impl SettingsStore {
             };
             let tab = self.page_history[index];
             let hidden = (tab == SettingsTabId::OsIntegration && !self.os_integration_visible())
+                || !self.built_in_extension_allows_page(tab)
                 || (tab == SettingsTabId::Debugging && !self.show_advanced());
             if tab != self.active_tab && !hidden {
                 self.page_history_index = index;

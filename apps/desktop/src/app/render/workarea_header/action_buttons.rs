@@ -343,9 +343,8 @@ impl GhostexGpuiApp {
             })
             .when(
                 show_actions_button
-                    && !self.titlebar_button_hidden(
-                        QUICK_ACTIONS_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY,
-                        "quickActions",
+                    && !self.built_in_feature_button_hidden(
+                        ghostex_settings_catalog::built_in_extensions::ACTIONS,
                     ),
                 |this| {
                     this.child(self.render_workarea_header_split_button(
@@ -367,7 +366,9 @@ impl GhostexGpuiApp {
                 },
             )
             .when(
-                !self.titlebar_button_hidden(OPEN_IN_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY, "openIn"),
+                !self.built_in_feature_button_hidden(
+                    ghostex_settings_catalog::built_in_extensions::OPEN_IN,
+                ),
                 |this| {
                     this.child(self.render_workarea_header_split_button(
                         WorkareaHeaderSplitButton {

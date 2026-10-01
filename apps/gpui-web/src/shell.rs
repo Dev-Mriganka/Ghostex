@@ -50,6 +50,14 @@ impl GhostexGpuiApp {
             .into_any_element()
     }
 
+    /// Built-in extension `id` is on in the settings gxserver gave this page.
+    fn web_built_in_enabled(id: &str) -> bool {
+        ghostex_settings_catalog::built_in_extensions::enabled(
+            crate::shared_settings::shared_sidebar_settings_snapshot().object(),
+            id,
+        )
+    }
+
     fn render_workarea_header(&self, cx: &mut Context<Self>) -> AnyElement {
         let text = titlebar_active_text_color();
         let titles = self.open_session_titles();
@@ -88,8 +96,13 @@ impl GhostexGpuiApp {
                 )
             })
             .child(div().flex_1())
-            .child(Self::render_disabled_header_button("web-header-start", TITLEBAR_ICON_PLAYER_PLAY, Some("Start")))
-            .child(Self::render_disabled_header_button("web-header-open", TITLEBAR_ICON_FOLDER_OPEN, Some("Open")))
+            // Start and Open follow the Actions and Open In extensions, as the desktop header does.
+            .when(Self::web_built_in_enabled(ghostex_settings_catalog::built_in_extensions::ACTIONS), |header| {
+                header.child(Self::render_disabled_header_button("web-header-start", TITLEBAR_ICON_PLAYER_PLAY, Some("Start")))
+            })
+            .when(Self::web_built_in_enabled(ghostex_settings_catalog::built_in_extensions::OPEN_IN), |header| {
+                header.child(Self::render_disabled_header_button("web-header-open", TITLEBAR_ICON_FOLDER_OPEN, Some("Open")))
+            })
             .child(self.render_web_git_button(cx))
             .child(Self::render_disabled_header_button("web-header-more", TITLEBAR_ICON_DOTS, None))
             .child(Self::render_disabled_header_button("web-header-panel-bottom", TITLEBAR_ICON_PANEL_BOTTOM, None))

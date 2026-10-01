@@ -20,7 +20,8 @@ hotkeys Every shortcut and its default binding
   the work area shows Hide sidebar, Back/Forward, and the project icon, project
   name and current session title as one breadcrumb. On the right are the
   **Start**, **Open** and **Commit** buttons (Quick Actions, Open In and Git
-  actions, each with a caret for its menu), a **⋯** menu holding Ask Ghostex,
+  actions, each with a caret for its menu; Start and Open show only while the
+  Actions and Open In extensions are on, and Actions is off by default), a **⋯** menu holding Ask Ghostex,
   Tips & Tricks, Resources, Dev servers, Extensions and Customize, and the command terminal
   and view panel toggles. The header covers your sessions only: when a view panel
   is open, the panel's own tabs take the rest of that same row, so the tabs sit
@@ -57,7 +58,7 @@ hotkeys Every shortcut and its default binding
 - **Quick Access** (Cmd+Shift+P): search every command, pane action, settings
   shortcut, and recent session. Cmd+P opens it on Recent Sessions.
 - **Settings** (Cmd+,): pages for General, Integrations, Cloud Boxes, Extensions, Remote,
-  Projects, Agents, Accounts, Actions, Open In, Hotkeys, Debugging, and About, with one
+  Projects, Agents, Accounts, Actions and Open In (each while its extension is on), Hotkeys, Debugging, and About, with one
   search box that finds rows on every page.
 - **Dialogs** such as Quick Access, Settings, Search by Prompt and Add Project open
   over the middle of the window and stay open when you click somewhere else. Close

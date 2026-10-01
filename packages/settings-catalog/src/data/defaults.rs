@@ -103,7 +103,8 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     ("devServersTitlebarButtonHidden", J::Bool(false)),
     ("extensionsTitlebarButtonHidden", J::Bool(false)),
     ("gitActionsTitlebarButtonHidden", J::Bool(false)),
-    ("quickActionsTitlebarButtonHidden", J::Bool(false)),
+    // CDXC:Extensions 2026-10-01 DECISION: Actions is off by default (built_in_extensions.rs).
+    ("actionsHidden", J::Bool(true)),
     ("openInTitlebarButtonHidden", J::Bool(false)),
     // CDXC:CodeEditor 2026-05-06-15:00
     // Embedded code-server editor panes can reuse the user's local VS Code

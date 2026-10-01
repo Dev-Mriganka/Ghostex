@@ -37,9 +37,12 @@ pub(crate) struct RailPage {
 }
 
 /// `HOTKEY_SETTINGS_SECTIONS` searched the way `useHotkeySettings` does, as `(id, title, result)`.
+/// `hotkey_shown` drops the hotkeys of a built-in extension that is off (`built_in_extensions`),
+/// and a section left with none of its hotkeys goes with them.
 pub(crate) fn hotkey_section_searches(
     query: &str,
     expand_collapsed: bool,
+    hotkey_shown: &dyn Fn(&str) -> bool,
 ) -> Vec<(String, String, SectionSearch)> {
     let catalog = settings_catalog();
     let sections = catalog
@@ -82,8 +85,12 @@ pub(crate) fn hotkey_section_searches(
                     "Next Session and Previous Session jump over sleeping sessions in the sidebar.",
                 ));
             }
-            for hotkey_id in section.get("ids")?.as_array()? {
+            let section_ids = section.get("ids")?.as_array()?;
+            for hotkey_id in section_ids {
                 let hotkey_id = hotkey_id.as_str()?;
+                if !hotkey_shown(hotkey_id) {
+                    continue;
+                }
                 if let Some(definition) = catalog.hotkeys.iter().find(|definition| definition.id == hotkey_id) {
                     rows.push(super::catalog::SettingRowDef {
                         key: definition.id.clone(),
@@ -96,6 +103,9 @@ pub(crate) fn hotkey_section_searches(
                         advanced: false,
                     });
                 }
+            }
+            if !section_ids.is_empty() && rows.is_empty() {
+                return None;
             }
             let mut result = super::search::section_search(query, &title, &rows);
             if page_matches {
@@ -139,7 +149,11 @@ pub(crate) fn rail_pages(store: &SettingsStore) -> Vec<RailPage> {
         })
         .collect();
     let hotkey_sections =
-        hotkey_section_searches(&query, store.bool("expandCollapsedProjectsOnJump"));
+        hotkey_section_searches(&query, store.bool("expandCollapsedProjectsOnJump"), &|id| {
+            ghostex_settings_catalog::built_in_extensions::hotkey_shown_with(id, |key| {
+                Some(store.bool(key))
+            })
+        });
     let active_hotkey = store
         .active_section(SettingsTabId::Hotkeys)
         .unwrap_or_else(|| "general".to_string());
@@ -174,7 +188,7 @@ pub(crate) fn rail_pages(store: &SettingsStore) -> Vec<RailPage> {
             SettingsTabId::OsIntegration => store.os_integration_visible(),
             // CDXC:Settings 2026-09-26 DECISION: Debugging leaves the rail while Show Advanced is off; a search still finds it.
             SettingsTabId::Debugging => show_advanced || searching,
-            _ => true,
+            _ => store.built_in_extension_allows_page(*tab),
         })
         .filter_map(|tab| {
             let sections = match tab {

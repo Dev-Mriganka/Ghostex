@@ -7,6 +7,8 @@
 //! (Sidebar Tags with the New tag form, from the sidebar's New tag deep link), `hotkeys` (the
 //! Hotkeys entry point). Saves are applied back to the modal the way the app rehydrates it.
 //! `GHOSTEX_NATIVE_MODAL_DEMO_GLASS=1` previews the frosted palette.
+//! `GHOSTEX_NATIVE_MODAL_DEMO_SETTINGS='{"actionsHidden":false}'` merges saved settings over the
+//! state's (a built-in extension switched on or off, for example).
 use super::settings_modal::model::SettingsModalHost;
 use super::settings_modal::*;
 use gpui::{App, AppContext as _, Entity, WindowHandle};
@@ -58,6 +60,12 @@ fn story_settings(state: &str) -> serde_json::Map<String, Value> {
     settings_f2::story_settings(state, &mut settings);
     settings_f1::story_settings(state, &mut settings);
     settings_e::story_settings(state, &mut settings);
+    if let Ok(Value::Object(extra)) = std::env::var("GHOSTEX_NATIVE_MODAL_DEMO_SETTINGS")
+        .map_err(|_| ())
+        .and_then(|text| serde_json::from_str::<Value>(&text).map_err(|_| ()))
+    {
+        settings.extend(extra);
+    }
     settings
 }
 

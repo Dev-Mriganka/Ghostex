@@ -217,6 +217,14 @@ pub(crate) fn gpui_visible_open_targets_from_settings(
     CDXC:Titlebar 2026-06-24-12:50:
     GPUI titlebar Open In consumes the same shared Settings fields as React: hidden built-in ids, availability resolved ids/commands/app names, and normalized custom targets. Finder/Open Folder remains always available unless hidden, custom targets follow built-ins, and no project path, command text, URL, stdout/stderr, or user content is logged or persisted here.
     */
+    // The Open In extension is off: no surface (the Open button's menu, Quick Access, the project
+    // menu, the sidebar's Open in) has a target, while the saved targets stay in settings.
+    if !ghostex_settings_catalog::built_in_extensions::enabled(
+        settings,
+        ghostex_settings_catalog::built_in_extensions::OPEN_IN,
+    ) {
+        return Vec::new();
+    }
     let hidden_ids = gpui_open_target_hidden_ids(settings.get("workspaceOpenTargetHiddenIds"));
     let availability =
         gpui_open_target_availability(settings.get("workspaceOpenTargetAvailability"));

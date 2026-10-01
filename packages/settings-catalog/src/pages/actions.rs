@@ -17,8 +17,6 @@ pub(crate) fn actions() -> Section {
             row("browserAction", "Browser Action", "Add browser actions to open saved URLs in browser panes."),
             row("actionShortcuts", "Custom actions", "Actions are custom shortcuts for repeat work, shared between a main project and its worktrees."),
             row("globalActions", "Global Actions", "Global actions apply to every project, are stored by the Ghostex daemon, and appear in the tab strip above your tabs."),
-            row("hideTabStripNewTerminalButton", "Hide New Terminal button", "Hide the New Terminal button from the tab strip."),
-            row("hideTabStripNewBrowserButton", "Hide New Browser Tab button", "Hide the New Browser Tab button from the tab strip."),
         ],
     )
 }

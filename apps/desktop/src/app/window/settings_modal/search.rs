@@ -359,6 +359,8 @@ pub(crate) struct GeneralSearch {
     pub(crate) query: String,
     pub(crate) show_advanced: bool,
     pub(crate) show_experimental: bool,
+    /// Rows of a built-in extension that is off (the Space rows while Spaces is off).
+    pub(crate) hidden_keys: Vec<&'static str>,
     /// `settingsSearch[sectionId]`.
     pub(crate) sections: HashMap<String, SectionSearch>,
     /// `mainSettingsGroupSearch[groupId]`.
@@ -366,7 +368,12 @@ pub(crate) struct GeneralSearch {
 }
 
 impl GeneralSearch {
-    pub(crate) fn new(query: &str, show_advanced: bool, show_experimental: bool) -> Self {
+    pub(crate) fn new(
+        query: &str,
+        show_advanced: bool,
+        show_experimental: bool,
+        hidden_keys: Vec<&'static str>,
+    ) -> Self {
         let catalog = settings_catalog();
         let sections: HashMap<String, SectionSearch> = catalog
             .general_sections
@@ -379,6 +386,7 @@ impl GeneralSearch {
                         row.key != "terminalShadersEnabled"
                             || (cfg!(target_os = "macos") && show_experimental)
                     })
+                    .filter(|row| !hidden_keys.contains(&row.key.as_str()))
                     .cloned()
                     .collect();
                 (
@@ -411,6 +419,7 @@ impl GeneralSearch {
             query: query.to_string(),
             show_advanced,
             show_experimental,
+            hidden_keys,
             sections,
             groups,
         }

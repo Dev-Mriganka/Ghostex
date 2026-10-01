@@ -94,9 +94,11 @@ impl GpuiSettingsModalWindow {
                         store.set_active_tab(SettingsTabId::General, cx)
                     });
                 }
-                // OS Integration hides with Enable Experimental Features.
-                if active == SettingsTabId::OsIntegration
-                    && !store.read(cx).os_integration_visible()
+                // OS Integration hides with Enable Experimental Features, and a page of a built-in
+                // extension that was just turned off (Actions, Open In) hides with it.
+                if (active == SettingsTabId::OsIntegration
+                    && !store.read(cx).os_integration_visible())
+                    || !store.read(cx).built_in_extension_allows_page(active)
                 {
                     store.update(cx, |store, cx| {
                         store.set_active_tab(SettingsTabId::General, cx)

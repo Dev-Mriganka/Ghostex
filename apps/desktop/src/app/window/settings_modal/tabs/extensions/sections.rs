@@ -22,8 +22,8 @@ use super::data::{
     built_in_filter_subject, cef_filter_subject, custom_views, extension_view_scope_key,
     filter_store, is_official_enabled, is_version_newer, merged_view_order, move_id,
     normalize_custom_views, official_blocked_by, official_categories, official_extensions,
-    official_icon, official_view_scope_key, scope_projects_and_spaces, titlebar_view_order,
-    view_order_items, view_scope, view_scope_description,
+    official_icon, official_switch_value, official_view_scope_key, scope_projects_and_spaces,
+    titlebar_view_order, view_order_items, view_scope, view_scope_description,
 };
 use gpui::{
     AnyElement, ClickEvent, Context, FontWeight, InteractiveElement as _, IntoElement,
@@ -251,6 +251,7 @@ impl ExtensionsTab {
                 };
                 let enabled = is_official_enabled(&values, extension) && blocked.is_none();
                 let settings_key = extension.settings_key.clone();
+                let switch_extension = (*extension).clone();
                 let title = extension.title.clone();
                 let control = small_switch_control(
                     p,
@@ -261,7 +262,8 @@ impl ExtensionsTab {
                     move |page: &mut Self, next, _window, cx| {
                         let store = page.store.clone();
                         let key = settings_key.clone();
-                        store.update(cx, |store, cx| store.update_setting(&key, json!(!next), cx));
+                        let value = official_switch_value(&switch_extension, next);
+                        store.update(cx, |store, cx| store.update_setting(&key, json!(value), cx));
                     },
                     cx,
                 );

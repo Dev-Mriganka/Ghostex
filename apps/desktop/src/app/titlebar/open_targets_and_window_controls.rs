@@ -47,6 +47,19 @@ impl GhostexGpuiApp {
             || !self.official_view_scope_allows(official_extension_id)
     }
 
+    /// Built-in extension `id` (`ghostex_settings_catalog::built_in_extensions`) is on. Every
+    /// surface of a whole-feature extension (Actions, Open In, Spaces) asks this before it draws
+    /// or runs anything, so turning the switch off takes effect on the next redraw.
+    pub(crate) fn built_in_extension_enabled(&self, id: &str) -> bool {
+        built_in_extension_enabled(id)
+    }
+
+    /// A whole-feature extension's header button is hidden: the feature is off, or the button's
+    /// view scope hides it in the active project.
+    pub(crate) fn built_in_feature_button_hidden(&self, id: &str) -> bool {
+        !built_in_extension_enabled(id) || !self.official_view_scope_allows(id)
+    }
+
     pub(crate) fn active_open_target_index(&self, targets: &[GpuiOpenTarget]) -> Option<usize> {
         self.active_open_target_id
             .as_deref()
@@ -236,4 +249,12 @@ impl GhostexGpuiApp {
                 .into_any_element()
         }
     }
+}
+
+/// [`GhostexGpuiApp::built_in_extension_enabled`] for code without the app at hand.
+pub(crate) fn built_in_extension_enabled(id: &str) -> bool {
+    ghostex_settings_catalog::built_in_extensions::enabled(
+        shared_settings::shared_sidebar_settings_snapshot().object(),
+        id,
+    )
 }

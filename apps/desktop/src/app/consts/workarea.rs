@@ -267,11 +267,6 @@ pub(crate) const EXTENSIONS_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY: &str =
 pub(crate) const GIT_ACTIONS_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY: &str =
     "gitActionsTitlebarButtonHidden";
 
-pub(crate) const QUICK_ACTIONS_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY: &str =
-    "quickActionsTitlebarButtonHidden";
-
-pub(crate) const OPEN_IN_TITLEBAR_BUTTON_HIDDEN_SETTINGS_KEY: &str = "openInTitlebarButtonHidden";
-
 pub(crate) const SOURCE_CODE_SERVER_INSTALL_PROMPT: &str = "The VS Code IDE component is a 150mb optional install (one-time).\nWould you like to install it?";
 
 /// CDXC:CodeEditor 2026-09-13 SEE-ALSO:

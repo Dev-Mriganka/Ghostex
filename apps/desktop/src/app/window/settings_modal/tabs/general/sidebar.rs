@@ -99,34 +99,13 @@ fn sidebar_section(
             cx,
         ));
     }
-    // CDXC:Spaces 2026-08-28: Spaces reads as the same segmented control as Preset.
-    if g.visible(s, "sidebarSpacesEnabled") {
-        let spec = g.spec(
-            "sidebarSpacesEnabled",
-            "Spaces",
-            "Show a row of Space filter buttons in each server's sidebar section.",
-        );
-        let value = if g.values.bool("sidebarSpacesEnabled") {
-            "on"
-        } else {
-            "off"
-        };
-        rows.push(segmented_field(
-            &g.p,
-            "sidebarSpacesEnabled",
-            spec,
-            Some(reset_key::<GeneralTab>("sidebarSpacesEnabled")),
-            &g.options("SIDEBAR_SPACES_ENABLED_OPTIONS"),
-            Some(value),
-            None,
-            |page: &mut GeneralTab, next, _window, cx| {
-                save(page, "sidebarSpacesEnabled", json!(next == "on"), cx)
-            },
-            cx,
-        ));
-    }
     // CDXC:Settings 2026-09-11 DECISION: dependent rows are hidden, not disabled, while their parent is off.
-    if g.values.bool("sidebarSpacesEnabled") {
+    // Their parent is the Spaces switch on the Extensions page now (built_in_extensions.rs), so they
+    // sit as plain rows rather than indented under a row this page no longer has.
+    if ghostex_settings_catalog::built_in_extensions::enabled_with(
+        ghostex_settings_catalog::built_in_extensions::SPACES,
+        |key| Some(g.values.bool(key)),
+    ) {
         rows.extend(page.select(
             g,
             s,
@@ -135,7 +114,7 @@ fn sidebar_section(
             "Reopen the session you last had open in a Space when you switch to it, in the view its project was in. If that session is closed, the one before it is used; a Space with nothing remembered opens its first project.",
             g.options("SIDEBAR_SPACE_SWITCH_BEHAVIOR_OPTIONS"),
             Some(256.0),
-            true,
+            false,
             window,
             cx,
         ));
@@ -145,7 +124,7 @@ fn sidebar_section(
             "sidebarSpaceFollowActiveSession",
             "Follow the active session's Space",
             "Switch the selected Space to the one that owns a session you open from outside it, such as through Back/Forward, Search by Prompt, a notification, or Previous Sessions.",
-            true,
+            false,
             cx,
         ));
     }
@@ -356,6 +335,26 @@ fn sidebar_section(
             cx,
         ));
     }
+    // The tab strip's own buttons moved here from the Actions page, which hides while the
+    // Actions extension is off (built_in_extensions.rs).
+    rows.extend(page.toggle(
+        g,
+        s,
+        "hideTabStripNewTerminalButton",
+        "Hide New Terminal button",
+        "Hide the New Terminal button from the tab strip.",
+        false,
+        cx,
+    ));
+    rows.extend(page.toggle(
+        g,
+        s,
+        "hideTabStripNewBrowserButton",
+        "Hide New Browser Tab button",
+        "Hide the New Browser Tab button from the tab strip.",
+        false,
+        cx,
+    ));
     rows.extend(page.slider(
         g,
         s,
