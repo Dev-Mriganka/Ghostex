@@ -233,6 +233,9 @@ pub(crate) struct SettingsStore {
     /// The latest transient payload per `type` (`agentHookStatus`, `ghostexCliStatus`, ...).
     host_payloads: HashMap<String, Value>,
     active_tab: SettingsTabId,
+    /// The pages this open has visited, newest last, and where Back/Forward stand in them.
+    page_history: Vec<SettingsTabId>,
+    page_history_index: usize,
     search_query: String,
     general_search: GeneralSearch,
     tab_searches: HashMap<String, TabSearch>,
@@ -278,6 +281,8 @@ impl SettingsStore {
             sidebar_state,
             host_payloads: HashMap::new(),
             active_tab: SettingsTabId::General,
+            page_history: Vec::new(),
+            page_history_index: 0,
             search_query: String::new(),
             general_search: GeneralSearch::default(),
             tab_searches: HashMap::new(),
@@ -292,6 +297,7 @@ impl SettingsStore {
             app_icon_error: None,
         };
         store.active_tab = store.initial_tab();
+        store.page_history = vec![store.active_tab];
         let clears_search = store.request.initial_agents_section.is_some()
             || store.request.initial_custom_view_id.is_some()
             || store.request.initial_view_scope_key.is_some();
@@ -725,6 +731,41 @@ impl SettingsStore {
     /// navigation right away.
     pub(crate) fn set_active_tab(&mut self, tab: SettingsTabId, cx: &mut Context<Self>) {
         let tab = self.resolve_tab(tab);
+        if self.page_history.get(self.page_history_index) != Some(&tab) {
+            self.page_history.truncate(self.page_history_index + 1);
+            self.page_history.push(tab);
+            let overflow = self.page_history.len().saturating_sub(100);
+            self.page_history.drain(..overflow);
+            self.page_history_index = self.page_history.len() - 1;
+        }
+        self.show_tab(tab, cx);
+    }
+
+    /// CDXC:Settings 2026-09-28 DECISION:
+    /// User: keep the current close behavior and use the mouse Back/Forward buttons to navigate between Settings pages.
+    /// Pages hidden since they were visited (OS Integration, Debugging) are skipped, and the search clears.
+    pub(crate) fn navigate_page_history(&mut self, back: bool, cx: &mut Context<Self>) {
+        let mut index = self.page_history_index;
+        loop {
+            index = match (back, index) {
+                (true, 0) => return,
+                (true, index) => index - 1,
+                (false, index) if index + 1 >= self.page_history.len() => return,
+                (false, index) => index + 1,
+            };
+            let tab = self.page_history[index];
+            let hidden = (tab == SettingsTabId::OsIntegration && !self.os_integration_visible())
+                || (tab == SettingsTabId::Debugging && !self.show_advanced());
+            if tab != self.active_tab && !hidden {
+                self.page_history_index = index;
+                self.set_search_query(String::new(), cx);
+                self.show_tab(tab, cx);
+                return;
+            }
+        }
+    }
+
+    fn show_tab(&mut self, tab: SettingsTabId, cx: &mut Context<Self>) {
         self.remember_active_scroll();
         REMEMBERED_TAB.with(|remembered| remembered.set(Some(tab)));
         self.active_tab = tab;

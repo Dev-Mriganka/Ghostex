@@ -11,7 +11,8 @@ use super::store::{SettingsStore, new_settings_store};
 use super::tabs::settings_tab_view;
 use gpui::{
     AnyElement, AnyView, App, AppContext as _, Context, Entity, FocusHandle, Focusable,
-    InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, Render, ScrollHandle,
+    InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, NavigationDirection,
+    ParentElement as _, Render, ScrollHandle,
     StatefulInteractiveElement as _, Styled as _, Subscription, Window, div, px,
 };
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -161,6 +162,15 @@ impl GpuiSettingsModalWindow {
         self.ensure_tab_view(tab, window, cx);
         let store = self.store.clone();
         store.update(cx, |store, cx| store.set_active_tab(tab, cx));
+        cx.notify();
+    }
+
+    /// The mouse Back/Forward buttons walk the pages this open visited (`SettingsStore::navigate_page_history`).
+    fn navigate_page_history(&mut self, back: bool, window: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        let store = self.store.clone();
+        store.update(cx, |store, cx| store.navigate_page_history(back, cx));
+        self.ensure_tab_view(self.store.read(cx).active_tab(), window, cx);
         cx.notify();
     }
 
@@ -389,6 +399,14 @@ impl Render for GpuiSettingsModalWindow {
             .text_color(hsla(p.foreground))
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(Self::on_key_down))
+            .on_mouse_down(
+                MouseButton::Navigate(NavigationDirection::Back),
+                cx.listener(|shell, _, window, cx| shell.navigate_page_history(true, window, cx)),
+            )
+            .on_mouse_down(
+                MouseButton::Navigate(NavigationDirection::Forward),
+                cx.listener(|shell, _, window, cx| shell.navigate_page_history(false, window, cx)),
+            )
             .child(
                 v_flex().size_full().pt(px(HEADING_HEIGHT)).child(
                     h_flex()
