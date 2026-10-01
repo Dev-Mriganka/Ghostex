@@ -1,6 +1,7 @@
 //! `useAccounts` (packages/core-ui/accounts/use-accounts.ts (deleted 2026-10-01)) for this computer's gxserver: the last
 //! `AgentAccountsState`, the error of the last read, busy and refreshing flags, a read when the page
-//! opens (refreshed when `refresh_on_open`), and a quiet re-read every 30 seconds while it is open.
+//! opens (the last reading, then refreshed when `refresh_on_open`), and a quiet re-read every 30
+//! seconds while it is open.
 //! A newer request supersedes an older one's answer (`generation`).
 use super::super::super::store::{SettingsStore, store_gxserver_rpc};
 use super::data::AccountsState;
@@ -72,7 +73,24 @@ impl AccountsClient {
             return;
         }
         let refresh = self.refresh_on_open;
-        self.request(json!({ "operation": "list", "refresh": refresh }), None, cx);
+        // The last reading first, so the page shows its accounts at once, then the read the page
+        // opens with (see `cached_list` in server/src/accounts/endpoint.rs).
+        let this = cx.weak_entity();
+        self.request(
+            json!({ "operation": "list", "cachedOnly": true }),
+            Some(Box::new(move |_, cx| {
+                let _ = this.update(cx, |client, cx| {
+                    if client.active {
+                        client.request(
+                            json!({ "operation": "list", "refresh": refresh }),
+                            None,
+                            cx,
+                        );
+                    }
+                });
+            })),
+            cx,
+        );
         self.poll = Some(cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor().timer(POLL_INTERVAL).await;
@@ -112,7 +130,9 @@ impl AccountsClient {
         self.generation += 1;
         let generation = self.generation;
         self.pending = true;
-        self.busy = true;
+        // A re-read of accounts already shown runs in the background and leaves every control
+        // usable; only the first read and changes mark the page busy.
+        self.busy = !(params["operation"] == "list" && self.data.is_some());
         self.refreshing = params["refresh"].as_bool() == Some(true);
         self.error.clear();
         cx.notify();

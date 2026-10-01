@@ -231,6 +231,9 @@ impl AccountsTab {
             let id = id.clone();
             move |page: &mut Self, _window: &mut Window, cx: &mut Context<Self>| {
                 page.editing = if page.editing.as_deref() == Some(id.as_str()) {
+                    // Closing saves what the focused field still holds; reopening starts fresh.
+                    page.commit_editor(&id, cx);
+                    page.editors.remove(&id);
                     None
                 } else {
                     Some(id.clone())

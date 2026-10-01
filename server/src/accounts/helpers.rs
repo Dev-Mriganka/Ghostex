@@ -193,130 +193,147 @@ pub(crate) fn discover(home: &Path, provider: Provider) -> Result<Vec<Discovered
         .get("accounts")
         .and_then(Value::as_array)
         .ok_or("The helper account list is missing.")?;
-    let mut accounts = Vec::new();
-    for row in rows {
-        let Some(number) = row.get("number").and_then(Value::as_u64) else {
-            continue;
-        };
-        let email = text(row, "email");
-        let alias = text(row, "alias");
-        let mut account = DiscoveredAccount {
-            provider,
-            selector: number.to_string(),
-            identity: String::new(),
-            name: if alias.is_empty() {
-                email.clone()
-            } else {
-                alias
-            },
-            email: email.clone(),
-            status: "ready".into(),
-            shared_history: false,
-            usage: vec![],
-            reset_credits: None,
-            reset_credit_details: None,
-            reset_credits_error: None,
-            usage_updated_at: None,
-            usage_error: None,
-        };
-        if provider == Provider::Claude {
-            account.identity =
-                format!("{}:{}", email.to_lowercase(), text(row, "organizationUuid"));
-            if email.is_empty() {
-                account.status = "loginRequired".into();
-            }
-            let status = text(row, "usageStatus");
-            if matches!(
-                status.as_str(),
-                "relogin_required" | "no_credentials" | "token_expired"
-            ) {
-                account.status = "loginRequired".into();
-            }
-            if status == "foreign_credential" {
-                account.status = "identityChanged".into();
-            }
-            // CDXC:AgentProviders 2026-09-18 WHY:
-            // cswap reports `unavailable` with a null `usage` once its last reading is too old to drive a switch, usually because the Anthropic usage endpoint answers 429 with a one-hour retry. Its documented `lastGoodUsage` fields keep that reading for display, so Ghostex shows those bars with their age instead of the bare status code. `usage_error` stays set, and every switch decision (`default_account.rs`, `has_room` in `recovery.rs`) requires it to be absent, so a stale reading never counts as headroom.
-            let (usage, fetched_at, last_good_age) = if row["usage"].is_object() {
-                (&row["usage"], &row["usageFetchedAt"], None)
-            } else {
-                (
-                    &row["lastGoodUsage"],
-                    &row["lastGoodFetchedAt"],
-                    row.get("lastGoodAgeSeconds").and_then(Value::as_f64),
-                )
-            };
-            account.usage_error = claude_usage_notice(&status, usage.is_object(), last_good_age);
-            if let Some(w) = window(
-                "fiveHour",
-                "Five-hour limit",
-                &usage["fiveHour"],
-                "pct",
-                None,
-            ) {
-                account.usage.push(w);
-            }
-            if let Some(w) = window("sevenDay", "Weekly limit", &usage["sevenDay"], "pct", None) {
-                account.usage.push(w);
-            }
-            if let Some(scoped) = usage.get("scoped").and_then(Value::as_array) {
-                for item in scoped {
-                    let model = text(item, "name");
-                    if let Some(w) = window(
-                        &model,
-                        &format!("{model} weekly"),
-                        item,
-                        "pct",
-                        Some(model.clone()),
-                    ) {
-                        account.usage.push(w);
-                    }
-                }
-            }
-            if let Some(w) = window("spend", "Extra usage", &usage["spend"], "pct", None) {
-                account.usage.push(w);
-            }
-            account.usage_updated_at = fetched_at.as_str().map(str::to_string);
-            if account.status == "ready" {
-                match super::claude_resets::cached(home, &account.selector) {
-                    Ok(Some(credits)) => {
-                        account.reset_credits = Some(credits.len() as u64);
-                        account.reset_credit_details = Some(credits);
-                    }
-                    Ok(None) => {}
-                    Err(error) => account.reset_credits_error = Some(error),
-                }
-            }
+    // CDXC:AgentProviders 2026-10-01 WHY:
+    // Each Codex account reads its usage and reset credits from chatgpt.com, and each Claude account may read its reset credits, so reading the accounts one after another made a forced refresh (Settings > Accounts on open) take about 5 seconds with eight accounts. Every account is read at the same time instead.
+    Ok(std::thread::scope(|scope| {
+        let tasks: Vec<_> = rows
+            .iter()
+            .map(|row| scope.spawn(move || discover_row(home, provider, row)))
+            .collect();
+        tasks
+            .into_iter()
+            .filter_map(|task| task.join().ok().flatten())
+            .collect()
+    }))
+}
+fn discover_row(home: &Path, provider: Provider, row: &Value) -> Option<DiscoveredAccount> {
+    let number = row.get("number").and_then(Value::as_u64)?;
+    let email = text(row, "email");
+    let alias = text(row, "alias");
+    let mut account = DiscoveredAccount {
+        provider,
+        selector: number.to_string(),
+        identity: String::new(),
+        name: if alias.is_empty() {
+            email.clone()
         } else {
-            account.identity = text(row, "accountId");
-            account.status = match text(row, "loginStatus").as_str() {
-                "present" => "ready",
-                "identity_changed" => "identityChanged",
-                _ => "loginRequired",
-            }
-            .into();
-            account.shared_history = row.get("shareHistory").and_then(Value::as_bool) == Some(true);
-            if account.status == "ready" {
-                match codex_usage(row) {
-                    Ok((usage, reset_credits)) => {
-                        account.usage = usage;
-                        account.reset_credits = reset_credits;
-                        account.usage_updated_at = Some(chrono::Utc::now().to_rfc3339());
-                        match super::reset_credits::read(row) {
-                            Ok(credits) => {
-                                account.reset_credits = Some(credits.len() as u64);
-                                account.reset_credit_details = Some(credits);
-                            }
-                            Err(error) => account.reset_credits_error = Some(error),
-                        }
-                    }
-                    Err(e) => account.usage_error = Some(e),
+            alias
+        },
+        email: email.clone(),
+        status: "ready".into(),
+        shared_history: false,
+        usage: vec![],
+        reset_credits: None,
+        reset_credit_details: None,
+        reset_credits_error: None,
+        usage_updated_at: None,
+        usage_error: None,
+    };
+    if provider == Provider::Claude {
+        account.identity = format!("{}:{}", email.to_lowercase(), text(row, "organizationUuid"));
+        if email.is_empty() {
+            account.status = "loginRequired".into();
+        }
+        let status = text(row, "usageStatus");
+        if matches!(
+            status.as_str(),
+            "relogin_required" | "no_credentials" | "token_expired"
+        ) {
+            account.status = "loginRequired".into();
+        }
+        if status == "foreign_credential" {
+            account.status = "identityChanged".into();
+        }
+        // CDXC:AgentProviders 2026-09-18 WHY:
+        // cswap reports `unavailable` with a null `usage` once its last reading is too old to drive a switch, usually because the Anthropic usage endpoint answers 429 with a one-hour retry. Its documented `lastGoodUsage` fields keep that reading for display, so Ghostex shows those bars with their age instead of the bare status code. `usage_error` stays set, and every switch decision (`default_account.rs`, `has_room` in `recovery.rs`) requires it to be absent, so a stale reading never counts as headroom.
+        let (usage, fetched_at, last_good_age) = if row["usage"].is_object() {
+            (&row["usage"], &row["usageFetchedAt"], None)
+        } else {
+            (
+                &row["lastGoodUsage"],
+                &row["lastGoodFetchedAt"],
+                row.get("lastGoodAgeSeconds").and_then(Value::as_f64),
+            )
+        };
+        account.usage_error = claude_usage_notice(&status, usage.is_object(), last_good_age);
+        if let Some(w) = window(
+            "fiveHour",
+            "Five-hour limit",
+            &usage["fiveHour"],
+            "pct",
+            None,
+        ) {
+            account.usage.push(w);
+        }
+        if let Some(w) = window("sevenDay", "Weekly limit", &usage["sevenDay"], "pct", None) {
+            account.usage.push(w);
+        }
+        if let Some(scoped) = usage.get("scoped").and_then(Value::as_array) {
+            for item in scoped {
+                let model = text(item, "name");
+                if let Some(w) = window(
+                    &model,
+                    &format!("{model} weekly"),
+                    item,
+                    "pct",
+                    Some(model.clone()),
+                ) {
+                    account.usage.push(w);
                 }
             }
         }
-        accounts.push(account);
+        if let Some(w) = window("spend", "Extra usage", &usage["spend"], "pct", None) {
+            account.usage.push(w);
+        }
+        account.usage_updated_at = fetched_at.as_str().map(str::to_string);
+        if account.status == "ready" {
+            match super::claude_resets::cached(home, &account.selector) {
+                Ok(Some(credits)) => {
+                    account.reset_credits = Some(credits.len() as u64);
+                    account.reset_credit_details = Some(credits);
+                }
+                Ok(None) => {}
+                Err(error) => account.reset_credits_error = Some(error),
+            }
+        }
+    } else {
+        account.identity = text(row, "accountId");
+        account.status = match text(row, "loginStatus").as_str() {
+            "present" => "ready",
+            "identity_changed" => "identityChanged",
+            _ => "loginRequired",
+        }
+        .into();
+        account.shared_history = row.get("shareHistory").and_then(Value::as_bool) == Some(true);
+        if account.status == "ready" {
+            // The reset credits are read alongside the usage, and kept only when the usage answered.
+            let (usage, credits) = std::thread::scope(|scope| {
+                let credits = scope.spawn(|| super::reset_credits::read(row));
+                (
+                    codex_usage(row),
+                    credits
+                        .join()
+                        .unwrap_or_else(|_| Err("Reset expiry details are unavailable.".into())),
+                )
+            });
+            match usage {
+                Ok((usage, reset_credits)) => {
+                    account.usage = usage;
+                    account.reset_credits = reset_credits;
+                    account.usage_updated_at = Some(chrono::Utc::now().to_rfc3339());
+                    match credits {
+                        Ok(credits) => {
+                            account.reset_credits = Some(credits.len() as u64);
+                            account.reset_credit_details = Some(credits);
+                        }
+                        Err(error) => account.reset_credits_error = Some(error),
+                    }
+                }
+                Err(e) => account.usage_error = Some(e),
+            }
+        }
     }
-    Ok(accounts)
+    Some(account)
 }
 pub(crate) fn codex_get(row: &Value, path: &str) -> Result<Value, String> {
     let response = match codex_request(row, "GET", path)?.call() {

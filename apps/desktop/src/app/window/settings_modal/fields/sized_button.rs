@@ -4,7 +4,7 @@
 //! the `secondary` and `destructive` fills, all in the Settings type scale (14px, weight 400).
 use super::super::super::native_modal_kit::*;
 use super::super::palette::SettingsPalette;
-use super::row::{settings_icon, tooltip_text};
+use super::row::{CONTROL_HEIGHT, settings_icon, tooltip_text};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, Context, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
@@ -18,7 +18,7 @@ pub(crate) enum SizedButtonSize {
     Xs,
     /// `size='sm'`: 28px tall.
     Sm,
-    /// `size='default'`: 32px tall.
+    /// `size='default'`: 32px tall, the height of the Settings fields and selects.
     Default,
 }
 
@@ -129,7 +129,7 @@ pub(crate) fn settings_sized_button<V: 'static>(
     let (height, side, gap, icon_size, line_height) = match size {
         SizedButtonSize::Xs => (24.0, 10.0, 4.0, 12.0, 18.67),
         SizedButtonSize::Sm => (28.0, 12.0, 4.0, 16.0, 20.0),
-        SizedButtonSize::Default => (32.0, 12.0, 6.0, 16.0, 20.0),
+        SizedButtonSize::Default => (CONTROL_HEIGHT, 12.0, 6.0, 16.0, 20.0),
     };
     let icon_side = match size {
         SizedButtonSize::Xs | SizedButtonSize::Sm => 8.0,

@@ -55,9 +55,15 @@ pub(crate) fn dispatch(
     // The first titlebar response renders saved identities without waiting for helper discovery or usage network requests. The desktop follows it with a normal usage refresh.
     let cached_titlebar =
         operation == "titlebar" && params.get("cachedOnly").and_then(Value::as_bool) == Some(true);
+    // CDXC:AgentProviders 2026-10-01 WHY:
+    // Settings > Accounts draws the last reading at once and follows it with the forced refresh it must run on open, instead of showing no accounts until every helper and usage request answers. Before the first reading exists it refreshes as usual, so saved accounts never flash as unavailable.
+    let cached_list = operation == "list"
+        && params.get("cachedOnly").and_then(Value::as_bool) == Some(true)
+        && state.accounts.snapshot().fetched_at.is_some();
     let mut snapshot = if matches!(operation, "select" | "setTitlebar")
         || !titlebar_has_accounts
         || cached_titlebar
+        || cached_list
     {
         state.accounts.snapshot()
     } else {
@@ -299,11 +305,18 @@ pub(crate) fn dispatch(
                 }
                 account.indicator = indicator.into();
             }
+            let renamed = account.name != name || account.color != color;
             account.name = name.into();
             account.color = color.into();
             account.eligible = eligible;
             store::write(&db, &registry)?;
-            for session in repository.list_sessions(None)? {
+            // Sessions carry only the name and color; an indicator or switching edit leaves them alone.
+            let sessions = if renamed {
+                repository.list_sessions(None)?
+            } else {
+                Vec::new()
+            };
+            for session in sessions {
                 if session
                     .pointer("/runtimeSettings/accountId")
                     .and_then(Value::as_str)

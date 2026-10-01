@@ -13,7 +13,7 @@
 //! link), `extensions-templates` (Add view), `extensions-scope` (the Choose where it's shown deep
 //! link), `extensions-scope-menu` (its picker open), `extensions-arrange` (Arrange views),
 //! `extensions-select` (the type filter open), `extensions-offline` (no gxserver); `accounts`,
-//! `accounts-editor`, `accounts-defaults`, `accounts-add`, `accounts-guide`, `accounts-connect`
+//! `accounts-editor`, `accounts-editor-actions` (scrolled to its buttons), `accounts-defaults`, `accounts-add`, `accounts-guide`, `accounts-connect`
 //! (a sign-in in progress), `accounts-uninstall`, `accounts-error`, `accounts-loading`,
 //! `accounts-empty` (no saved accounts).
 use serde_json::{Map, Value, json};
@@ -69,6 +69,12 @@ pub(super) fn story_settings(state: &str, settings: &mut Map<String, Value>) {
     }
     let fixture = extensions();
     settings.insert("customViews".into(), fixture["customViews"].clone());
+    if state == "accounts-editor-actions" {
+        settings.insert(
+            "settingsModalNavigation".into(),
+            json!({ "activeTab": "accounts", "scrollTopByTab": { "accounts": 420 }, "version": 1 }),
+        );
+    }
 }
 
 pub(super) fn extend_sidebar_state(message: &mut Value) {

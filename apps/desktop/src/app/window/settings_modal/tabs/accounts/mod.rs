@@ -39,7 +39,7 @@ use gpui::{
 use helper_tools::HelperToolsState;
 use manager::SetupDraft;
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 /// Creates the Accounts page view.
@@ -82,6 +82,8 @@ pub(crate) struct AccountsTab {
     preview_applied: bool,
     /// The inputs masked as passwords (`sync_masked`).
     pub(crate) masked_inputs: HashMap<SharedString, bool>,
+    /// The editor inputs that save when they lose focus or take Enter (`commit_on_blur`).
+    pub(crate) commit_inputs: HashSet<SharedString>,
 }
 
 impl SettingsPage for AccountsTab {
@@ -138,6 +140,7 @@ impl AccountsTab {
             was_active: false,
             preview_applied: false,
             masked_inputs: HashMap::new(),
+            commit_inputs: HashSet::new(),
         }
     }
 
@@ -265,7 +268,9 @@ impl AccountsTab {
         }
         self.preview_applied = true;
         match state.as_str() {
-            "accounts-editor" => self.editing = Some("claude-1".into()),
+            "accounts-editor" | "accounts-editor-actions" => {
+                self.editing = Some("claude-1".into())
+            }
             "accounts-defaults" => self.defaults_open = Some("claude".into()),
             "accounts-add" => self.adding = Some("claude".into()),
             "accounts-guide" => self.open_guide("claude".into(), window, cx),
@@ -304,7 +309,7 @@ impl AccountsTab {
                 None,
                 SizedButtonVariant::Ghost,
                 SizedButtonSize::Default,
-                busy,
+                busy || refreshing,
                 Some("Accounts are being read.".into()),
                 |page: &mut Self, _window, cx| {
                     let this = cx.weak_entity();
