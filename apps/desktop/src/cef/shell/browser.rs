@@ -197,7 +197,9 @@ impl CefBrowser {
             .map(|scope| scope.base_url().to_string());
         let request_handler = manage_docs_resource_scope
             .as_ref()
-            .map(ManageDocsResourceScope::request_handler)
+            .map(|scope| {
+                scope.request_handler(&requested_url, project_workarea_bridge_event_handler.clone())
+            })
             .or_else(|| {
                 // Browser panes and project website views use the same shell popup
                 // route for middle-click and Cmd/Ctrl-click links.

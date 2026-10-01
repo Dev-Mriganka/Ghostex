@@ -96,6 +96,8 @@ pub enum ProjectWorkareaBridgeEvent {
     ProjectBoardRequest(String),
     ProjectBoardImageRequest(String),
     ManageFilesRequest(String),
+    /// The page tried to navigate its own main frame somewhere else; the payload is the refused URL.
+    RefusedPageNavigation(String),
 }
 
 pub type ProjectWorkareaBridgeEventHandler = Rc<dyn Fn(ProjectWorkareaBridgeEvent)>;

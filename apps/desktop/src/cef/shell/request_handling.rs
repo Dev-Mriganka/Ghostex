@@ -30,8 +30,17 @@ impl ManageDocsResourceScope {
         MANAGE_DOCS_RESOURCE_BASE_URL
     }
 
-    pub(crate) fn request_handler(&self) -> RequestHandler {
-        GhostexManageDocsRequestHandler::new(self.source.clone())
+    /// `page_url` is the embed page the surface opens, the one main-frame document it may show.
+    pub(crate) fn request_handler(
+        &self,
+        page_url: &str,
+        bridge_event_handler: Option<ProjectWorkareaBridgeEventHandler>,
+    ) -> RequestHandler {
+        GhostexManageDocsRequestHandler::new(
+            self.source.clone(),
+            first_party_page_entry_identity(page_url),
+            bridge_event_handler,
+        )
     }
 }
 
@@ -406,18 +415,6 @@ wrap_resource_request_handler! {
     }
 }
 
-/*
-CDXC:SessionChat 2026-09-09 DECISION:
-User: a first-party page (sidebar, session chat) must never navigate itself
-away; if anything tries, the URL opens where a clicked link would go, in the
-embedded Browser or the system browser depending on "Open links in embedded
-browser". The chat pane has real browser history, so an un-intercepted link
-in a transcript (a Storybook URL inside a tool-call block, 2026-09-09) used
-to replace chat.html with that page until the user pressed Back. Only
-main-frame navigations to a different document are refused; reloads and
-query changes of the page's own entry, and every sub-frame load, pass.
-*/
-
 wrap_request_handler! {
     pub(crate) struct GhostexGpuiBrowserRequestHandler {
         popup_open_handler: BrowserPopupOpenHandler,
@@ -458,12 +455,59 @@ wrap_request_handler! {
     }
 }
 
+/*
+CDXC:SessionChat 2026-09-09 DECISION:
+User: a first-party page (sidebar, session chat) must never navigate itself
+away; if anything tries, the URL opens where a clicked link would go, in the
+embedded Browser or the system browser depending on "Open links in embedded
+browser". The chat pane has real browser history, so an un-intercepted link
+in a transcript (a Storybook URL inside a tool-call block, 2026-09-09) used
+to replace chat.html with that page until the user pressed Back. Only
+main-frame navigations to a different document are refused; reloads and
+query changes of the page's own entry, and every sub-frame load, pass.
+The sidebar and chat are native now, so the Files embed page (an HTML file's
+own links run in its sub-frame) is the first-party page this guards; extension
+pages and website views keep their own navigation.
+*/
+pub(crate) fn first_party_page_entry_identity(url: &str) -> String {
+    get_url_without_query_or_fragment(url).to_string()
+}
+
 wrap_request_handler! {
     pub(crate) struct GhostexManageDocsRequestHandler {
         source: ManageDocsResourceSource,
+        entry_identity: String,
+        bridge_event_handler: Option<ProjectWorkareaBridgeEventHandler>,
     }
 
     impl RequestHandler {
+        fn on_before_browse(
+            &self,
+            _browser: Option<&mut cef::Browser>,
+            frame: Option<&mut Frame>,
+            request: Option<&mut Request>,
+            _user_gesture: c_int,
+            _is_redirect: c_int,
+        ) -> c_int {
+            let is_main_frame = frame.map(|frame| frame.is_main() != 0).unwrap_or(true);
+            if !is_main_frame {
+                return 0;
+            }
+            let Some(request_url) = request.map(|request| CefString::from(&request.url()).to_string())
+            else {
+                return 0;
+            };
+            if first_party_page_entry_identity(&request_url) == self.entry_identity {
+                return 0;
+            }
+            if (request_url.starts_with("http://") || request_url.starts_with("https://"))
+                && let Some(handler) = self.bridge_event_handler.as_ref()
+            {
+                handler(ProjectWorkareaBridgeEvent::RefusedPageNavigation(request_url));
+            }
+            1
+        }
+
         fn resource_request_handler(
             &self,
             _browser: Option<&mut cef::Browser>,

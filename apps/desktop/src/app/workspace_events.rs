@@ -340,6 +340,11 @@ impl GhostexGpuiApp {
                     cx,
                 );
             }
+            // Same rule as a clicked chat link (CDXC:SessionChat 2026-09-09 in
+            // cef/shell/request_handling.rs).
+            (_, cef::ProjectWorkareaBridgeEvent::RefusedPageNavigation(url)) => {
+                self.open_session_chat_link(&url, None, false, false, window, cx);
+            }
             _ => {}
         }
     }
