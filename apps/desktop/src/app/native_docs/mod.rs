@@ -25,6 +25,7 @@ pub(crate) mod mermaid_widget;
 pub(crate) mod notes;
 pub(crate) mod notes_view;
 pub(crate) mod notes_windows;
+pub(crate) mod open_externally;
 pub(crate) mod open_file;
 pub(crate) mod palette;
 pub(crate) mod rename_dialog;

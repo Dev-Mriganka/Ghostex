@@ -33,6 +33,10 @@ use std::rc::Rc;
 use std::time::Duration;
 
 /// Keystroke settle time before re-querying (`FIND_PROMPTS_QUERY_DEBOUNCE_MS`).
+/// The query field's placeholder (the phone's Find says the same).
+pub(super) const FIND_PLACEHOLDER: &str = "Search every prompt you have sent";
+/// What the placeholder shortens to when the window is too narrow for the long one.
+pub(super) const FIND_PLACEHOLDER_SHORT: &str = "Search your prompts";
 const FIND_PROMPTS_QUERY_DEBOUNCE: Duration = Duration::from_millis(120);
 /// Full prompt texts kept for the preview, so walking back over a long prompt does not fetch it again.
 const FULL_TEXT_CACHE_LIMIT: usize = 64;
@@ -135,6 +139,8 @@ pub(crate) struct GpuiFindPromptsModalWindow {
     pub(super) preview_input: Entity<TextareaState>,
     pub(super) preview_input_text: SharedString,
     pub(super) preview_input_wrap: bool,
+    /// Whether the query field currently shows the short placeholder (the window is too narrow for the long one).
+    pub(super) short_placeholder: bool,
     pub(super) expanded_scroll: ScrollHandle,
     /// Unix seconds, refreshed every 30s so "6m ago" keeps moving.
     pub(super) now: i64,
@@ -163,8 +169,7 @@ impl GpuiFindPromptsModalWindow {
         let p = FindPalette::resolve(light, glass);
         let muted = crate::app::window::native_modal_kit::hsla(p.muted);
         let search = cx.new(|cx| {
-            let mut input =
-                InputState::new(window, cx).placeholder("Search every prompt you have sent");
+            let mut input = InputState::new(window, cx).placeholder(FIND_PLACEHOLDER);
             input.set_placeholder_color(Some(muted));
             input
         });
@@ -286,6 +291,7 @@ impl GpuiFindPromptsModalWindow {
             preview_input,
             preview_input_text: SharedString::default(),
             preview_input_wrap: true,
+            short_placeholder: false,
             expanded_scroll: ScrollHandle::new(),
             now: unix_now(),
             reduce_motion: crate::app::helpers::gpui_macos_reduce_motion_enabled(),

@@ -83,6 +83,14 @@ pub fn project(search: &SearchState) -> Value {
         return Value::Null;
     }
     let active = search.matches.get(search.active_index);
+    // Which occurrence of its row the selected one is, so a renderer that highlights the words
+    // can mark that one: the matches before it that share its row.
+    let active_in_row = active.map(|found| {
+        search.matches[..search.active_index]
+            .iter()
+            .filter(|earlier| earlier.item_index == found.item_index)
+            .count()
+    });
     // Row indices to tint, deduplicated and in transcript order.
     let mut rows: Vec<usize> = Vec::new();
     for found in &search.matches {
@@ -99,6 +107,7 @@ pub fn project(search: &SearchState) -> Value {
             Some(found) => Value::from(found.item_index),
             None => Value::Null,
         },
+        "activeInRow": active_in_row,
         "items": rows,
         "label": search_count_label(&search.query, search.matches.len(), search.active_index),
         "revision": search.revision,
