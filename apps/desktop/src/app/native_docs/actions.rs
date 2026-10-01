@@ -22,7 +22,7 @@ pub(crate) struct NativeDocsAction {
     pub(crate) command: Value,
 }
 
-fn action(command: Value) -> Box<dyn gpui::Action> {
+pub(crate) fn action(command: Value) -> Box<dyn gpui::Action> {
     Box::new(NativeDocsAction { command })
 }
 
@@ -187,6 +187,13 @@ impl GhostexGpuiApp {
                 }
             }
             "confirmDelete" => self.native_docs_delete(&path, cx),
+            "openExternally" => {
+                let app = command["app"].as_str().map(std::path::PathBuf::from);
+                self.native_docs_open_externally(&path, app, cx);
+            }
+            "openWithApp" => {
+                self.native_docs_open_with_app(&path, text("app").into(), cx);
+            }
             "refresh" => self.native_docs_refresh(cx),
             "configureFolders" => self.native_docs_open_folders_settings(window, cx),
             "barItem" => {
@@ -414,6 +421,15 @@ impl GhostexGpuiApp {
                 busy,
                 command("addToSessionContext"),
             );
+            if super::open_externally::file_opens_externally(path) {
+                menu = menu.menu_with_icon(
+                    "Open Externally",
+                    "titlebar/external-link.svg",
+                    false,
+                    command("openExternally"),
+                );
+            }
+            menu = menu.submenu_menu("Open With", self.native_docs_open_with_menu(path));
         }
         if !is_file {
             let create =

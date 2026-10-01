@@ -18,7 +18,9 @@ ghostex-find = { path = "../packages/find" }
 ghostex-settings-catalog = { path = "../packages/settings-catalog" }
 ghostex-agent-sync = { path = "../packages/agent-sync" }
 libc = "0.2"
+markdown = "1"
 md-5 = "0.10"
+percent-encoding = "2"
 portable-pty = "0.9"
 rand = "0.8"
 tungstenite = { version = "0.24", default-features = false, features = ["handshake"] }

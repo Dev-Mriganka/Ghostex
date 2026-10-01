@@ -74,12 +74,12 @@ impl GhostexGpuiApp {
                 .insert(session_id, effective_interface);
         }
 
-        let mut changed = false;
+        let mut switched = Vec::new();
         for session_id in newly_eligible {
             if !self.agents_chat_mode_sessions.insert(session_id) {
                 continue;
             }
-            changed = true;
+            switched.push(session_id);
             /*
             CDXC:Drafts 2026-08-18:
             This is the switch a user never asked for: they started an agent by
@@ -90,11 +90,15 @@ impl GhostexGpuiApp {
             */
             self.request_session_chat_draft_transfer(session_id, cx);
         }
-        if !changed {
+        if switched.is_empty() {
             return;
         }
+        /*
+        CDXC:SessionChat 2026-10-01 WHY:
+        Only the focused session's own switch to Chat hands it the keyboard. The handoff used to fire for the focused session whenever any session in the sweep switched, so a coordinator starting a thread (a new session turning chat-eligible) pulled the keyboard into the focused chat's composer while the user was typing in its search field, a note or an answer.
+        */
         if let Some(focused_session_id) = self.focused_agents_or_companion_shell_session_id()
-            && eligible_session_ids.contains(&focused_session_id)
+            && switched.contains(&focused_session_id)
         {
             self.request_keyboard_handoff_for_session(focused_session_id);
         }

@@ -143,6 +143,9 @@ pub(crate) struct NativeChatView {
     pub(super) search_input: Option<Entity<InputState>>,
     pub(super) search_subscription: Option<Subscription>,
     pub(super) search_scrolled_revision: i64,
+    /// The find the row being drawn gives its text views, set only while a searched row is drawn
+    /// (search.rs, `begin_row_find`).
+    pub(super) row_find: Option<gpui_component::text::TextFind>,
     /// Open or closed as this pane last asked the shared runtime, held until its snapshot agrees.
     pub(super) search_pending_open: Option<bool>,
     /// Keyboard zoom (Cmd+= / Cmd+- / Cmd+0): this pane's temporary size (zoom.rs).
@@ -370,6 +373,7 @@ impl NativeChatView {
             search_input: None,
             search_subscription: None,
             search_scrolled_revision: -1,
+            row_find: None,
             search_pending_open: None,
             zoom: Default::default(),
             draft: String::new(),
@@ -528,10 +532,17 @@ impl NativeChatView {
                 });
             }
         }
+        /*
+        CDXC:SessionChat 2026-10-01 DECISION:
+        User: typing in the chat's search field must never be moved to the chat box when they did not click it. A queued composer focus (a keyboard handoff, a draft the core put back, a send's reset) lands only while no other field of this chat holds the keyboard; the find bar, the note and the answer fields keep it until the user leaves them (Escape, a click, the close button).
+        */
         if self.focus_requested {
             self.focus_requested = false;
             if let Some(input) = &self.input {
-                input.read(cx).focus_handle(cx).focus(window, cx);
+                let composer = input.read(cx).focus_handle(cx);
+                if composer.is_focused(window) || !self.chat_text_field_focused(window, cx) {
+                    composer.focus(window, cx);
+                }
             }
         }
     }
