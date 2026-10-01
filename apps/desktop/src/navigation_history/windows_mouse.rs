@@ -12,7 +12,6 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::GhostexGpuiApp;
-use crate::app::model::GpuiAppModalKind;
 use crate::app::window::GpuiAppModalHostWindow;
 
 #[derive(Clone)]
@@ -140,7 +139,6 @@ fn navigate(target: NavigationTarget, back: bool) {
         view,
         mut async_app,
     } = target;
-    let direction = if back { "back" } else { "forward" };
     let foreground = async_app.foreground_executor().clone();
     foreground
         .spawn(async move {
@@ -152,27 +150,10 @@ fn navigate(target: NavigationTarget, back: bool) {
                         }
                     });
                 }
-                // Only the pages drawn by the Settings modal keep a page history.
-                NavigationView::Modal(modal) => {
-                    let _ = modal.update_in(&mut async_app, |this, _, cx| {
-                        if matches!(
-                            this.current_modal,
-                            GpuiAppModalKind::Settings
-                                | GpuiAppModalKind::Hotkeys
-                                | GpuiAppModalKind::ConfigureAgents
-                                | GpuiAppModalKind::ConfigureActions
-                                | GpuiAppModalKind::OpenTargets
-                        ) {
-                            this.dispatch_transient_message(
-                                serde_json::json!({
-                                    "type": "navigateSettingsHistory",
-                                    "direction": direction,
-                                }),
-                                cx,
-                            );
-                        }
-                    });
-                }
+                // The CEF modal window hosts only extension pages now; the press is
+                // consumed so Chromium cannot walk the page's URL history.
+                // Native Settings walks its pages from GPUI's own mouse event.
+                NavigationView::Modal(_) => {}
             }
         })
         .detach();
