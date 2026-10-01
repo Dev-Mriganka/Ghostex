@@ -721,13 +721,6 @@ fn main() {
         .file(gpui_color_panel)
         .compile("ghostex_gpui_color_panel");
 
-    // The Files view's Open With menu (native_docs/open_externally.rs).
-    let gpui_open_with = manifest_dir.join("native/macos/GpuiOpenWith.m");
-    println!("cargo:rerun-if-changed={}", gpui_open_with.display());
-    gpui_macos_objc_build()
-        .file(gpui_open_with)
-        .compile("ghostex_gpui_open_with");
-
     // The first-run intro video's WKWebView (window/onboarding/intro_web_view.rs).
     let gpui_intro_video_web_view = manifest_dir.join("native/macos/GpuiIntroVideoWebView.m");
     println!(

@@ -100,33 +100,6 @@ pub(crate) fn gpui_spawn_os_open(target: &std::ffi::OsStr) -> Result<(), String>
         })
 }
 
-/// Opens a file or link with one app, as Finder's Open With does.
-#[cfg(target_os = "macos")]
-pub(crate) fn gpui_open_with_application(
-    app: &Path,
-    target: &std::ffi::OsStr,
-) -> Result<(), String> {
-    std::process::Command::new("/usr/bin/open")
-        .arg("-a")
-        .arg(app)
-        .arg(target)
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .map(|_| ())
-        .map_err(|_| "The app could not open the file.".to_string())
-}
-
-/// Open With lists no apps outside macOS, so nothing asks for one here.
-#[cfg(not(target_os = "macos"))]
-pub(crate) fn gpui_open_with_application(
-    _app: &Path,
-    target: &std::ffi::OsStr,
-) -> Result<(), String> {
-    gpui_spawn_os_open(target)
-}
-
 pub(crate) const GPUI_FILE_MANAGER_NAME: &str = "the file manager";
 
 #[cfg(target_os = "macos")]

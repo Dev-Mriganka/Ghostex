@@ -446,9 +446,6 @@ impl Render for GhostexGpuiApp {
                 if this.start_find_in_focused_browser(window, cx) {
                     return;
                 }
-                if this.open_search_in_focused_chat(window, cx) {
-                    return;
-                }
                 let _ = this.start_search_in_focused_terminal_surface(cx);
             }))
             .on_action(

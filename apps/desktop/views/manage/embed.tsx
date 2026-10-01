@@ -89,23 +89,6 @@ function ManageEmbedDocument() {
 
   useEffect(() => () => window.clearTimeout(saveTimer.current), []);
 
-  /**
-   * CDXC:CefRuntime 2026-10-01 DECISION:
-   * User: "please allow me to pinch zoom in/out in Excalidraw". The app lets a trackpad pinch reach this page only while it shows a drawing (cef/shell/browser.rs); Chromium delivers it as a Ctrl+wheel, which Excalidraw turns into its own canvas zoom. Cancelling the default here, before Excalidraw sees the event, keeps Chromium from zooming the whole page, which built-in views never do.
-   */
-  useEffect(() => {
-    if (!drawing) {
-      return;
-    }
-    const stopPageZoom = (event: WheelEvent) => {
-      if (event.ctrlKey) {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener('wheel', stopPageZoom, { capture: true, passive: false });
-    return () => window.removeEventListener('wheel', stopPageZoom, { capture: true });
-  }, [drawing]);
-
   if (error) {
     return <div className='manage-preview-message'>{error}</div>;
   }

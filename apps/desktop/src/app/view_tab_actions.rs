@@ -12,19 +12,7 @@ impl GhostexGpuiApp {
     /// address for Browser), so popping out hands that exact page to a window of its own instead of
     /// building a second CEF host inside the app. A view with no page yet cannot be popped out, and
     /// the control says so rather than opening an empty window.
-    /// CDXC:Docs 2026-10-01 DECISION:
-    /// User chose option 3A: Files is drawn natively and has no page of its own, so its Open Externally pops out the open HTML, Markdown or Excalidraw file through gxserver's file link (`native_docs/open_externally.rs`) instead of staying disabled; its embed page is never handed out, because it only works inside Ghostex.
-    pub(crate) fn view_can_pop_out(&self, mode: TitlebarMode) -> bool {
-        if mode == TitlebarMode::Manage {
-            return self.native_docs_external_file().is_some();
-        }
-        self.view_pop_out_url(mode).is_some()
-    }
-
-    fn view_pop_out_url(&self, mode: TitlebarMode) -> Option<String> {
-        if mode == TitlebarMode::Manage {
-            return None;
-        }
+    pub(crate) fn view_pop_out_url(&self, mode: TitlebarMode) -> Option<String> {
         if mode == TitlebarMode::Browser {
             return self
                 .browser_tabs
@@ -39,12 +27,6 @@ impl GhostexGpuiApp {
     }
 
     pub(crate) fn pop_out_view(&mut self, mode: TitlebarMode, cx: &mut gpui::Context<Self>) {
-        if mode == TitlebarMode::Manage {
-            if let Some(path) = self.native_docs_external_file() {
-                self.native_docs_open_externally(&path, None, cx);
-            }
-            return;
-        }
         let Some(url) = self.view_pop_out_url(mode) else {
             return;
         };

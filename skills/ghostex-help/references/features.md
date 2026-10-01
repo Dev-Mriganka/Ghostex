@@ -232,13 +232,7 @@ view from the strip.
   Escape, or click outside it. Cmd+F, or Ctrl+F on Windows and Linux, opens the
   search: inside a Markdown document it shows Find and Replace with the caret
   ready, and anywhere else it reveals the files list and focuses its search.
-  Escape closes the document search. To open an HTML, Markdown, or Excalidraw
-  file in your web browser, use the open-in-browser button in the file's header
-  or Open Externally at the top right of the view: HTML pages open as they are,
-  Markdown opens as a formatted page, and drawings open in an Excalidraw editor
-  that saves back to the file. The arrow beside the button, and Open With in a file's right-click
-  menu, list your other browsers and the apps that open that kind of file.
-  Browser links stop working when Ghostex restarts; open the file again for a new one.
+  Escape closes the document search.
 - **Terminal**: a command terminal in the view panel that works like the
   Commands pane, only on the right beside your sessions instead of below them.
   It has its own tab bar with a **+** for new terminals, Cmd+Shift+T for another
@@ -870,8 +864,6 @@ requests for approval keep their own status cards.
 Chat follows the app theme by default. In Settings > Theme > Advanced, set Chat theme to Light, Dark, or System for a separate appearance, or choose Follow app to use the main Appearance (`sessionChatTheme`, `sidebarTheme`).
 
 Set Default Chat Zoom (%) in Settings > Chat to scale the desktop chat interface, including messages, controls, and the prompt composer. Choose 70% to 200% in 5% steps; the initial default is 100%. The saved level applies to open chats and when chats open again (`sessionChatZoomPercent`). With a chat focused, Cmd+= and Cmd+- (Ctrl on Windows and Linux) resize that chat for as long as it is open, and Cmd+0 returns it to the saved level.
-
-To search a chat, press Cmd+F (Ctrl+F on Windows and Linux) with the chat focused, including while typing in the chat box. Every occurrence in the messages is highlighted, the current one more strongly, and the counter shows which match you are on; Enter or the down arrow goes to the next match, Shift+Enter or the up arrow to the previous one, and the chat scrolls to it. Escape or the close button ends the search and returns you to the chat box. A match inside a folded group or a collapsed card marks its row instead. On the phone, Search Conversation in the session's menu opens the same search.
 
 Toggle chat and terminal for a session with one click on the pane header or
 the pane hotkey. Compatible agents can default to chat. On macOS and Linux,

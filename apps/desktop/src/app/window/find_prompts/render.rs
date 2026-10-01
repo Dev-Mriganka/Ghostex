@@ -16,9 +16,7 @@
 use super::model::{
     FIND_PROMPT_AGENTS, FindAction, ViewRow, format_day_header, format_last_active_compact,
 };
-use super::window::{
-    FIND_PLACEHOLDER, FIND_PLACEHOLDER_SHORT, FindMenu, FindNoticeKind, GpuiFindPromptsModalWindow,
-};
+use super::window::{FindMenu, FindNoticeKind, GpuiFindPromptsModalWindow};
 use crate::app::window::native_modal_kit::hsla;
 use crate::app::window::quick_access::chrome::quick_access_tooltip;
 use gpui::prelude::FluentBuilder as _;
@@ -62,13 +60,6 @@ fn inset_ring(color: Rgba) -> BoxShadow {
     }
 }
 
-/// Narrower than this, the Fav, View, Copy and Fork buttons drop their labels (the tooltips keep the names), so the query field keeps room for its placeholder.
-const FIND_COMPACT_ACTIONS_BELOW: f32 = 970.0;
-/// Narrower than this, the query field's placeholder shortens to `FIND_PLACEHOLDER_SHORT` and the Grouping button drops its label too.
-const FIND_SHORT_PLACEHOLDER_BELOW: f32 = 830.0;
-/// The query field can shrink to this width, no further, so typed text keeps scrolling inside the field instead of under the buttons.
-const FIND_QUERY_MIN_WIDTH: f32 = 120.0;
-
 fn hotkey(chord: &str) -> String {
     crate::hotkey_label::terminal_overlay_hotkey_chord_label(chord)
 }
@@ -76,8 +67,6 @@ fn hotkey(chord: &str) -> String {
 impl Render for GpuiFindPromptsModalWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_preview_input(window, cx);
-        let width = f32::from(window.viewport_size().width);
-        self.sync_search_placeholder(width < FIND_SHORT_PLACEHOLDER_BELOW, window, cx);
         let p = self.p;
         div()
             .id("find-prompts-window")
@@ -89,11 +78,7 @@ impl Render for GpuiFindPromptsModalWindow {
             .bg(hsla(p.background))
             .font_family(self.font_family.clone())
             .text_color(hsla(p.foreground))
-            .child(self.render_toolbar(
-                width < FIND_COMPACT_ACTIONS_BELOW,
-                width < FIND_SHORT_PLACEHOLDER_BELOW,
-                cx,
-            ))
+            .child(self.render_toolbar(cx))
             .when(!self.fullscreen_preview, |this| {
                 this.child(self.render_results(cx))
             })
@@ -126,30 +111,8 @@ impl GpuiFindPromptsModalWindow {
         }
     }
 
-    /// Swaps the query placeholder for the short one when the window is narrow, only when that changed.
-    fn sync_search_placeholder(
-        &mut self,
-        short: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if short == self.short_placeholder {
-            return;
-        }
-        self.short_placeholder = short;
-        let placeholder = if short {
-            FIND_PLACEHOLDER_SHORT
-        } else {
-            FIND_PLACEHOLDER
-        };
-        self.search.update(cx, |input, cx| {
-            input.set_placeholder(placeholder, window, cx)
-        });
-    }
-
     /// The query row: chevron and input on the left, the filter dropdowns and actions on the right.
-    /// `compact` drops the Fav, View, Copy and Fork labels; `narrow` drops Grouping's as well.
-    fn render_toolbar(&self, compact: bool, narrow: bool, cx: &mut Context<Self>) -> AnyElement {
+    fn render_toolbar(&self, cx: &mut Context<Self>) -> AnyElement {
         let p = self.p;
         let selected = self.selected_row();
         let has_row = selected.is_some();
@@ -158,7 +121,7 @@ impl GpuiFindPromptsModalWindow {
         buttons.push(self.toolbar_button(
             "find-grouping",
             ICON_CALENDAR_WEEK,
-            if narrow { "" } else { "Grouping" },
+            "Grouping",
             self.group_by_day,
             false,
             false,
@@ -183,7 +146,7 @@ impl GpuiFindPromptsModalWindow {
             } else {
                 ICON_STAR
             },
-            if compact { "" } else { "Fav" },
+            "Fav",
             favorite,
             favorite,
             !has_row,
@@ -202,7 +165,7 @@ impl GpuiFindPromptsModalWindow {
         buttons.push(self.toolbar_button(
             "find-view",
             ICON_EYE,
-            if compact { "" } else { "View" },
+            "View",
             self.expanded_prompt,
             false,
             !has_row,
@@ -225,7 +188,7 @@ impl GpuiFindPromptsModalWindow {
             } else {
                 ICON_COPY
             },
-            if compact { "" } else { "Copy" },
+            "Copy",
             false,
             false,
             !has_row,
@@ -236,7 +199,7 @@ impl GpuiFindPromptsModalWindow {
         buttons.push(self.toolbar_button(
             "find-fork",
             ICON_GIT_FORK,
-            if compact { "" } else { "Fork" },
+            "Fork",
             self.fork_open,
             false,
             !has_row,
@@ -272,11 +235,10 @@ impl GpuiFindPromptsModalWindow {
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(FIND_QUERY_MIN_WIDTH))
+                    .min_w_0()
                     .h(px(32.0))
                     .flex()
                     .items_center()
-                    .overflow_hidden()
                     .child(
                         Input::new(&self.search)
                             .appearance(false)
@@ -372,7 +334,7 @@ impl GpuiFindPromptsModalWindow {
                     .flex_shrink_0()
                     .text_color(hsla(text)),
             )
-            .when(!label.is_empty(), |this| this.child(label))
+            .child(label)
             .into_any_element()
     }
 
