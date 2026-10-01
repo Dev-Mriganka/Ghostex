@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+## 10.9.0 - 2026-10-01
+
+**Ghostex 10.9.0 is out.** Run agent threads in Cloud Boxes on this computer, in the cloud or on your own server, open more Ghostex windows for other monitors and Spaces, turn Actions, Open In and Spaces on or off as built-in extensions, and get wrapping tables, Antigravity questions in chat and native Find on the phone.
+
+### 📦 Cloud Boxes
+- **Run an agent thread in an isolated box instead of on this computer.** Boxes run locally with Docker, in the cloud on Hetzner, Vercel, Daytona, E2B or DigitalOcean, or on your own server over SSH, and the session keeps working like any other: sleep and wake, messages, notifications and its terminal.
+- **Set it up from Settings > Cloud Boxes,** or press Set It Up for Me and an agent installs and configures everything, asking before anything that costs money.
+- **Pick where a thread runs from the Run on row** in New Thread or above a new chat thread's message box, on the computer, the phone and in the browser. The box starts with your first message.
+
+### 🪟 More windows
+- **File > New Window (Cmd+Shift+N) opens another full Ghostex window** for another monitor or Space, also from Quick Access and the sidebar's More menu. Each window keeps its own selection, tabs, panes and views, and every open window reopens at launch.
+- **Every window gets the Code view, glass and Keep Awake,** a Window menu lists the open windows, and Cmd+` cycles them.
+- **Menus, dialogs and toasts open on the monitor of the Ghostex window you are using,** so the chat's model menu and its other popups no longer appear on the main display. Floating Capture works on every display too.
+
+### 🧩 Built-in extensions
+- **Actions, Open In and Spaces each have an on/off switch** under Features in Settings > Extensions. Turning one off hides its pages, buttons, hotkeys, menus and Quick Access rows, and your saved actions, open targets and Spaces are kept for when you turn it back on.
+- **SpaceO installs from Settings > Integrations,** giving agents their own headless displays on Apple Silicon computers with macOS 14 or later.
+
+### 💬 Chat
+- **Wide tables wrap to fit the chat,** and expanded tables and pictures open over the whole window, on the computer and the phone.
+- **Antigravity questions are answered from the chat card,** and a mode pill switches between Default, Accept edits and Plan.
+- **A picture that can't be shown says why in a compact card** with its shortened folder.
+- **Typing in a long chat is faster,** because the conversation is no longer laid out again on every key.
+- **OMP sessions are named OMP in chat,** and messages reach OMP whatever symbol theme it uses.
+
+### 🧭 Coordinators
+- **Fold a coordinator's threads with the chevron beside its crown,** and the crown is white on dark themes and black on light ones, on the computer and the phone.
+- **The crew badge shows one number,** orange while a thread works and light blue while one waits, and resolving a finished thread closes its session while keeping its conversation to reopen later.
+- **Threads for work in another folder start in the coordinator's own project** with that folder in their brief.
+
+### 📱 On the phone
+- **Find Prompts is native screens** that open with the search field focused and the keyboard up.
+- **The phone chat gets Simple mode, Saved prompts and Switch Account,** and text fields and dialog buttons stay above the keyboard everywhere.
+- **The phone's app icon matches the desktop app icon.**
+
+### 🩹 Fixes and polish
+- **Experimental terminal shader effects on macOS.** Turn on Enable Experimental Features in Settings > Advanced, then Custom shaders at the bottom of the Terminal section runs the custom shaders from your Ghostty config. Thanks to @vespillo-tech.
+- **First-run setup opens on the Ghostex intro video,** with setup continuing as usual when you are offline.
+- **The mouse Back and Forward buttons walk the Settings pages again,** and a sign-in that finishes after you leave Settings reopens it at Accounts.
+- **Settings > Accounts shows its accounts at once,** and the account editor saves edits as you make them.
+- **Settings, Search by Prompt, the Agents Hub, Commit Changes and File Diff open 10% bigger.**
+- **A custom agent starts on a remote computer,** and a refused remote start says why.
+- **Sessions dropped between pinned rows pin at that spot,** and drop lines show exactly where a row will land.
+- **An Excalidraw drawing no longer reloads after its own autosaves,** and the Files comment box opens on the Files view's monitor.
+
 ## 10.8.1 - 2026-10-01
 
 **Ghostex 10.8.1 is out.** Coordinators start, brief and supervise a crew of agent sessions for you, Pi and OMP get the model picker, Escape asks twice before it interrupts a working agent, the phone can search every computer's sessions, and Linux gets 10.7.0's features together with its own fixes.
