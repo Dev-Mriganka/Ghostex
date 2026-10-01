@@ -2,9 +2,9 @@
 //! operating system's own web view, with Continue into setup.
 //!
 //! CDXC:Onboarding 2026-10-01 DECISION:
-//! User: "I don't want to force CEF install, so let's use the built-in web view on each OS just for this YouTube embed." The intro video (the Ghostex v10 launch video, unlisted on YouTube) is the first screen of the first run, before the setup panels, once per install (`introVideoSeen` in gpui-first-run-onboarding-state.json). It plays in the system web view (intro_web_view.rs), never CEF, and that web view exists only on this page.
+//! User: "I don't want to force CEF install, so let's use the built-in web view on each OS just for this YouTube embed." The intro video (the Ghostex v10 launch video, unlisted on YouTube) is the first screen of the first run, before the setup panels, once per install (`introVideoSeen` in gpui-first-run-onboarding-state.json). It plays in the system web view (intro_web_view.rs), never CEF, and that web view exists only on this page. Linux links no system web view (WebKitGTK would be a new library every Linux install must have), and there the user chose to keep a link: "a still from the video" filling the frame "with a YouTube play button inside it and the text 'Watch the intro on YouTube'", opening the video in the browser from anywhere on it. The still is bundled (assets/onboarding/intro-video.jpg), never fetched from YouTube.
 //! CDXC:Onboarding 2026-10-01 WHY:
-//! Linux builds link no system web view (WebKitGTK would be a new library every Linux install must have), so there the frame opens the video on YouTube instead. Nothing here waits on the network: YouTube is asked first, a frame that cannot reach it says so, and Continue always works.
+//! Nothing here waits on the network: YouTube is asked first, a frame that cannot reach it says so over the same still, and Continue always works.
 //! SEE-ALSO: apps/desktop/native/macos/GpuiIntroVideoWebView.m, apps/desktop/src/app/os_integration/first_run_onboarding.rs (the once-per-install gate), apps/desktop/src/app/onboarding_modal_lifecycle.rs (`IntroVideoSeen`).
 use super::intro_web_view::IntroWebView;
 use super::primitives::*;
@@ -12,7 +12,8 @@ use super::stage::*;
 use super::{GpuiOnboardingWindow, OnboardingCommand, interact};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, Context, IntoElement, ParentElement as _, Styled as _, Window, canvas, div,
+    AnyElement, Context, InteractiveElement as _, IntoElement, ObjectFit, ParentElement as _,
+    Styled as _, StyledImage as _, Window, canvas, div, img,
 };
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -259,97 +260,162 @@ impl GpuiOnboardingWindow {
                 .gap(s.px(8.0))
                 .child(sans(s, 18.0, 500.0, hex(0xeef1f7)).child(title.to_string()))
                 .child(
-                    sans(s, 14.5, 400.0, hex(0xa3abb9))
+                    sans(s, 14.5, 400.0, hex(0xc3c9d4))
                         .max_w(s.px(520.0))
                         .text_center()
                         .child(body.to_string()),
                 )
         };
+        // Every state draws over the same still from the video, so the frame never shows an empty box.
+        let still = || {
+            img("onboarding/intro-video.jpg")
+                .absolute()
+                .left_0()
+                .top_0()
+                .size_full()
+                .object_fit(ObjectFit::Cover)
+        };
+        let veil = |alpha: f32| {
+            div()
+                .absolute()
+                .left_0()
+                .top_0()
+                .size_full()
+                .bg(black(alpha))
+        };
+        let centered = || {
+            div()
+                .absolute()
+                .left_0()
+                .top_0()
+                .size_full()
+                .flex()
+                .flex_col()
+                .items_center()
+                .justify_center()
+        };
         let inner: AnyElement = match intro.status {
+            // The still shows until the player paints its own thumbnail over it.
             Status::Ready => {
                 let web_view = intro.web_view.clone();
-                canvas(
-                    move |bounds, window, _| {
-                        if let Some(web_view) = &web_view {
-                            web_view.place(bounds);
-                        }
-                        window.occlude_native_region(bounds);
-                    },
-                    |_, _, _, _| {},
-                )
-                .size_full()
-                .into_any_element()
+                div()
+                    .size_full()
+                    .relative()
+                    .child(still())
+                    .child(
+                        canvas(
+                            move |bounds, window, _| {
+                                if let Some(web_view) = &web_view {
+                                    web_view.place(bounds);
+                                }
+                                window.occlude_native_region(bounds);
+                            },
+                            |_, _, _, _| {},
+                        )
+                        .absolute()
+                        .left_0()
+                        .top_0()
+                        .size_full(),
+                    )
+                    .into_any_element()
             }
             Status::Checking => div()
                 .size_full()
-                .flex()
-                .flex_col()
-                .items_center()
-                .justify_center()
-                .gap(s.px(14.0))
-                .child(spinner(s, 22.0, 2.0, intro.changed_at, now))
-                .child(sans(s, 14.5, 400.0, hex(0xa3abb9)).child("Loading the video…"))
+                .relative()
+                .child(still())
+                .child(veil(0.62))
+                .child(
+                    centered()
+                        .gap(s.px(14.0))
+                        .child(spinner(s, 22.0, 2.0, intro.changed_at, now))
+                        .child(sans(s, 14.5, 400.0, hex(0xc3c9d4)).child("Loading the video…")),
+                )
                 .into_any_element(),
             Status::Offline => div()
                 .size_full()
-                .flex()
-                .flex_col()
-                .items_center()
-                .justify_center()
-                .gap(s.px(18.0))
-                .child(icon(s, "wifi", 28.0, 1.6, hex(0x8c98c2)))
-                .child(message(
-                    "The video can't load right now",
-                    "Check your internet connection, or continue to setup and watch it later on YouTube.",
-                ))
-                .child(self.control(
-                    s,
-                    cta(
-                        s,
-                        "intro-video-retry",
-                        "Try again",
-                        false,
-                        false,
-                        false,
-                        CtaSize::Small,
-                    ),
-                    "intro-video-retry",
-                    interact::Ring::new(10.0, 1.0),
-                    interact::Keys::EnterSpace,
-                    cx,
-                    |this, window, cx| this.check_intro_video(window, cx),
-                ))
+                .relative()
+                .child(still())
+                .child(veil(0.84))
+                .child(
+                    centered()
+                        .gap(s.px(18.0))
+                        .child(icon(s, "wifi", 28.0, 1.6, hex(0x8c98c2)))
+                        .child(message(
+                            "The video can't load right now",
+                            "Check your internet connection, or continue to setup and watch it later on YouTube.",
+                        ))
+                        .child(self.control(
+                            s,
+                            cta(
+                                s,
+                                "intro-video-retry",
+                                "Try again",
+                                false,
+                                false,
+                                false,
+                                CtaSize::Small,
+                            ),
+                            "intro-video-retry",
+                            interact::Ring::new(10.0, 1.0),
+                            interact::Keys::EnterSpace,
+                            cx,
+                            |this, window, cx| this.check_intro_video(window, cx),
+                        )),
+                )
                 .into_any_element(),
-            Status::NoWebView => div()
-                .size_full()
-                .flex()
-                .flex_col()
-                .items_center()
-                .justify_center()
-                .gap(s.px(18.0))
-                .child(icon(s, "monitor", 28.0, 1.6, hex(0x8c98c2)))
-                .child(message(
-                    "Watch the tour on YouTube",
-                    "It opens in your browser, and setup is here when you come back.",
-                ))
-                .child(self.control(
+            Status::NoWebView => {
+                let key = "intro-video-watch";
+                let dim = interact::tween_value(
+                    key,
+                    "dim",
+                    if interact::hovered(key) { 0.16 } else { 0.3 },
+                    200,
+                );
+                let red = interact::hover_color(key, "red", hex(0xe8002d), hex(0xff0033), 200);
+                self.control(
                     s,
-                    cta(
-                        s,
-                        "intro-video-open",
-                        "Open on YouTube",
-                        true,
-                        false,
-                        false,
-                        CtaSize::Small,
-                    ),
-                    "intro-video-open",
-                    interact::Ring::new(10.0, 1.0),
+                    div()
+                        .id(key)
+                        .size_full()
+                        .relative()
+                        .cursor_pointer()
+                        .child(still())
+                        .child(veil(dim))
+                        .child(
+                            centered()
+                                .gap(s.px(18.0))
+                                .child(
+                                    div()
+                                        .w(s.px(76.0))
+                                        .h(s.px(54.0))
+                                        .rounded(s.px(14.0))
+                                        .bg(red)
+                                        .shadow(vec![shadow(black(0.35), 0.0, 6.0, 18.0, 0.0, s)])
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .child(icon(s, "play", 26.0, 1.6, gpui::white())),
+                                )
+                                .child(
+                                    div()
+                                        .py(s.px(8.0))
+                                        .px(s.px(16.0))
+                                        .rounded_full()
+                                        .bg(rgba(10, 12, 18, 0.74))
+                                        .child(
+                                            sans(s, 15.5, 500.0, gpui::white())
+                                                .child("Watch the intro on YouTube"),
+                                        ),
+                                ),
+                        ),
+                    key,
+                    interact::Ring::new(8.0, 0.0),
                     interact::Keys::EnterSpace,
                     cx,
                     |this, _, cx| this.send(OnboardingCommand::OpenExternalUrl(watch_url()), cx),
-                ))
-                .into_any_element(),
+                )
+                .into_any_element()
+            }
         };
         glass(s)
             .absolute()

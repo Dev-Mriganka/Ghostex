@@ -106,6 +106,11 @@ const ICON_PATHS: &[(&str, &str)] = &[
         r#"<path d="M3.5 9.5a12 12 0 0 1 17 0M6.5 12.8a7.5 7.5 0 0 1 11 0M9.6 16a3 3 0 0 1 4.8 0"/>"#,
     ),
     ("pulse", r#"<path d="M3 12h4l2-5 4 10 2-5h6"/>"#),
+    // The intro video still's play button (window/onboarding/intro_video.rs).
+    (
+        "play",
+        r#"<path d="M8.5 5.6v12.8a.9.9 0 0 0 1.37.77l10.2-6.4a.9.9 0 0 0 0-1.54L9.87 4.83a.9.9 0 0 0-1.37.77z" fill="black" stroke="none"/>"#,
+    ),
     (
         "layers",
         r#"<path d="M12 3 3 8l9 5 9-5z"/><path d="M3 12.5l9 5 9-5M3 16.5l9 5 9-5"/>"#,
@@ -191,6 +196,13 @@ pub(crate) fn asset(key: &str) -> Option<Cow<'static, [u8]>> {
         "phone/home-quiet.png" => {
             return Some(Cow::Borrowed(include_bytes!(
                 "../../assets/onboarding/phone/home-quiet.png"
+            )));
+        }
+        // A frame of the intro video (10.2s), drawn under the intro page's player and in place of it
+        // where there is no web view or no network (window/onboarding/intro_video.rs).
+        "intro-video.jpg" => {
+            return Some(Cow::Borrowed(include_bytes!(
+                "../../assets/onboarding/intro-video.jpg"
             )));
         }
 
