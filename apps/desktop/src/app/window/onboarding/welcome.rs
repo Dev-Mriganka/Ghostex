@@ -57,6 +57,10 @@ const TABS: [(WelcomeTab, &str, &str, &str); 3] = [
 ];
 
 /// `<FootActions panel>`: the panel's forward action on the footer row, right-aligned to the copy column.
+/// CDXC:Onboarding 2026-09-12 DECISION:
+/// User: "please make there only 1 next button on each page, i dont like how we have a cta then a next button". Each panel's single forward action (and an optional ghost secondary before it) sits in this slot.
+/// CDXC:Onboarding 2026-09-15 DECISION:
+/// User: "please move the Next button to be bottom right of the left half of the modal for all pages". The slot is on the footer row at the copy column's right edge, opposite the Back button.
 pub(crate) fn foot_actions(s: S, panel: usize) -> Div {
     div()
         .absolute()

@@ -217,6 +217,8 @@ impl ExtensionsTab {
         toggle_dropdown(self, category_dropdown, "Search...", selected, window, cx);
     }
 
+    /// CDXC:Extensions 2026-09-24 DECISION:
+    /// User: one filter bar (search, source, type, category, "N shown") covers every extension on the Settings Extensions page, not only the Store list. Every group (built-in categories, installed, Store, the user's own views) is matched against the page's one filter and a group with no match disappears; the Settings-wide search still narrows the page first.
     /// The bar's content (`.extensions-filter-bar`).
     fn filter_bar_content(
         &mut self,

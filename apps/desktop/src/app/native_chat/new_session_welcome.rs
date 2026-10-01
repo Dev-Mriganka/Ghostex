@@ -32,6 +32,10 @@ const TITLE_TEXT_SIZE: f32 = 22.0;
 
 /// Port of `getBrandAgentLogoStyle` (packages/core-ui/agent-logos.ts (deleted 2026-10-01)) against the
 /// chat's own theme tokens rather than the app chrome's.
+/// CDXC:SessionChat 2026-09-13 DECISION:
+/// User: the GPT/Codex icon is dark in light chat. Share the palette token across model pills, account panels and agent menus instead of colouring each instance separately. The model menu's `agent_logo` (option_menu/model_menu/render.rs) still carries its own copy of the white-mark rule.
+/// CDXC:Icons 2026-09-15 DECISION:
+/// User: the Z.ai/ZCode logo must be black on light UI and white on dark UI, including independently themed chat.
 pub(super) fn brand_logo_color(icon: &str, p: &ChatAppearance) -> Hsla {
     match icon {
         // `--ghostex-zcode-logo` (styles/theme.css) is black on light chat, white on dark.

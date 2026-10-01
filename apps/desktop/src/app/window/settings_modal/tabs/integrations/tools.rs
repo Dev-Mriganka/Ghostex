@@ -446,6 +446,8 @@ impl IntegrationsTab {
     }
 
     /// `ManagedToolsSection`.
+    /// CDXC:ManagedTools 2026-09-29 DECISION:
+    /// User: "when they click on something, we help them install it on windows/macos/linux automatically (show a button with a tooltip explaining how we'll install) but 1 click installs it for them as much as possible". Settings > Integrations > Tools lists what Ghostex can install for the user: Install carries the server's plan as its tooltip, and an installed tool gets the Update (or check again), Reinstall and Uninstall icon buttons of the Trycua row, each only when gxserver offers it. Tools the user installed themselves are shown as theirs without buttons.
     pub(super) fn managed_tools_section(
         &mut self,
         p: &SettingsPalette,

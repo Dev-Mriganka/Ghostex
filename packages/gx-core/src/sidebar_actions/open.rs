@@ -94,6 +94,7 @@ fn plan_sidebar_action(view: &SidebarView, action: &str) -> Option<SidebarAction
     }
     let machine_id = view.selected_machine_id.as_str();
     let open = match action {
+        // CDXC:Sessions 2026-09-12 DECISION: User: creating a session tag happens in one place only. The sidebar's New tag row opens Settings > Sidebar Tags with the create form already open, instead of offering a second inline editor inside the Tag as menu.
         "newTag" => json!({
             "type": "open",
             "modal": "settings",

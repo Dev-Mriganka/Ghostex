@@ -407,6 +407,8 @@ fn integration_row(
         }))
         .children(title.pill.map(|pill| {
             div().ml(px(6.0)).child(tinted_label(
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: rows do not spell out Installed or Permissions Allowed in a pill. State is a small dot before the icon, the way the Extensions page marks enabled views.
                 p,
                 AMBER_500,
                 AMBER_200,

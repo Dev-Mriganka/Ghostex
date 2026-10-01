@@ -14,6 +14,8 @@ use gpui_component::h_flex;
 use serde_json::json;
 use std::rc::Rc;
 
+/// CDXC:Settings 2026-09-09 DECISION:
+/// User: never show On or Off text beside a toggle in Settings; the switch itself is the state. A view that cannot be turned off shows a locked-on switch instead of an "Always on" caption.
 /// The Settings switch: a 32x20 track with a 6px radius and a 1px edge, a 16px thumb with a 4px
 /// radius. Off: the raised-hover track with a hairline edge and a foreground thumb (dark) or
 /// surface thumb (light). On: a foreground track and a surface thumb.

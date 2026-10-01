@@ -19,6 +19,8 @@ pub(crate) fn debugging_tab_view(store: &Entity<SettingsStore>, cx: &mut App) ->
     cx.new(|cx| DebuggingTab::new(store.clone(), cx)).into()
 }
 
+/// CDXC:Diagnostics 2026-09-26 DECISION:
+/// User: debugging lives on its own Settings page above About, with Show debug UI controls first. User: hide and disable the Storage section (storage usage and folder statistics); this supersedes the 2026-09-16 decision that showed it behind Show debug UI controls.
 pub(crate) struct DebuggingTab {
     store: Entity<SettingsStore>,
     fields: FieldStates,

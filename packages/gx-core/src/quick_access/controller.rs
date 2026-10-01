@@ -461,6 +461,10 @@ impl QuickAccessController {
         }
     }
 
+    /// CDXC:Sessions 2026-09-08 DECISION:
+    /// User: Option+C cycles all three scopes (All, Closed, External) and takes precedence over other hotkeys while Sessions is open. The equal-width scope buttons of the same decision became the search line's scope filter under the 2026-09-21 Raycast layout (CDXC:AppModal in apps/desktop/src/app/window/quick_access/window.rs).
+    /// CDXC:Sessions 2026-09-09 DECISION:
+    /// User: refresh discovery whenever External is opened and skip unnecessary scanning. Only entering External requests a filesystem refresh; search, filters, and pagination reuse the discovered history.
     fn cycle_sessions_scope(&mut self, effects: &mut Vec<QuickAccessEffect>) {
         self.sessions.scope = match self.sessions.scope {
             SessionScope::All => SessionScope::Closed,

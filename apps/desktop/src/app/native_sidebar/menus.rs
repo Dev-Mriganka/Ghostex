@@ -155,6 +155,7 @@ impl GhostexGpuiApp {
                         focus,
                         previous_focus,
                         scale,
+                        // CDXC:Tooltips 2026-09-15 DECISION: User: no tooltip may show while a context menu is open; the suppression is held for as long as the menu is.
                         _tooltips: Root::suppress_tooltips(window, cx),
                     });
                     if let Some(command) = on_open {
@@ -211,6 +212,8 @@ impl GhostexGpuiApp {
         }
     }
 
+    /// CDXC:DesignSystem 2026-09-15 DECISION:
+    /// User: Switch Account and other submenus must stay open when the pointer crosses another menu item so their contents remain easy to reach. Submenus open on a click here, never on hover, so passing over another row leaves them open.
     /// CDXC:ContextMenus 2026-09-19 DECISION:
     /// User: "please do the same for all context menus that have sub menus in the gpui app. when i
     /// click on the menu item that opens the sub menu again then close the sub menu if it's open.

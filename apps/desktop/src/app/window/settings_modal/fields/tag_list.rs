@@ -558,6 +558,7 @@ fn save_items<V: SettingsPage>(
     store.update(cx, |store, cx| {
         store.update_setting(KEY, items_json(items), cx)
     });
+    // CDXC:Sessions 2026-09-11 DECISION: User: custom tags are added and sorted from the existing Sidebar Tags list. Custom rows sit in the same drag list as the built-in rows (hide, disable, reorder work unchanged) and gain a delete action; the relative order of the custom rows is written back to the daemon catalog so the phone's Tag as menu lists them in the same order.
     // The custom rows' relative order is the daemon catalog's order.
     if let Some(custom) = custom {
         let next_order: Vec<String> = items
@@ -613,6 +614,8 @@ fn choose_icon<V: SettingsPage>(
     cx.notify();
 }
 
+/// CDXC:Sessions 2026-09-12 DECISION:
+/// User: the New tag form lives only in Settings > Sidebar Tags, and it has to be built from the same rounded controls as the rest of Settings. It is laid out as one more row of the tag list, and the icon trigger doubles as the live preview by drawing the chosen glyph in the chosen colour.
 /// The New tag form: the compact icon picker (the glyph in the chosen colour), the name box,
 /// the colour swatches, Cancel and Create tag.
 fn new_tag_form<V: SettingsPage>(
@@ -1157,6 +1160,7 @@ pub(crate) fn tag_list_field<V: SettingsPage>(
                                 .child(label.clone()),
                         ),
                 )
+                // CDXC:Sessions 2026-09-12 DECISION: User: place the custom tag trash button leftmost, before the enabled switch and visibility button.
                 .when(is_custom, |this| {
                     this.child(settings_icon_button(
                         p,

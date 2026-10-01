@@ -46,6 +46,8 @@ const END: u64 = 8400;
 const LOOP: u64 = 12400;
 
 impl GpuiOnboardingWindow {
+    /// CDXC:Onboarding 2026-09-15 DECISION:
+    /// User: "in the take ghostex with you section, we need to not download the app. We should just have a toggle saying 'Configure my phone with ghostex after this flow' and all that does is it opens the sidebar menu -> remote screen for the user after the flow". There are no install or pair steps and no APK link; the toggle sets `phone_queued`, which opens Settings -> Remote (Easy Connect) once the flow closes.
     fn toggle_phone(&mut self, cx: &mut Context<Self>) {
         self.flow.phone_queued = !self.flow.phone_queued;
         cx.notify();

@@ -213,6 +213,8 @@ impl RailState {
     }
 }
 
+/// CDXC:Settings 2026-09-12 DECISION:
+/// User: Settings table-of-contents titles only navigate; only the small chevron on the right expands or collapses their entries. This replaces the full-header toggle behavior.
 fn chevron(expanded: bool) -> &'static str {
     if expanded {
         super::fields::icon::CHEVRON_DOWN

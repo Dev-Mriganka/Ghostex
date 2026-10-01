@@ -3,6 +3,8 @@
 //!
 //! CDXC:AgentHooks 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt in native GPUI one at a time, and each native modal must be EXACTLY 1 to 1 with its React twin: the same layout, copy, colors, radii, spacing, states, keyboard behaviour and bridge messages in both appearances. The hero tile, benefit chips and top glow take the agent's logo color; white-logo agents fall back to the foreground so the tint follows the theme.
+//! CDXC:AgentHooks 2026-09-15 DECISION:
+//! User: the missing-hooks prompt is a friendly, short invitation that shows the agent's logo, not a technical notice. The agent's brand color tints the hero tile and benefit icons; copy names the agent and stays to one sentence per idea.
 //! SEE-ALSO: packages/core-ui/agent-hooks-required-modal.tsx (deleted 2026-10-01) and packages/core-ui/agent-hook-benefits.tsx (deleted 2026-10-01) (the React twin), the `.agent-hooks-required-*` rules in packages/core-ui/styles/modals.css and modals-light.css, packages/core-ui/agent-logos.ts (deleted 2026-10-01) and packages/shared/sidebar-agents.ts (the agent id, logo file and brand color table mirrored below), apps/desktop/src/app/agent_hooks_required_modal_lifecycle.rs (open, close, sidebar bridge).
 use super::native_modal_kit::*;
 use gpui::StyledImage as _;

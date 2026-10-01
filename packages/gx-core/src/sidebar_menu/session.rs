@@ -134,6 +134,8 @@ pub fn session_hover_submenu(input: &SessionMenuInput<'_>, action: HoverAction) 
         .unwrap_or_default()
 }
 
+/// CDXC:Sessions 2026-09-12 DECISION:
+/// User: hover buttons are icons only; the tooltip names the action. A button on a pinned, parked or snoozed row shows the reverse action (Unpin, Unpark, Unsnooze) so one slot toggles the state, which is why the strip reuses the menu's own action rows.
 fn build(input: &SessionMenuInput<'_>, include_menu: bool) -> SessionActions {
     let (rows, caps) = action_rows(input, include_menu);
     let strip = hover_strip(&input.settings.session_card_hover_buttons);

@@ -91,6 +91,7 @@ impl GhostexGpuiApp {
                             && self.native_sidebar.menu.is_none()
                             && !cx.has_active_drag(),
                         |row| {
+                            // CDXC:Tooltips 2026-09-15 DECISION: User: the small buttons inside a session card must not show their tooltip instantly; they wait as long as the card's own title tooltip does.
                             row.managed_discrete_tooltip_with_placement(
                                 ManagedTooltipPlacement::BelowLeft,
                                 appearance.tooltip_delay,

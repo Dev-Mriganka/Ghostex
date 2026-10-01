@@ -55,12 +55,16 @@ fn use_transparency_choices() -> Vec<SettingOption> {
     .collect()
 }
 
+/// CDXC:Theming 2026-09-27 DECISION:
+/// User answered "Build now" to Wallpaper, Picture and Live on Windows, so Glass shows offers them on macOS and Windows, and the Linux rollout of the same day offers them on Linux. The user's own video stays off Windows: the Windows backdrop has no video player. Supersedes the 2026-09-25 rule that kept Glass shows macOS-only.
 /// `windowGlassVideoAvailable`: the user's own video plays behind the glass on macOS and Linux;
 /// the Windows backdrop has no video player.
 fn video_available() -> bool {
     cfg!(target_os = "macos") || cfg!(target_os = "linux")
 }
 
+/// CDXC:Theming 2026-09-25 DECISION:
+/// User: "let's enable transparency on windows please also if possible. like it works on mac exactly." The glass controls show on macOS and Windows (and Linux since 2026-09-27), and on Windows turning glass on takes effect at the next launch (`note_main_window_background` in apps/desktop/src/app/helpers/window_glass.rs).
 /// `windowGlassStatusNote`: why the window stays opaque when the system's own switch blocks glass,
 /// otherwise the Windows restart note.
 fn status_note(blocked: bool) -> &'static str {
