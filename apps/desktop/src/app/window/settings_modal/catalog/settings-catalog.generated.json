@@ -5816,6 +5816,11 @@
                   "value": "inherit"
                 }
               ]
+            },
+            {
+              "key": "terminalShadersEnabled",
+              "title": "Custom shaders (experimental)",
+              "subtitle": "Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions."
             }
           ]
         },
@@ -8713,7 +8718,8 @@
             "terminalScrollbar",
             "terminalMouseScrollMultiplierPrecision",
             "terminalMouseScrollMultiplierDiscrete",
-            "terminalScrollToBottomWhenTyping"
+            "terminalScrollToBottomWhenTyping",
+            "terminalShadersEnabled"
           ],
           "tools": [
             "webLinkOpenTarget",
@@ -8995,7 +9001,8 @@
             "terminalScrollbar",
             "terminalMouseScrollMultiplierPrecision",
             "terminalMouseScrollMultiplierDiscrete",
-            "terminalScrollToBottomWhenTyping"
+            "terminalScrollToBottomWhenTyping",
+            "terminalShadersEnabled"
           ],
           "tools": [
             "webLinkOpenTarget",
@@ -11809,6 +11816,7 @@
           "customSidebarTitlebarLightBackgroundColor": "#f4f4f5",
           "terminalCursorStyle": "bar",
           "terminalCursorStyleBlink": true,
+          "terminalShadersEnabled": false,
           "windowsTerminalBackend": "powershell",
           "windowsWslDistribution": "",
           "terminalFontFamily": "JetBrains Mono",
@@ -17034,33 +17042,213 @@
           "general",
           "sections",
           13,
-          "settings",
-          19,
-          "subtitle"
+          "settings"
         ],
-        "Show a model button in the terminal bar and open the model picker with its shortcut (Alt+P by default) in agent terminal sessions. Turn off to use terminal bindings."
-      ],
-      [
         [
-          "general",
-          "sections",
-          13,
-          "settings",
-          22,
-          "title"
-        ],
-        "Ctrl+G prompt editor"
-      ],
-      [
-        [
-          "general",
-          "sections",
-          13,
-          "settings",
-          22,
-          "subtitle"
-        ],
-        "Choose which editor Ctrl+G uses when a terminal prompt asks for $EDITOR."
+          {
+            "key": "ghosttySettingsActions",
+            "title": "Ghostty settings actions",
+            "subtitle": "Recommended Ghostty settings, Ghostty config file, Ghostty docs, and Ghostty defaults.",
+            "options": [
+              {
+                "label": "Apply recommended",
+                "value": "applyRecommendedGhosttySettings"
+              },
+              {
+                "label": "Open Ghostty config",
+                "value": "openGhosttyConfigFile"
+              },
+              {
+                "label": "Open Ghostty docs",
+                "value": "openGhosttySettingsDocs"
+              },
+              {
+                "label": "Reset Ghostty defaults",
+                "value": "resetGhosttySettingsToDefault"
+              }
+            ]
+          },
+          {
+            "key": "terminalBackgroundMode",
+            "title": "Terminal background",
+            "subtitle": "Only changes the terminal panes. Black / white is pure black in dark mode and pure white in light mode.",
+            "options": [
+              {
+                "label": "Black / white",
+                "value": "pure"
+              },
+              {
+                "label": "Follow theme",
+                "value": "theme"
+              },
+              {
+                "label": "Custom color",
+                "value": "custom"
+              }
+            ]
+          },
+          {
+            "key": "workspaceBackgroundColor",
+            "title": "Terminal background color",
+            "subtitle": "Custom terminal background, painted behind terminal text in dark mode."
+          },
+          {
+            "key": "terminalBackgroundImage",
+            "title": "Background Image",
+            "subtitle": "Absolute path to an image drawn behind terminal panes."
+          },
+          {
+            "key": "terminalBackgroundImageOpacity",
+            "title": "Background Image Opacity",
+            "subtitle": "Blend the background image toward the terminal background color."
+          },
+          {
+            "key": "terminalBackgroundImageFit",
+            "title": "Background Image Fit",
+            "subtitle": "How the background image is scaled inside each pane.",
+            "options": [
+              {
+                "label": "Cover",
+                "value": "cover"
+              },
+              {
+                "label": "Contain",
+                "value": "contain"
+              },
+              {
+                "label": "Stretch",
+                "value": "stretch"
+              },
+              {
+                "label": "Natural size",
+                "value": "natural"
+              }
+            ]
+          },
+          {
+            "key": "terminalFontFamily",
+            "title": "Font Family",
+            "subtitle": "Type a Ghostty font-family name."
+          },
+          {
+            "key": "terminalFontSize",
+            "title": "Font Size",
+            "subtitle": "Set terminal text size."
+          },
+          {
+            "key": "terminalFontWeight",
+            "title": "Font Weight",
+            "subtitle": "Set terminal text weight."
+          },
+          {
+            "key": "terminalLineHeight",
+            "title": "Line Height",
+            "subtitle": "Adjust terminal row height."
+          },
+          {
+            "key": "terminalLetterSpacing",
+            "title": "Letter Spacing",
+            "subtitle": "Adjust spacing between glyphs."
+          },
+          {
+            "key": "terminalViewWidthMode",
+            "title": "Terminal width mode",
+            "subtitle": "Use the full pane, match the chat transcript, or set an independent terminal width.",
+            "options": [
+              {
+                "label": "Full",
+                "value": "full"
+              },
+              {
+                "label": "Match Chat",
+                "value": "match-chat"
+              },
+              {
+                "label": "Custom",
+                "value": "custom"
+              }
+            ]
+          },
+          {
+            "key": "terminalViewWidthPercent",
+            "title": "Terminal Width (%)",
+            "subtitle": "Set the centered terminal body width as a percentage."
+          },
+          {
+            "key": "terminalWidthApplyToCommandPaneTerminals",
+            "title": "Apply Width to Command Pane Terminals",
+            "subtitle": "Apply the narrower terminal width to command pane terminals too."
+          },
+          {
+            "key": "terminalPaneHorizontalPaddingPx",
+            "title": "Horizontal Padding",
+            "subtitle": "Add left and right inner padding inside the terminal content area."
+          },
+          {
+            "key": "terminalPaneVerticalPaddingPx",
+            "title": "Vertical Padding",
+            "subtitle": "Add top and bottom inner padding inside the terminal content area."
+          },
+          {
+            "key": "terminalCursorStyle",
+            "title": "Cursor Style",
+            "subtitle": "Choose the cursor shape.",
+            "options": [
+              {
+                "label": "Line",
+                "value": "bar"
+              },
+              {
+                "label": "Block",
+                "value": "block"
+              },
+              {
+                "label": "Underline",
+                "value": "underline"
+              }
+            ]
+          },
+          {
+            "key": "terminalCursorStyleBlink",
+            "title": "Cursor blink",
+            "subtitle": "Blink the terminal cursor."
+          },
+          {
+            "key": "clickToWakeSleepingSessions",
+            "title": "Click to Wake Sleeping Panes",
+            "subtitle": "Select sleeping pane tabs without waking them until the empty pane is clicked."
+          },
+          {
+            "key": "showQuickModelPickerInTerminal",
+            "title": "Model picker in terminal view",
+            "subtitle": "Show a model button in the terminal bar and open the model picker with its shortcut (Alt+P by default) in agent terminal sessions. Turn off to use terminal bindings."
+          },
+          {
+            "key": "showSessionIdInTerminalPanes",
+            "title": "Show session id in terminal panes",
+            "subtitle": "Show the provider session id in the top-right corner of terminal panes."
+          },
+          {
+            "key": "showNotificationOnTerminalBell",
+            "title": "Show notification on terminal bell",
+            "subtitle": "Treat terminal bell events as session attention."
+          },
+          {
+            "key": "promptEditorBackend",
+            "title": "Ctrl+G prompt editor",
+            "subtitle": "Choose which editor Ctrl+G uses when a terminal prompt asks for $EDITOR.",
+            "options": [
+              {
+                "label": "Ghostex editor",
+                "value": "monaco"
+              },
+              {
+                "label": "Use default from this machine",
+                "value": "inherit"
+              }
+            ]
+          }
+        ]
       ],
       [
         [
