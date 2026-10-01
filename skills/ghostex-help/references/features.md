@@ -691,6 +691,14 @@ model to save the default, or right-click to apply it only to this session.
 Use `/compact` to summarize the conversation. Forms with conditional fields or
 external sign-in steps offer an Open terminal action. Commands:
 `ghostex send-session-chat-message`, `ghostex answer-session-chat-prompt`.
+Antigravity CLI chats show its replies, its thinking, the commands it runs, the
+files it reads and searches, and its file edits with their changes. When
+Antigravity asks questions, they appear as a card in the chat: pick options,
+write your own answer, or skip a question, and the answer goes to Antigravity
+as if you had answered in its terminal. The mode button next to the model pill
+switches Antigravity between Default, Accept edits and Plan (Shift+Tab in its
+terminal). Commands: `ghostex send-session-chat-message`,
+`ghostex answer-session-chat-prompt`.
 Sending a message to a sleeping session wakes it. While the agent is still
 starting, the message shows in the chat right away and is typed in as soon as
 the agent's input box appears. If Claude Code has its settings, a plugin
@@ -910,7 +918,9 @@ without a message above them collapse to a tool-call count, and tool rows hide
 command previews; expand a tool to inspect its full input and result. File edits
 collapse under "Edited 1 file" or "Edited X files", counting each path once; expand
 the row to see the usual file and diff cards. The menu and Settings use the same
-toggle (`sessionChatSimpleMode`, on by default).
+toggle (`sessionChatSimpleMode`, on by default). The phone app has Simple mode too,
+under More actions > View in its chat box or in its Settings > Chat; the phone keeps
+its own switch, also on by default.
 
 Summary mode folds each turn down to your prompt and an "Agent reply" row; the
 newest reply stays open, and older ones open with a click. The row holds every
@@ -926,6 +936,9 @@ Summary mode (under View), Session note, Stash prompt, Attach, Maximize, then Te
 If the context ring still does not fit beside the model, it moves into Model
 settings at the top of More actions; the model pill shortens instead of moving.
 Controls return as space opens up; More actions and Send or Stop stay visible.
+On the phone, Stash prompt with an empty chat box (or a long press on it) opens
+Saved prompts for this project: tap one to put it in the chat box, or delete it
+with its trash button. Tags and editing stay on the computer.
 Click the model pill or the context meter to open it; hovering does not open either control.
 Hover the model pill to see the configured Model & Effort Picker shortcut
 (Option+P by default on macOS). Hover the context circle to read the agent's
