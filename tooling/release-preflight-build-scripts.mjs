@@ -38,7 +38,7 @@ const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
 
 export const RELEASE_BUILD_SCRIPTS = Object.freeze([
   {
-    // CI: release-gpui-android.yml / release-build-android.yml
+    // CI: release-gpui-android.yml
     //   -> tooling/release-gpui/android.sh -> tooling/release-mobile/android.sh
     //   (also release-mobile-ios-testflight.yml -> tooling/release-mobile/ios-testflight.sh)
     caller: 'release-gpui-android.yml -> tooling/release-mobile/android.sh',
@@ -66,6 +66,10 @@ export const RELEASE_BUILD_SCRIPTS = Object.freeze([
   },
 ]);
 
+/**
+ * @param {string} command
+ * @param {{ timeoutMs?: number, cwd?: string }} [options]
+ */
 function runCommand(command, { timeoutMs, cwd = repoRoot } = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, {
@@ -203,6 +207,10 @@ export function formatDuration(durationMs) {
  result (or null). `onResult` is called after each command so callers can stream
  per-command timings; `scripts` defaults to the full RELEASE_BUILD_SCRIPTS list.
 */
+/**
+ * @param {{ keepOutputs?: boolean, onResult?: (result: any) => void, scripts?: readonly any[] }} [options]
+ * @returns {Promise<{ failure: any, results: any[] }>}
+ */
 export async function runReleaseBuildScripts({ keepOutputs = false, onResult, scripts = RELEASE_BUILD_SCRIPTS } = {}) {
   const results = [];
   for (const entry of scripts) {

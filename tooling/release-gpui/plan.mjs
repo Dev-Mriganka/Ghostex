@@ -374,6 +374,7 @@ function planEstimates({ products }) {
   return { builtRunnerMinutes: built, savedRunnerMinutes: saved };
 }
 
+/** @param {Record<string, any>} options */
 export function computePlan({
   algorithmRevision = FINGERPRINT_ALGORITHM_REVISION,
   assetMetadata,

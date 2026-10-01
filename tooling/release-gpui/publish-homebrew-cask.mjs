@@ -95,6 +95,7 @@ export function pullRequestTitle(version) {
  * release workflow does so on a macOS runner), and the AI box carries a
  * disclosure that the change comes from this deterministic automation.
  */
+/** @param {{ version: string, repo?: string, checks?: { audited?: boolean, styled?: boolean } }} options */
 export function pullRequestBody({ version, repo = defaultRepo, checks = {} }) {
   const box = (done) => (done ? '[x]' : '[ ]');
   const script = `https://github.com/${repo}/blob/main/tooling/release-gpui/publish-homebrew-cask.mjs`;
@@ -208,6 +209,10 @@ function gh(args, options = {}) {
   return result;
 }
 
+/**
+ * @param {string} endpoint
+ * @param {{ allowNotFound?: boolean, body?: unknown, method?: string, token?: string }} [options]
+ */
 function ghApi(endpoint, { allowNotFound = false, body, method = 'GET', token } = {}) {
   const args = ['api', '--method', method, endpoint];
   if (body !== undefined) args.push('--input', '-');
@@ -237,6 +242,7 @@ function decodeContent(entry) {
   return Buffer.from(entry.content.replace(/\n/gu, ''), 'base64').toString('utf8');
 }
 
+/** @param {{ repo: string, path: string, ref: string, token?: string, allowNotFound?: boolean }} options */
 async function readFile({ repo, path: filePath, ref, token, allowNotFound = false }) {
   const entry = await ghApi(`repos/${repo}/contents/${filePath}?ref=${encodeURIComponent(ref)}`, {
     allowNotFound,
@@ -368,6 +374,7 @@ export async function waitForLivecheckAppcast({ version, timeoutMs = 8 * 60 * 10
 
 // Shared with tooling/release-final-verify.mjs, which treats an open bump pull
 // request as the official cask being on its way rather than missing.
+/** @param {{ version: string, token?: string }} options */
 export async function findOpenPullRequest({ version, token }) {
   const query = `repo:${officialCask.repo} is:pr is:open ghostex in:title`;
   const search = await ghApi(`search/issues?q=${encodeURIComponent(query)}&per_page=50`, { token });

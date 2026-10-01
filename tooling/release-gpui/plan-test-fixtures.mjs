@@ -78,7 +78,7 @@ const FIXTURE_FILES = {
     2
   )}\n`,
   'tooling/build-remote-gxserver-linux-release.sh': '#!/usr/bin/env bash\n',
-  'tooling/release-ghostex.mjs': '// remote package\n',
+  'tooling/release-shared.mjs': '// remote package\n',
   'tooling/release-gpui/android.sh': '#!/usr/bin/env bash\n',
   'tooling/release-gpui/code-server-component-identity.mjs': '// identity\n',
   'tooling/release-gpui/common.sh': '# manifest writer\n',

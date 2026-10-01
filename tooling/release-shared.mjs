@@ -1,10 +1,48 @@
-import { readFile } from 'node:fs/promises';
+/*
+ The helpers the current release tooling still uses from the retired local
+ release driver (`release-ghostex*.mjs`, deleted 2026-10-01; see git history):
+ build-number math, the on-demand asset names, the remote gxserver package
+ check, CHANGELOG parsing and validation, and the published cask check.
+*/
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { repoRoot, config, ReleaseError } from './release-ghostex-config.mjs';
 
-export async function extractChangelogSection(version) {
-  const changelog = await readFile(path.join(repoRoot, 'CHANGELOG.md'), 'utf8');
-  return extractChangelogSectionFromText(changelog, version);
+export class ReleaseError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ReleaseError';
+  }
+}
+
+/*
+ CDXC:RemotePairing 2026-07-13:
+ The Linux remote package no longer ships portless (macOS launchd-only), the
+ npm-style package.json manifest, or dist/protocol exports; nothing on the
+ remote host consumes them and version identity lives in build-identity.json.
+ */
+const remoteGxserverLinuxRequiredPackageResources = ['bin/gxserver', 'bin/zmx', 'bin/ghostex', 'build-identity.json'];
+
+/*
+ CDXC:Release 2026-07-02-14:10:
+ Public releases stop embedding the two Ubuntu remote gxserver payloads inside
+ the DMG. The app build stages a sealed checksum manifest instead, and the
+ release publishes the two tarballs as version-pinned GitHub release assets the
+ app downloads on first use. Remote installs keep the Mac-then-scp flow.
+ */
+export const onDemandAssetNames = ['gxserver-linux-x64.tar.gz', 'gxserver-linux-arm64.tar.gz'];
+
+export function releaseBuildVersion(version) {
+  const [major, minor, patch] = version
+    .split('-')[0]
+    .split('.')
+    .map((part) => Number.parseInt(part, 10));
+  return major * 10000 + minor * 100 + patch;
+}
+
+export function missingRemoteGxserverLinuxPackageResources(packageDir, exists = existsSync) {
+  return remoteGxserverLinuxRequiredPackageResources.filter((relativePath) => {
+    return !exists(path.join(packageDir, relativePath));
+  });
 }
 
 export function extractChangelogSectionFromText(changelog, version) {
@@ -216,55 +254,35 @@ export function validateMajorMinorReleaseNotes(notes, version) {
   }
 }
 
-export async function buildGithubReleaseNotes(
-  version,
-  artifacts,
-  { androidArtifact = null, onDemandAssets = null, gpuiArtifact = null } = {}
-) {
-  const changelogNotes = await extractChangelogSection(version);
-  const arm = artifacts.find((entry) => entry.arch === 'arm64' && entry.kind !== 'gpui');
-  if (!arm) {
-    throw new ReleaseError('arm64 release artifact is required.');
+export function validateGhostexCask(cask, { version, sha256 }) {
+  for (const required of [
+    `version "${version}"`,
+    `sha256 "${sha256}"`,
+    'url "https://github.com/maddada/Ghostex/releases/download/v#{version}/ghostex-#{version}-arm64.dmg"',
+    'depends_on arch: :arm64',
+    'depends_on macos: :ventura',
+    'command_wrapper "ghostex", content:',
+    'command_wrapper "gx", content:',
+    'CDXC:CliInstall 2026-06-12-09:31',
+    'exec "#{appdir}/ghostex.app/Contents/Resources/CLI/ghostex" "$@"',
+  ]) {
+    if (!cask.includes(required)) {
+      throw new ReleaseError(`Ghostex cask is missing required stanza: ${required}`);
+    }
   }
-  const downloads = ['- Apple Silicon', `  - \`${path.basename(arm.finalDmg)}\``, `  - SHA256: \`${arm.sha256}\``];
-  if (gpuiArtifact) {
-    downloads.push(
-      '- Ghostex (Apple Silicon)',
-      `  - \`${path.basename(gpuiArtifact.finalDmg)}\``,
-      `  - SHA256: \`${gpuiArtifact.sha256}\``
-    );
+  for (const block of ['preflight_steps', 'postflight_steps', 'uninstall_preflight_steps']) {
+    if (!new RegExp(`^\\s*${block} do$`, 'm').test(cask)) {
+      throw new ReleaseError(`Ghostex cask is missing required stanza: ${block} do`);
+    }
   }
-  if (androidArtifact) {
-    downloads.push('- Android', `  - \`${androidArtifact.name}\``, `  - SHA256: \`${androidArtifact.sha256}\``);
+  if (/^\s*(?:preflight|postflight|uninstall_preflight) do$/m.test(cask)) {
+    throw new ReleaseError('Ghostex cask still uses the Ruby preflight/postflight blocks Homebrew 7.0.6 deprecated.');
   }
-
-  const onDemandSection = [];
-  if (onDemandAssets?.length) {
-    onDemandSection.push(
-      '## On-demand components',
-      '',
-      'The app downloads these automatically when first needed (remote Linux machines, Project board) and verifies them against checksums sealed inside the signed app:',
-      '',
-      ...onDemandAssets.map((asset) => `- \`${asset.name}\` - SHA256: \`${asset.sha256}\``),
-      ''
-    );
+  if (/^\s*binary\s+"/m.test(cask)) {
+    throw new ReleaseError('Ghostex cask must install wrapper files, not Homebrew binary aliases.');
   }
-
-  return [
-    '## Changes',
-    '',
-    changelogNotes,
-    '',
-    '## Downloads',
-    '',
-    ...downloads,
-    '',
-    ...onDemandSection,
-    '## Install',
-    '',
-    '```sh',
-    config.installCommand,
-    '```',
-    '',
-  ].join('\n');
+  if (cask.includes('x86_64') || cask.includes('#{arch}') || cask.includes('intel:')) {
+    throw new ReleaseError('Ghostex cask still contains Intel release distribution stanzas.');
+  }
+  return true;
 }

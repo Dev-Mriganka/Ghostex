@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { validateMajorMinorReleaseNotes } from './release-ghostex.mjs';
+import { validateMajorMinorReleaseNotes } from './release-shared.mjs';
 
 /*
  CDXC:Release 2026-09-01-12:05:

@@ -7,8 +7,8 @@ set -euo pipefail
 # script as one 24-minute step, so per-phase timing was invisible from the jobs
 # API. The script is now a sequence of phase functions dispatched by `--phase`.
 # Without `--phase` (or with `--phase all`) it runs every phase in the original
-# order, in one process, exactly as before, so release-build-macos.yml,
-# release-amend-existing.yml, and local runs are unaffected.
+# order, in one process, exactly as before, so release-amend-existing.yml and
+# local runs are unaffected.
 #
 # Every value a later phase needs is derived deterministically in the prologue
 # below (paths, version, build number, identities), so no shell state has to be

@@ -164,17 +164,7 @@ const GXSERVER_PATHSPECS = Object.freeze([
   /* server/package-remote-linux.mjs stages the bundled skills catalog into the package. */
   { pathspec: 'skills/**' },
   { pathspec: 'tooling/build-remote-gxserver-linux-release.sh' },
-  { pathspec: 'tooling/release-ghostex.mjs' },
-  { pathspec: 'tooling/release-ghostex-config.mjs' },
-  { pathspec: 'tooling/release-ghostex-process.mjs' },
-  { pathspec: 'tooling/release-ghostex-github.mjs' },
-  { pathspec: 'tooling/release-ghostex-signing.mjs' },
-  { pathspec: 'tooling/release-ghostex-terminal.mjs' },
-  { pathspec: 'tooling/release-ghostex-preflight.mjs' },
-  { pathspec: 'tooling/release-ghostex-build.mjs' },
-  { pathspec: 'tooling/release-ghostex-notes.mjs' },
-  { pathspec: 'tooling/release-ghostex-publish.mjs' },
-  { pathspec: 'tooling/release-ghostex-homebrew.mjs' },
+  { pathspec: 'tooling/release-shared.mjs' },
   { pathspec: 'tooling/release-gpui/prepare-references.sh' },
   /*
    * release-gpui-runtime.yml was split into the gxserver package workflow and

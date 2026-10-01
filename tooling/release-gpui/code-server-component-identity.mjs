@@ -100,6 +100,7 @@ function resolveSourceRevision(codeServerRoot) {
   return revision;
 }
 
+/** @param {{ codeServerRoot: string, recipeRoot?: string, sourceRevision?: string }} options */
 export async function codeServerComponentIdentity({ codeServerRoot, recipeRoot, sourceRevision }) {
   const revision = sourceRevision ?? resolveSourceRevision(codeServerRoot);
   if (!/^[0-9a-f]{12}$/.test(revision)) {

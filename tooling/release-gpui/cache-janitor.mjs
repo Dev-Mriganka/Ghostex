@@ -57,6 +57,7 @@ export const DEFAULT_OPTIONS = Object.freeze({
 });
 
 /* Key families, matched in order; the first match wins. */
+/** @type {Array<[string, RegExp]>} */
 const FAMILY_RULES = [
   ['sccache', /^sccache\//u],
   ['cargo-reg', /^cargo-reg-/u],
@@ -97,6 +98,7 @@ function usage() {
 }
 
 export function parseArgs(argv) {
+  /** @type {{ apply: boolean, budgetGb: number, help?: boolean, minAgeHours: number, repo: string, sccacheUnusedDays: number }} */
   const options = { ...DEFAULT_OPTIONS };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];

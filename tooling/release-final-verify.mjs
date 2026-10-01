@@ -12,7 +12,7 @@ import {
   onDemandAssetNames,
   releaseBuildVersion,
   validateGhostexCask,
-} from './release-ghostex.mjs';
+} from './release-shared.mjs';
 import { validateMacosAppBundle } from './validate-macos-app-bundle.mjs';
 import { validateOnDemandManifestV2 } from './release-gpui/on-demand-manifest.mjs';
 import { locateComponentRelease, verifyPublishedComponent } from './release-gpui/publish-component.mjs';

@@ -95,39 +95,6 @@ describe('immutable code-server component identity', () => {
 });
 
 describe('phased macOS code-server prerequisite contract', () => {
-  test.each([
-    ['x64', 'release-build-gxserver-x64.yml'],
-    ['arm64', 'release-build-gxserver-arm64.yml'],
-  ])('publishes the Linux %s archive from its gxserver phase', (arch, workflowName) => {
-    const source = workflow(workflowName);
-    expect(source).toContain(`--platform linux-${arch} --github-output`);
-    expect(source).toContain('name: ${{ steps.code_server_identity.outputs.artifact_name }}');
-    expect(source).toContain('ARCHIVE="$OUTPUT/${{ steps.code_server_identity.outputs.archive_name }}"');
-    expect(source).toContain('lib/node');
-    expect(source).toContain('out/node/entry.js');
-    expect(source).toContain('lib/vscode/out/server-main.js');
-    expect(source).toContain('if-no-files-found: error');
-  });
-
-  test('downloads both archives from the exact release-state prerequisite runs', () => {
-    const source = workflow('release-build-macos.yml');
-    for (const arch of ['x64', 'arm64']) {
-      expect(source).toContain(`path: build/runtime-artifacts/code-server-${arch}`);
-      expect(source).toContain(`run-id: \${{ inputs.gxserver_${arch}_run_id }}`);
-      expect(source).toContain(`linux-${arch}.tar.gz`);
-    }
-    expect(source).toContain('name: ${{ steps.code_server_identity.outputs.artifact_name }}');
-    expect(source).toContain(
-      'name: release-code-server-${{ steps.code_server_identity.outputs.component_version }}-linux-arm64'
-    );
-    expect(source).toContain(
-      'GHOSTEX_CODE_SERVER_COMPONENT_VERSION: ${{ steps.code_server_identity.outputs.component_version }}'
-    );
-    expect(source).toContain('does not match verified release state run');
-    expect(source).toContain('.release-automation/tooling/release-gpui/verify-code-server-archive.mjs');
-    expect(source).toContain('--platform "linux-$1"');
-  });
-
   test('keeps every other active macOS release entry path fail-closed', () => {
     const reusableWorkflow = workflow('release-gpui-macos.yml');
     // CDXC:Release 2026-08-13: release-gpui-runtime.yml was
@@ -229,7 +196,7 @@ describe('phased macOS code-server prerequisite contract', () => {
     );
   });
 
-  test.each(['release-build-gxserver-x64.yml', 'release-build-gxserver-arm64.yml', 'release-gpui-code-server.yml'])(
+  test.each(['release-gpui-code-server.yml'])(
     'binds the producer checksum to the exact archive name in %s',
     (workflowName) => {
       const source = workflow(workflowName);

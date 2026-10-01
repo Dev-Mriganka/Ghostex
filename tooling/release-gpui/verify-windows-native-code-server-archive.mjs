@@ -41,6 +41,7 @@ export function isWindowsNativeCodeServerPlatform(platform) {
   return windowsNativePlatformPattern.test(platform);
 }
 
+/** @param {{ archivePath: string, componentVersion: string, platform: string, sidecarPath?: string }} options */
 export async function verifyWindowsNativeCodeServerArchive({ archivePath, componentVersion, platform, sidecarPath }) {
   if (!isWindowsNativeCodeServerPlatform(platform)) {
     throw new Error(`Unsupported native Windows code-server platform: ${platform}`);

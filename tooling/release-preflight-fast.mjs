@@ -10,7 +10,7 @@ import {
   extractChangelogSectionFromText,
   releaseBuildVersion,
   validateMajorMinorReleaseNotes,
-} from './release-ghostex.mjs';
+} from './release-shared.mjs';
 import { RELEASE_BUILD_SCRIPTS, runReleaseBuildScripts } from './release-preflight-build-scripts.mjs';
 import { checkPatches } from './release-gpui/check-patches-apply.mjs';
 import { formatToolingImportViolation, scanToolingImports } from './release-preflight-tooling-imports.mjs';
@@ -185,6 +185,10 @@ function parseArgs(argv) {
   return options;
 }
 
+/**
+ * @param {string} command
+ * @param {{ timeoutMs?: number, cwd?: string, env?: NodeJS.ProcessEnv }} [options]
+ */
 function runCommand(command, { timeoutMs = 60_000, cwd = repoRoot, env } = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, {
@@ -464,7 +468,7 @@ async function checkAssertionFreshness() {
   const [workflow, literals] = await Promise.all([
     evaluateWorkflowGates(),
     evaluatePreflightLiteralProbes({
-      constants: { githubRepo, signingIdentity, sparklePublicKey: await expectedSparklePublicKey() },
+      constants: { sparklePublicKey: await expectedSparklePublicKey() },
       repoRoot,
     }),
   ]);

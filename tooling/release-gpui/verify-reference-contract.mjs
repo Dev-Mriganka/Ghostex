@@ -31,6 +31,7 @@ function referenceMetadata() {
   return { revision, url };
 }
 
+/** @param {{ revision: string, source?: string, url: string }} metadata */
 function prepareCleanCheckout({ revision, source, url }) {
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'ghostex-reference-contract-'));
   const checkout = join(temporaryRoot, 'gpui-component');

@@ -39,6 +39,7 @@ export function componentsGithubRepo(env = process.env) {
 }
 
 /* The repositories a component tag may live in, most authoritative first, without duplicates. */
+/** @param {{ component?: { githubRepo?: string }, env?: NodeJS.ProcessEnv }} [options] */
 export function componentReleaseRepos({ component, env = process.env } = {}) {
   const repos = [component?.githubRepo, componentsGithubRepo(env), LEGACY_COMPONENTS_GITHUB_REPO];
   return [...new Set(repos.filter((repo) => typeof repo === 'string' && repo.length > 0))];

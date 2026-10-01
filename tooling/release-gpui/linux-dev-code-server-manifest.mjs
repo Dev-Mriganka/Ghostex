@@ -38,6 +38,7 @@ function parseArgs(argv) {
   return options;
 }
 
+/** @returns {Promise<Map<string, any>>} */
 async function releaseAssets(repository, tag) {
   const headers = { Accept: "application/vnd.github+json" };
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -46,7 +47,7 @@ async function releaseAssets(repository, tag) {
   const response = await fetch(url, { headers });
   if (!response.ok)
     throw new Error(`${url}: HTTP ${response.status} ${response.statusText}`);
-  const release = await response.json();
+  const release = /** @type {any} */ (await response.json());
   return new Map((release.assets ?? []).map((asset) => [asset.name, asset]));
 }
 

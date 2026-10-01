@@ -82,7 +82,7 @@ async function discoverRun({ head, since }) {
   for (let attempt = 1; attempt <= discoveryAttempts; attempt += 1) {
     const candidate = listRuns()
       .filter((entry) => entry.headSha === head && new Date(entry.createdAt).getTime() >= since)
-      .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))[0];
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0];
     if (candidate) return candidate;
     await sleep(4000);
   }

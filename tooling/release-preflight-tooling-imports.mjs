@@ -180,7 +180,7 @@ function collectSpecifiers(source) {
  CDXC:Release 2026-09-21 WHY:
  `@/` is the repo-root path alias from tsconfig.json (`@/packages/...`,
  `@/apps/...`), not an npm scope, so it resolves to repo files and has no
- package.json entry to declare. The tooling/gx-core parity gates import through it.
+ package.json entry to declare. The quick-access hotkey-table generator in tooling/gx-core imports through it.
 */
 function packageRoot(specifier) {
   if (

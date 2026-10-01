@@ -104,7 +104,7 @@ elapsed_since() {
 package_status() {
 	local arch="$1"
 	local package_dir="$PACKAGE_ROOT/$arch/package"
-	GHOSTEX_RELEASE_MODULE="$AUTOMATION_ROOT/tooling/release-ghostex.mjs" \
+	GHOSTEX_RELEASE_MODULE="$AUTOMATION_ROOT/tooling/release-shared.mjs" \
 		GHOSTEX_PACKAGE_DIR="$package_dir" \
 		GHOSTEX_EXPECTED_REVISION="$HEAD_REVISION" \
 		GHOSTEX_EXPECTED_ZMX_REVISION="$ZMX_HEAD_REVISION" \

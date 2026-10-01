@@ -484,6 +484,10 @@ export function summarizeReleaseProvenance(releaseProvenance, { plan = releasePr
   return summary;
 }
 
+/**
+ * @param {any} releaseProvenance
+ * @param {{ plan?: any }} [options]
+ */
 export function renderReleaseProvenanceReport(releaseProvenance, { plan } = {}) {
   const summary = summarizeReleaseProvenance(releaseProvenance, { plan });
   const lines = [];

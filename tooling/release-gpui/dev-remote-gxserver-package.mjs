@@ -29,6 +29,7 @@ function parseArgs(argv) {
   return options;
 }
 
+/** @returns {Promise<any>} */
 async function githubJson(pathname) {
   const headers = { Accept: 'application/vnd.github+json' };
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;

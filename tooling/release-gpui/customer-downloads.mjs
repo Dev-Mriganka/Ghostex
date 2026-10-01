@@ -33,7 +33,9 @@ export function customerDownloadUrl(version, assetName) {
 export function customerDownloadEntries(version, assetNames) {
   assertVersion(version);
   const available = new Set(assetNames ?? []);
+  /** @type {(label: string, assetName: string) => { assetName?: string, label: string, url?: string }} */
   const asset = (label, assetName) => ({ assetName, label });
+  /** @type {(label: string, url: string) => { assetName?: string, label: string, url?: string }} */
   const link = (label, url) => ({ label, url });
   const groups = [
     {
