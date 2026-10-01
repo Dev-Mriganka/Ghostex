@@ -358,6 +358,7 @@ pub(crate) fn extra_tab_search(query: &str, tab: &str, debugging_mode: bool) -> 
 pub(crate) struct GeneralSearch {
     pub(crate) query: String,
     pub(crate) show_advanced: bool,
+    pub(crate) show_experimental: bool,
     /// `settingsSearch[sectionId]`.
     pub(crate) sections: HashMap<String, SectionSearch>,
     /// `mainSettingsGroupSearch[groupId]`.
@@ -365,15 +366,24 @@ pub(crate) struct GeneralSearch {
 }
 
 impl GeneralSearch {
-    pub(crate) fn new(query: &str, show_advanced: bool) -> Self {
+    pub(crate) fn new(query: &str, show_advanced: bool, show_experimental: bool) -> Self {
         let catalog = settings_catalog();
         let sections: HashMap<String, SectionSearch> = catalog
             .general_sections
             .iter()
             .map(|section: &SearchSectionDef| {
+                let settings: Vec<SettingRowDef> = section
+                    .settings
+                    .iter()
+                    .filter(|row| {
+                        row.key != "terminalShadersEnabled"
+                            || (cfg!(target_os = "macos") && show_experimental)
+                    })
+                    .cloned()
+                    .collect();
                 (
                     section.id.clone(),
-                    section_search(query, &section.title, &section.settings),
+                    section_search(query, &section.title, &settings),
                 )
             })
             .collect();
@@ -400,6 +410,7 @@ impl GeneralSearch {
         Self {
             query: query.to_string(),
             show_advanced,
+            show_experimental,
             sections,
             groups,
         }
@@ -437,6 +448,10 @@ impl GeneralSearch {
 
     /// `mainSettingVisible(settingsSearch[section], key)`.
     pub(crate) fn setting_visible(&self, section: &str, key: &str) -> bool {
+        if key == "terminalShadersEnabled" && !(cfg!(target_os = "macos") && self.show_experimental)
+        {
+            return false;
+        }
         if self.is_searching() && self.setting_matches_group_title(key) {
             return true;
         }

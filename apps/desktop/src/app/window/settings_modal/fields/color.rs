@@ -8,7 +8,7 @@ use super::super::super::native_modal_kit::*;
 use super::super::palette::SettingsPalette;
 use super::controls::{ButtonVariant, settings_button};
 use super::row::{CONTROL_LANE_WIDTH, PageAction, RowSpec, setting_row, tooltip_text};
-use super::text::settings_text_input;
+use super::text::{settings_text_input, settings_text_input_with_disabled};
 use super::{FieldStates, SettingsPage, icon};
 use gpui::Focusable as _;
 use gpui::prelude::FluentBuilder as _;
@@ -216,6 +216,13 @@ fn save_color<V: SettingsPage>(
     let store = page.settings_store().clone();
     let value = json!(value);
     store.update(cx, |store, cx| {
+        // A picker or text event can arrive after the shader switch changed.
+        if cfg!(target_os = "macos")
+            && key == "workspaceBackgroundColor"
+            && store.bool("terminalShadersEnabled")
+        {
+            return;
+        }
         if commit {
             store.update_setting(key, value, cx);
         } else {
@@ -893,6 +900,7 @@ pub(crate) fn color_field<V: SettingsPage>(
     cx: &mut Context<V>,
 ) -> AnyElement {
     FieldStates::color_state(page, key, value, ColorFieldKind::Plain, window, cx);
+    let disabled = spec.disabled_reason.is_some();
     let swatch_color = normalize_color_input_value(value, "#121212");
     let text_input = page
         .field_states()
@@ -917,12 +925,13 @@ pub(crate) fn color_field<V: SettingsPage>(
         .border_1()
         .border_color(hsla(p.hairline))
         .bg(hsla(p.input_background()))
-        .cursor_pointer()
-        .on_click({
-            let initial = swatch_color.clone();
-            cx.listener(move |page: &mut V, _: &ClickEvent, _window, cx| {
-                let store = page.settings_store().clone();
-                store.update(cx, |store, cx| store.pick_system_color(key, &initial, cx));
+        .when(!disabled, |swatch| {
+            swatch.cursor_pointer().on_click({
+                let initial = swatch_color.clone();
+                cx.listener(move |page: &mut V, _: &ClickEvent, _window, cx| {
+                    let store = page.settings_store().clone();
+                    store.update(cx, |store, cx| store.pick_system_color(key, &initial, cx));
+                })
             })
         })
         .child(
@@ -935,15 +944,28 @@ pub(crate) fn color_field<V: SettingsPage>(
             ),
         );
     let control = h_flex()
+        .id(SharedString::from(format!("{key}-color-control")))
         .w(px(CONTROL_LANE_WIDTH))
         .max_w_full()
         .items_center()
         .gap(px(12.0))
         .child(swatch)
-        .child(settings_text_input(p, &text_input, None, false, window, cx))
-        .children(dialog)
+        .child(settings_text_input_with_disabled(
+            p,
+            &text_input,
+            None,
+            false,
+            disabled,
+            window,
+            cx,
+        ))
+        .when(!disabled, |control| control.children(dialog))
+        .when(disabled, |control| control.opacity(0.5))
+        .when_some(spec.disabled_reason.clone(), |control, reason| {
+            control.tooltip(tooltip_text(reason))
+        })
         .into_any_element();
-    setting_row(p, key, spec, on_reset, control, cx)
+    setting_row(p, key, spec, on_reset.filter(|_| !disabled), control, cx)
 }
 
 /// `WebColorPickerField`: the tint swatches, the custom picker button and the hex box, wrapping
