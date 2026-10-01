@@ -126,6 +126,12 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) {
         let first_run = message.get("firstRun").and_then(serde_json::Value::as_bool) == Some(true);
+        // Only the automatic first run carries `introVideo`; Tips > Setup never opens on the video.
+        let intro_video = first_run
+            && message
+                .get("introVideo")
+                .and_then(serde_json::Value::as_bool)
+                == Some(true);
         let has_projects = open_message_has_projects(message);
         let catalog = GPUI_DEFAULT_SIDEBAR_AGENTS
             .iter()
@@ -145,6 +151,7 @@ impl GhostexGpuiApp {
             cli_available: true,
             initial_panel: InitialPanel::Panel(1),
             picked_folder: None,
+            intro_video,
         };
         let host: OnboardingHost = self.native_app_modal_host(cx, |app, command, cx| {
             app.handle_gpui_onboarding_command(command, cx);
@@ -271,6 +278,12 @@ impl GhostexGpuiApp {
             }
             OnboardingCommand::OpenExternalUrl(url) => {
                 let _ = gpui_open_external_http_url(url.trim());
+            }
+            OnboardingCommand::IntroVideoSeen => {
+                self.persist_gpui_first_run_onboarding_marker(
+                    GpuiFirstRunOnboardingMarker::IntroVideoSeen,
+                    cx,
+                );
             }
             OnboardingCommand::PickProjectFolder => {
                 self.handle_gpui_pick_first_launch_project_folder_message(cx);

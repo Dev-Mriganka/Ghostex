@@ -1840,7 +1840,10 @@ docs directory), `hideProjectHeaderDiffStats`,
   next to the look: Appearance, the theme colour squares (Dark and Light tabs),
   Colourfulness and one Transparency row (the simple choices from Settings >
   Theme), with a "More theme options in Settings > Theme" link that opens the
-  Theme page. Turning transparency on there also switches Appearance to Dark. "I already know Ghostex" on the first panel skips the rest. Reopen it any
+  Theme page. Turning transparency on there also switches Appearance to Dark. The very first run opens on a short
+  intro video before the panels: it plays from YouTube (on Linux it opens in
+  the browser), shows once, and Continue goes on to setup at any time; the
+  video is also at https://youtu.be/QzjFB4J6-8E. Reopen the setup any
   time from Tips > Setup or Quick Access > Commands > Setup.
 
 ## Appearance and app

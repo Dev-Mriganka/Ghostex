@@ -17,6 +17,8 @@ pub(crate) mod fonts;
 mod get_started;
 mod install_guide;
 mod interact;
+mod intro_video;
+mod intro_web_view;
 mod mobile;
 pub(crate) mod model;
 mod primitives;
@@ -80,6 +82,8 @@ pub(crate) struct OnboardingConfig {
     pub(crate) cli_available: bool,
     pub(crate) initial_panel: InitialPanel,
     pub(crate) picked_folder: Option<String>,
+    /// Open on the intro video page before Welcome (the automatic first run, once per install).
+    pub(crate) intro_video: bool,
 }
 
 /// Where the flow goes once it closes.
@@ -125,6 +129,8 @@ pub(crate) enum OnboardingCommand {
     },
     /// `completeFirstLaunchSetup`, then open `FinishTarget`.
     Finish(FinishTarget),
+    /// The user left the intro video page: it is not shown again.
+    IntroVideoSeen,
     /// `/api/agentCliMaintenance` for one agent.
     AgentCli {
         request_id: u64,
@@ -247,6 +253,8 @@ pub(crate) struct GpuiOnboardingWindow {
     focus: interact::FocusState,
     /// The Install guide list's scroll position, for its scrollbar.
     guide_scroll: gpui::ScrollHandle,
+    /// The intro video page, while it is the page shown (intro_video.rs).
+    intro: Option<intro_video::IntroVideo>,
 }
 
 impl GpuiOnboardingWindow {
@@ -277,6 +285,7 @@ impl GpuiOnboardingWindow {
             InitialPanel::Finished => (PANEL_COUNT, true),
         };
         let vignette = backdrop::render_vignette();
+        let intro_video = config.intro_video;
         let mut this = Self {
             host,
             focus_handle,
@@ -321,6 +330,7 @@ impl GpuiOnboardingWindow {
             closed: false,
             focus: interact::FocusState::default(),
             guide_scroll: gpui::ScrollHandle::new(),
+            intro: None,
         };
         this.get_started.reset(&this.settings, this.system_light);
         // CDXC:Onboarding 2026-09-11 DECISION:
@@ -341,6 +351,9 @@ impl GpuiOnboardingWindow {
         this.send(OnboardingCommand::RequestCliStatus, cx);
         this.mount_panel(now, cx);
         this.start_backdrop(cx);
+        if intro_video {
+            this.start_intro_video(window, cx);
+        }
         this
     }
 
@@ -580,6 +593,7 @@ impl GpuiOnboardingWindow {
         }
         self.tick_cli_rows(now, cx);
         self.tick_get_started(now);
+        self.tick_intro_video(cx);
         if self.flow.finished {
             self.tick_finished(now, cx);
         } else if self.panel == 2 {
@@ -691,6 +705,13 @@ impl GpuiOnboardingWindow {
             return;
         }
         if modifiers.control || modifiers.alt || modifiers.platform || modifiers.shift {
+            return;
+        }
+        if self.intro_video_active() {
+            if key == "right" {
+                self.leave_intro_video(cx);
+            }
+            cx.stop_propagation();
             return;
         }
         if self.popup_open() {
@@ -1046,7 +1067,9 @@ impl GpuiOnboardingWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let show_finished = self.flow.finished && self.panel == PANEL_COUNT;
-        let children: Vec<AnyElement> = if show_finished {
+        let children: Vec<AnyElement> = if self.intro_video_active() {
+            self.render_intro_video(s, now, cx)
+        } else if show_finished {
             self.render_finished(s, now, cx)
         } else {
             match self.panel {
@@ -1104,16 +1127,26 @@ impl Render for GpuiOnboardingWindow {
         let s = S(scale);
         let stage_left = (viewport.width.as_f32() - STAGE_WIDTH * scale) / 2.0;
         let stage_top = (viewport.height.as_f32() - STAGE_HEIGHT * scale) / 2.0;
+        // The intro video page spans the whole stage; the veil slides in when Welcome replaces it.
+        let divider_target = if self.intro_video_active() {
+            STAGE_WIDTH
+        } else {
+            self.divider_x()
+        };
         let divider = self
             .transitions
-            .value("veil-clip", self.divider_x(), STAGE_MOVE, now);
+            .value("veil-clip", divider_target, STAGE_MOVE, now);
         let backdrop = self.render_backdrop(s, now, divider);
         self.focus.set_group(interact::TabGroup::Back);
-        let chrome = self.render_chrome(s, now, cx);
+        let chrome = if self.intro_video_active() {
+            self.render_intro_video_chrome(s, now)
+        } else {
+            self.render_chrome(s, now, cx)
+        };
         self.focus.set_group(interact::TabGroup::Panel);
         let scene = self.render_scene(s, now, window, cx);
         self.focus.set_group(interact::TabGroup::Dots);
-        let dots = self.render_dots(s, now, cx);
+        let dots = (!self.intro_video_active()).then(|| self.render_dots(s, now, cx));
         let toast = self.render_toast(s, now);
         let overlays = self.render_overlays(s);
         self.end_focus_frame(window, cx);
@@ -1130,7 +1163,13 @@ impl Render for GpuiOnboardingWindow {
                 }),
             )
             .on_action(cx.listener(|this, _: &Activate, window, cx| {
-                if !this.activate_focused(false, window, cx) {
+                if this.activate_focused(false, window, cx) {
+                    return;
+                }
+                // Enter on the intro video page continues, as on a page whose only action is Continue.
+                if this.intro_video_active() {
+                    this.leave_intro_video(cx);
+                } else {
                     cx.propagate();
                 }
             }))
@@ -1157,7 +1196,7 @@ impl Render for GpuiOnboardingWindow {
                     .child(backdrop)
                     .children(chrome)
                     .child(scene)
-                    .child(dots)
+                    .children(dots)
                     .child(overlays)
                     .children(toast),
             )

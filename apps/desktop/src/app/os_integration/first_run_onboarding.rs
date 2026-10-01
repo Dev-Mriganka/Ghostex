@@ -79,6 +79,12 @@ impl GhostexGpuiApp {
                         }
                         state.os_integration_onboarding_seen = true;
                     }
+                    GpuiFirstRunOnboardingMarker::IntroVideoSeen => {
+                        if state.intro_video_seen {
+                            return;
+                        }
+                        state.intro_video_seen = true;
+                    }
                 }
                 persist_gpui_first_run_onboarding_state(&state);
             })
@@ -153,9 +159,14 @@ impl GhostexGpuiApp {
                     let needs_first_launch_setup = state.first_launch_setup_seen_revision.as_deref()
                         != Some(GPUI_FIRST_LAUNCH_SETUP_SEEN_REVISION)
                         || !state.first_launch_setup_complete;
+                    // The intro video page (window/onboarding/intro_video.rs) leads into this setup, once per install.
+                    let show_intro_video = !state.intro_video_seen;
                     let first_launch_setup_sidebar_state = needs_first_launch_setup.then(|| {
-                        gpui_app_modal_sidebar_state_message_for_active_project_id(
-                            active_project_id.as_deref(),
+                        (
+                            gpui_app_modal_sidebar_state_message_for_active_project_id(
+                                active_project_id.as_deref(),
+                            ),
+                            show_intro_video,
                         )
                     });
                     (show_os_integration_toast, first_launch_setup_sidebar_state)
@@ -189,8 +200,14 @@ impl GhostexGpuiApp {
                         cx,
                     );
                 }
-                if let Some(base_sidebar_state) = first_launch_setup_sidebar_state {
-                    this.open_gpui_first_launch_setup_with_sidebar_state(base_sidebar_state, cx);
+                if let Some((base_sidebar_state, show_intro_video)) =
+                    first_launch_setup_sidebar_state
+                {
+                    this.open_gpui_first_launch_setup_with_sidebar_state(
+                        base_sidebar_state,
+                        show_intro_video,
+                        cx,
+                    );
                     // Only a window that actually exists counts as "this
                     // revision's setup was presented".
                     if this.native_app_modal_kind() == Some(GpuiAppModalKind::Onboarding)

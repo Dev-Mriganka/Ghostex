@@ -721,6 +721,16 @@ fn main() {
         .file(gpui_color_panel)
         .compile("ghostex_gpui_color_panel");
 
+    // The first-run intro video's WKWebView (window/onboarding/intro_web_view.rs).
+    let gpui_intro_video_web_view = manifest_dir.join("native/macos/GpuiIntroVideoWebView.m");
+    println!(
+        "cargo:rerun-if-changed={}",
+        gpui_intro_video_web_view.display()
+    );
+    gpui_macos_objc_build()
+        .file(gpui_intro_video_web_view)
+        .compile("ghostex_gpui_intro_video_web_view");
+
     /*
     CDXC:AppModal 2026-07-04:
     Compile the toast popup chrome shim separately because it only strips AppKit
@@ -768,4 +778,5 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=IOSurface");
     println!("cargo:rustc-link-lib=framework=UniformTypeIdentifiers");
     println!("cargo:rustc-link-lib=framework=UserNotifications");
+    println!("cargo:rustc-link-lib=framework=WebKit");
 }

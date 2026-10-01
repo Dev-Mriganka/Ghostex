@@ -6,7 +6,10 @@
 //! `computer-use-permissions`, `computer-use-on`, `computer-use-on-tab`, `agents-integration`, `agents-guide`,
 //! `workspace`, `workspace-no-browser-skill`, `workspace-agents`, `workspace-docs`,
 //! `workspace-code`, `workspace-kanban`, `workspace-automate`, `mobile`, `get-started`,
-//! `get-started-no-folder`, `get-started-no-folder-with-projects`, `finished`, `finished-guide`.
+//! `get-started-no-folder`, `get-started-no-folder-with-projects`, `finished`, `finished-guide`,
+//! and the first-run intro video page: `intro-video` (the real player in the system web view),
+//! `intro-video-offline`, `intro-video-no-web-view` (what Linux shows), `intro-video-continue`
+//! (presses Continue after 6s).
 //! The host simulates the app: detection answers at once (after 1.4s on a rescan), the helper
 //! install connects after 0.9s, CLI installs finish a few seconds after they start, Computer Use
 //! asks for permission after 1.8s, and closing the flow quits the demo. `GHOSTEX_ONBOARDING_DEMO_SIZE=WxH`
@@ -613,6 +616,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
                 });
             }
             OnboardingCommand::OpenExternalUrl(url) => eprintln!("open {url}"),
+            OnboardingCommand::IntroVideoSeen => eprintln!("introVideoSeen"),
             OnboardingCommand::PickProjectFolder => {
                 cx.defer(move |cx| {
                     with_view(&host, cx, |view, cx| {
@@ -726,6 +730,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         cli_available: cli != "none",
         initial_panel,
         picked_folder: picked.map(str::to_string),
+        intro_video: state.starts_with("intro-video"),
     };
     let host_for_window = host_state.clone();
     // `GHOSTEX_ONBOARDING_DEMO_SIZE=WxH` opens another window size, to check the stage scaling.
@@ -774,6 +779,15 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
             view.preview_workspace_tab(Some(4), cx)
         }),
         "finished-guide" => with_view(&host, cx, |view, cx| view.preview_finished_guide(cx)),
+        "intro-video-offline" => {
+            with_view(&host, cx, |view, cx| view.preview_intro_video_offline(cx))
+        }
+        "intro-video-no-web-view" => with_view(&host, cx, |view, cx| {
+            view.preview_intro_video_no_web_view(cx)
+        }),
+        "intro-video-continue" => later(cx, Duration::from_secs(6), move |cx| {
+            with_view(&host, cx, |view, cx| view.leave_intro_video(cx))
+        }),
         _ => {}
     }
 }

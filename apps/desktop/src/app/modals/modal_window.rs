@@ -869,6 +869,7 @@ impl GhostexGpuiApp {
     pub(crate) fn open_gpui_first_launch_setup_with_sidebar_state(
         &mut self,
         base_sidebar_state: serde_json::Value,
+        intro_video: bool,
         cx: &mut gpui::Context<Self>,
     ) {
         let sidebar_state_message =
@@ -885,6 +886,7 @@ impl GhostexGpuiApp {
         let modal = GpuiAppModalKind::Onboarding;
         let mut open_message = modal.open_message();
         open_message["firstRun"] = serde_json::Value::Bool(true);
+        open_message["introVideo"] = serde_json::Value::Bool(intro_video);
         // The native onboarding reads whether a project exists from the open message.
         open_message["latestSidebarStateMessage"] = sidebar_state_message.clone();
         self.open_gpui_app_modal_window(modal, open_message, sidebar_state_message, None, cx);
