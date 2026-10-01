@@ -275,6 +275,15 @@ impl GhostexGpuiApp {
         self.gx_store_hud_store_changed(&output.changes, cx);
         self.gx_store.sidebar_list.note_changes(&output.changes);
         self.gx_store_update_sidebar_list(cx);
+        // A draft whose first message started its agentbox box leaves Chat View (gx-core's
+        // `session_chat_view_unavailable`), so its terminal is attached as the rule flips.
+        if let Some(session) = self.open_session.clone()
+            && self.web_shows_terminal(&session)
+            && !self.terminals.contains_key(&session)
+        {
+            self.ensure_terminal(&session, cx);
+            cx.notify();
+        }
     }
 
     /// Something outside the store moved (the sidebar's own state, a setting): the list is rebuilt.

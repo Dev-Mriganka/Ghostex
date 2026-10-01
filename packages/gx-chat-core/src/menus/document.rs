@@ -21,6 +21,10 @@ pub fn document(state: &ChatState, context: &ChatContext, into: &mut Document) {
     into.selected_options = nullable(state.session.selected_options.clone());
     into.available_agents = nullable(state.session.available_agents.clone());
     into.switchable_agents = nullable(state.session.switchable_agents.clone());
+    into.run_location = match crate::menus::run_location::row(state) {
+        Some(row) => Tri::Value(row),
+        None => Tri::Absent,
+    };
     into.option_labels = Tri::Value(to_value(&options.option_labels));
     into.option_menus = Tri::Value(to_value(&options.option_menus));
     into.session_options = Tri::Value(to_value(&options.session_options));

@@ -1630,8 +1630,10 @@ signed in.
   Sign In opens the sign-in page. Each step runs in a terminal tab; the page
   updates while it runs. Run Check shows agentbox's own health check.
 - **Use**: pick a box under Run on in New Thread (Cmd+Left and Cmd+Right switch
-  location), or choose Run in a Box in a project's Select Agent menu. Box
-  sessions open in the terminal view and show a badge with where they run. The
+  location), or choose Run in a Box in a project's Select Agent menu. A new
+  chat thread also shows a Run on row above its message box until you send the
+  first message: pick This computer or a box there, and the box starts with
+  that first message. Box sessions open in the terminal view and show a badge with where they run. The
   first Claude box asks you to sign in right in its terminal: approve in the
   browser page that opens and paste the code. Right-click a box session for Open
   Box Web App (the app it serves, opened on this computer), Open Box Screen (the

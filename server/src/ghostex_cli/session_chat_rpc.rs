@@ -22,11 +22,13 @@ use crate::ghostex_cli::rpc::{
 /// session (`subscribe_session_chat_follower`).
 ///
 /// The method list is the chat core's (`ChatRpcMethod` in `packages/gx-chat-core/src/wire/rpc.rs`)
-/// minus the two the host answers itself, so this stays a chat bridge rather than a door to every
-/// gxserver path, the same rule `saved_prompts.rs` keeps. Params travel base64-encoded so no shell
+/// minus the two the host answers itself, plus `switchSessionAgent`, the call behind the chat's own
+/// More actions > Switch Account rows for agents without the Accounts panel (the desktop host makes
+/// it for its chat, the phone has no other way to). It stays a chat bridge rather than a door to
+/// every gxserver path, the same rule `saved_prompts.rs` keeps. Params travel base64-encoded so no shell
 /// (POSIX, PowerShell, WSL) can re-quote a JSON body on its way through.
 /// SEE-ALSO: packages/gx-chat-core/src/wire/rpc.rs, apps/mobile/app/src/chat/rust/transport.ts
-const SESSION_CHAT_RPC_METHODS: [&str; 25] = [
+const SESSION_CHAT_RPC_METHODS: [&str; 27] = [
     "readSessionChat",
     "readSessionChatSkills",
     "readSessionChatFiles",
@@ -46,12 +48,14 @@ const SESSION_CHAT_RPC_METHODS: [&str; 25] = [
     "readSessionTerminalTail",
     "sessionForkBranches",
     "switchDraftAgent",
+    "draftRunLocation",
     "agentAccounts",
     "readSessionAgentNote",
     "saveSessionAgentNote",
     "listStashedPrompts",
     "saveStashedPrompt",
     "runProjectDocsAction",
+    "switchSessionAgent",
 ];
 
 /// The request timeout when the caller names none: the desktop chat's own (`native_chat/rpc.rs`).

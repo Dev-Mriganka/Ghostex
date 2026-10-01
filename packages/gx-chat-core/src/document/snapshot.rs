@@ -67,6 +67,9 @@ pub struct Document {
     pub available_agents: Tri<Value>,
     /// The same-family accounts a prompted session can resume under. Family e.
     pub switchable_agents: Tri<Value>,
+    /// A draft's Run on row (`menus/run_location.rs`), absent when the row is hidden. Family e.
+    #[serde(default, skip_serializing_if = "Tri::is_absent")]
+    pub run_location: Tri<Value>,
     /// The session's own launch agent id, never the transcript family.
     pub session_agent_id: Tri<String>,
     pub error: Tri<String>,

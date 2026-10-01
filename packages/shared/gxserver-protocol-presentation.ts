@@ -262,6 +262,8 @@ export interface GxserverPresentationAgentbox {
   boxName: string;
   /** Short label for the provider, e.g. "Docker" or "Hetzner". */
   providerLabel: string;
+  /** A draft whose chat Run on row picked this box; its first message creates the box. */
+  pending?: true;
 }
 
 export interface GxserverPresentationSession {

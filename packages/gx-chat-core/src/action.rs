@@ -169,6 +169,7 @@ action_kinds! {
     ModelMenuTrait => "modelMenuTrait",
     Accounts => "accounts",
     SwitchDraftAgent => "switchDraftAgent",
+    SwitchDraftRunLocation => "switchDraftRunLocation",
     SelectForkBranch => "selectForkBranch",
 
     // Context.

@@ -174,6 +174,7 @@ fn new_thread_picker_boxes(
                     run_location: location.run_location(),
                     label: location.label.clone(),
                     kind: location.kind.clone(),
+                    tooltip: location.tooltip(),
                 })
                 .collect(),
         ),

@@ -320,6 +320,8 @@ pub(crate) struct GpuiNewThreadPickerWindow {
     accounts: Option<Vec<NewThreadPickerAccount>>,
     accounts_error: Option<String>,
     run_on: RunOnState,
+    /// The Run on chips' horizontal scroll (new_thread_picker_run_on.rs).
+    run_on_scroll: ScrollHandle,
     query: String,
     selected: usize,
     scope: Option<usize>,
@@ -381,7 +383,7 @@ impl GpuiNewThreadPickerWindow {
             },
         );
         input.update(cx, |input, cx| input.focus(window, cx));
-        Self {
+        let picker = Self {
             glass: false,
             frosted_fill: None,
             host,
@@ -392,6 +394,7 @@ impl GpuiNewThreadPickerWindow {
             accounts: config.accounts,
             accounts_error: None,
             run_on: RunOnState::new(config.boxes, config.default_run_location),
+            run_on_scroll: ScrollHandle::new(),
             query: String::new(),
             selected: 0,
             scope: None,
@@ -403,7 +406,9 @@ impl GpuiNewThreadPickerWindow {
                 activation_subscription,
                 press_subscription,
             ],
-        }
+        };
+        picker.reveal_selected_run_location();
+        picker
     }
 
     /// Reuses a preloaded window for a new open: current palette, fresh agent
@@ -424,6 +429,7 @@ impl GpuiNewThreadPickerWindow {
         }
         self.run_on = RunOnState::new(config.boxes, config.default_run_location);
         self.fit_window_height(window);
+        self.reveal_selected_run_location();
         self.scope = None;
         self.selected = 0;
         self.clear_query(window, cx);
@@ -899,6 +905,7 @@ impl GpuiNewThreadPickerWindow {
                     self.render_hint(&["⇥"], HINT_ACCOUNTS)
                 })
             })
+            .children(self.run_on_key_hint())
             .child(self.render_hint(&["esc"], if in_accounts { HINT_BACK } else { HINT_CLOSE }))
     }
 

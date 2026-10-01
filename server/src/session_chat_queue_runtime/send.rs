@@ -72,6 +72,22 @@ pub(crate) async fn send_session_chat_message_with_draft(
     if source == SessionChatMessageSource::Composer {
         crate::accounts::recovery::user_action(state, project_id, session_id, false)?;
     }
+    // A draft whose Run on row picked a box has no agent to type into yet: its first message
+    // creates the box (agents/draft_run_location.rs).
+    if let Some(sent) = super::box_first_send::send_pending_box_first_message(
+        state,
+        project_id,
+        session_id,
+        text,
+        image_paths,
+        source == SessionChatMessageSource::Composer,
+        draft_before_send.as_ref(),
+        draft_version,
+    )
+    .await
+    {
+        return sent;
+    }
     let agent = session_chat_agent_for_session(&target.session);
     let terminal_agent =
         crate::session_chat_composer::session_chat_composer_agent_id(&target.session)

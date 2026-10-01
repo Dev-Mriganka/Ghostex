@@ -38,6 +38,7 @@ pub fn handle(state: &mut ChatState, action: &UserAction, context: &ChatContext)
 
         ActionKind::Accounts => accounts(state, action),
         ActionKind::SwitchDraftAgent => switch_draft_agent(state, action),
+        ActionKind::SwitchDraftRunLocation => crate::menus::run_location::switch(state, action),
         ActionKind::SelectOption => select_option(state, action, context),
 
         _ => Vec::new(),

@@ -379,6 +379,14 @@ pub struct PresentationAgentbox {
     /// Short label for the provider, e.g. "Docker" or "Hetzner".
     #[serde(default, deserialize_with = "crate::de::null_as_default")]
     pub provider_label: String,
+    /// A draft whose chat Run on row picked this box: nothing runs in a box yet, and its first
+    /// message creates it. Until then the draft keeps Chat View.
+    #[serde(
+        default,
+        deserialize_with = "crate::de::null_as_default",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    pub pending: bool,
 }
 
 /// One session row. Unique only together with `project_id`.

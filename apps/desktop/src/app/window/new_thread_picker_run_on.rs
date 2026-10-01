@@ -3,7 +3,7 @@
 //! too), which is why it reads the picker's private state directly.
 //!
 //! CDXC:AgentBox 2026-10-01 DECISION:
-//! User: "when spinning up a thread i should be able to pick to spin it up in one of these clouds". The picker carries a Run on row under its search field: This computer, then one chip per location `/api/agentbox status` reports ready (Docker, a cloud provider, or a registered SSH host as "<alias> (SSH)"), starting on Settings > Cloud Boxes' default location. Cmd+Left and Cmd+Right (Alt+Left and Alt+Right off macOS) or a click move between them; Tab stays the account list. A box location lists only the agents agentbox runs (Claude, Codex, OpenCode, Pi), drops the Browser and Terminal rows and the account list (a box signs in on its own), and launches with that `runLocation`. With agentbox installed but no box ready, the row offers a "Run in a cloud box…" link to Settings > Cloud Boxes.
+//! User: "when spinning up a thread i should be able to pick to spin it up in one of these clouds". The picker carries a Run on row under its search field: This computer, then one chip per location `/api/agentbox status` reports ready (Docker, a cloud provider, or a registered SSH host by its alias, with "Your server <alias> over SSH" on hover), starting on Settings > Cloud Boxes' default location. Cmd+Left and Cmd+Right (Alt+Left and Alt+Right off macOS) or a click move between them; Tab stays the account list. A box location lists only the agents agentbox runs (Claude, Codex, OpenCode, Pi), drops the Browser and Terminal rows and the account list (a box signs in on its own), and launches with that `runLocation`. With agentbox installed but no box ready, the row offers a "Run in a cloud box…" link to Settings > Cloud Boxes.
 //!
 //! CDXC:AgentBox 2026-10-01 WHY:
 //! The orchestrator decided, while the user was away, that the row and its 30px appear only when agentbox is installed and the project is on this computer; without agentbox, on Windows, for a remote project, or before a status answer, the picker is exactly the one the user sized (CDXC:AgentLauncher 2026-09-09 in new_thread_picker.rs), and discovery stays in Settings > Cloud Boxes and the sidebar's Select Agent menu.
@@ -19,9 +19,13 @@ const THIS_COMPUTER: &str = "This computer";
 const SET_UP_LINK: &str = "Run in a cloud box…";
 const ICON_THIS_COMPUTER: &str = "titlebar/device-desktop.svg";
 #[cfg(target_os = "macos")]
-const KEYS: [&str; 2] = ["⌘←", "⌘→"];
+const KEYS: &str = "⌘←→";
 #[cfg(not(target_os = "macos"))]
-const KEYS: [&str; 2] = ["Alt ←", "Alt →"];
+const KEYS: &str = "Alt ←→";
+const HINT_LOCATION: &str = "Location";
+/// A chip's label is cut short with an ellipsis past this width; the row scrolls when the chips
+/// still do not fit.
+const CHIP_LABEL_MAX_WIDTH: f32 = 120.0;
 
 /// One box location the picker can launch in.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,6 +35,8 @@ pub(crate) struct NewThreadPickerLocation {
     pub(crate) label: String,
     /// `local`, `cloud` or `remoteDocker`: picks the chip's glyph.
     pub(crate) kind: String,
+    /// The hover text (`Your server <alias> over SSH` for an SSH host).
+    pub(crate) tooltip: Option<String>,
 }
 
 impl NewThreadPickerLocation {
@@ -183,6 +189,7 @@ impl GpuiNewThreadPickerWindow {
         if was_shown != self.run_on.shown() {
             self.fit_window_height(window);
         }
+        self.reveal_selected_run_location();
         cx.notify();
     }
 
@@ -204,7 +211,20 @@ impl GpuiNewThreadPickerWindow {
         if was != self.run_on.selected_index() {
             self.run_location_changed(window, cx);
         }
+        self.reveal_selected_run_location();
         cx.notify();
+    }
+
+    /// Scrolls the chips so the picked one is on screen when they do not all fit.
+    pub(super) fn reveal_selected_run_location(&self) {
+        self.run_on_scroll
+            .scroll_to_item(self.run_on.selected_index());
+    }
+
+    /// `⌘←→ Location` in the key-hint row, while there is more than one place to pick.
+    pub(super) fn run_on_key_hint(&self) -> Option<impl IntoElement> {
+        (self.run_on.shown() && self.run_on.chip_count() > 1 && self.scope.is_none())
+            .then(|| self.render_hint(&[KEYS], HINT_LOCATION))
     }
 
     /// Cmd+Left and Cmd+Right (Alt off macOS): the previous or next location, wrapping.
@@ -299,6 +319,7 @@ impl GpuiNewThreadPickerWindow {
         index: usize,
         icon: &'static str,
         label: String,
+        tooltip: Option<String>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let c = self.colors;
@@ -329,7 +350,20 @@ impl GpuiNewThreadPickerWindow {
                 13.0,
                 if selected { c.selected_label } else { c.glyph },
             ))
-            .child(div().whitespace_nowrap().child(label))
+            .child(
+                div()
+                    .min_w_0()
+                    .max_w(px(CHIP_LABEL_MAX_WIDTH))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .whitespace_nowrap()
+                    .child(label),
+            )
+            .when_some(tooltip, |chip, tooltip| {
+                chip.tooltip(move |window, cx| {
+                    gpui_component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+                })
+            })
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.pick_run_location(index, window, cx);
                 this.input.update(cx, |input, cx| input.focus(window, cx));
@@ -337,17 +371,31 @@ impl GpuiNewThreadPickerWindow {
             .into_any_element()
     }
 
-    /// `Run on [This computer] [Docker] [Hetzner] ... ⌘← ⌘→`, or the Settings link when no box
-    /// is set up.
+    /// `Run on [This computer] [Docker] [Hetzner] ...`, or the Settings link when no box is set
+    /// up. Its keys are in the key-hint row, so the chips have the whole width.
     pub(super) fn render_run_on(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let c = self.colors;
-        let mut chips: Vec<AnyElement> =
-            vec![self.render_run_on_chip(0, ICON_THIS_COMPUTER, THIS_COMPUTER.to_string(), cx)];
+        // Asked on every draw: the first frame has no viewport width yet, so a request made only
+        // when the pick changes can be spent before the chips are measured.
+        self.reveal_selected_run_location();
+        let mut chips: Vec<AnyElement> = vec![self.render_run_on_chip(
+            0,
+            ICON_THIS_COMPUTER,
+            THIS_COMPUTER.to_string(),
+            None,
+            cx,
+        )];
         for (offset, location) in self.run_on.boxes.locations().iter().enumerate() {
+            // A label the chip cuts short is readable on hover.
+            let tooltip = location
+                .tooltip
+                .clone()
+                .or_else(|| (location.label.chars().count() > 16).then(|| location.label.clone()));
             chips.push(self.render_run_on_chip(
                 offset + 1,
                 location.icon(),
                 location.label.clone(),
+                tooltip,
                 cx,
             ));
         }
@@ -355,6 +403,9 @@ impl GpuiNewThreadPickerWindow {
         h_flex()
             .id("ghostex-gpui-new-thread-picker-run-on")
             .flex_shrink_0()
+            .w_full()
+            .min_w_0()
+            .overflow_hidden()
             .h(px(NEW_THREAD_PICKER_RUN_ON_HEIGHT))
             .pt(px(8.0))
             .px(px(10.0))
@@ -376,6 +427,7 @@ impl GpuiNewThreadPickerWindow {
                     .gap(px(5.0))
                     .items_center()
                     .overflow_x_scroll()
+                    .track_scroll(&self.run_on_scroll)
                     .children(chips)
                     .when(set_up, |row| {
                         row.child(
@@ -398,15 +450,5 @@ impl GpuiNewThreadPickerWindow {
                         )
                     }),
             )
-            .when(self.run_on.chip_count() > 1, |row| {
-                row.child(
-                    h_flex()
-                        .flex_shrink_0()
-                        .gap(px(3.0))
-                        .text_size(px(11.0))
-                        .text_color(hsla(rgba_of(c.muted, 0.8)))
-                        .children(KEYS.into_iter().map(|key| self.render_kbd(key))),
-                )
-            })
     }
 }

@@ -54,6 +54,7 @@ mod reference_menu;
 mod rewind;
 mod row_click;
 mod rpc;
+mod run_location;
 mod runtime_worker;
 mod scroll_bottom;
 mod scrollbar;

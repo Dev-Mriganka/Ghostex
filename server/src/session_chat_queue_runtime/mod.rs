@@ -83,6 +83,7 @@ use crate::{
 use axum::http::StatusCode;
 use serde_json::{json, Map};
 
+mod box_first_send;
 mod endpoints;
 mod post_send;
 mod scheduler;

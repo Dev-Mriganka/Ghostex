@@ -172,6 +172,7 @@ pub(crate) fn dispatch_agent_http_blocking(
                 }
             }
             if endpoint_path == "/api/switchDraftAgent"
+                || endpoint_path == "/api/draftRunLocation"
                 || endpoint_path == "/api/switchSessionAgent"
             {
                 if let Some((project_id, session_id)) = presentation_session.as_ref() {

@@ -275,6 +275,10 @@ impl SessionChatQueueRuntime {
             let composer_agent =
                 crate::session_chat_composer::session_chat_composer_agent_id(&session);
             let composer = (self.composer_reader)(&project_id, &session_id);
+            // A draft whose Run on row picked a box has no input box to wait for: delivering its
+            // first queued prompt starts the box (agents/draft_run_location.rs).
+            let pending_box = crate::agentbox::pending_session_agentbox(&session).is_some();
+            let awaiting_startup = awaiting_startup && !pending_box;
             if awaiting_startup
                 && crate::session_chat_composer::has_session_chat_composer_signature(
                     composer_agent.as_deref(),
@@ -389,9 +393,12 @@ impl SessionChatQueueRuntime {
             Grok requires positive readiness; unmeasured agents retain their
             existing Unknown behavior.
             */
-            if composer.blocks_message_for(
-                crate::session_chat_composer::session_chat_composer_agent_id(&session).as_deref(),
-            ) && !composer.should_dismiss()
+            if !pending_box
+                && composer.blocks_message_for(
+                    crate::session_chat_composer::session_chat_composer_agent_id(&session)
+                        .as_deref(),
+                )
+                && !composer.should_dismiss()
             {
                 self.reset_gate(&key);
                 continue;

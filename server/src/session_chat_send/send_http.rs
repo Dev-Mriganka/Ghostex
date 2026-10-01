@@ -193,7 +193,12 @@ pub(crate) async fn handle_send_session_chat_message_http(
     };
     // CDXC:SessionChat 2026-09-09 DECISION:
     // User: sending in a new chat is immediate, but delivery waits for the agent's input box. A durable queue receipt lets both apps clear the composer while startup continues.
-    if crate::agents::session_is_draft(&target.session) && image_paths.is_empty() {
+    // A draft whose Run on row picked a box has no agent to wait for: its first message starts the
+    // box (agents/draft_run_location.rs), so it takes the direct send below.
+    if crate::agents::session_is_draft(&target.session)
+        && image_paths.is_empty()
+        && crate::agentbox::pending_session_agentbox(&target.session).is_none()
+    {
         return crate::session_chat_send_wake::queue_startup_send(
             state,
             endpoint_path,

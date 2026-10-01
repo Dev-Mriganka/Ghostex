@@ -30,7 +30,8 @@ pub struct AgentboxLocation {
     /// The provider id: `docker`, `hetzner`, `vercel`, `daytona`, `e2b`, `digitalocean`, or
     /// `docker:<alias>` for a registered remote Docker host.
     pub provider: String,
-    /// What a chip or a menu row shows: "Docker", "Hetzner", "selfhost (SSH)".
+    /// What a chip or a menu row shows: "Docker", "Hetzner", or a registered SSH host's alias
+    /// ("selfhost"); the server glyph says it is reached over SSH.
     pub label: String,
     /// gxserver's one-line description ("On this computer", "Cloud VPS", ...).
     pub description: String,
@@ -44,14 +45,16 @@ impl AgentboxLocation {
         format!("{RUN_LOCATION_PREFIX}{}", self.provider)
     }
 
+    /// The hover text of a chip or row: `Your server <alias> over SSH` for a registered remote
+    /// Docker host, nothing for the others (their label says it all).
+    pub fn tooltip(&self) -> Option<String> {
+        ghostex_gx_protocol::agentbox::agentbox_location_tooltip(&self.provider)
+    }
+
     /// The menu icon id for this kind of box: a box on this computer, a server over SSH, or the
     /// cloud.
     pub fn icon(&self) -> &'static str {
-        match self.kind.as_str() {
-            "local" => "box",
-            "remoteDocker" => "server",
-            _ => "cloud",
-        }
+        ghostex_gx_protocol::agentbox::agentbox_location_icon(&self.kind)
     }
 }
 
@@ -144,12 +147,6 @@ fn ready_location(provider: &Value) -> Option<AgentboxLocation> {
         label if label.is_empty() => id.strip_prefix("docker:").unwrap_or(&id).to_string(),
         label => label,
     };
-    // A registered remote Docker host is listed by its alias; the suffix says how it is reached.
-    let label = if id.starts_with("docker:") {
-        format!("{label} (SSH)")
-    } else {
-        label
-    };
     Some(AgentboxLocation {
         provider: id,
         label,
@@ -179,10 +176,17 @@ fn valid_provider_id(id: &str) -> bool {
 /// desktop's chat gate and row focus, the web page's surface choice), so a deep link, a restore,
 /// a notification, `ghostex focus`, Quick Access and a row click all land on the terminal alike;
 /// do not add per-entry checks for box sessions.
+///
+/// A draft whose chat Run on row picked a box (`agentbox.pending`) keeps Chat View: nothing runs
+/// in its box until its first message, which creates the box and clears `pending`, and that flip
+/// is what hands the thread to its terminal on every client.
 pub fn session_chat_view_unavailable(core: &Core, session: &SessionKey) -> bool {
-    core.presentation()
-        .session(session)
-        .is_some_and(|session| session.agentbox.is_some())
+    core.presentation().session(session).is_some_and(|session| {
+        session
+            .agentbox
+            .as_ref()
+            .is_some_and(|agentbox| !agentbox.pending)
+    })
 }
 
 /// Whether a `runLocation` names a box rather than this computer.
@@ -194,14 +198,14 @@ pub fn is_agentbox_run_location(run_location: Option<&str>) -> bool {
 }
 
 /// What a toast or a label calls a box location named only by its `runLocation` (one the status
-/// did not report ready): the provider's name, or `<alias> (SSH)` for a remote Docker host.
+/// did not report ready): the provider's name, or the alias of a remote Docker host.
 pub fn agentbox_location_label(run_location: &str) -> String {
     let provider = run_location
         .trim()
         .strip_prefix(RUN_LOCATION_PREFIX)
         .unwrap_or(run_location);
     if let Some(alias) = provider.strip_prefix("docker:") {
-        return format!("{alias} (SSH)");
+        return alias.to_string();
     }
     match provider {
         "docker" => "Docker",

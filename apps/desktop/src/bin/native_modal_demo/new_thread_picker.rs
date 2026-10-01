@@ -3,7 +3,8 @@
 //! Codex account list opens after a moment), `noaccounts` (accounts read but
 //! none for Codex: Current CLI login and Add account), `error` (the accounts
 //! list could not be read: Try again), `loading` (agents not read yet), `boxes`
-//! (the Run on row with Docker, Hetzner and an SSH host ready, Docker picked),
+//! (the Run on row with Docker, Hetzner, an SSH host and Daytona ready, Docker
+//! picked), `boxes-ssh` (the same, the SSH host picked: the chips scroll to it),
 //! `noboxes` (agentbox installed, no box ready: the Settings link). Every other
 //! state has no Run on row.
 use super::new_thread_picker::*;
@@ -176,12 +177,16 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         run_location: run_location.to_string(),
         label: label.to_string(),
         kind: kind.to_string(),
+        tooltip: run_location
+            .strip_prefix("agentbox:docker:")
+            .map(|alias| format!("Your server {alias} over SSH")),
     };
     let boxes = match state.as_str() {
-        "boxes" => NewThreadPickerBoxes::Ready(vec![
+        "boxes" | "boxes-ssh" => NewThreadPickerBoxes::Ready(vec![
             location("agentbox:docker", "Docker", "local"),
             location("agentbox:hetzner", "Hetzner", "cloud"),
-            location("agentbox:docker:selfhost", "selfhost (SSH)", "remoteDocker"),
+            location("agentbox:docker:selfhost", "selfhost", "remoteDocker"),
+            location("agentbox:daytona", "Daytona", "cloud"),
         ]),
         "noboxes" => NewThreadPickerBoxes::NotSetUp,
         _ => NewThreadPickerBoxes::Unknown,
@@ -193,10 +198,10 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         agents_loaded: state != "loading",
         accounts: accounts(&state),
         boxes,
-        default_run_location: if state == "boxes" {
-            "agentbox:docker".to_string()
-        } else {
-            "local".to_string()
+        default_run_location: match state.as_str() {
+            "boxes" => "agentbox:docker".to_string(),
+            "boxes-ssh" => "agentbox:docker:selfhost".to_string(),
+            _ => "local".to_string(),
         },
         close_when_inactive: false,
     };
@@ -207,6 +212,21 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         cx,
     );
     *slot.borrow_mut() = Some((window, view.clone()));
+    if state == "boxes-ssh" {
+        // A background preview draws one frame; a second one shows the chips scrolled to the pick.
+        let view = view.clone();
+        cx.spawn(async move |cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            let _ = cx.update(|cx| {
+                let _ = window.update(cx, |_root, _window, cx| {
+                    view.update(cx, |_, cx| cx.notify())
+                });
+            });
+        })
+        .detach();
+    }
     if state == "accounts" || state == "noaccounts" || state == "error" {
         let error = state == "error";
         cx.spawn(async move |cx| {

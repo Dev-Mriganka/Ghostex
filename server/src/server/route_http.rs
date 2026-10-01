@@ -1669,6 +1669,7 @@ pub(super) async fn route_http(
         | "/api/readAgentResumePlan"
         | "/api/forkSession"
         | "/api/switchDraftAgent"
+        | "/api/draftRunLocation"
         | "/api/switchSessionAgent"
         | "/api/requestSessionRename"
         | "/api/cancelFirstPromptAutoTitle"
