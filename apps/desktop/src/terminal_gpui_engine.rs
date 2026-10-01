@@ -114,6 +114,9 @@ impl GpuiTerminalEngineConfig {
     ///
     /// CDXC:Theming 2026-09-28 DECISION:
     /// User: "allow us to set terminal background color to full black/white and make it black by default not the background color from the theme". The palette still comes from the Ghostty config or the light theme; the background is the Terminal background choice: Black / white (the default) paints pure black behind dark terminals and pure white behind light ones, Follow theme paints the theme's content colour (`theme_background`), and Custom replaces it in dark mode only. It never colours the work area (SEE-ALSO `refresh_gpui_visual_settings` in app/helpers/project/colors.rs, `normalizeTerminalBackgroundMode` in packages/shared/ghostex-settings/normalize-fields.ts (deleted 2026-10-01)). Supersedes the 2026-09-23 decision that the background follows the theme by default.
+    ///
+    /// CDXC:Theming 2026-09-30 WHY:
+    /// Shader input pixels and iBackgroundColor must agree, or background-sensitive effects change brightness. The opt-in chain therefore retains the finalized Ghostty background (or selected light palette); disabling it restores the ordinary Terminal background choice. This proposed exception leaves the work area theme unchanged.
     pub(crate) fn apply_color_scheme(
         &mut self,
         settings: &SharedGpuiTerminalEngineSettings,
@@ -129,7 +132,17 @@ impl GpuiTerminalEngineConfig {
             // Use the renderer's adaptive translucent selection tint so light palettes remain readable.
             self.view.selection_background = None;
         }
-        self.apply_terminal_background(settings.grid_background_rgb(light, theme_background));
+        #[cfg(target_os = "macos")]
+        let shader_background = self
+            .view
+            .shaders
+            .as_ref()
+            .is_some_and(|shaders| shaders.enabled);
+        #[cfg(not(target_os = "macos"))]
+        let shader_background = false;
+        if !shader_background {
+            self.apply_terminal_background(settings.grid_background_rgb(light, theme_background));
+        }
     }
 
     pub(crate) fn apply_terminal_background(&mut self, [r, g, b]: [u8; 3]) {

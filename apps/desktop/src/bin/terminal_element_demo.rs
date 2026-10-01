@@ -23,6 +23,9 @@ built-in showcase.
 // this demo crate root so the real app binary keeps full dead-code coverage.
 #![allow(dead_code)]
 
+#[cfg(target_os = "macos")]
+#[path = "../ghostty_kit.rs"]
+mod ghostty_kit;
 #[path = "../ghostty_vt/mod.rs"]
 mod ghostty_vt;
 #[path = "../hotkey_label.rs"]
@@ -39,6 +42,9 @@ mod terminal_environment;
 mod terminal_model;
 #[path = "../terminal_scrollbar_reveal.rs"]
 mod terminal_scrollbar_reveal;
+#[cfg(target_os = "macos")]
+#[path = "../terminal_shaders.rs"]
+mod terminal_shaders;
 #[path = "../terminal_wheel.rs"]
 mod terminal_wheel;
 

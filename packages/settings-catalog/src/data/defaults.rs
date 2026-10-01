@@ -556,6 +556,8 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     // precision/discrete mouse scrolling.
     ("terminalCursorStyle", J::Str("bar")),
     ("terminalCursorStyleBlink", J::Bool(true)),
+    // macOS Metal terminal effect; ordinary rendering remains the default.
+    ("terminalShadersEnabled", J::Bool(false)),
     // CDXC:PlatformSupport 2026-09-14 DECISION: User: make PowerShell the default Windows environment.
     ("windowsTerminalBackend", J::Str("powershell")),
     ("windowsWslDistribution", J::Str("")),

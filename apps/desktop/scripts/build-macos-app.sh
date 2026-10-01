@@ -356,8 +356,16 @@ validate_build_toolchain_dependencies() {
 # up front avoids a long Rust compile that only fails at link time.
 validate_ghosttykit_archive() {
 	local ghostty_kit="$REPO_ROOT/.dependencies/ghostty/macos/GhosttyKit.xcframework/macos-arm64_x86_64"
-	if [[ ! -f "$ghostty_kit/ghostty-internal.a" || ! -f "$ghostty_kit/Headers/ghostty.h" ]]; then
-		echo "Missing repo-local GhosttyKit static archive: $ghostty_kit" >&2
+	# Existing checkouts may still have an archive built before the shader API.
+	# Read the target slice's exported symbols so we fail before the Rust link.
+	local has_shader_api=0
+	if [[ -f "$ghostty_kit/ghostty-internal.a" ]] &&
+		xcrun nm -arch "$GHOSTEX_MACOS_ARCH" -g -U "$ghostty_kit/ghostty-internal.a" 2>/dev/null |
+		awk '$NF == "_ghostty_custom_shader_load_msl" { found = 1 } END { exit !found }'; then
+		has_shader_api=1
+	fi
+	if [[ ! -f "$ghostty_kit/Headers/ghostty.h" || "$has_shader_api" != "1" ]]; then
+		echo "Missing or outdated repo-local GhosttyKit static archive: $ghostty_kit" >&2
 		echo "gpui/build.rs links this archive by exact path; the dev build does not build it." >&2
 		echo "Build it from the vendored Ghostty source with:" >&2
 		echo "  (cd \"$REPO_ROOT/.dependencies/ghostty\" && ZIG=\${ZIG:-\$(command -v zig)} && \\" >&2

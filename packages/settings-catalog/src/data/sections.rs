@@ -405,6 +405,7 @@ pub const MAIN_SETTINGS_SCROLL_TARGET_SETTING_KEYS: &[(&str, &[&str])] = &[
             "terminalMouseScrollMultiplierPrecision",
             "terminalMouseScrollMultiplierDiscrete",
             "terminalScrollToBottomWhenTyping",
+            "terminalShadersEnabled",
         ],
     ),
     (
@@ -729,6 +730,7 @@ pub const MAIN_SETTINGS_SECTION_SETTING_KEYS: &[(&str, &[&str])] = &[
             "terminalMouseScrollMultiplierPrecision",
             "terminalMouseScrollMultiplierDiscrete",
             "terminalScrollToBottomWhenTyping",
+            "terminalShadersEnabled",
         ],
     ),
     (

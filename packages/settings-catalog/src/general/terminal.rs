@@ -41,6 +41,15 @@ pub(crate) fn terminal(platform: Platform) -> Section {
         row("showNotificationOnTerminalBell", "Show notification on terminal bell", "Treat terminal bell events as session attention."),
         row("promptEditorBackend", format!("{} prompt editor", hotkey_label("ctrl+g", platform)), format!("Choose which editor {} uses when a terminal prompt asks for $EDITOR.", hotkey_label("ctrl+g", platform))).options(PROMPT_EDITOR_BACKEND_OPTIONS),
     ]);
+    // Shown only on macOS (Metal), and the Terminal page and search list it only while Enable
+    // Experimental Features is on (`setting_visible` and the search filter in the desktop's settings_modal/search.rs).
+    if platform == Platform::MacOs {
+        settings.push(row(
+            "terminalShadersEnabled",
+            "Custom shaders (experimental)",
+            "Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions.",
+        ));
+    }
     section("terminal", "Terminal", settings)
 }
 

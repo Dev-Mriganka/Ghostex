@@ -63,7 +63,9 @@ then regenerate that patch). After a sync always:
   (macOS-27 machines whose default toolchain lacks the Metal compiler).
 - **0005-embed-config-string-apis** — `ghostty_config_load_string` +
   `ghostty_config_to_string` C APIs used by the desktop app to round-trip
-  Ghostty config through embedded hosts.
+  Ghostty config through embedded hosts. Its `include/ghostty.h` diff also
+  carries the declaration for 0008 (regen diffs each file whole, so a header
+  can belong to only one patch).
 - **0006-mouse-cmd-click-encode-and-mod-dedupe** — encode macOS Cmd as the
   Ctrl bit in terminal mouse protocols (Cmd-click opens paths/links in
   TUIs) and include binding modifiers in same-cell motion dedupe so
@@ -78,6 +80,11 @@ then regenerate that patch). After a sync always:
   and the fork/setsid pgid retry is bounded. Fixes the 2026-07-10/11
   process-wide freeze family (io-thread ↔ app-thread join cycles). Also
   contains a bounds guard on the renderer's shaper-cell advance scan.
+- **0008-embed-custom-shader-msl-api** — Darwin-only
+  `ghostty_custom_shader_load_msl`, which runs a Shadertoy custom shader file
+  through Ghostty's own `renderer/shadertoy.zig` pipeline (uniform prefix,
+  glslang, SPIRV-Cross) and returns the MSL for Ghostex terminal shaders. The
+  result is freed with `ghostty_string_free`.
 
 ## Rebased in the 2026-09-27 sync
 

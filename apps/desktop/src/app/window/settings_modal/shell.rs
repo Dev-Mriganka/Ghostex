@@ -198,6 +198,13 @@ impl GpuiSettingsModalWindow {
     pub(crate) fn receive_system_color(&mut self, key: &str, hex: String, cx: &mut Context<Self>) {
         let store = self.store.clone();
         store.update(cx, |store, cx| {
+            // Ignore an already-open system picker once this override is disabled.
+            if cfg!(target_os = "macos")
+                && key == "workspaceBackgroundColor"
+                && store.bool("terminalShadersEnabled")
+            {
+                return;
+            }
             if store.string(key) != hex {
                 store.update_setting(key, Value::String(hex), cx);
             }

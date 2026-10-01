@@ -1664,6 +1664,20 @@
       "agentWritable": true
     },
     {
+      "key": "terminalShadersEnabled",
+      "title": "Custom shaders (experimental)",
+      "subtitle": "Apply the shaders from your Ghostty config in order. macOS with Metal only; tested on Apple Silicon. Intel Mac rendering is not yet validated. Windows and Linux are unsupported. Turn off to restore ordinary rendering in the same sessions.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "terminal",
+      "groupTitle": "Terminal",
+      "section": "terminal",
+      "sectionTitle": "Terminal",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": true
+    },
+    {
       "key": "windowsTerminalBackend",
       "title": "Windows Environment",
       "subtitle": "Windows only. PowerShell (default) runs native Windows projects and agents. WSL runs Linux projects. Changing environments prompts you to restart Ghostex.",

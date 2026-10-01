@@ -391,7 +391,11 @@ fn experimental_section(
                         .gap(px(6.0))
                         .child("OS Integration settings tab")
                         .child("All Automations")
-                        .child("Power settings and the sidebar menu: Keep Awake"),
+                        .child("Power settings and the sidebar menu: Keep Awake")
+                        .children(
+                            cfg!(target_os = "macos")
+                                .then(|| div().child("Terminal custom shaders (macOS only)")),
+                        ),
                 ),
         ));
     }
