@@ -213,13 +213,44 @@ impl GhostexGpuiApp {
         CDXC:Settings 2026-06-24-11:19:
         After a successful Settings save or gxserver startup/open canonical sync, GPUI refreshes only the settings-dependent runtime state it owns today: app-modal hydrate/sidebarState, sidebar debug/beta booleans through the existing CEF runtime-settings path, project-workarea CEF visibility, project-editor auto-sleep scheduling, supported embedded Ghostty request-map settings, gxserver-owned agent-policy reconciliation, and central-service render reads such as the Browser feedback/profile toolbar controls. This is not full settings fan-out; many action bridges, code-server sync, live Ghostty config reloads, and broad future side effects remain outside this path.
         */
+        self.refresh_gpui_window_settings_consumers(settings_snapshot, cx);
+        // Newly saved hotkey chords bind immediately. The save boundary first
+        // adds targeted Unbind markers for the prior Ghostex action chords, so
+        // removed/remapped entries stop dispatching without clearing GPUI or
+        // gpui-component's unrelated keymap entries.
+        cx.bind_keys(gpui_configured_hotkey_key_bindings_from_settings());
+        cx.notify();
+        // The other open windows follow the same save; the keymap above is the process's one
+        // (app/workspace_windows/).
+        let others = crate::app::workspace_windows::other_workspace_window_apps(cx.entity_id());
+        if !others.is_empty() {
+            let settings_snapshot = settings_snapshot.clone();
+            cx.defer(move |cx| {
+                for other in others {
+                    other.update(cx, |app, cx| {
+                        app.refresh_gpui_window_settings_consumers(&settings_snapshot, cx);
+                        cx.notify();
+                    });
+                }
+            });
+        }
+    }
+
+    /// What one window refreshes after a settings save, in whichever window the save came from.
+    fn refresh_gpui_window_settings_consumers(
+        &mut self,
+        settings_snapshot: &shared_settings::SharedSidebarSettingsSnapshot,
+        cx: &mut gpui::Context<Self>,
+    ) {
         self.reschedule_project_editor_auto_sleep_if_policy_changed_from_shared_settings(
             settings_snapshot,
             cx,
         );
         self.apply_gpui_sidebar_visibility_memory_from_saved_settings(settings_snapshot);
         self.apply_gpui_command_pane_side_from_saved_settings(settings_snapshot);
-        self.ghostex_capture_settings_changed(settings_snapshot, cx);
+        if self.is_lead_window() {
+            self.ghostex_capture_settings_changed(settings_snapshot, cx);
+        }
         refresh_gpui_visual_settings(settings_snapshot);
         apply_gpui_component_theme(cx);
         self.native_kanban_notify_appearance(cx);
@@ -239,12 +270,6 @@ impl GhostexGpuiApp {
         self.reset_open_git_commit_prompt_agent(&sidebar_state_message, cx);
         self.refresh_open_gpui_app_modal_sidebar_state(sidebar_state_message, cx);
         self.sync_titlebar_account_privacy(cx);
-        // Newly saved hotkey chords bind immediately. The save boundary first
-        // adds targeted Unbind markers for the prior Ghostex action chords, so
-        // removed/remapped entries stop dispatching without clearing GPUI or
-        // gpui-component's unrelated keymap entries.
-        cx.bind_keys(gpui_configured_hotkey_key_bindings_from_settings());
-        cx.notify();
     }
 
     pub(crate) fn reload_live_gpui_engine_terminal_config(&mut self, cx: &mut gpui::Context<Self>) {

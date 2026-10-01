@@ -171,6 +171,29 @@ pub(crate) fn hide_frosted_host_over(kind: FrostedHostKind, parent: AnyWindowHan
     }
 }
 
+/// Hides every host sitting over `parent`, which is closing, so none keeps its app alive or stays
+/// on screen without it (app/workspace_windows/).
+#[allow(dead_code)] // the GPUI web build compiles this file and has a single window
+pub(crate) fn hide_frosted_hosts_over(parent: AnyWindowHandle, cx: &mut App) {
+    let menu_levels = SIDEBAR_MENU_HOSTS.with(|slots| slots.borrow().len());
+    let kinds = [
+        FrostedHostKind::Tooltip,
+        FrostedHostKind::DocsSelectionToolbar,
+        FrostedHostKind::QuickAccessPicker,
+        FrostedHostKind::QuickAccessActions,
+        FrostedHostKind::SidebarUsage,
+        FrostedHostKind::ModalPopover,
+    ]
+    .into_iter()
+    .chain(
+        (0..menu_levels)
+            .filter_map(|level| u8::try_from(level).ok().map(FrostedHostKind::SidebarMenu)),
+    );
+    for kind in kinds {
+        hide_frosted_host_over(kind, parent, cx);
+    }
+}
+
 fn apply(kind: FrostedHostKind, cx: &mut App) {
     loop {
         let (wanted, handle, parent, shown) = with_slot(kind, |slot| {

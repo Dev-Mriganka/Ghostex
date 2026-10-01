@@ -184,6 +184,7 @@ impl Render for GhostexGpuiApp {
         self.sync_terminal_model_picker_keyboard_scope();
         self.main_window_bounds = window.bounds();
         self.main_window_handle = Some(gpui::Window::window_handle(window));
+        crate::app::workspace_windows::sync_workspace_window_title(window, &self.project_name, cx);
         self.sync_main_window_glass(window, cx);
         crate::app::window::frosted_host::sync_frosted_tooltip_presenter(window, cx);
         self.native_docs_drop_unseen_drawer(cx);

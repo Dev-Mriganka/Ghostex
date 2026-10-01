@@ -32,8 +32,8 @@ hotkeys Every shortcut and its default binding
   remote machines, Quick chats, and the More Options menu under the button at
   the top right (Add Project, Sort & Filter, Sessions, Import Sessions, Search by
   Prompt, Agents Hub, All Automations, Mobile & Remote, Join Discord, then
-  Check for Updates, Restart Ghostex, Quit Ghostex, and Quit Ghostex & BG
-  Service, which also stops the background service and every session). The
+  New Window, Check for Updates, Restart Ghostex, Quit Ghostex, and Quit Ghostex
+  & BG Service, which also stops the background service and every session). The
   Notifications bell is in its top row; the Commands row at the bottom carries a
   chart button that shows or hides your account usage meters above it, and the
   Settings gear, which is where Settings and its Hotkeys page open from. Drag
@@ -50,6 +50,10 @@ hotkeys Every shortcut and its default binding
   everything this project can open. Project views load on demand and sleep when unused.
   The view panel toggle at the right end of the header, or Cmd+Option+B, opens
   and closes the whole panel.
+- **More windows**: File > New Window (Cmd+Shift+N) opens another full window
+  on the same projects and sessions, for a second monitor or Space; each window
+  keeps its own sidebar selection, panes and views, and every open window comes
+  back at the next launch.
 - **Quick Access** (Cmd+Shift+P): search every command, pane action, settings
   shortcut, and recent session. Cmd+P opens it on Recent Sessions.
 - **Settings** (Cmd+,): pages for General, Integrations, Cloud Boxes, Extensions, Remote,

@@ -1,4 +1,4 @@
-//! The app's own commands: Check for Updates, Restart and the two Quits.
+//! The app's own commands: New Window, Check for Updates, Restart and the two Quits.
 //!
 //! One list, so the sidebar menu and Quick Access's Commands tab offer the same rows with the same
 //! words, and post the same message for the host to perform. Only the desktop app can do any of
@@ -22,7 +22,13 @@ pub struct AppLifecycleAction {
 }
 
 /// Menu order, top to bottom.
-pub const APP_LIFECYCLE_ACTIONS: [AppLifecycleAction; 4] = [
+pub const APP_LIFECYCLE_ACTIONS: [AppLifecycleAction; 5] = [
+    AppLifecycleAction {
+        id: "newWindow",
+        title: "New Window",
+        icon: "copy-plus",
+        search_text: "New Window open another second window monitor screen",
+    },
     AppLifecycleAction {
         id: "checkForUpdates",
         title: "Check for Updates…",

@@ -28,7 +28,17 @@ use crate::app::helpers::*;
 use crate::app::model::*;
 use crate::*;
 impl GhostexGpuiApp {
-    pub(crate) fn new(window: &mut Window, cx: &mut App) -> Result<Entity<Self>> {
+    /// The app for one workspace window: a window reopened from its saved slot, the first of which
+    /// runs the app-wide work, or a New Window on a fresh slot, which starts on the project it was
+    /// opened from with no tabs open (app/workspace_windows/).
+    pub(crate) fn new_workspace_window(
+        window: &mut Window,
+        start: &crate::app::workspace_windows::WorkspaceWindowStart,
+        cx: &mut App,
+    ) -> Result<Entity<Self>> {
+        use crate::app::workspace_windows::{WorkspaceWindowStart, workspace_window_state_path};
+        let lead = start.lead();
+        let workspace_window_slot = start.slot();
         let system_color_scheme_is_light = refresh_gpui_system_appearance(cx);
         refresh_gpui_visual_settings(&shared_settings::shared_sidebar_settings_snapshot());
         apply_gpui_component_theme(cx);
@@ -45,8 +55,20 @@ impl GhostexGpuiApp {
         re-materialize the previously focused running session after its first
         presentation hydrate.
         */
-        let sidebar_gxserver_presentation_focus_state =
-            load_gpui_gxserver_presentation_focus_state();
+        let sidebar_gxserver_presentation_focus_state = match start {
+            WorkspaceWindowStart::Restore { slot, .. } => {
+                load_gpui_gxserver_presentation_focus_state(&workspace_window_state_path(
+                    gpui_gxserver_presentation_focus_state_path(),
+                    *slot,
+                ))
+            }
+            WorkspaceWindowStart::New {
+                active_project_id, ..
+            } => GpuiGxserverPresentationFocusState {
+                active_project_id: active_project_id.clone(),
+                ..Default::default()
+            },
+        };
         let sidebar_gxserver_bootstrap =
             gpui_sidebar_gxserver_bootstrap(None, &sidebar_gxserver_presentation_focus_state, None);
         let command_pane_side =
@@ -55,11 +77,20 @@ impl GhostexGpuiApp {
             .unwrap_or(DEFAULT_SIDEBAR_WIDTH)
             .clamp(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
         let command_pane_initial_content_height = command_pane_content_height(window);
-        let mut shell_layout_state = GpuiShellLayoutState::load_or_default(
-            command_pane_initial_content_height,
-            ProjectScopedWorkareaAvailability::from_env_bridge(),
-            &shared_settings_snapshot,
-        );
+        let mut shell_layout_state = match start {
+            WorkspaceWindowStart::Restore { slot, .. } => GpuiShellLayoutState::load_or_default(
+                &workspace_window_state_path(gpui_workspace_shell_state_path(), *slot),
+                command_pane_initial_content_height,
+                ProjectScopedWorkareaAvailability::from_env_bridge(),
+                &shared_settings_snapshot,
+            ),
+            WorkspaceWindowStart::New { .. } => {
+                GpuiShellLayoutState::shell_default_from_shared_settings(
+                    command_pane_initial_content_height,
+                    &shared_settings_snapshot,
+                )
+            }
+        };
         let sidebar_visibility_memory =
             GpuiSidebarVisibilityMemory::from_shared_settings(&shared_settings_snapshot);
         let restored_panes =
@@ -115,7 +146,8 @@ impl GhostexGpuiApp {
             .collect();
         #[cfg(target_os = "windows")]
         let windows_first_run_setup_state =
-            if load_gpui_first_run_onboarding_state().windows_terminal_setup_complete {
+            // Only the lead runs the setup screen; another window shows the app.
+            if !lead || load_gpui_first_run_onboarding_state().windows_terminal_setup_complete {
                 GpuiWindowsFirstRunSetupState::Ready
             } else {
                 GpuiWindowsFirstRunSetupState::Checking
@@ -154,6 +186,9 @@ impl GhostexGpuiApp {
                 parked_command_panes_by_project: shell_layout_state.parked_command_panes_by_project,
                 command_pane_project_epoch: 0,
                 main_window_handle,
+                lead_window_term: Self::initial_lead_window_term(lead),
+                workspace_window_slot,
+                workspace_window_closing: false,
                 project_editor_shell: shell_layout_state.project_editor_shell,
                 project_editor_auto_sleep_epochs: ProjectEditorAutoSleepEpochs::default(),
                 project_editor_auto_sleep_policy,
@@ -536,26 +571,9 @@ impl GhostexGpuiApp {
                 });
             })
             .detach();
-            #[cfg(target_os = "macos")]
-            register_gpui_menu_bar_status_callback_target(cx.weak_entity(), cx.to_async());
-            #[cfg(target_os = "macos")]
-            register_gpui_sidebar_pointer_callback_target(cx.weak_entity(), cx.to_async());
-            #[cfg(target_os = "macos")]
-            register_gpui_session_attention_notification_callback_target(
-                cx.weak_entity(),
-                cx.to_async(),
-            );
-            #[cfg(target_os = "macos")]
-            register_gpui_accessibility_display_options_callback_target(
-                cx.weak_entity(),
-                cx.to_async(),
-            );
-            #[cfg(target_os = "macos")]
-            register_gpui_workspace_power_events_callback_target(cx.weak_entity(), cx.to_async());
-            #[cfg(target_os = "macos")]
-            register_gpui_sparkle_updater_callback_target(cx.weak_entity(), cx.to_async());
-            #[cfg(target_os = "macos")]
-            register_gpui_os_integration_callback_target(cx.weak_entity(), cx.to_async());
+            if lead {
+                this.register_app_wide_callback_targets(cx);
+            }
             #[cfg(target_os = "macos")]
             register_gpui_first_responder_callback_target(
                 this.parent_ns_view,
@@ -582,7 +600,9 @@ impl GhostexGpuiApp {
                 cx.weak_entity(),
                 cx.to_async(),
             );
-            this.initialize_ghostex_capture(cx);
+            if lead {
+                this.initialize_ghostex_capture(cx);
+            }
             let startup_activity_changed = this.restore_gpui_command_startup_activity_intents(
                 command_startup_activity_restore_intents,
                 cx,
@@ -617,7 +637,9 @@ impl GhostexGpuiApp {
             this.refresh_gpui_command_close_after_done_timers(cx);
             let settings_snapshot = shared_settings::shared_sidebar_settings_snapshot();
             this.sync_gpui_keep_awake_automation_from_settings(&settings_snapshot, cx);
-            this.reconcile_gpui_gxserver_agent_settings_in_background(cx);
+            if lead {
+                this.reconcile_gpui_gxserver_agent_settings_in_background(cx);
+            }
         });
 
         Ok(app)

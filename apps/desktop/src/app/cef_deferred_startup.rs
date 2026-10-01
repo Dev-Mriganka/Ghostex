@@ -19,14 +19,12 @@ impl GhostexGpuiApp {
     pub(crate) fn begin_deferred_cef_startup(&mut self, cx: &mut gpui::Context<Self>) {
         self.gx_store_load_remote_recent_projects(cx);
         if let Some(mut demand) = cef::take_runtime_demand_receiver() {
-            cx.spawn(async move |this, cx| {
+            // Every open window answers the signal, and the listener outlives the window that
+            // took it (app/workspace_windows/).
+            let app: &gpui::App = cx;
+            app.spawn(async move |cx| {
                 while demand.next().await.is_some() {
-                    if this
-                        .update(cx, |this, cx| this.request_cef_runtime(cx))
-                        .is_err()
-                    {
-                        break;
-                    }
+                    cx.update(crate::app::workspace_windows::request_cef_runtime_in_every_window);
                 }
             })
             .detach();

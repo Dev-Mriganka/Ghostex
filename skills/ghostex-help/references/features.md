@@ -1918,6 +1918,30 @@ docs directory), `hideProjectHeaderDiffStats`,
   video is also at https://youtu.be/QzjFB4J6-8E. Reopen the setup any
   time from Tips > Setup or Quick Access > Commands > Setup.
 
+## More than one window
+
+File > New Window (Cmd+Shift+N, Ctrl+Shift+N on Windows and Linux) opens another
+full Ghostex window, so you can put one on each monitor or macOS Space, for
+example an agent testing something in one window while you work in another.
+New Window is also in Quick Access's Commands tab and at the end of the
+sidebar's More Options menu. A new window opens on the project of the window you
+opened it from, with no session open, a little down and to the right of it; drag
+it to another screen or Space. Each window has its own sidebar selection,
+sessions on screen, panes, view panel and views, Commands panel and Browser
+tabs. Projects, sessions, settings, themes and hotkeys are shared: a session
+started in one window shows up in every window's sidebar, and a setting changed
+in one window applies to all of them. The same session can be open in two
+windows at once; its terminal takes the size of the window you last typed in or
+showed it in. The menu bar status icon, notifications and completion sounds come
+once, not once per window. The Code view can be open in one window at a time.
+Every window open when you quit, restart or update comes back where it was at
+the next launch. Closing a window while others stay open removes it for good:
+its Commands panel terminals close and its Delayed Sends are cancelled (it asks
+first when it has either), while agent sessions keep running. Closing the last
+window quits Ghostex, and Cmd+Q quits it with all its windows.
+
+Related settings: none; window positions and layouts are saved automatically.
+
 ## Appearance and app
 
 Theme colours, colourfulness, window glass, and active pane outline live on their

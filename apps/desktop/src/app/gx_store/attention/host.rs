@@ -100,6 +100,11 @@ impl GhostexGpuiApp {
                     .detach();
             }
             Effect::SessionAttentionRaised { session } => {
+                // Every window's store raises it; one sound plays, from the lead window
+                // (app/workspace_windows/).
+                if !self.is_lead_window() {
+                    return;
+                }
                 let Some(sound) = completion_sound() else {
                     return;
                 };

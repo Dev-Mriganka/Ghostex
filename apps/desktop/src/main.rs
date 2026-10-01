@@ -343,6 +343,7 @@ fn main() {
             gpui_key_binding_from_shared_hotkey("cmd+alt+b", ToggleViewPanel, None),
             KeyBinding::new(SLEEP_FOCUSED_SESSION_DEFAULT_KEY, SleepFocusedSession, None),
             gpui_key_binding_from_shared_hotkey("cmd+shift+t", NewTerminalTab, None),
+            gpui_key_binding_from_shared_hotkey("cmd+shift+n", NewGhostexGpuiWindow, None),
             gpui_key_binding_from_shared_hotkey("cmd+d", SplitFocusedTerminalRight, None),
             gpui_key_binding_from_shared_hotkey("cmd+shift+d", SplitFocusedTerminalDown, None),
             gpui_key_binding_from_shared_hotkey("cmd+t", NewBrowserTab, None),
@@ -382,214 +383,39 @@ fn main() {
         // runGhostexHotkeyAction route regardless of which surface has focus.
         cx.bind_keys(gpui_configured_hotkey_key_bindings_from_settings());
         gpui_prewarm_ghostex_editor_daemon();
-        // Window frame persistence (macOS persistMainWindowChrome parity):
-        // restore the saved frame with multi-monitor rules, else the
-        // historical centered default.
-        let (window_bounds, display_id) = match restored_gpui_window_bounds(cx) {
-            Some((window_bounds, display_id)) => (window_bounds, Some(display_id)),
-            None => (
-                WindowBounds::centered(size(px(1280.0), px(820.0)), cx),
-                None,
-            ),
-        };
-        let main_window_background = window_glass_background_appearance();
-        crate::app::helpers::note_main_window_background(main_window_background);
-        let options = WindowOptions {
-            window_bounds: Some(window_bounds),
-            window_background: main_window_background,
-            display_id,
-            window_min_size: Some(size(
-                px(GPUI_WINDOW_FRAME_MIN_WIDTH),
-                px(GPUI_WINDOW_FRAME_MIN_HEIGHT),
-            )),
-            app_id: gpui_platform_window_app_id(),
-            icon: gpui_platform_window_icon(),
-            /*
-            Linux draws the same integrated Ghostex titlebar and caption
-            controls as Windows, so the X11 host must ask KWin (or another
-            window manager) to remove its server-side frame. GPUI translates
-            this request into the standard _MOTIF_WM_HINTS decoration hint.
-            The rendered decoration mode remains authoritative: if the X11
-            session cannot provide client decorations, Ghostex keeps the
-            server frame and omits its own caption buttons.
-            */
-            #[cfg(target_os = "linux")]
-            window_decorations: Some(gpui::WindowDecorations::Client),
-            /*
-            CDXC:Titlebar 2026-09-20 WHY:
-            The lights are placed against whatever row owns the window's top-left corner, and that
-            row is no longer the 28px titlebar this offset was measured for. It is the sidebar's
-            35px Search row while the sidebar is docked and the 36px work area header while it is
-            collapsed, and both centre their own contents near y = 18. At the old y = 8 the lights
-            sat three and a half pixels above everything beside them in both states; 11.5 puts a
-            12px light on that same centreline.
-            */
-            titlebar: Some(gpui::TitlebarOptions {
-                title: Some("Ghostex".into()),
-                appears_transparent: true,
-                traffic_light_position: Some(gpui::point(px(11.0), px(11.5))),
-            }),
-            // See `window_drag_region`: the top band holds draggable tabs, so the app, not AppKit,
-            // decides which drags there move the window.
-            app_owns_titlebar_drag: true,
-            ..Default::default()
-        };
-
+        crate::app::helpers::note_main_window_background(window_glass_background_appearance());
+        cx.on_action(|_: &NewGhostexGpuiWindow, cx| {
+            // A key press dispatches while its window is mid-update; the new window reads that
+            // window's frame and project, so it opens on the next turn.
+            cx.defer(crate::app::workspace_windows::open_new_workspace_window);
+        });
+        // Window frame persistence (macOS persistMainWindowChrome parity): every
+        // window open at the last quit reopens at its saved frame with the
+        // multi-monitor rules, else the historical centered default.
+        crate::app::workspace_windows::open_saved_workspace_windows(cx);
         /*
-        CDXC:CefRuntime 2026-06-14-13:10:
-        CEF surfaces need an actual GPUI platform window before they attach native AppKit children. Create the GPUI window first, then let the CEF bridge wait for non-zero layout bounds before creating browser hosts. (CEF is optional since 2026-09-28: see app/helpers/web_runtime.rs.)
-
-        CDXC:CefRuntime 2026-06-14-13:09:
-        CEF startup must run after GPUI completes the first frame because initializing native Chromium children during root construction can stall the GPUI launch path without producing helper processes. The first frame only installs the listener that starts CEF when a web view is shown, then explicitly refreshes the window so the sidebar and browser elements enter the normal GPUI layout pass.
-        */
-        let main_window = cx
-            .open_window(options, |window, cx| {
-                window.activate_window();
-                let view = GhostexGpuiApp::new(window, cx).expect("failed to create Ghostex app");
-                register_ghostex_gpui_main_menu_actions(
-                    view.downgrade(),
-                    gpui::Window::window_handle(window),
-                    cx,
-                );
-                let view_for_cef = view.clone();
-                window.on_next_frame(move |window, cx| {
-                    view_for_cef.update(cx, |app, cx| {
-                        #[cfg(any(
-                            target_os = "macos",
-                            target_os = "windows",
-                            target_os = "linux"
-                        ))]
-                        app.begin_deferred_cef_startup(cx);
-                        #[cfg(not(any(
-                            target_os = "macos",
-                            target_os = "windows",
-                            target_os = "linux"
-                        )))]
-                        app.initialize_cef(cx);
-                    });
-                    window.refresh();
-                });
-                view.update(cx, |app, cx| {
-                    app.start_gpui_support_log_maintenance(cx);
-                    /*
-                    CDXC:ServerDaemon 2026-09-09 DECISION:
-                    User: do not show the "Loading sessions" toast when the app starts.
-                    */
-                    app.start_gpui_local_gxserver_bootstrap(false, cx);
-                    app.start_gpui_workspace_open_target_availability_scan(cx);
-                    app.start_gpui_updater(cx);
-                    cx.on_app_quit(|this, cx| {
-                        this.flush_gpui_quit_persistence(cx);
-                        persist_gpui_window_frame_state();
-                        async {}
-                    })
-                    .detach();
-                });
-                view.update(cx, |_, cx| {
-                    record_gpui_window_frame_state(window, cx);
-                    cx.observe_window_bounds(window, |app, window, cx| {
-                        app.main_window_bounds = window.bounds();
-                        app.main_window_display_id = window.display(cx).map(|display| display.id());
-                        /*
-                        macOS delivers bounds observer callbacks for window events
-                        that do not actually change the frame (e.g. key/order
-                        churn when a child panel opens). Close the anchored
-                        titlebar dropdown only when the frame genuinely moved or
-                        resized, otherwise every dropdown open self-closed within
-                        one frame.
-                        */
-                        let previous_frame_state =
-                            GPUI_LATEST_WINDOW_FRAME_STATE.with(|latest| latest.borrow().clone());
-                        record_gpui_window_frame_state(window, cx);
-                        let current_frame_state =
-                            GPUI_LATEST_WINDOW_FRAME_STATE.with(|latest| latest.borrow().clone());
-                        if previous_frame_state != current_frame_state {
-                            schedule_gpui_window_frame_state_persist(cx);
-                            app.close_gpui_titlebar_popup(None, window, cx);
-                            app.recycle_gpui_new_thread_picker_preload(cx);
-                        }
-                    })
-                    .detach();
-                    cx.observe_window_activation(window, |app, window, cx| {
-                        if !window.is_window_active() {
-                            app.close_gpui_titlebar_popup(None, window, cx);
-                            /*
-                            CDXC:Sidebar 2026-08-02:
-                            Pointer-moved events stop arriving once the window is
-                            no longer active, so the last crossing the observer saw
-                            may have been an enter. Report the pointer as outside
-                            and close any open sidebar context menu, the same way
-                            leaving for another app closes a native menu.
-
-                            CDXC:Sidebar 2026-08-20:
-                            Route the "outside" report through the AppKit observer
-                            instead of writing the page flag here. This used to
-                            call `dispatch_gpui_sidebar_pointer_inside(false)`
-                            directly, which left the observer's cache saying
-                            "inside" while the page said "false"; the next real
-                            crossing back into the sidebar then matched the cache
-                            and was dropped as redundant, so hovering a session row
-                            showed neither the row background nor the hover-only
-                            Close button until the pointer left the sidebar and
-                            came back. Clicking a tab in the tab strip churns window
-                            activation, which is why that click was the reliable way
-                            to get into the broken state.
-                            */
-                            #[cfg(target_os = "macos")]
-                            {
-                                cef::report_sidebar_pointer_outside();
-                                app.dispatch_gpui_sidebar_dismiss_context_menus(cx);
-                            }
-                            #[cfg(not(target_os = "macos"))]
-                            app.dismiss_native_sidebar_menu(cx);
-                        } else {
-                            /*
-                            CDXC:Sidebar 2026-08-20:
-                            Coming back active is the other half: the pointer can
-                            already be sitting on a session row, and a pointer that
-                            does not move produces no event to recompute from, so
-                            resolve the crossing from the real pointer location.
-                            */
-                            #[cfg(target_os = "macos")]
-                            cef::refresh_sidebar_pointer_inside();
-                        }
-                    })
-                    .detach();
-                });
-                cx.new(|cx| {
-                    // Transparent rather than unset, which would paint the theme's opaque
-                    // background: the app view's root paints the window's fill and follows window
-                    // glass, which this style (set once, here) could not.
-                    let root = Root::new(view, window, cx).bg(gpui::transparent_black());
-                    /*
-                    Ghostex owns an exact, non-overlapping Linux resize frame
-                    inside its main view. Disable gpui-component's generic
-                    shadow overlay there so resize input never extends across
-                    the workspace or embedded CEF children.
-                    */
-                    #[cfg(target_os = "linux")]
-                    let root = root.bordered(false);
-                    root
-                })
-            })
-            .expect("failed to open GPUI window");
-        let main_window_id = main_window.window_id();
-        /*
-        CDXC:PlatformSupport 2026-08-02:
-        The main workspace window owns application lifetime. App-modal, toast,
+        CDXC:PlatformSupport 2026-10-01 WHY:
+        The workspace windows own application lifetime. App-modal, toast,
         and titlebar child windows can still be registered when the user closes
-        the workspace, so waiting for `cx.windows()` to become empty leaves a
-        headless Ghostex process holding CEF's persistent-profile singleton.
-        A subsequent Ghostex.exe then reaches `cef_initialize` while that stale
-        owner is alive and exits with "CEF initialization returned false".
-        Quit when the main window itself closes; keep the empty-window arm for
-        defensive parity if a platform closes every child before this observer.
+        the last workspace window, so waiting for `cx.windows()` to become empty
+        leaves a headless Ghostex process holding CEF's persistent-profile
+        singleton. A subsequent Ghostex.exe then reaches `cef_initialize` while
+        that stale owner is alive and exits with "CEF initialization returned
+        false". Quit when the last workspace window closes (File > New Window
+        can open more than one, app/workspace_windows/); keep the
+        empty-window arm for defensive parity if a platform closes every child
+        before this observer. Supersedes the 2026-08-02 rule that quit on the
+        main window's close.
         */
         cx.on_window_closed(move |cx, window_id| {
             #[cfg(target_os = "linux")]
             cef::detach_native_views_of_closing_window(window_id);
-            persist_gpui_window_frame_state();
-            if window_id == main_window_id || cx.windows().is_empty() {
+            let closed = crate::app::workspace_windows::workspace_window_closed(window_id, cx);
+            if matches!(
+                closed,
+                crate::app::workspace_windows::WorkspaceWindowClosed::Last
+            ) || cx.windows().is_empty()
+            {
                 GPUI_APP_QUIT_IN_PROGRESS.store(true, Ordering::Release);
                 cx.quit();
             }

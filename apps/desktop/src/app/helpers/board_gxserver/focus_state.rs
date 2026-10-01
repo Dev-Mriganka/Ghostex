@@ -4,7 +4,11 @@
 // validation, and on-disk persistence helpers.
 // See docs/2026-08-22/repo-restructure/SPLITS.md C1.
 
-use std::{collections::HashSet, fs, path::PathBuf};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::app::helpers::*;
 use crate::*;
@@ -511,10 +515,11 @@ pub(crate) fn gpui_gxserver_presentation_focus_state_path() -> PathBuf {
 /// re-materialize the previously focused session (Decision #3). The file
 /// carries only the fixed focus-state contract shape — no titles, paths,
 /// commands, or terminal content.
+/// `path` is the window's own focus file (app/workspace_windows/slots.rs).
 pub(crate) fn persist_gpui_gxserver_presentation_focus_state(
+    path: &Path,
     state: &GpuiGxserverPresentationFocusState,
 ) {
-    let path = gpui_gxserver_presentation_focus_state_path();
     if let Some(parent) = path.parent() {
         let _ = fs::create_dir_all(parent);
     }
@@ -537,8 +542,10 @@ pub(crate) fn persist_gpui_gxserver_presentation_focus_state(
     let _ = fs::write(path, payload.to_string());
 }
 
-pub(crate) fn load_gpui_gxserver_presentation_focus_state() -> GpuiGxserverPresentationFocusState {
-    fs::read_to_string(gpui_gxserver_presentation_focus_state_path())
+pub(crate) fn load_gpui_gxserver_presentation_focus_state(
+    path: &Path,
+) -> GpuiGxserverPresentationFocusState {
+    fs::read_to_string(path)
         .ok()
         .and_then(|text| {
             gpui_gxserver_presentation_focus_state_from_sidebar_contract_json(&text).ok()

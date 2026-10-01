@@ -155,7 +155,7 @@ pub(crate) enum PaletteCommand {
         search_text: String,
         title: String,
     },
-    /// Check for Updates, Restart and the two Quits, where the host is the desktop app.
+    /// New Window, Check for Updates, Restart and the two Quits, where the host is the desktop app.
     AppLifecycle(&'static AppLifecycleAction),
     Pet {
         search_text: String,

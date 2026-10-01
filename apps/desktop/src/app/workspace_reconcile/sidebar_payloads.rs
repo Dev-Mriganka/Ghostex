@@ -77,7 +77,11 @@ impl GhostexGpuiApp {
         CDXC:Notifications 2026-06-26-06:56:
         GPUI session attention banners fire only on sanitized status rows newly entering `attention` after the first status snapshot. Saved `showMacOSAttentionNotifications` defaults to true, notification sound stays nil, and runtime rate limiting mirrors native without persisting or logging titles, ids, raw payloads, paths, URLs, command text, stdout/stderr, settings JSON, tokens, or terminal content.
         */
-        if candidates.is_empty() || !gpui_macos_attention_notifications_enabled() {
+        // One banner per session, from the lead window only (app/workspace_windows/).
+        if candidates.is_empty()
+            || !self.is_lead_window()
+            || !gpui_macos_attention_notifications_enabled()
+        {
             return;
         }
         let now = Instant::now();
@@ -113,7 +117,10 @@ impl GhostexGpuiApp {
         CDXC:StatusPet 2026-06-26-06:05:
         The primary-click dropdown shares this Rust-owned status snapshot for bounded project/session rows. AppKit receives explicit copied FFI fields for ids, titles, status, order, and timestamps only; it never receives renderer JSON, paths, URLs, command text, tokens, logs, terminal output, hidden hit regions, or overlay instructions.
         */
-        apply_gpui_menu_bar_status_item(&self.sidebar_session_status_indicators);
+        // The status item is the process's one; the lead window feeds it (app/workspace_windows/).
+        if self.is_lead_window() {
+            apply_gpui_menu_bar_status_item(&self.sidebar_session_status_indicators);
+        }
     }
 
     pub(crate) fn receive_sidebar_pet_overlay_state_payload(

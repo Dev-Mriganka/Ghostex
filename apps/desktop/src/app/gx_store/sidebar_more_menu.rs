@@ -1,5 +1,5 @@
 //! The More menu rows whose whole answer already lives in Rust: Join Discord, Keep Awake, and the
-//! app's own Check for Updates, Restart and Quit rows.
+//! app's own New Window, Check for Updates, Restart and Quit rows.
 //!
 //! CDXC:Sidebar 2026-09-25 WHY:
 //! Join Discord (`openExternalUrl`) used to leave Rust for the app runtime, which posted the same
@@ -50,16 +50,17 @@ impl GhostexGpuiApp {
         }
     }
 
-    /// Check for Updates, Restart and the two Quits, from the sidebar menu or a Quick Access
-    /// Commands row: the same actions the macOS menu bar's Ghostex menu dispatches, so each has
-    /// one handler (helpers/os_cli/main_menus.rs). Deferred because the click arrives inside a
-    /// window update, where dispatching into the active window is refused.
+    /// New Window, Check for Updates, Restart and the two Quits, from the sidebar menu or a Quick
+    /// Access Commands row: the same actions the macOS menu bar dispatches, so each has one handler
+    /// (helpers/os_cli/main_menus.rs, and main.rs for New Window). Deferred because the click
+    /// arrives inside a window update, where dispatching into the active window is refused.
     pub(crate) fn run_app_lifecycle_action(&mut self, action: &str, cx: &mut gpui::Context<Self>) {
         use crate::app::actions::{
-            CheckForGhostexGpuiUpdates, QuitGhostexGpui, QuitGhostexGpuiAndBackgroundServices,
-            RestartGhostexGpui,
+            CheckForGhostexGpuiUpdates, NewGhostexGpuiWindow, QuitGhostexGpui,
+            QuitGhostexGpuiAndBackgroundServices, RestartGhostexGpui,
         };
         let action: Box<dyn gpui::Action> = match action {
+            "newWindow" => Box::new(NewGhostexGpuiWindow),
             "checkForUpdates" => Box::new(CheckForGhostexGpuiUpdates),
             "restart" => Box::new(RestartGhostexGpui),
             "quit" => Box::new(QuitGhostexGpui),

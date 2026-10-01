@@ -108,6 +108,15 @@ pub struct GhostexGpuiApp {
     /// The main workspace window, recorded by its render so model hooks without a `Window` can
     /// defer window work onto it (`defer_in_main_window`).
     pub(crate) main_window_handle: Option<gpui::AnyWindowHandle>,
+    /// The lead term this window holds while it runs the app-wide work; `None` for a window File >
+    /// New Window opened (app/workspace_windows/).
+    pub(crate) lead_window_term: Option<u64>,
+    /// Which saved layout, focus and frame files this window reads and writes
+    /// (app/workspace_windows/slots.rs).
+    pub(crate) workspace_window_slot: u32,
+    /// Set while this window closes with another workspace window still open, so nothing starts
+    /// again in it (app/workspace_windows/).
+    pub(crate) workspace_window_closing: bool,
     pub(crate) project_editor_shell: ProjectEditorShellModel,
     pub(crate) project_editor_auto_sleep_epochs: ProjectEditorAutoSleepEpochs,
     pub(crate) project_editor_auto_sleep_policy: ProjectEditorAutoSleepPolicySnapshot,
@@ -983,30 +992,34 @@ pub struct GhostexGpuiApp {
 
 impl Drop for GhostexGpuiApp {
     fn drop(&mut self) {
-        self.shut_down_ghostex_capture();
+        // Only the current lead owns Ghostex Capture's hotkeys, the process-wide targets and the
+        // menu bar status item; a lead dropped after another window took over must leave the new
+        // registrations alone (app/workspace_windows/).
+        let lead = self.is_lead_window();
+        if lead {
+            self.shut_down_ghostex_capture();
+        }
         #[cfg(target_os = "windows")]
         crate::navigation_history::windows_mouse::unregister(self.parent_ns_view);
         #[cfg(target_os = "macos")]
-        unregister_gpui_menu_bar_status_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_sidebar_pointer_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_session_attention_notification_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_accessibility_display_options_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_workspace_power_events_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_sparkle_updater_callback_target();
-        #[cfg(target_os = "macos")]
-        unregister_gpui_os_integration_callback_target();
+        if lead {
+            unregister_gpui_menu_bar_status_callback_target();
+            unregister_gpui_sidebar_pointer_callback_target();
+            unregister_gpui_session_attention_notification_callback_target();
+            unregister_gpui_accessibility_display_options_callback_target();
+            unregister_gpui_workspace_power_events_callback_target();
+            unregister_gpui_sparkle_updater_callback_target();
+            unregister_gpui_os_integration_callback_target();
+        }
         #[cfg(target_os = "macos")]
         unregister_gpui_first_responder_callback_target(self.parent_ns_view);
         #[cfg(target_os = "macos")]
         unregister_gpui_keyboard_router_target(self.parent_ns_view);
         #[cfg(target_os = "macos")]
         unregister_gpui_terminal_key_event_callback_target(self.parent_ns_view);
-        hide_gpui_menu_bar_status_item();
+        if lead {
+            hide_gpui_menu_bar_status_item();
+        }
         self.source_code_server_runtime.stop();
         self.stop_gpui_keep_awake_runtime();
         self.stop_all_gpui_remote_gxserver_connections();

@@ -1,31 +1,34 @@
 use crate::*;
-use gpui::{AnyWindowHandle, Bounds, Pixels};
+use gpui::{AnyWindowHandle, Bounds, EntityId, Pixels};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 thread_local! {
     /// Where each terminal's model pill was last painted, and in which window, so Option+P opens the
-    /// pop-up against it the way a click on the pill does.
-    static TERMINAL_MODEL_PILLS: RefCell<HashMap<TerminalSessionId, (Bounds<Pixels>, AnyWindowHandle)>> =
+    /// pop-up against it the way a click on the pill does. Keyed by the app as well, because each
+    /// workspace window numbers its terminals from 1 (app/workspace_windows/).
+    static TERMINAL_MODEL_PILLS: RefCell<HashMap<(EntityId, TerminalSessionId), (Bounds<Pixels>, AnyWindowHandle)>> =
         RefCell::new(HashMap::new());
 }
 
 /// Records the terminal model pill's painted frame (content coordinates of `window`).
 pub(crate) fn note_terminal_model_pill(
+    app: EntityId,
     session_id: TerminalSessionId,
     bounds: Bounds<Pixels>,
     window: AnyWindowHandle,
 ) {
     TERMINAL_MODEL_PILLS.with_borrow_mut(|pills| {
-        pills.insert(session_id, (bounds, window));
+        pills.insert((app, session_id), (bounds, window));
     });
 }
 
 /// The terminal model pill's last painted frame and window.
 pub(crate) fn terminal_model_pill(
+    app: EntityId,
     session_id: TerminalSessionId,
 ) -> Option<(Bounds<Pixels>, AnyWindowHandle)> {
-    TERMINAL_MODEL_PILLS.with_borrow(|pills| pills.get(&session_id).copied())
+    TERMINAL_MODEL_PILLS.with_borrow(|pills| pills.get(&(app, session_id)).copied())
 }
 
 impl GhostexGpuiApp {
@@ -40,7 +43,7 @@ impl GhostexGpuiApp {
             return false;
         };
         if !self.agents_chat_mode_sessions.contains(&session_id) {
-            let Some((bounds, handle)) = terminal_model_pill(session_id) else {
+            let Some((bounds, handle)) = terminal_model_pill(cx.entity_id(), session_id) else {
                 return false;
             };
             return self.open_terminal_model_menu(session_id, bounds, handle, cx);

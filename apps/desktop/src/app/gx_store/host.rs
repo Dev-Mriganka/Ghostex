@@ -340,6 +340,9 @@ impl GhostexGpuiApp {
     /// survive a restart of the client: the new socket subscribes with the held revision, and a
     /// daemon with another identity makes the core ask for a full snapshot.
     pub(crate) fn sync_gx_store_transport(&mut self, cx: &mut gpui::Context<Self>) {
+        if self.workspace_window_closing {
+            return;
+        }
         let next = self
             .sidebar_gxserver_bootstrap
             .as_ref()
@@ -368,6 +371,16 @@ impl GhostexGpuiApp {
         self.gx_store.transport = next;
         self.gx_store.client_restart_attempt = 0;
         self.start_gx_store_client(cx);
+    }
+
+    /// A workspace window closing while another stays open lets go of its socket for good: no
+    /// transport means neither a restart timer nor a later bootstrap starts a client again
+    /// (app/workspace_windows/).
+    pub(crate) fn gx_store_disconnect_for_window_close(&mut self) {
+        let host = &mut self.gx_store;
+        host.transport = None;
+        host.client_generation += 1;
+        host.client = None;
     }
 
     /// The one start path: a transport change and the replacement of a dead client both end here.

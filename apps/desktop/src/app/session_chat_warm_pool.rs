@@ -11,8 +11,10 @@ const NATIVE_CHAT_POOL_PASS_INTERVAL: Duration = Duration::from_secs(3);
 const NATIVE_CHAT_PAUSE_AFTER_HIDDEN: Duration = Duration::from_secs(20);
 
 thread_local! {
-    /// When each runtime generation was last seen hidden by the pool pass.
-    static HIDDEN_SINCE: RefCell<HashMap<u64, Instant>> = RefCell::new(HashMap::new());
+    /// When each runtime generation was last seen hidden by the pool pass, per workspace window:
+    /// one window's pass must not forget another window's hidden chats (app/workspace_windows/).
+    static HIDDEN_SINCE: RefCell<HashMap<gpui::EntityId, HashMap<u64, Instant>>> =
+        RefCell::new(HashMap::new());
 }
 
 impl GhostexGpuiApp {
@@ -76,7 +78,9 @@ impl GhostexGpuiApp {
             }
         }
         let now = Instant::now();
+        let window_app = cx.entity_id();
         let due = HIDDEN_SINCE.with_borrow_mut(|since| {
+            let since = since.entry(window_app).or_default();
             let hidden_generations = hidden
                 .iter()
                 .map(|(_, _, _, generation, _)| *generation)

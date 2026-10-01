@@ -15,6 +15,11 @@ impl GhostexGpuiApp {
         scale_factor: f32,
         cx: &mut gpui::Context<Self>,
     ) {
+        // A window closing beside another one detaches its terminals; that is not their sessions
+        // exiting (app/workspace_windows/).
+        if self.workspace_window_closing {
+            return;
+        }
         /*
         CDXC:Terminal 2026-06-22-22:45:
         The GPUI App owns native terminal host plans as runtime-only slot-keyed maps, not persisted workspace model data. Recompute them only from current rendered running Agents mount slots, active Agents visibility, and runtime body bounds so stale tabs, sleeping/missing sessions, hidden leaves, and inactive tabs cannot retain or fabricate native terminal views.

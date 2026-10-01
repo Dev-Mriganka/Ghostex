@@ -103,12 +103,14 @@ impl GpuiShellLayoutState {
         }
     }
 
+    /// `path` is the window's own layout file (app/workspace_windows/slots.rs).
     pub(crate) fn load_or_default(
+        path: &std::path::Path,
         content_height: f32,
         fallback_availability: ProjectScopedWorkareaAvailability,
         settings: &shared_settings::SharedSidebarSettingsSnapshot,
     ) -> Self {
-        read_json_object(&gpui_workspace_shell_state_path())
+        read_json_object(path)
             .and_then(|object| {
                 Self::from_json_object_with_shared_settings(
                     &object,

@@ -220,7 +220,7 @@ impl GhostexGpuiApp {
             return;
         }
         self.clear_sidebar_divider_hover_state();
-        persist_sidebar_width_setting(self.sidebar_width);
+        self.persist_sidebar_width_if_lead_window();
         cx.notify();
     }
 
@@ -229,7 +229,15 @@ impl GhostexGpuiApp {
         let reset_width = read_sidebar_default_width_setting().unwrap_or(SIDEBAR_RESET_WIDTH);
         self.sidebar_width = clamp_sidebar_width(reset_width, max_width);
         self.cancel_sidebar_divider_interaction_state();
-        persist_sidebar_width_setting(self.sidebar_width);
+        self.persist_sidebar_width_if_lead_window();
+    }
+
+    /// The saved width is the one the next launch opens with, which is the lead window's; a New
+    /// Window keeps its own width to itself (app/workspace_windows/).
+    fn persist_sidebar_width_if_lead_window(&self) {
+        if self.is_lead_window() {
+            persist_sidebar_width_setting(self.sidebar_width);
+        }
     }
 
     pub(crate) fn cancel_sidebar_divider_interaction_state(&mut self) {

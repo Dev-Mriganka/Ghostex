@@ -179,7 +179,7 @@ impl GhostexGpuiApp {
         scale_factor: f32,
         cx: &mut gpui::Context<Self>,
     ) {
-        if GPUI_APP_QUIT_IN_PROGRESS.load(Ordering::Acquire) {
+        if GPUI_APP_QUIT_IN_PROGRESS.load(Ordering::Acquire) || self.workspace_window_closing {
             return;
         }
         /*

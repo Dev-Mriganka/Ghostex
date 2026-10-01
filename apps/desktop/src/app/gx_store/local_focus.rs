@@ -510,6 +510,11 @@ impl GhostexGpuiApp {
     /// runs: a payload of the old runtime and the end of a local burst both come through here, so
     /// a held key costs one write, not one per tab. The quit path writes unconditionally.
     pub(crate) fn gx_store_persist_focus_state_file(&mut self) {
+        // Each window writes its own slot's file; a closing window's slot is being forgotten
+        // (app/workspace_windows/slots.rs).
+        if self.workspace_window_closing {
+            return;
+        }
         let focus_state = &self.sidebar_gxserver_presentation_focus_state;
         let current = (
             focus_state.active_project_id.clone(),
@@ -519,7 +524,10 @@ impl GhostexGpuiApp {
         if self.gx_store.local_focus.persisted_focus.as_ref() == Some(&current) {
             return;
         }
-        crate::app::helpers::persist_gpui_gxserver_presentation_focus_state(focus_state);
+        crate::app::helpers::persist_gpui_gxserver_presentation_focus_state(
+            &self.presentation_focus_state_path(),
+            focus_state,
+        );
         self.gx_store.local_focus.persisted_focus = Some(current);
     }
 

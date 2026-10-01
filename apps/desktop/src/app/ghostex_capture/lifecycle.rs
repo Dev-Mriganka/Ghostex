@@ -136,4 +136,13 @@ impl GhostexGpuiApp {
             self.ghostex_capture.hotkeys_registered = false;
         }
     }
+
+    /// The window that ran Ghostex Capture is closing while another stays open: its button and
+    /// panel close and its hotkeys go, for the window taking over to set up again
+    /// (app/workspace_windows/).
+    pub(crate) fn release_ghostex_capture(&mut self, cx: &mut Context<Self>) {
+        self.ghostex_capture.enabled = false;
+        self.sync_ghostex_capture(cx);
+        self.shut_down_ghostex_capture();
+    }
 }

@@ -24,6 +24,11 @@ impl GhostexGpuiApp {
     back to Running because the composited element needs no native remount.
     */
     pub(crate) fn sync_agents_gpui_engine_terminals(&mut self, cx: &mut gpui::Context<Self>) {
+        // A window closing beside another one detaches its terminals; that is not their sessions
+        // exiting (app/workspace_windows/).
+        if self.workspace_window_closing {
+            return;
+        }
         // CDXC:Terminal 2026-09-19 WHY: every tab step used to retire the viewer of the tab it left and spawn an attach client for the tab it entered, so a held "next tab" key started and killed one process per repeat. While the selection is still moving both wait (gx_store/burst.rs); a tab whose viewer is already mounted is drawn regardless, and the settle repaints so this pass runs for the tab the user landed on.
         let selection_settling = self.gx_store_selection_is_settling();
         if !selection_settling {
@@ -330,7 +335,7 @@ impl GhostexGpuiApp {
         user's shell exiting: the normal exit path removes the command tab and
         explicitly closes the daemon-owned gxserver/zmx session.
         */
-        if GPUI_APP_QUIT_IN_PROGRESS.load(Ordering::Acquire) {
+        if GPUI_APP_QUIT_IN_PROGRESS.load(Ordering::Acquire) || self.workspace_window_closing {
             return;
         }
         self.release_unused_command_gpui_terminal_viewers(cx);

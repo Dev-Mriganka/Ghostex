@@ -171,6 +171,11 @@ pub(crate) fn gpui_workspace_shell_state_json(app: &GhostexGpuiApp) -> serde_jso
 }
 
 pub(crate) fn persist_gpui_workspace_shell_state(app: &GhostexGpuiApp) {
+    // Each window writes its own slot's file; a closing window's slot is being forgotten
+    // (app/workspace_windows/slots.rs).
+    if app.workspace_window_closing {
+        return;
+    }
     /*
     CDXC:Telemetry 2026-06-23-13:18:
     Phase 10 persistence re-audit keeps this as the only GPUI-owned workspace shell-state writer. It may write writer-owned layout/focus/tab/profile/lifecycle metadata, bounded canonical gxserver P/G identities, the validated bounded command Action selector used for restart reuse, safe Agents Delayed Send trigger/remaining-time checkpoints, complete sanitized Browser HTTP(S) URLs, plus the `petOverlayActivitiesVisible`, `sidebarUsageVisible` and `viewPanelPickerOpen` UI booleans only; pet activity payloads, pet titles, raw settings JSON, terminal content, command text, stdout/stderr, project paths, file paths, page titles, profile paths, cookies, URL credentials, raw payloads, unrelated private user content, and runtime surface data must stay out at the serializer boundary.
@@ -178,21 +183,32 @@ pub(crate) fn persist_gpui_workspace_shell_state(app: &GhostexGpuiApp) {
     let Ok(data) = serde_json::to_vec_pretty(&gpui_workspace_shell_state_json(app)) else {
         return;
     };
-    shell_state_writer().enqueue(data);
+    shell_state_writer(app.workspace_window_slot).enqueue(data);
 }
 
 /// Write the shell state synchronously. Only the quit path uses this, so the last layout is on disk before the process exits.
 pub(crate) fn flush_gpui_workspace_shell_state(app: &GhostexGpuiApp) {
+    if app.workspace_window_closing {
+        return;
+    }
     let Ok(data) = serde_json::to_vec_pretty(&gpui_workspace_shell_state_json(app)) else {
         return;
     };
-    shell_state_writer().write_now(data);
+    shell_state_writer(app.workspace_window_slot).write_now(data);
+}
+
+/// A closed window's slot: drops a write still on its way, so it cannot land after the file is
+/// deleted, then deletes the file (app/workspace_windows/slots.rs).
+pub(crate) fn discard_gpui_workspace_shell_state(slot: u32) {
+    shell_state_writer(slot).discard();
 }
 
 /// CDXC:SessionChat 2026-09-16 WHY:
 /// The shell state is persisted on every session switch, tab change and layout edit (well over a hundred call sites) and used to be written to disk synchronously on the UI thread, inside the click path.
 /// Serialization stays on the UI thread; the bytes go to one writer thread that always writes the newest pending state, and a sequence number keeps a slower background write from landing after the synchronous quit-time flush.
 struct ShellStateWriter {
+    /// The window slot's layout file (app/workspace_windows/slots.rs).
+    path: std::path::PathBuf,
     pending: std::sync::Mutex<Option<(u64, Vec<u8>)>>,
     wake: std::sync::Condvar,
     written: std::sync::Mutex<u64>,
@@ -229,11 +245,22 @@ impl ShellStateWriter {
         if sequence <= *written {
             return;
         }
-        let path = gpui_workspace_shell_state_path();
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = self.path.parent() {
             let _ = fs::create_dir_all(parent);
         }
-        let _ = fs::write(path, data);
+        let _ = fs::write(&self.path, data);
+        *written = sequence;
+    }
+
+    fn discard(&self) {
+        let sequence = self.next_sequence();
+        if let Ok(mut pending) = self.pending.lock() {
+            *pending = None;
+        }
+        let Ok(mut written) = self.written.lock() else {
+            return;
+        };
+        let _ = fs::remove_file(&self.path);
         *written = sequence;
     }
 
@@ -258,10 +285,21 @@ impl ShellStateWriter {
     }
 }
 
-fn shell_state_writer() -> &'static ShellStateWriter {
-    static WRITER: std::sync::OnceLock<&'static ShellStateWriter> = std::sync::OnceLock::new();
-    WRITER.get_or_init(|| {
+/// One writer per window slot, each with its own thread, kept for the life of the process: slots
+/// are few and a reopened window reuses its slot's writer.
+fn shell_state_writer(slot: u32) -> &'static ShellStateWriter {
+    static WRITERS: std::sync::OnceLock<std::sync::Mutex<HashMap<u32, &'static ShellStateWriter>>> =
+        std::sync::OnceLock::new();
+    let mut writers = WRITERS
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    *writers.entry(slot).or_insert_with(|| {
         let writer: &'static ShellStateWriter = Box::leak(Box::new(ShellStateWriter {
+            path: crate::app::workspace_windows::workspace_window_state_path(
+                gpui_workspace_shell_state_path(),
+                slot,
+            ),
             pending: std::sync::Mutex::new(None),
             wake: std::sync::Condvar::new(),
             written: std::sync::Mutex::new(0),

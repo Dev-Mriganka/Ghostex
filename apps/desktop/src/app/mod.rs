@@ -132,3 +132,4 @@ pub(crate) mod workarea;
 pub(crate) mod workspace_events;
 pub(crate) mod workspace_reconcile;
 pub(crate) mod workspace_terminals;
+pub(crate) mod workspace_windows;

@@ -322,6 +322,10 @@ impl GhostexGpuiApp {
         for (_, mut connection) in self.remote_gxserver_connections.drain() {
             connection.terminate();
         }
-        gpui_stop_all_easy_connect_forwards();
+        // The Easy Connect forwarders are process-wide, shared with another open window's
+        // connection to the same machine (app/workspace_windows/).
+        if self.is_last_workspace_window() {
+            gpui_stop_all_easy_connect_forwards();
+        }
     }
 }

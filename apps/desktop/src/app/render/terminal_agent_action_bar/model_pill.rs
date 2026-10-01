@@ -34,6 +34,7 @@ impl GhostexGpuiApp {
         if !self.terminal_model_menu_available(session_id) {
             return None;
         }
+        let app_id = cx.entity_id();
         let pill = self
             .native_chat_views
             .get(&session_id)
@@ -78,8 +79,10 @@ impl GhostexGpuiApp {
                     cx.listener(move |this, _event: &MouseDownEvent, window, cx| {
                         window.prevent_default();
                         cx.stop_propagation();
-                        let pill =
-                            crate::app::session_chat_model_picker::terminal_model_pill(session_id);
+                        let pill = crate::app::session_chat_model_picker::terminal_model_pill(
+                            cx.entity_id(),
+                            session_id,
+                        );
                         if let Some((bounds, handle)) = pill {
                             this.open_terminal_model_menu(session_id, bounds, handle, cx);
                         }
@@ -116,6 +119,7 @@ impl GhostexGpuiApp {
                     gpui::canvas(
                         move |bounds, window, _| {
                             note_terminal_model_pill(
+                                app_id,
                                 session_id,
                                 bounds,
                                 gpui::Window::window_handle(window),
