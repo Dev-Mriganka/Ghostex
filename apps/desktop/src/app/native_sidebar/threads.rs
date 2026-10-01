@@ -18,8 +18,8 @@ pub(crate) const THREAD_INDENT: f32 = 16.0;
 const COORDINATOR_ICON: &str = "titlebar/users-group.svg";
 const WAITING_COLOR: u32 = 0x95d7f6;
 const COORDINATOR_ROW_ICON: &str = "titlebar/coordinator-crown.svg";
-const COORDINATOR_COLOR_DARK: u32 = 0xb197fc;
-const COORDINATOR_COLOR_LIGHT: u32 = 0x7048e8;
+const COORDINATOR_COLOR_DARK: u32 = 0xffffff;
+const COORDINATOR_COLOR_LIGHT: u32 = 0x000000;
 
 pub(crate) fn thread_depth(session: &NativeSidebarSession) -> f32 {
     session
@@ -92,7 +92,7 @@ pub(crate) fn is_coordinator(session: &NativeSidebarSession) -> bool {
 /// The icon a coordinator row draws in place of its agent's logo.
 ///
 /// CDXC:Coordinators 2026-10-01 DECISION:
-/// User: "please give coordinator agents a different logo in the sidebar of the app (not the agent's app logo)", a cool SVG instead of the Claude icon. A crown in its own violet (the agent logos beside it are brand coloured), bold enough to read at the row's 13px; its threads keep their agent logos. Picked from three drawn variants (hub, crown, commander chevrons).
+/// User: "please give coordinator agents a different logo in the sidebar of the app (not the agent's app logo)", a cool SVG instead of the Claude icon. A crown, bold enough to read at the row's 13px, drawn white on dark themes and black on light ones the way the Codex logo adapts (user: "make the crown white, not purple"), with the row's usual focus and hover dimming; its threads keep their agent logos, and the crew icon with the open-thread count stays beside it.
 pub(crate) fn coordinator_icon(appearance: &SidebarAppearance) -> AnyElement {
     titlebar_svg_icon(
         COORDINATOR_ROW_ICON,

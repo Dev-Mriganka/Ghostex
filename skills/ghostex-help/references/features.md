@@ -1359,7 +1359,7 @@ version of the Projects features in Cursor and Claude Code.
   by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
   it opens in chat. A project can have several coordinators, one per stream of
   work.
-- **Threads in the sidebar**: a coordinator's row shows a violet crown in
+- **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo (on the phone's session list too), and a crew icon
   with the number of open threads (light blue when one waits on you, orange while one
   works), and its threads sit indented right under it with their own status
