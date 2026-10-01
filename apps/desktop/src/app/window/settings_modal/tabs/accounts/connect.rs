@@ -2,6 +2,10 @@
 //! Add / Reconnect account (its login command in the tooltip), then while the sign-in runs its
 //! status, Open sign-in page, Show terminal, Cancel and a sign-in code field, the Codex windows
 //! that stopped it, and the helper's output.
+//!
+//! CDXC:Settings 2026-09-07 DECISION:
+//! Login commands are hidden in Accounts and its tutorial. Click to run login starts the flow; hovering the button reveals the command. This replaces the visible login command boxes and Log in to fix label.
+//! The command stays hidden behind the start button's tooltip, but that button reads Add account or Reconnect account and runs the sign-in inside Settings (server/src/accounts/setup.rs, 2026-09-08 DECISION); React stopped using its Click to run login button (`AccountLoginButton`) on 2026-09-08, well before it was deleted.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::fields::{
     FieldStates, SizedButtonSize, SizedButtonVariant, checkbox_control, settings_sized_button,

@@ -54,6 +54,9 @@ fn ghost_fill(p: &SettingsPalette) -> gpui::Rgba {
 
 impl AccountsTab {
     /// One provider's section.
+    ///
+    /// CDXC:Settings 2026-09-10 DECISION:
+    /// User: the Accounts page is organized like the General page. One Accounts section holds the page-wide rows, and each provider is its own section whose card lists the saved accounts as expandable management rows, with Connection guide and Add account as quiet header actions. Refresh accounts is a quiet header action too, superseding the 2026-09-07 decision that made it a brighter standalone button above the list. The Accounts page uses the General page's section cards and rows; account-specific chrome is limited to the identity figures, the status caption, and inset form blocks.
     pub(crate) fn render_provider_section(
         &mut self,
         p: &SettingsPalette,
@@ -295,6 +298,7 @@ impl AccountsTab {
                         })),
                 )
         };
+        // CDXC:AgentProviders 2026-09-09 DECISION: User: put the account-switching status before the titlebar star, label it Automatic or Manual, and explain the meaning through an adjacent info tooltip.
         let status: AnyElement = if account.status() == "ready" {
             let (label, tip) = if account.eligible() {
                 (
@@ -325,6 +329,8 @@ impl AccountsTab {
                 )
                 .into_any_element()
         } else {
+            // CDXC:Settings 2026-09-07 DECISION: A saved account with missing credentials shows the reason and a Click to run login button directly in the account row. Repairing its login is available before consenting to shared conversations; adding it still requires that consent.
+            // The row shows the reason and this Reconnect button, which opens the editor's in-Settings sign-in (as React did from 2026-09-08); there is no Click to run login text.
             let id = id.clone();
             settings_sized_button(
                 p,
@@ -593,6 +599,10 @@ impl AccountsTab {
     }
 
     /// `DefaultAccountRow`: the automatic rules, then each saved account.
+    ///
+    /// CDXC:AgentProviders 2026-09-11 DECISION:
+    /// User: the row lists the automatic rules first, Auto (recommended) on top as the default, then each saved account so one specific account can be pinned instead. Choices saved before these rules existed migrate to Auto.
+    /// SEE-ALSO: server/src/accounts/default_account.rs.
     #[allow(clippy::too_many_arguments)]
     fn render_default_account_row(
         &mut self,
@@ -662,6 +672,9 @@ impl AccountsTab {
     }
 
     /// `PolicySettingRows`.
+    ///
+    /// CDXC:Settings 2026-09-10 DECISION:
+    /// User: on the Accounts page the auto-continue policy renders as ordinary setting rows (switch, segmented control, dropdown), matching the General page, instead of the stacked form the session popover keeps in PolicyControls.
     fn render_policy_rows(
         &mut self,
         p: &SettingsPalette,

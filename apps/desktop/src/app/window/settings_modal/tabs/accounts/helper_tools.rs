@@ -3,12 +3,9 @@
 //! Uninstall icon buttons whose tooltips carry the versions, a confirmation before Uninstall, a
 //! poll while one runs, and its result as a toast.
 //!
-//! CDXC:AgentProviders 2026-09-28 DECISION (see the React twin): each provider's helper gets these
-//! three icon buttons, with update checking like the Trycua row, and Uninstall asks first.
-//!
-//! CDXC:ManagedTools 2026-09-29 SEE-ALSO: `AccountHelperInstallButton` (accounts/helper-tools.tsx (deleted 2026-10-01))
-//! holds the user's "1 click installs it for them" decision; `render_helper_install_button` is its
-//! twin, used by the helper row, the Add account flow (manager.rs) and the guide (guide.rs).
+//! CDXC:AgentProviders 2026-09-28 DECISION:
+//! User: each provider on the Accounts page gets icon buttons with tooltips to update, reinstall and uninstall its account helper (Claude Swap, Codex Swap), with update checking like the Trycua row: an Update button when a newer release exists, otherwise an "up to date, click to check again" button, and versions in the tooltips. Uninstall asks first.
+//! SEE-ALSO: server/src/accounts/helper_tools.rs, the Trycua row (Desktop control) in tabs/integrations.rs.
 use super::super::super::fields::{
     ListItemStatus, SizedButtonSize, SizedButtonVariant, settings_list_item, settings_sized_button,
     settings_square_button, tooltip_text,
@@ -281,6 +278,10 @@ impl AccountsTab {
     /// `AccountHelperInstallButton` without its copy-command fallback (callers keep theirs):
     /// Install with gxserver's plan as the tooltip, or the running install. `None` when gxserver
     /// cannot install the helper.
+    ///
+    /// CDXC:ManagedTools 2026-09-29 DECISION:
+    /// User: "when they click on something, we help them install it on windows/macos/linux automatically (show a button with a tooltip explaining how we'll install) but 1 click installs it for them as much as possible". A missing Claude Swap or Codex Swap is one Install button whose tooltip is gxserver's `installPlan`; the job runs on the computer the accounts belong to. Supersedes the copyable install command the Accounts page, the Add account flow and the connection guide showed, which stays only for a computer whose gxserver cannot install helpers yet.
+    /// SEE-ALSO: server/src/accounts/helper_tools.rs (`install_plan`, `Work::UvInstall`); used by the helper row, the Add account flow (manager.rs) and the guide (guide.rs).
     pub(crate) fn render_helper_install_button(
         &mut self,
         p: &SettingsPalette,

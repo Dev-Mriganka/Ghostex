@@ -216,6 +216,9 @@ impl Account {
     }
 
     /// `accountFigures`: the two small figures beside the logo, each with its tooltip label.
+    ///
+    /// CDXC:AgentProviders 2026-09-08 DECISION:
+    /// User: Codex account badges show the five-hour percentage on the second line when that limit exists; otherwise show available resets as "2rs" or "0rs". Use the main account windows so Spark's separate five-hour limit does not stand in for an absent account limit. Claude figures are the two tightest of weekly, five-hour, and Fable (see `headline_windows`).
     pub(crate) fn figures(&self) -> [(Option<String>, String); 2] {
         let windows = self.headline_windows();
         let first = windows.first();
