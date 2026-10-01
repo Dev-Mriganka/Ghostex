@@ -3702,7 +3702,9 @@ impl TerminalElement {
     ) -> Option<(gpui::ShaderEffect, f32)> {
         use crate::terminal_shaders::{ShaderAnimation, ShaderCursor};
 
-        if !window.supports_shader_effects() {
+        // Every terminal paints through here on every frame; with shaders off
+        // (the default) leave before touching the window or leasing the view.
+        if self.terminal.read(cx).settings.shaders.is_none() || !window.supports_shader_effects() {
             return None;
         }
         let canvas = window.shader_effect_size(bounds);

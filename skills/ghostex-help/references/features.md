@@ -1214,19 +1214,15 @@ Terminal background (Settings, Terminal) is Black / white by default: pure black
 behind dark terminals and pure white behind light ones. Choose Follow theme to use
 the theme's background color instead, or Custom color to pick your own for dark mode.
 
-On macOS, Custom shaders (experimental) applies the `custom-shader` files from
-your Ghostty config, in their configured order, to terminal panes. It is at the
-bottom of the Terminal settings section, visible only with Enable Experimental
-Features on, and marked with a flask icon. The info tooltip lists platform
-support: Apple Silicon macOS tested, Intel Mac rendering unvalidated, Windows
-and Linux unsupported. The ordinary
-renderer remains the default. With shaders enabled, the grid uses the Ghostty
-background color and opacity instead of the ordinary Black / white or Custom
-background override. Turn the switch off to restore ordinary pixels
-without restarting sessions. Shader animation follows Ghostty's setting; hidden
-terminals do not animate. A shader translation failure restores ordinary rendering. A Metal pipeline
-compilation failure can retain an unshaded capture with the Ghostty background
-until Custom shaders is turned off.
+On macOS, Custom shaders (experimental) runs the `custom-shader` files from your
+Ghostty config over Ghostex's terminal panes, in the order the config lists them.
+Turn on Enable Experimental Features (Settings, Advanced) to see it at the bottom of
+the Terminal section. While it is on, terminals use the background color and
+opacity from your Ghostty config, so Terminal background and its color are greyed
+out. Shader animation follows Ghostty's `custom-shader-animation`. Turn the switch
+off to go back to normal rendering; running sessions keep going. If a shader file
+does not compile, terminals keep their normal look. Windows and Linux are not
+supported yet.
 
 Terminal links (`ghostex://terminal`) without a folder open in the active local
 project. A folder supplied in the link takes precedence.
@@ -1235,8 +1231,7 @@ Related settings: `terminalFontFamily`, `terminalFontSize`,
 `terminalGhosttyTheme`, `terminalColorScheme`, `terminalGhosttyLightTheme`,
 `terminalBackgroundMode`, `workspaceBackgroundColor`, `terminalCursorStyle`, `terminalPane*PaddingPx`,
 `terminalScrollbackLimitMb`, `terminalCopyOnSelect`, `promptEditorBackend`,
-`terminalDevServerDetectionEnabled`.
-Shader setting: `terminalShadersEnabled`.
+`terminalDevServerDetectionEnabled`, `terminalShadersEnabled`.
 
 ## Agents, actions, and orchestration
 
