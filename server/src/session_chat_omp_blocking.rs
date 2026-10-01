@@ -15,10 +15,9 @@ prompt input is unavailable while OMP presents any of these terminal states:
 
 OMP's standard inline and fullscreen surfaces use `OverlayPanel`/overlay-box:
 a rounded `╭ ... ╮` through `╰ ... ╯` frame with stable titles or action
-footers. The normal composer is also rounded, so frames carrying OMP's `π`,
-`⬢`, and `◒` composer header are explicitly excluded. A later live composer
-header retires an earlier match, preventing a dismissed selector left in
-scrollback from keeping chat blocked. Unframed states require paired, exact UI
+footers. The normal composer is also rounded, so the live composer's own frame
+is excluded, and a live composer below a match retires it, preventing a
+dismissed selector left in scrollback from keeping chat blocked. Unframed states require paired, exact UI
 evidence, never a generic word such as "Settings", "Ask", or "paused" alone.
 
 Extensions may supply arbitrary `ui.custom` components or replace the editor
@@ -87,19 +86,14 @@ fn is_horizontal_rule(line: &str) -> bool {
             .all(|character| matches!(character, '\u{2500}' | '-' | '_'))
 }
 
-fn is_omp_composer_head(line: &str) -> bool {
-    is_rounded_top(line)
-        && line.contains('\u{03c0}')
-        && line.contains('\u{2b22}')
-        && line.contains('\u{25d2}')
-}
-
-fn latest_omp_composer_head(lines: &[String]) -> Option<usize> {
-    lines.iter().rposition(|line| is_omp_composer_head(line))
+/// CDXC:AgentScreenDetection 2026-10-01 WHY:
+/// The composer used to be recognised by the `π`, `⬢` and `◒` in its statusline border, which OMP's Nerd Font symbol preset never draws, so a dismissed dialog kept blocking sends. It is found by its frame instead, the same shape composer readiness reads (`omp_input_region`).
+fn omp_composer_head(lines: &[String]) -> Option<usize> {
+    crate::session_chat_composer::omp_composer_head_row(lines)
 }
 
 fn composer_after(lines: &[String], evidence: usize) -> bool {
-    latest_omp_composer_head(lines).is_some_and(|composer| composer > evidence)
+    omp_composer_head(lines).is_some_and(|composer| composer > evidence)
 }
 
 fn rounded_frames(lines: &[String]) -> Vec<(usize, usize)> {
@@ -307,7 +301,7 @@ fn live_unframed(
 }
 
 fn classify_rounded_frame(lines: &[String], start: usize, end: usize) -> Option<OmpBlockingScreen> {
-    if is_omp_composer_head(&lines[start]) || composer_after(lines, end) {
+    if omp_composer_head(lines) == Some(start) || composer_after(lines, end) {
         return None;
     }
     let title = frame_title(&lines[start]);

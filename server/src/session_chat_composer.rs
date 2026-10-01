@@ -65,6 +65,11 @@ pub(crate) fn hermes_composer_row(screen_text: &str) -> Option<usize> {
     input::hermes_input_region(&raw_lines).map(|region| region.start)
 }
 
+/// The row OMP's live box composer's `╭` top border sits on, found by the frame shape `omp_input_region` reads, or `None` when it is not on screen.
+pub(crate) fn omp_composer_head_row(lines: &[String]) -> Option<usize> {
+    input::omp_input_region(lines).map(|region| region.start - 1)
+}
+
 /// Non-blank lines kept from the bottom of a capture. Wide enough to hold
 /// opencode's mid-screen composer plus the banner above it on an 80x24 pane,
 /// and to hold gemini's full-height dialogs without the composer scan running
