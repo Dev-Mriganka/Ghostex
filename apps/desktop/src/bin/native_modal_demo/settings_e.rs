@@ -166,6 +166,17 @@ fn ghostex_cli_status(state: &str) -> Value {
         "cuaDriverScreenRecordingPermissionGranted": permissions_granted,
         "cuaDriverUpdateAvailable": update_available,
         "cuaDriverVersion": "0.23.2",
+        "spaceoAccessibilityPermissionGranted": permissions_granted,
+        "spaceoDaemonRunning": driver_installed,
+        "spaceoInstallCommand": "curl -fsSL https://raw.githubusercontent.com/ParthJadhav/SpaceO/main/install.sh | bash -s -- --no-clients",
+        "spaceoInstalled": driver_installed,
+        "spaceoLatestVersion": if update_available { "1.0.6" } else { "1.0.5" },
+        "spaceoPermissionApp": "spaceo (/Users/you/.local/bin/spaceo)",
+        "spaceoScreenRecordingPermissionGranted": permissions_granted,
+        "spaceoSkillInstalled": skills,
+        "spaceoSupported": true,
+        "spaceoUpdateAvailable": update_available,
+        "spaceoVersion": "1.0.5",
         "detail": "Ghostex CLI is installed automatically with the app.",
         "generateTitleSkillInstalled": false,
         "generatedAt": "2026-05-27T04:17:00.000Z",
@@ -217,7 +228,9 @@ pub(super) fn answers(message: &Value) -> Vec<Value> {
             "requestGhostexCliStatus"
             | "installGhostexCli"
             | "checkCuaDriverUpdate"
-            | "reinstallCuaDriver",
+            | "reinstallCuaDriver"
+            | "checkSpaceoUpdate"
+            | "reinstallSpaceo",
         ) => vec![ghostex_cli_status(state)],
         Some("pickWindowGlassImageFile") => vec![json!({
             "appearance": message.get("appearance").cloned().unwrap_or(json!("dark")),

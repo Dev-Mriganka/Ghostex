@@ -56,6 +56,8 @@ above. Route to a specialized skill only when its domain applies:
 - Use `$ghostex-embedded-browser-use` for browser panes inside Ghostex.
 - Use `$ghostex-browser-use` for supported external browser page content.
 - Use `$ghostex-computer-use` for native desktop application control.
+- Use `$ghostex-spaceo` to drive Mac apps on SpaceO's hidden virtual displays,
+  out of the user's way.
 - Use `$ghostex-manage-beads` for Project Board bead workflows through the
   machine-installed `bd` CLI.
 - Use `$ghostex-agents` when launching, messaging, reading,

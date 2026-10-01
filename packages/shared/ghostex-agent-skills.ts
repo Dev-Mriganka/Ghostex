@@ -4,6 +4,7 @@ export type BundledGhostexAgentSkillId =
   | 'browserUse'
   | 'embeddedBrowserUse'
   | 'computerUse'
+  | 'spaceo'
   | 'agentsOrchestration'
   | 'manageBeads'
   | 'generateTitle'
@@ -23,6 +24,10 @@ export type BundledGhostexAgentSkill = {
    * try to use it.
    */
   requiresCuaDriver?: boolean;
+  /** Skills that drive apps on SpaceO's virtual displays need SpaceO installed first. */
+  requiresSpaceo?: boolean;
+  /** Skills for tools that only run on macOS; the install surfaces hide them elsewhere. */
+  macOSOnly?: boolean;
   /**
    * CDXC:AgentSkills 2026-08-24:
    * Some bundled skills stay installable through the CLI (and keep working when
@@ -42,6 +47,9 @@ export type BundledGhostexAgentSkill = {
  * prerequisite reads as one product the user installs once.
  */
 export const GHOSTEX_TRYCUA_PRODUCT_NAME = 'Fast Computer Use';
+
+/** The product name Settings shows for SpaceO (github.com/ParthJadhav/SpaceO). */
+export const GHOSTEX_SPACEO_PRODUCT_NAME = 'SpaceO';
 
 /**
  * CDXC:AgentSkills 2026-05-31-09:18:
@@ -90,6 +98,17 @@ export const BUNDLED_GHOSTEX_AGENT_SKILLS: readonly BundledGhostexAgentSkill[] =
     name: 'Ghostex Computer Use',
     requiresCuaDriver: true,
     skillName: 'ghostex-computer-use',
+    tier: 'recommended',
+  },
+  {
+    command: 'ghostex spaceo install-skill',
+    description:
+      'Let agents use Mac apps on their own hidden screen: SpaceO opens apps on a virtual display, so agents click, type and take screenshots there while you keep your own screen, pointer and focus. Needs SpaceO, an Apple Silicon Mac and macOS 14 or later.',
+    id: 'spaceo',
+    macOSOnly: true,
+    name: 'Ghostex SpaceO',
+    requiresSpaceo: true,
+    skillName: 'ghostex-spaceo',
     tier: 'recommended',
   },
   {

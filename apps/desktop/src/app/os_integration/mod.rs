@@ -17,5 +17,6 @@ pub(crate) mod keep_awake_core;
 pub(crate) mod keep_awake_lid_sleep;
 pub(crate) mod managed_tool_terminal;
 pub(crate) mod notifications_and_portless;
+pub(crate) mod spaceo;
 pub(crate) mod toast_and_status_dispatch;
 pub(crate) mod updater;

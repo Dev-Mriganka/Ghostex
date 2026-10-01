@@ -18,6 +18,7 @@ pub(crate) fn gpui_bundled_agent_skill_name(skill_id: &str) -> Option<&'static s
     match skill_id {
         "browserUse" => Some("ghostex-browser-use"),
         "computerUse" => Some("ghostex-computer-use"),
+        "spaceo" => Some("ghostex-spaceo"),
         "embeddedBrowserUse" => Some("ghostex-embedded-browser-use"),
         "cli" => Some("ghostex-cli"),
         "help" => Some("ghostex-help"),

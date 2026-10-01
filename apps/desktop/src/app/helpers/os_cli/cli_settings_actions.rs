@@ -6,6 +6,7 @@ pub(crate) enum GpuiGhostexCliSettingsAction {
     InstallBrowserControl,
     InstallBrowserUseSkill,
     InstallComputerUseSkill,
+    InstallSpaceoSkill,
     InstallCliSkill,
     InstallAgentsOrchestrationSkill,
     InstallManageBeadsSkill,
@@ -19,6 +20,13 @@ pub(crate) enum GpuiGhostexCliSettingsAction {
     FinishTrycuaUninstall {
         succeeded: bool,
     },
+    FinishSpaceoSetup {
+        installed: bool,
+        was_update: bool,
+    },
+    FinishSpaceoUninstall {
+        succeeded: bool,
+    },
     UninstallBundledAgentSkill(&'static str),
     UninstallBundledAgentSkills,
 }
@@ -30,6 +38,7 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallBrowserControl => "installBrowserControl",
             Self::InstallBrowserUseSkill => "installBrowserUseSkill",
             Self::InstallComputerUseSkill => "installComputerUseSkill",
+            Self::InstallSpaceoSkill => "installSpaceoSkill",
             Self::InstallCliSkill => "installCliSkill",
             Self::InstallAgentsOrchestrationSkill => "installAgentsOrchestrationSkill",
             Self::InstallManageBeadsSkill => "installManageBeadsSkill",
@@ -38,6 +47,8 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallHelpSkill => "installHelpSkill",
             Self::FinishDesktopControlSetup { .. } => "installCuaDriver",
             Self::FinishTrycuaUninstall { .. } => "uninstallCuaDriver",
+            Self::FinishSpaceoSetup { .. } => "installSpaceo",
+            Self::FinishSpaceoUninstall { .. } => "uninstallSpaceo",
             Self::UninstallBundledAgentSkill(_) => "uninstallBundledAgentSkill",
             Self::UninstallBundledAgentSkills => "uninstallBundledAgentSkills",
         }
@@ -49,6 +60,7 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallBrowserControl => "Ghostex Embedded Browser Use installed",
             Self::InstallBrowserUseSkill => "Ghostex Browser Use installed",
             Self::InstallComputerUseSkill => "Ghostex Computer Use installed",
+            Self::InstallSpaceoSkill => "Ghostex SpaceO installed",
             Self::InstallCliSkill => "Ghostex CLI skill installed",
             Self::InstallAgentsOrchestrationSkill => "Ghostex Agents installed",
             Self::InstallManageBeadsSkill => "Ghostex Manage Beads installed",
@@ -60,6 +72,11 @@ impl GpuiGhostexCliSettingsAction {
             } => "Fast Computer Use updated",
             Self::FinishDesktopControlSetup { .. } => "Desktop Control installed",
             Self::FinishTrycuaUninstall { .. } => "Fast Computer Use uninstalled",
+            Self::FinishSpaceoSetup {
+                was_update: true, ..
+            } => "SpaceO updated",
+            Self::FinishSpaceoSetup { .. } => "SpaceO installed",
+            Self::FinishSpaceoUninstall { .. } => "SpaceO uninstalled",
             Self::UninstallBundledAgentSkill(_) => "Agent skill uninstalled",
             Self::UninstallBundledAgentSkills => "Bundled agent skills uninstalled",
         }
@@ -71,6 +88,7 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallBrowserControl => "Ghostex Embedded Browser Use install failed",
             Self::InstallBrowserUseSkill => "Ghostex Browser Use install failed",
             Self::InstallComputerUseSkill => "Ghostex Computer Use install failed",
+            Self::InstallSpaceoSkill => "Ghostex SpaceO install failed",
             Self::InstallCliSkill => "Ghostex CLI skill install failed",
             Self::InstallAgentsOrchestrationSkill => "Ghostex Agents install failed",
             Self::InstallManageBeadsSkill => "Ghostex Manage Beads install failed",
@@ -82,6 +100,11 @@ impl GpuiGhostexCliSettingsAction {
             } => "Fast Computer Use update failed",
             Self::FinishDesktopControlSetup { .. } => "Desktop Control setup incomplete",
             Self::FinishTrycuaUninstall { .. } => "Fast Computer Use uninstall failed",
+            Self::FinishSpaceoSetup {
+                was_update: true, ..
+            } => "SpaceO update failed",
+            Self::FinishSpaceoSetup { .. } => "SpaceO setup incomplete",
+            Self::FinishSpaceoUninstall { .. } => "SpaceO uninstall failed",
             Self::UninstallBundledAgentSkill(_) => "Bundled agent skill uninstall failed",
             Self::UninstallBundledAgentSkills => "Bundled agent skill uninstall failed",
         }
@@ -148,6 +171,13 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
                 action,
                 &["computer-use", "install-skill"],
                 "Ghostex Computer Use",
+            )
+        }
+        GpuiGhostexCliSettingsAction::InstallSpaceoSkill => {
+            gpui_install_bundled_ghostex_skill_action(
+                action,
+                &["spaceo", "install-skill"],
+                "Ghostex SpaceO",
             )
         }
         GpuiGhostexCliSettingsAction::InstallCliSkill => {
@@ -219,6 +249,27 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
                     .to_string(),
             )
         }
+        GpuiGhostexCliSettingsAction::FinishSpaceoSetup {
+            installed,
+            was_update,
+        } => match gpui_finish_spaceo_setup(installed, was_update) {
+            Ok(message) => GpuiGhostexCliActionResult::success(action, message),
+            Err(message) => GpuiGhostexCliActionResult::failure(action, message),
+        },
+        GpuiGhostexCliSettingsAction::FinishSpaceoUninstall { succeeded: true } => {
+            GpuiGhostexCliActionResult::success(
+                action,
+                "SpaceO was removed. Its Accessibility and Screen Recording permissions were kept for a later reinstall."
+                    .to_string(),
+            )
+        }
+        GpuiGhostexCliSettingsAction::FinishSpaceoUninstall { succeeded: false } => {
+            GpuiGhostexCliActionResult::failure(
+                action,
+                "The SpaceO uninstaller did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                    .to_string(),
+            )
+        }
         GpuiGhostexCliSettingsAction::UninstallBundledAgentSkill(skill_name) => {
             match gpui_uninstall_bundled_agent_skill(skill_name) {
                 Ok(true) => GpuiGhostexCliActionResult::success(
@@ -276,21 +327,11 @@ pub(crate) const GPUI_TRYCUA_UNINSTALL_COMMAND: &str =
 pub(crate) const GPUI_CUA_DRIVER_START_COMMAND: &str =
     "/usr/bin/open -n -g -a CuaDriver --args serve";
 
-/// What a Trycua button runs: a script for the background job (bash, or Windows PowerShell), and
-/// how its completion is reported.
-pub(crate) struct GpuiCuaDriverCommandAction {
-    pub(crate) script: String,
-    /// `install`, `update`, `reinstall` or `uninstall` (`cuaDriverJob.operation`).
-    pub(crate) operation: &'static str,
-    pub(crate) running_message: &'static str,
-    pub(crate) toast_title: &'static str,
-}
-
-pub(crate) fn gpui_cua_driver_command_action() -> GpuiCuaDriverCommandAction {
+pub(crate) fn gpui_cua_driver_command_action() -> GpuiInstallJobAction {
     #[cfg(target_os = "macos")]
     if let Some(cua_driver_path) = gpui_cua_driver_executable_path() {
         let executable = gpui_shell_single_quote_path(&cua_driver_path);
-        return GpuiCuaDriverCommandAction {
+        return GpuiInstallJobAction {
             script: format!(
                 "{executable} check-update --no-cache && {executable} update --apply && {GPUI_CUA_DRIVER_START_COMMAND}"
             ),
@@ -305,8 +346,8 @@ pub(crate) fn gpui_cua_driver_command_action() -> GpuiCuaDriverCommandAction {
 
 /// Reinstall runs the official installer even when Trycua is present, so its
 /// exit finishes Desktop Control setup exactly like a first install.
-pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiCuaDriverCommandAction {
-    GpuiCuaDriverCommandAction {
+pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiInstallJobAction {
+    GpuiInstallJobAction {
         operation: "reinstall",
         running_message: GPUI_CUA_DRIVER_REINSTALL_RUNNING_MESSAGE,
         toast_title: "Reinstalling Fast Computer Use",
@@ -314,8 +355,8 @@ pub(crate) fn gpui_cua_driver_reinstall_command_action() -> GpuiCuaDriverCommand
     }
 }
 
-pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiCuaDriverCommandAction {
-    GpuiCuaDriverCommandAction {
+pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiInstallJobAction {
+    GpuiInstallJobAction {
         script: GPUI_TRYCUA_UNINSTALL_COMMAND.to_string(),
         operation: "uninstall",
         running_message: GPUI_CUA_DRIVER_UNINSTALL_RUNNING_MESSAGE,
@@ -323,13 +364,13 @@ pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiCuaDriverCommand
     }
 }
 
-fn gpui_cua_driver_installer_command_action() -> GpuiCuaDriverCommandAction {
+fn gpui_cua_driver_installer_command_action() -> GpuiInstallJobAction {
     #[cfg(target_os = "macos")]
     let script = format!("{GPUI_TRYCUA_INSTALL_COMMAND} && {GPUI_CUA_DRIVER_START_COMMAND}");
     #[cfg(not(target_os = "macos"))]
     let script = GPUI_TRYCUA_INSTALL_COMMAND.to_string();
 
-    GpuiCuaDriverCommandAction {
+    GpuiInstallJobAction {
         script,
         operation: "install",
         running_message: GPUI_CUA_DRIVER_INSTALL_RUNNING_MESSAGE,

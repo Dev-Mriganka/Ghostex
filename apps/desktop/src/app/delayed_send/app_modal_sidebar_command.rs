@@ -723,6 +723,24 @@ impl GhostexGpuiApp {
             "checkCuaDriverUpdate" => {
                 self.check_gpui_cua_driver_update(cx);
             }
+            "installSpaceoSkill" => {
+                self.run_gpui_ghostex_cli_settings_action(
+                    GpuiGhostexCliSettingsAction::InstallSpaceoSkill,
+                    cx,
+                );
+            }
+            "installSpaceo" => {
+                self.handle_gpui_spaceo_install_or_update(window, cx);
+            }
+            "reinstallSpaceo" => {
+                self.handle_gpui_spaceo_reinstall(window, cx);
+            }
+            "uninstallSpaceo" => {
+                self.handle_gpui_spaceo_uninstall(window, cx);
+            }
+            "checkSpaceoUpdate" => {
+                self.check_gpui_spaceo_update(cx);
+            }
             "runManagedToolTerminalCommand" => {
                 if let Some(tool_id) = command.get("toolId").and_then(serde_json::Value::as_str) {
                     self.run_managed_tool_terminal_command(tool_id.to_string(), window, cx);

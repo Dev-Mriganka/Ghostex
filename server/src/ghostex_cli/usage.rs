@@ -457,6 +457,10 @@ pub fn usage() -> String {
             "Show Ghostex Computer Use skill setup for Cua Driver",
         ),
         format_help_command(
+            "spaceo --help",
+            "Show Ghostex SpaceO skill setup for driving Mac apps on SpaceO's virtual displays",
+        ),
+        format_help_command(
             "cli --help",
             "Show general Ghostex CLI discovery and agent skill setup",
         ),
@@ -639,8 +643,8 @@ Specialized workflows:
   Everyday Ghostex work (sessions, orchestration, automations, quick actions,
   chat queues, prompt history, server, diagnostics) is covered by ghostex --help
   and the focused help pages. Use $ghostex-embedded-browser-use,
-  $ghostex-browser-use, $ghostex-computer-use, $ghostex-manage-beads,
-  $ghostex-agents, $ghostex-auto-rename-session, or
+  $ghostex-browser-use, $ghostex-computer-use, $ghostex-spaceo,
+  $ghostex-manage-beads, $ghostex-agents, $ghostex-auto-rename-session, or
   $ghostex-move-codex-session when their domain applies. Use $ghostex-help to
   explain how a Ghostex feature works or to change an app setting for the user
   (ghostex guide, ghostex settings).
@@ -1244,6 +1248,32 @@ Desktop Control requirements:
 Boundary:
   Use $ghostex-computer-use for native macOS apps.
   Use $ghostex-browser-use for supported external browser page content.
+  Use $ghostex-embedded-browser-use and gx browser --help for embedded Ghostex browser panes.
+"
+    .to_string()
+}
+
+pub fn spaceo_usage() -> String {
+    "Ghostex SpaceO - install the agent skill for driving Mac apps on SpaceO's virtual displays
+
+Usage:
+  gx spaceo --help
+  gx spaceo install-skill [--json]
+
+Agent skill:
+  Use $ghostex-spaceo when a task needs a native Mac app or a Chromium page
+  driven out of the user's way. SpaceO opens the app on a headless virtual
+  display, so the agent clicks, types and takes screenshots there while the
+  user keeps their own screen, pointer and focus.
+
+Requirements:
+  An Apple Silicon Mac with macOS 14 or later. Install SpaceO from
+  Settings > Integrations, then turn on Accessibility and Screen Recording for
+  the app SpaceO names there. `spaceo doctor` checks the Mac without changing it.
+
+Boundary:
+  Use $ghostex-spaceo for Mac apps that should run off-screen.
+  Use $ghostex-computer-use to drive apps on the user's own screen.
   Use $ghostex-embedded-browser-use and gx browser --help for embedded Ghostex browser panes.
 "
     .to_string()

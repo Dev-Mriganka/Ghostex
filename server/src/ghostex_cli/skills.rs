@@ -19,6 +19,7 @@ builds install the skill version that matches their CLI commands.
 const GHOSTEX_BROWSER_SKILL_NAME: &str = "ghostex-browser-use";
 const GHOSTEX_EMBEDDED_BROWSER_SKILL_NAME: &str = "ghostex-embedded-browser-use";
 const GHOSTEX_COMPUTER_USE_SKILL_NAME: &str = "ghostex-computer-use";
+const GHOSTEX_SPACEO_SKILL_NAME: &str = "ghostex-spaceo";
 const GHOSTEX_CLI_SKILL_NAME: &str = "ghostex-cli";
 const GHOSTEX_MANAGE_BEADS_SKILL_NAME: &str = "ghostex-manage-beads";
 const GHOSTEX_AGENTS_ORCHESTRATION_SKILL_NAME: &str = "ghostex-agents";
@@ -338,6 +339,24 @@ pub fn install_computer_use_skill_command(args: &[String]) -> CliResult<()> {
         "cua-driver",
         &["GHOSTEX_COMPUTER_USE_SKILL_SOURCE"],
         GHOSTEX_COMPUTER_USE_SKILL_NAME,
+    )
+}
+
+pub fn spaceo_command(args: &[String]) -> CliResult<()> {
+    skill_surface_command(
+        args,
+        &usage::spaceo_usage(),
+        "spaceo",
+        &install_spaceo_skill_command,
+    )
+}
+
+pub fn install_spaceo_skill_command(args: &[String]) -> CliResult<()> {
+    install_ghostex_agent_skill(
+        args,
+        "spaceo help",
+        &["GHOSTEX_SPACEO_SKILL_SOURCE"],
+        GHOSTEX_SPACEO_SKILL_NAME,
     )
 }
 

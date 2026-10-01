@@ -145,6 +145,7 @@ pub(crate) fn gpui_native_resource_is_user_runtime_process(
         "codex",
         "code-server",
         "computer-use",
+        "spaceo",
         "chrome-devtools",
         "devtools",
     ]
@@ -474,6 +475,7 @@ pub(crate) const GPUI_BUNDLED_GHOSTEX_AGENT_SKILL_NAMES: &[&str] = &[
     "ghostex-browser-use",
     "ghostex-embedded-browser-use",
     "ghostex-computer-use",
+    "ghostex-spaceo",
     "ghostex-cli",
     "ghostex-help",
     "ghostex-agents",

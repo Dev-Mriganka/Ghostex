@@ -169,7 +169,12 @@ export type SidebarToExtensionMessage =
         | 'installCuaDriver'
         | 'reinstallCuaDriver'
         | 'uninstallCuaDriver'
-        | 'checkCuaDriverUpdate';
+        | 'checkCuaDriverUpdate'
+        | 'installSpaceoSkill'
+        | 'installSpaceo'
+        | 'reinstallSpaceo'
+        | 'uninstallSpaceo'
+        | 'checkSpaceoUpdate';
     }
   | {
       /**

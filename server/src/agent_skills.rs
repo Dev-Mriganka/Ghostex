@@ -16,6 +16,7 @@ pub const GHOSTEX_AGENT_SKILL_NAMES: &[&str] = &[
     "ghostex-browser-use",
     "ghostex-embedded-browser-use",
     "ghostex-computer-use",
+    "ghostex-spaceo",
     "ghostex-cli",
     "ghostex-manage-beads",
     "ghostex-agents",

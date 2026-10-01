@@ -199,6 +199,32 @@ export type SidebarGhostexCliStatusMessage = {
   cuaDriverScreenRecordingPermissionGranted?: boolean;
   cuaDriverUpdateAvailable?: boolean;
   cuaDriverVersion?: string;
+  /**
+   * SpaceO (github.com/ParthJadhav/SpaceO), the macOS-only counterpart of Cua Driver: agents drive
+   * apps on its virtual displays. Hosts that cannot run it (Windows, Linux, Intel Macs, macOS
+   * before 14) send `spaceoSupported: false` and no other SpaceO field.
+   */
+  spaceoSupported?: boolean;
+  spaceoInstalled?: boolean;
+  spaceoPath?: string;
+  spaceoVersion?: string;
+  spaceoLatestVersion?: string;
+  spaceoUpdateAvailable?: boolean;
+  /** The exact command the host's Install SpaceO button runs, like `cuaDriverInstallCommand`. */
+  spaceoInstallCommand?: string;
+  /** Tooltip for Install, Update and Reinstall SpaceO: exactly what one click runs. */
+  spaceoInstallPlan?: string;
+  /** The SpaceO install, update, reinstall or uninstall the desktop app is running (or last ran). */
+  spaceoJob?: SidebarSpaceoJob | null;
+  /** Whether SpaceO's background daemon answered; its grants are unknown while it is not running. */
+  spaceoDaemonRunning?: boolean;
+  /** The app macOS attributes the daemon's Accessibility and Screen Recording grants to. */
+  spaceoPermissionApp?: string;
+  spaceoAccessibilityPermissionGranted?: boolean;
+  spaceoScreenRecordingPermissionGranted?: boolean;
+  spaceoPermissionDetail?: string;
+  spaceoSkillInstalled?: boolean;
+  spaceoSkillPath?: string;
   detail: string;
   generatedAt: string;
   ghostexPath?: string;
@@ -215,6 +241,9 @@ export type SidebarCuaDriverJob = {
   output: string;
   error?: string | null;
 };
+
+/** SpaceO's install job has the same shape as Trycua's. */
+export type SidebarSpaceoJob = SidebarCuaDriverJob;
 
 /** The last non-empty line a running Trycua job printed, for a one-line progress label. */
 export function sidebarCuaDriverJobProgressLine(job: SidebarCuaDriverJob | null | undefined): string | undefined {
