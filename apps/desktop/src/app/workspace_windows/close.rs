@@ -2,12 +2,20 @@
 //! the quit path (main.rs).
 //!
 //! CDXC:AppWindows 2026-10-01 WHY:
-//! A closed window is gone for good (its slot is forgotten), so what only it held goes with it: its Commands panel and Terminal view shells are closed in gxserver rather than left running where no window shows them, and its Delayed Sends are cancelled. The window asks first when it holds either. Agent sessions are untouched: they live in gxserver and every window's sidebar lists them. Its terminals detach their zmx clients with terminal sync stopped, so the detach is not read as the sessions exiting (`GPUI_APP_QUIT_IN_PROGRESS` does the same for a quit).
+//! A closed window is gone for good (its slot is forgotten), so what only it held goes with it: its Commands panel and Terminal view shells are closed in gxserver, and a remote Action tab's session is closed on its machine, rather than left running where no window shows them; its Delayed Sends are cancelled. The window asks first when it holds any of them, and a remote close goes down another window's tunnel to that machine when there is one, else down this window's own, which is why the window waits for those closes (a few seconds at most) before its tunnels go. Agent sessions are untouched: they live in gxserver and every window's sidebar lists them. A hand-started Keep Awake moves to the window that takes over. Its terminals detach their zmx clients with terminal sync stopped, so the detach is not read as the sessions exiting (`GPUI_APP_QUIT_IN_PROGRESS` does the same for a quit).
 
-use gpui::{AnyWindowHandle, App, Context, WeakEntity, Window};
+use std::time::Duration;
 
-use super::registry::several_workspace_windows_open;
+use gpui::{AnyWindowHandle, App, Context, Task, WeakEntity, Window};
+
+use super::registry::{
+    hand_over_app_keep_awake, other_workspace_window_apps, several_workspace_windows_open,
+};
+use crate::app::helpers::*;
 use crate::*;
+
+/// The longest a closing window waits for its remote Action sessions to close on their machines.
+const REMOTE_ACTION_CLOSE_WAIT: Duration = Duration::from_secs(8);
 
 pub(super) fn install_workspace_window_close_handler(
     app: WeakEntity<GhostexGpuiApp>,
@@ -22,7 +30,7 @@ pub(super) fn install_workspace_window_close_handler(
 
 impl GhostexGpuiApp {
     /// The user asked to close this window. Returns whether it closes now; `false` while the
-    /// confirmation is up, which closes it itself when the user agrees.
+    /// confirmation is up or its remote closes run, after which it closes itself.
     fn workspace_window_should_close(
         &mut self,
         window: &mut Window,
@@ -31,7 +39,12 @@ impl GhostexGpuiApp {
         if !several_workspace_windows_open() {
             return true;
         }
-        let command_terminals = self.workspace_window_command_terminal_keys(window).len();
+        if self.workspace_window_closing {
+            // Already closing: its remote Action sessions are still being closed.
+            return false;
+        }
+        let command_terminals = self.workspace_window_command_terminal_keys(window).len()
+            + self.workspace_window_remote_action_sessions(window).len();
         let delayed_sends = self.agents_delayed_send_timers.len()
             + self.agents_send_when_stopped_watchers.len()
             + self.command_delayed_send_timers.len();
@@ -70,8 +83,25 @@ impl GhostexGpuiApp {
             if answer.await != Ok(1) {
                 return;
             }
+            let remote_closes = handle
+                .update(cx, |_, window, cx| {
+                    this.update(cx, |app, cx| {
+                        // Another window may have closed while the question was up.
+                        if !several_workspace_windows_open() {
+                            return Vec::new();
+                        }
+                        app.workspace_window_closing = true;
+                        app.close_workspace_window_remote_actions(window, cx)
+                    })
+                    .unwrap_or_default()
+                })
+                .unwrap_or_default();
+            if !remote_closes.is_empty() {
+                let closes = futures::future::join_all(remote_closes);
+                let timeout = cx.background_executor().timer(REMOTE_ACTION_CLOSE_WAIT);
+                futures::future::select(Box::pin(closes), Box::pin(timeout)).await;
+            }
             let _ = handle.update(cx, |_, window, cx| {
-                // Another window may have closed while the question was up.
                 let _ = this.update(cx, |app, cx| {
                     if several_workspace_windows_open() {
                         app.prepare_workspace_window_close(window, cx);
@@ -95,6 +125,7 @@ impl GhostexGpuiApp {
         self.close_floating_reveal(cx);
         if self.is_lead_window() {
             self.release_ghostex_capture(cx);
+            hand_over_app_keep_awake(self.keep_awake_runtime.take());
         }
         for handle in [
             self.app_modal_window.map(Into::into),
@@ -120,37 +151,107 @@ impl GhostexGpuiApp {
         self.gx_store_disconnect_for_window_close();
     }
 
+    /// Starts closing this window's remote Action sessions on their machines. Returns the closes
+    /// that go down this window's own tunnel, which the window waits for before it closes; the
+    /// ones sent down another window's tunnel run on their own.
+    fn close_workspace_window_remote_actions(
+        &mut self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<Task<()>> {
+        let references = self.workspace_window_remote_action_sessions(window);
+        self.command_remote_action_sessions.clear();
+        let others = other_workspace_window_apps(cx.entity_id());
+        let mut own_closes = Vec::new();
+        for reference in references {
+            let machine = reference.remote_machine_id.as_str();
+            let other_target = others
+                .iter()
+                .find_map(|other| other.read(cx).gpui_remote_gxserver_request_target(machine));
+            let (target, own) = match other_target {
+                Some(target) => (target, false),
+                None => match self.gpui_remote_gxserver_request_target(machine) {
+                    Some(target) => (target, true),
+                    // Not connected anywhere: the session stays in that machine's Running
+                    // Sessions, as a closed tab's does (command_pane_remote_action.rs).
+                    None => continue,
+                },
+            };
+            let close = cx.background_executor().spawn(async move {
+                gpui_close_remote_command_action_session(&target, &reference)
+            });
+            if own {
+                own_closes.push(close);
+            } else {
+                close.detach();
+            }
+        }
+        own_closes
+    }
+
     /// The gxserver sessions behind this window's Commands panel and Terminal view tabs: the live
     /// pane's and the ones parked for its other projects.
     fn workspace_window_command_terminal_keys(
         &self,
         window: &Window,
     ) -> Vec<GpuiLocalWorkspaceSessionKey> {
-        let content_height = command_pane_content_height(window);
-        let default_height = command_pane_default_height_px_from_shared_settings(
-            &shared_settings::shared_sidebar_settings_snapshot(),
-        );
         let mut keys = self
             .command_gxserver_session_mappings
             .values()
             .cloned()
             .collect::<Vec<_>>();
-        for pane in self.parked_command_panes_by_project.values() {
-            if let Some(model) = command_pane_model_from_shell_state_with_default_height_px(
-                pane,
-                content_height,
-                default_height,
-            ) {
-                keys.extend(
-                    command_gxserver_session_mappings_from_command_model(&model).into_values(),
-                );
-            }
+        for model in self.parked_workspace_window_command_panes(window) {
+            keys.extend(command_gxserver_session_mappings_from_command_model(&model).into_values());
         }
         keys.sort_by(|left, right| {
             (&left.project_id, &left.session_id).cmp(&(&right.project_id, &right.session_id))
         });
         keys.dedup();
         keys
+    }
+
+    /// The remote sessions behind this window's remote Action tabs, live and parked.
+    fn workspace_window_remote_action_sessions(
+        &self,
+        window: &Window,
+    ) -> Vec<GpuiRemoteAttachSessionReference> {
+        let mut references = self
+            .command_remote_action_sessions
+            .values()
+            .cloned()
+            .chain(
+                command_remote_action_sessions_from_command_model(&self.command_pane).into_values(),
+            )
+            .collect::<Vec<_>>();
+        for model in self.parked_workspace_window_command_panes(window) {
+            references
+                .extend(command_remote_action_sessions_from_command_model(&model).into_values());
+        }
+        let mut unique = Vec::new();
+        for reference in references {
+            if !unique.contains(&reference) {
+                unique.push(reference);
+            }
+        }
+        unique
+    }
+
+    /// The Commands panes this window keeps parked for its other projects.
+    fn parked_workspace_window_command_panes(&self, window: &Window) -> Vec<CommandPaneModel> {
+        let content_height = command_pane_content_height(window);
+        let default_height = command_pane_default_height_px_from_shared_settings(
+            &shared_settings::shared_sidebar_settings_snapshot(),
+        );
+        self.parked_command_panes_by_project
+            .values()
+            .filter_map(|pane| {
+                command_pane_model_from_shell_state_with_default_height_px(
+                    pane,
+                    content_height,
+                    default_height,
+                )
+            })
+            .collect()
     }
 }
 

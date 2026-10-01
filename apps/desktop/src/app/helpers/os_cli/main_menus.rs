@@ -5,12 +5,25 @@ use gpui::App;
 use crate::app::helpers::*;
 use crate::*;
 
+thread_local! {
+    /// The menu variant last installed, so the Window menu's list of windows can be rebuilt
+    /// without changing it.
+    static MAIN_MENUS_SOURCE_FOCUS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 pub(crate) fn set_ghostex_gpui_main_menus(source_workarea_cef_owns_native_focus: bool, cx: &App) {
+    MAIN_MENUS_SOURCE_FOCUS.set(source_workarea_cef_owns_native_focus);
     cx.set_menus(ghostex_gpui_main_menus_for_source_focus(
         source_workarea_cef_owns_native_focus,
     ));
     #[cfg(target_os = "macos")]
     cef::refresh_application_menu_hooks();
+}
+
+/// Rebuilds the menu bar after a workspace window opened, closed, was renamed or became the
+/// active one, so the Window menu lists the windows as they are (app/workspace_windows/).
+pub(crate) fn refresh_ghostex_gpui_main_menus(cx: &mut App) {
+    set_ghostex_gpui_main_menus(MAIN_MENUS_SOURCE_FOCUS.get(), cx);
 }
 
 pub(crate) fn register_ghostex_gpui_main_menu_actions(
@@ -160,7 +173,8 @@ fn menu_target_window(
 /// Native app menu bar (macOS `installMainMenu` parity, AppDelegate.swift
 /// :2533-2663): App (About/Check for Updates/Settings/Hide/Restart/Quit),
 /// File → New Window ⇧⌘N and Close Pane ⌘W, the Edit clipboard set (first-responder OS actions so
-/// CEF and Ghostty views handle them natively), and Window → Minimize/Zoom.
+/// CEF and Ghostty views handle them natively), and Window → Minimize/Zoom, Cycle Through Windows
+/// and the open windows.
 /// Undo/Redo are omitted from the GPUI-owned menu because gpui routes them
 /// through app actions instead of first-responder selectors; the macOS CEF hook
 /// installs them after each menu replacement, targeted at an object that picks
@@ -217,11 +231,29 @@ pub(crate) fn ghostex_gpui_main_menus_for_source_focus(
             MenuItem::separator(),
             MenuItem::os_action("Select All", GpuiEditMenuSelectAll, OsAction::SelectAll),
         ]),
-        Menu::new("Window").items(vec![
-            MenuItem::action("Minimize", MinimizeGhostexGpuiWindow),
-            MenuItem::action("Zoom", ZoomGhostexGpuiWindow),
-        ]),
+        Menu::new("Window").items(ghostex_gpui_window_menu_items()),
     ]
+}
+
+/// Window: Minimize, Zoom, Cycle Through Windows (Cmd+`), and one row per open workspace window
+/// with a tick on the active one (app/workspace_windows/).
+fn ghostex_gpui_window_menu_items() -> Vec<gpui::MenuItem> {
+    use gpui::MenuItem;
+    let mut items = vec![
+        MenuItem::action("Minimize", MinimizeGhostexGpuiWindow),
+        MenuItem::action("Zoom", ZoomGhostexGpuiWindow),
+        MenuItem::separator(),
+        MenuItem::action("Cycle Through Windows", CycleGhostexGpuiWindows),
+    ];
+    let rows = crate::app::workspace_windows::workspace_window_menu_rows();
+    if !rows.is_empty() {
+        items.push(MenuItem::separator());
+        items.extend(rows.into_iter().map(|row| {
+            MenuItem::action(row.label, ActivateGhostexGpuiWindow { number: row.number })
+                .checked(row.active)
+        }));
+    }
+    items
 }
 
 /// Runs Edit > Undo or Redo against the focused text field of the active GPUI window. The macOS

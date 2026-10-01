@@ -82,6 +82,11 @@ impl GhostexGpuiApp {
             &self.sidebar_runtime_settings_snapshot,
         );
         let mut changed = self.refresh_source_code_server_runtime_child(cx);
+        if let Some(shared) =
+            self.share_source_code_server_runtime_with_other_windows(&target, &settings, cx)
+        {
+            return changed | shared;
+        }
         if matches!(
             self.source_code_server_runtime.state,
             SourceCodeServerRuntimeLaunchState::InstallRequired
@@ -320,7 +325,84 @@ impl GhostexGpuiApp {
         self.deliver_pending_remote_prompt_editor_request_if_ready(cx);
         self.update_project_workarea_runtime_cef_surface_visibility(cx);
         self.trace_source_runtime_state("launchFinished");
+        self.offer_source_code_server_runtime_to_other_windows(cx);
         cx.notify();
+    }
+
+    /// Another workspace window may already run, or be launching, the editor this window's Code
+    /// view needs (`SharedSourceCodeServerChild`). Adopts a ready one, or waits for one being
+    /// launched; `None` when this window has to launch its own. A window that runs or launches its
+    /// own process keeps it.
+    fn share_source_code_server_runtime_with_other_windows(
+        &mut self,
+        target: &SourceCodeServerRuntimeTarget,
+        settings: &SourceCodeServerRuntimeSettings,
+        cx: &mut gpui::Context<Self>,
+    ) -> Option<bool> {
+        if self.source_code_server_runtime.child.is_some()
+            || self.source_code_server_runtime.owns_launch()
+        {
+            return None;
+        }
+        let others = crate::app::workspace_windows::other_workspace_window_apps(cx.entity_id());
+        let ready = others.iter().find_map(|other| {
+            other
+                .read(cx)
+                .source_code_server_runtime
+                .shareable_ready_process(target, settings)
+        });
+        if let Some(shared) = ready {
+            let generation = self.source_code_server_runtime.next_generation();
+            self.source_code_server_runtime
+                .adopt_shared(target.clone(), settings.clone(), shared);
+            self.watch_source_code_server_runtime_child(generation, cx);
+            self.refresh_project_workarea_runtime_cef_surfaces_from_runtime_state(cx);
+            self.ensure_project_workarea_runtime_cef_surfaces_for_current_context(cx);
+            self.deliver_pending_remote_prompt_editor_request_if_ready(cx);
+            self.update_project_workarea_runtime_cef_surface_visibility(cx);
+            self.trace_source_runtime_state("sharedReady");
+            cx.notify();
+            return Some(true);
+        }
+        let launching_elsewhere = others.iter().any(|other| {
+            let runtime = &other.read(cx).source_code_server_runtime;
+            runtime.owns_launch() && runtime.launching_can_share(target, settings)
+        });
+        if launching_elsewhere {
+            if self.source_code_server_runtime.waiting_for_shared_launch
+                && self.source_code_server_runtime.target.as_ref() == Some(target)
+            {
+                return Some(false);
+            }
+            self.source_code_server_runtime
+                .set_waiting_for_shared_launch(target.clone(), settings.clone());
+            self.trace_source_runtime_state("sharedWaiting");
+            cx.notify();
+            return Some(true);
+        }
+        if self.source_code_server_runtime.waiting_for_shared_launch {
+            // The launch it waited for ended without a process to share: it launches its own.
+            self.source_code_server_runtime.stop();
+        }
+        None
+    }
+
+    /// A launch here ended: the other windows waiting for it, or showing a failure, adopt the
+    /// process or launch their own.
+    fn offer_source_code_server_runtime_to_other_windows(&self, cx: &mut gpui::Context<Self>) {
+        let others = crate::app::workspace_windows::other_workspace_window_apps(cx.entity_id());
+        if others.is_empty() {
+            return;
+        }
+        cx.defer(move |cx| {
+            for other in others {
+                other.update(cx, |app, cx| {
+                    if app.source_code_server_runtime.child.is_none() {
+                        app.ensure_source_code_server_runtime_for_current_context(cx);
+                    }
+                });
+            }
+        });
     }
 
     /// CDXC:CodeEditor 2026-09-23 WHY:
@@ -389,7 +471,10 @@ impl GhostexGpuiApp {
             .project_editor_shell
             .is_mode_awake(TitlebarMode::Source)
         {
-            return false;
+            // A sleeping Code view still lets go of the editor, so a window restarting it with the
+            // new settings is not left waiting for the port (app/workspace_windows/).
+            return self.source_code_server_runtime.child.is_some()
+                && self.stop_source_code_server_runtime(cx);
         }
         let stopped = self.stop_source_code_server_runtime(cx);
         self.ensure_source_code_server_runtime_for_current_context(cx) || stopped

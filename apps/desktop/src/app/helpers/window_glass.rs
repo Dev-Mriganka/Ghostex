@@ -36,9 +36,6 @@ const WINDOW_GLASS_BLUR_RADIUS_DEFAULT: u8 = 60;
 /// `windowGlassMenuBlurRadius`: the blur radius of frosted menus and tooltips.
 static WINDOW_GLASS_MENU_BLUR_RADIUS: AtomicU8 = AtomicU8::new(FROSTED_MENU_BLUR_RADIUS as u8);
 
-/// The blur radius the main window was last given; `u8::MAX` until the first sync.
-static APPLIED_MAIN_WINDOW_GLASS_BLUR: AtomicU8 = AtomicU8::new(u8::MAX);
-
 /// The main window glass's blur radius (`windowGlassBlurRadius`), in points.
 fn window_glass_blur_radius() -> gpui::Pixels {
     gpui::px(f32::from(WINDOW_GLASS_BLUR_RADIUS.load(Ordering::Relaxed)))
@@ -125,14 +122,6 @@ fn window_glass_uses_backdrop(
     if custom { image.is_some() } else { true }
 }
 
-/// What the main window's glass drew last; see `APPLIED_MAIN_WINDOW_GLASS`.
-static APPLIED_MAIN_WINDOW_GLASS_LIVE: std::sync::Mutex<Option<gpui::LiveBackground>> =
-    std::sync::Mutex::new(None);
-
-/// What the main window's glass played last; see `APPLIED_MAIN_WINDOW_GLASS`.
-static APPLIED_MAIN_WINDOW_GLASS_VIDEO: std::sync::Mutex<(Option<std::path::PathBuf>, bool)> =
-    std::sync::Mutex::new((None, true));
-
 /// The picture the main window's glass shows in the current appearance, when Glass shows is
 /// Custom image and one is chosen for that appearance.
 fn window_glass_custom_image() -> Option<std::path::PathBuf> {
@@ -148,15 +137,23 @@ fn window_glass_custom_image() -> Option<std::path::PathBuf> {
     (!path.is_empty()).then(|| std::path::PathBuf::from(path))
 }
 
-/// What the main window's glass showed last; see `APPLIED_MAIN_WINDOW_GLASS`.
-static APPLIED_MAIN_WINDOW_GLASS_IMAGE: std::sync::Mutex<Option<std::path::PathBuf>> =
-    std::sync::Mutex::new(None);
+/// What each workspace window's glass was last switched to, by window id. GPUI has no getter for
+/// a window's background appearance, and re-applying it every frame rebuilds the window's AppKit
+/// backing state. Kept per window, because File > New Window opens several and one window's
+/// record would otherwise stop the next from ever getting its glass (app/workspace_windows/).
+static APPLIED_WINDOW_GLASS: std::sync::Mutex<
+    Option<std::collections::HashMap<u64, AppliedWindowGlass>>,
+> = std::sync::Mutex::new(None);
 
-/// What the main window was last switched to: 0 nothing yet, 1 opaque, 2 live blur, 3 wallpaper
-/// blur. GPUI has no
-/// getter for the window's background appearance, and re-applying it every frame rebuilds the
-/// window's AppKit backing state.
-static APPLIED_MAIN_WINDOW_GLASS: AtomicU8 = AtomicU8::new(0);
+#[derive(Clone, PartialEq)]
+struct AppliedWindowGlass {
+    /// 1 opaque, 2 live blur, 3 wallpaper blur.
+    code: u8,
+    blur: u8,
+    image: Option<std::path::PathBuf>,
+    video: (Option<std::path::PathBuf>, bool),
+    live: Option<gpui::LiveBackground>,
+}
 
 /// Only the main window is blurred. Views that also render in their own windows (the chat) ask
 /// with `window_glass_active_in` so they stay opaque there.
@@ -442,6 +439,9 @@ pub(crate) fn window_glass_active_for(window: Option<gpui::AnyWindowHandle>) -> 
         && window.is_some_and(|window| {
             let id = window.window_id().as_u64();
             id == MAIN_WINDOW_ID.load(Ordering::Relaxed)
+                // Every workspace window takes glass, not only the one that drew last
+                // (app/workspace_windows/).
+                || crate::app::workspace_windows::is_workspace_window(window.window_id())
                 || id == FLOATING_REVEAL_WINDOW_ID.load(Ordering::Relaxed)
                 || id == DOCS_DRAWER_WINDOW_ID.load(Ordering::Relaxed)
         })
@@ -525,7 +525,11 @@ impl GhostexGpuiApp {
             window.window_handle().window_id().as_u64(),
             Ordering::Relaxed,
         );
-        if let Ok(mut size) = MAIN_WINDOW_SIZE.lock() {
+        // Windows laid over a workspace window are laid over the active one, so with several
+        // windows open its size is the one they take (app/workspace_windows/).
+        if let Ok(mut size) = MAIN_WINDOW_SIZE.lock()
+            && (window.is_window_active() || size.is_none())
+        {
             *size = Some(window.viewport_size());
         }
         let wanted = window_glass_background_appearance();
@@ -542,36 +546,23 @@ impl GhostexGpuiApp {
             (true, false) => 2,
             (true, true) => 3,
         };
-        let image_changed = APPLIED_MAIN_WINDOW_GLASS_IMAGE
-            .lock()
-            .map(|mut applied| {
-                let changed = *applied != image;
-                *applied = image.clone();
-                changed
-            })
-            .unwrap_or(true);
-        let video_changed = APPLIED_MAIN_WINDOW_GLASS_VIDEO
-            .lock()
-            .map(|mut applied| {
-                let changed = *applied != video;
-                *applied = video.clone();
-                changed
-            })
-            .unwrap_or(true);
-        let live_changed = APPLIED_MAIN_WINDOW_GLASS_LIVE
-            .lock()
-            .map(|mut applied| {
-                let changed = *applied != live;
-                *applied = live.clone();
-                changed
-            })
-            .unwrap_or(true);
-        let blur = WINDOW_GLASS_BLUR_RADIUS.load(Ordering::Relaxed);
-        let blur_changed = APPLIED_MAIN_WINDOW_GLASS_BLUR.swap(blur, Ordering::Relaxed) != blur;
-        let previous = APPLIED_MAIN_WINDOW_GLASS.swap(code, Ordering::Relaxed);
-        if previous == code && !image_changed && !video_changed && !live_changed && !blur_changed {
+        let wanted_glass = AppliedWindowGlass {
+            code,
+            blur: WINDOW_GLASS_BLUR_RADIUS.load(Ordering::Relaxed),
+            image: image.clone(),
+            video: video.clone(),
+            live: live.clone(),
+        };
+        let previous_glass = APPLIED_WINDOW_GLASS.lock().ok().and_then(|mut applied| {
+            applied.get_or_insert_with(Default::default).insert(
+                window.window_handle().window_id().as_u64(),
+                wanted_glass.clone(),
+            )
+        });
+        if previous_glass.as_ref() == Some(&wanted_glass) {
             return;
         }
+        let previous = previous_glass.map_or(0, |glass| glass.code);
         window.set_background_blur_style(window_glass_blur_radius(), false);
         window.set_background_live(live);
         window.set_background_video(video.0, video.1);

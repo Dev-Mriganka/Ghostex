@@ -795,8 +795,45 @@ impl SourceCodeServerRuntimeFailure {
     }
 }
 
+/// The Code editor process (or its SSH tunnel to a remote one), shared by every workspace window
+/// whose Code view uses it; the process stops when the last of them lets go.
+///
+/// CDXC:AppWindows 2026-10-01 WHY:
+/// code-server listens on one fixed port and keeps one profile, and one process already serves every local folder (each Code view is a folder URL on it), so a second window launching its own failed with the port in use. A window whose Code view needs the editor adopts the process another window runs for the same machine and settings, or waits for the one being launched, instead of starting a second (workarea/source_code_server.rs).
+#[derive(Clone)]
+pub(crate) struct SharedSourceCodeServerChild(Rc<RefCell<OwnedSourceCodeServerChild>>);
+
+pub(crate) struct OwnedSourceCodeServerChild(Child);
+
+impl Drop for OwnedSourceCodeServerChild {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+impl SharedSourceCodeServerChild {
+    fn new(child: Child) -> Self {
+        Self(Rc::new(RefCell::new(OwnedSourceCodeServerChild(child))))
+    }
+
+    fn try_wait(&self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        self.0.borrow_mut().0.try_wait()
+    }
+}
+
+/// A ready process another window runs, as `SourceCodeServerRuntimeOwner::adopt_shared` takes it.
+pub(crate) struct SharedSourceCodeServerRuntime {
+    child: SharedSourceCodeServerChild,
+    started_at: Option<Instant>,
+    runtime_origin: String,
+    prompt_editor_ipc_ready: bool,
+}
+
 pub(crate) struct SourceCodeServerRuntimeOwner {
-    pub(crate) child: Option<Child>,
+    pub(crate) child: Option<SharedSourceCodeServerChild>,
+    /// Launching here means waiting for another window's launch to finish, to adopt its process.
+    pub(crate) waiting_for_shared_launch: bool,
     pub(crate) failure: Option<SourceCodeServerRuntimeFailure>,
     pub(crate) install_progress: Option<component_store::ComponentStoreProgressPhase>,
     pub(crate) started_at: Option<Instant>,
@@ -813,6 +850,7 @@ impl SourceCodeServerRuntimeOwner {
     pub(crate) fn new() -> Self {
         Self {
             child: None,
+            waiting_for_shared_launch: false,
             failure: None,
             install_progress: None,
             started_at: None,
@@ -950,6 +988,7 @@ impl SourceCodeServerRuntimeOwner {
         started_at: Instant,
     ) {
         self.pending_remote_prompt_editor_request = None;
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::Launching;
         self.failure = None;
         self.install_progress = None;
@@ -965,6 +1004,7 @@ impl SourceCodeServerRuntimeOwner {
         target: SourceCodeServerRuntimeTarget,
         settings: SourceCodeServerRuntimeSettings,
     ) {
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::Ready;
         self.failure = None;
         self.install_progress = None;
@@ -1004,6 +1044,7 @@ impl SourceCodeServerRuntimeOwner {
             self.replace_child(child);
         }
         self.started_at = started_at;
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::Failed;
         self.failure = Some(failure);
         self.install_progress = None;
@@ -1019,6 +1060,7 @@ impl SourceCodeServerRuntimeOwner {
         settings: SourceCodeServerRuntimeSettings,
     ) {
         self.pending_remote_prompt_editor_request = None;
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::InstallRequired;
         self.failure = None;
         self.install_progress = None;
@@ -1035,6 +1077,7 @@ impl SourceCodeServerRuntimeOwner {
         settings: Option<SourceCodeServerRuntimeSettings>,
     ) {
         self.pending_remote_prompt_editor_request = None;
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::Installing;
         self.failure = None;
         self.install_progress = Some(component_store::ComponentStoreProgressPhase::Checking);
@@ -1052,6 +1095,7 @@ impl SourceCodeServerRuntimeOwner {
         failure: SourceCodeServerRuntimeFailure,
     ) {
         self.pending_remote_prompt_editor_request = None;
+        self.waiting_for_shared_launch = false;
         self.state = SourceCodeServerRuntimeLaunchState::Failed;
         self.failure = Some(failure);
         self.install_progress = None;
@@ -1064,6 +1108,7 @@ impl SourceCodeServerRuntimeOwner {
 
     pub(crate) fn reset_after_install(&mut self) {
         self.pending_remote_prompt_editor_request = None;
+        self.waiting_for_shared_launch = false;
         self.started_at = None;
         self.state = SourceCodeServerRuntimeLaunchState::Idle;
         self.failure = None;
@@ -1074,12 +1119,57 @@ impl SourceCodeServerRuntimeOwner {
         self.prompt_editor_ipc_ready = false;
     }
 
+    /// Dropping the previous handle stops its process unless another window still uses it.
     pub(crate) fn replace_child(&mut self, child: Child) {
-        if let Some(mut previous_child) = self.child.take() {
-            let _ = previous_child.kill();
-            let _ = previous_child.wait();
+        self.child = Some(SharedSourceCodeServerChild::new(child));
+    }
+
+    /// This window's ready process, for another window to adopt: the same machine and settings.
+    pub(crate) fn shareable_ready_process(
+        &self,
+        target: &SourceCodeServerRuntimeTarget,
+        settings: &SourceCodeServerRuntimeSettings,
+    ) -> Option<SharedSourceCodeServerRuntime> {
+        if !self.can_reuse_ready_process(target, settings) {
+            return None;
         }
-        self.child = Some(child);
+        Some(SharedSourceCodeServerRuntime {
+            child: self.child.clone()?,
+            started_at: self.started_at,
+            runtime_origin: self.runtime_origin.clone()?,
+            prompt_editor_ipc_ready: self.prompt_editor_ipc_ready,
+        })
+    }
+
+    /// Whether this window is launching a process of its own (not waiting for another's).
+    pub(crate) fn owns_launch(&self) -> bool {
+        self.state == SourceCodeServerRuntimeLaunchState::Launching
+            && !self.waiting_for_shared_launch
+    }
+
+    /// Runs on another window's process, as if this window had launched it.
+    pub(crate) fn adopt_shared(
+        &mut self,
+        target: SourceCodeServerRuntimeTarget,
+        settings: SourceCodeServerRuntimeSettings,
+        shared: SharedSourceCodeServerRuntime,
+    ) {
+        self.pending_remote_prompt_editor_request = None;
+        self.child = Some(shared.child);
+        self.started_at = shared.started_at;
+        self.runtime_origin = Some(shared.runtime_origin);
+        self.prompt_editor_ipc_ready = shared.prompt_editor_ipc_ready;
+        self.set_ready_target(target, settings);
+    }
+
+    /// Shows the Code view as starting while another window launches the process it will adopt.
+    pub(crate) fn set_waiting_for_shared_launch(
+        &mut self,
+        target: SourceCodeServerRuntimeTarget,
+        settings: SourceCodeServerRuntimeSettings,
+    ) {
+        self.set_launching(target, settings, Instant::now());
+        self.waiting_for_shared_launch = true;
     }
 
     pub(crate) fn refresh_child_exit(&mut self) -> bool {
@@ -1101,6 +1191,7 @@ impl SourceCodeServerRuntimeOwner {
                 );
                 self.pending_remote_prompt_editor_request = None;
                 self.child = None;
+                self.waiting_for_shared_launch = false;
                 self.started_at = None;
                 self.state = SourceCodeServerRuntimeLaunchState::Failed;
                 self.failure = Some(SourceCodeServerRuntimeFailure::Launch);
@@ -1117,10 +1208,9 @@ impl SourceCodeServerRuntimeOwner {
         let had_state = self.child.is_some()
             || self.target.is_some()
             || self.state != SourceCodeServerRuntimeLaunchState::Idle;
-        if let Some(mut child) = self.child.take() {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
+        // The process stops here unless another window still uses it.
+        self.child = None;
+        self.waiting_for_shared_launch = false;
         self.generation = self.generation.saturating_add(1);
         self.pending_remote_prompt_editor_request = None;
         self.started_at = None;

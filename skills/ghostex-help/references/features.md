@@ -1932,13 +1932,17 @@ tabs. Projects, sessions, settings, themes and hotkeys are shared: a session
 started in one window shows up in every window's sidebar, and a setting changed
 in one window applies to all of them. The same session can be open in two
 windows at once; its terminal takes the size of the window you last typed in or
-showed it in. The menu bar status icon, notifications and completion sounds come
-once, not once per window. The Code view can be open in one window at a time.
+showed it in. The Code view works in every window at once, all on the same
+editor. The menu bar status icon, notifications, completion sounds and Keep
+Awake are the app's, not each window's: Keep Awake started from any window keeps
+the computer awake and shows as on in every window. The Window menu lists the
+open windows (each named after its project) and Cmd+` cycles through them.
 Every window open when you quit, restart or update comes back where it was at
 the next launch. Closing a window while others stay open removes it for good:
-its Commands panel terminals close and its Delayed Sends are cancelled (it asks
-first when it has either), while agent sessions keep running. Closing the last
-window quits Ghostex, and Cmd+Q quits it with all its windows.
+its Commands panel terminals close (a remote project's Action terminal closes on
+its machine too) and its Delayed Sends are cancelled (it asks first when it has
+either), while agent sessions keep running. Closing the last window quits
+Ghostex, and Cmd+Q quits it with all its windows.
 
 Related settings: none; window positions and layouts are saved automatically.
 

@@ -146,11 +146,15 @@ impl GhostexGpuiApp {
             project_commands: hud
                 .map(|hud| commands_by_project(&hud["commandsByProject"]))
                 .unwrap_or_default(),
-            // The Keep Awake period this app is running, which the More menu ticks.
-            keep_awake_minutes: self
-                .keep_awake_runtime
-                .as_ref()
-                .map(|runtime| runtime.duration_minutes.minutes() as i64),
+            // The Keep Awake period this app is running, which the More menu ticks; the lead
+            // window holds it for every window (app/workspace_windows/).
+            keep_awake_minutes: if self.is_lead_window() {
+                self.keep_awake_runtime
+                    .as_ref()
+                    .map(|runtime| runtime.duration_minutes.minutes() as i64)
+            } else {
+                crate::app::workspace_windows::app_keep_awake_minutes()
+            },
             machine_connected,
             open_targets: self.gx_store.menu_host.open_targets.clone(),
             app_lifecycle: true,

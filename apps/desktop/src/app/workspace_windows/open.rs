@@ -9,7 +9,9 @@ use gpui::{App, AppContext as _, WindowBounds, WindowOptions, px, size};
 use gpui_component::Root;
 
 use super::close::install_workspace_window_close_handler;
-use super::registry::{active_workspace_window, register_workspace_window};
+use super::registry::{
+    active_workspace_window, note_workspace_window_activated, register_workspace_window,
+};
 use super::slots::*;
 use crate::app::helpers::*;
 use crate::*;
@@ -208,6 +210,11 @@ pub(crate) fn open_workspace_window(
         if lead {
             register_ghostex_gpui_main_menu_actions(view.downgrade(), window_handle, cx);
         }
+        if activate {
+            note_workspace_window_activated(window, false, cx);
+        } else {
+            cx.defer(refresh_ghostex_gpui_main_menus);
+        }
         let view_for_cef = view.clone();
         window.on_next_frame(move |window, cx| {
             view_for_cef.update(cx, |app, cx| {
@@ -295,6 +302,11 @@ pub(crate) fn open_workspace_window(
                     #[cfg(not(target_os = "macos"))]
                     app.dismiss_native_sidebar_menu(cx);
                 } else {
+                    #[cfg(target_os = "macos")]
+                    let source_focus = app.source_workarea_cef_menu_passthrough_active;
+                    #[cfg(not(target_os = "macos"))]
+                    let source_focus = false;
+                    note_workspace_window_activated(window, source_focus, cx);
                     /*
                     CDXC:Sidebar 2026-08-20:
                     Coming back active is the other half: the pointer can

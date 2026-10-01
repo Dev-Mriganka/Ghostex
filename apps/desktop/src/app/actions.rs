@@ -70,12 +70,20 @@ gpui::actions!(
         MinimizeGhostexGpuiWindow,
         ZoomGhostexGpuiWindow,
         NewGhostexGpuiWindow,
+        CycleGhostexGpuiWindows,
         GpuiEditMenuCut,
         GpuiEditMenuCopy,
         GpuiEditMenuPaste,
         GpuiEditMenuSelectAll
     ]
 );
+
+/// Window menu: bring one workspace window to the front (app/workspace_windows/).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
+#[action(namespace = ghostex_gpui, no_json)]
+pub(crate) struct ActivateGhostexGpuiWindow {
+    pub(crate) number: u64,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Action)]
 #[action(namespace = ghostex_gpui, no_json)]

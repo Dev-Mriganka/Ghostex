@@ -366,6 +366,7 @@ fn main() {
                 KeyBinding::new("cmd-h", HideGhostexGpui, None),
                 KeyBinding::new("alt-cmd-h", HideGhostexGpuiOthers, None),
                 KeyBinding::new("cmd-m", MinimizeGhostexGpuiWindow, None),
+                KeyBinding::new("cmd-`", CycleGhostexGpuiWindows, None),
             ]);
             bindings
         };
@@ -388,6 +389,15 @@ fn main() {
             // A key press dispatches while its window is mid-update; the new window reads that
             // window's frame and project, so it opens on the next turn.
             cx.defer(crate::app::workspace_windows::open_new_workspace_window);
+        });
+        cx.on_action(|action: &ActivateGhostexGpuiWindow, cx| {
+            let number = action.number;
+            cx.defer(move |cx| {
+                crate::app::workspace_windows::activate_workspace_window(number, cx)
+            });
+        });
+        cx.on_action(|_: &CycleGhostexGpuiWindows, cx| {
+            cx.defer(crate::app::workspace_windows::activate_next_workspace_window);
         });
         // Window frame persistence (macOS persistMainWindowChrome parity): every
         // window open at the last quit reopens at its saved frame with the
