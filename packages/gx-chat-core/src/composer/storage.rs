@@ -3,7 +3,7 @@
 //! CDXC:Drafts 2026-09-22 DECISION:
 //! User: drafts and queued prompts must survive the switch to the Rust brain. Every record below
 //! keeps the key prefix, the field names and the legacy-value tolerance of
-//! `packages/core-ui/chat/session-chat-draft-storage.ts`, `session-chat-summary-override.ts` and
+//! `packages/core-ui/chat/session-chat-draft-storage.ts` (deleted 2026-10-01), `session-chat-summary-override.ts` and
 //! `session-chat-verbose-override.ts`, so a draft written by the TypeScript brain is read back
 //! unchanged by this one.
 //!
@@ -74,7 +74,7 @@ pub struct StoredDraftRecord {
     /// `None` for a legacy plain-string draft, which callers must treat as "age unknown".
     ///
     /// A double, not an `i64`: the stamp is compared with `>=` against `Date.parse(...)` in
-    /// `session-chat-draft-storage.ts`, and `value as i64` truncated a fractional stamp and
+    /// `session-chat-draft-storage.ts` (deleted 2026-10-01), and `value as i64` truncated a fractional stamp and
     /// saturated anything past `i64::MAX`, which is a different answer from the one JavaScript
     /// gives. `js_optional_number` writes it back as `JSON.stringify` writes a number.
     #[serde(

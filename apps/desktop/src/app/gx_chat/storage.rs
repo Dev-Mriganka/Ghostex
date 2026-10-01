@@ -242,7 +242,7 @@ const STORES: &[ChatStore] = &[
         collection: true,
         backend: protected_disk("deliveryReceipts"),
     },
-    // The retained transcript cache (`persistence.ts`), keyed by the retention key rather than by
+    // The retained transcript cache (`persistence.ts` (deleted 2026-10-01)), keyed by the retention key rather than by
     // the storage session key. Its catalog `retainedAt` reads the record's own `savedAt`, which is
     // also when the record is written, so the write stamp this door keeps instead means the same
     // thing here; `sentHistory`'s does not, which is why that one has a note of its own.

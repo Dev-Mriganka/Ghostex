@@ -1,5 +1,5 @@
-//! The Settings field library: the native twins of packages/core-ui/settings-modal/fields.tsx
-//! (and the row pieces of app-tooltip.tsx and disabled-setting-control-tooltip.tsx), drawn on
+//! The Settings field library: the native twins of packages/core-ui/settings-modal/fields.tsx (deleted 2026-10-01)
+//! (and the row pieces of app-tooltip.tsx and disabled-setting-control-tooltip.tsx (deleted 2026-10-01)), drawn on
 //! GPUI-Kit (`Input`, `Slider` state, `Tooltip`) and the shared app modal kit (`ModalSelect`).
 //!
 //! Every page entity implements [`SettingsPage`]; the field functions take the page, build their

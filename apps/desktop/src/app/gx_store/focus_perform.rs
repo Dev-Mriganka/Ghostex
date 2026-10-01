@@ -402,6 +402,9 @@ impl GhostexGpuiApp {
         session: &SessionKey,
     ) -> Option<GpuiPreferredAgentInterface> {
         let row = self.gx_store.core.presentation().session(session)?;
+        if ghostex_gx_core::session_chat_view_unavailable(&self.gx_store.core, session) {
+            return Some(GpuiPreferredAgentInterface::Terminal);
+        }
         let settings = self.gx_store_preferred_interface_settings();
         settings
             .resolve(row.agent_id.as_deref())

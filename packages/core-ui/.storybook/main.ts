@@ -5,17 +5,6 @@ import { fileURLToPath } from 'node:url';
 import type { StorybookConfig } from '@storybook/react-vite';
 
 const storybookDir = path.dirname(fileURLToPath(import.meta.url));
-const monacoVsSource = path.resolve(storybookDir, '../../../node_modules/monaco-editor/min/vs');
-
-function monacoContentType(filePath: string): string {
-  if (filePath.endsWith('.js')) return 'text/javascript';
-  if (filePath.endsWith('.css')) return 'text/css';
-  if (filePath.endsWith('.json')) return 'application/json';
-  if (filePath.endsWith('.ttf')) return 'font/ttf';
-  if (filePath.endsWith('.svg')) return 'image/svg+xml';
-  return 'application/octet-stream';
-}
-
 const config: StorybookConfig = {
   framework: '@storybook/react-vite',
   // Standalone story pages otherwise request the missing /favicon.ico instead of Storybook's real icon.
@@ -29,11 +18,15 @@ const config: StorybookConfig = {
    * Storybook config lives under packages/core-ui/.storybook so the repo root has fewer folders while config ownership stays with the sidebar UI surface.
    * Paths must resolve from this config directory because package scripts pass `-c packages/core-ui/.storybook` instead of relying on the default root .storybook folder.
    */
-  stories: ['../**/*.stories.@(ts|tsx)'],
+  // The phone's Find page lives in the apps/mobile/app submodule (views/find) and keeps its story there;
+  // the glob matches nothing when the submodule is not checked out.
+  stories: ['../**/*.stories.@(ts|tsx)', '../../../apps/mobile/app/views/**/*.stories.@(ts|tsx)'],
   viteFinal: async (config) => {
     const existingPlugins = config.plugins ?? [];
     config.resolve = {
       ...config.resolve,
+      // Stories under apps/mobile/app would otherwise pick up React Native's React from that app's node_modules.
+      dedupe: [...(config.resolve?.dedupe ?? []), 'react', 'react-dom'],
       alias: {
         ...(Array.isArray(config.resolve?.alias) ? {} : config.resolve?.alias),
         '@': path.resolve(storybookDir, '../../..'),
@@ -41,21 +34,6 @@ const config: StorybookConfig = {
     };
     config.plugins = [
       ...existingPlugins,
-      {
-        name: 'ghostex-storybook-monaco-vs',
-        configureServer(server) {
-          server.middlewares.use('/monaco/vs', (request, response, next) => {
-            const requestPath = (request.url ?? '').split('?', 1)[0];
-            const filePath = path.join(monacoVsSource, requestPath);
-            if (!filePath.startsWith(monacoVsSource) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-              next();
-              return;
-            }
-            response.setHeader('content-type', monacoContentType(filePath));
-            fs.createReadStream(filePath).pipe(response);
-          });
-        },
-      },
       {
         name: 'ghostex-current-sidebar-settings',
         configureServer(server) {

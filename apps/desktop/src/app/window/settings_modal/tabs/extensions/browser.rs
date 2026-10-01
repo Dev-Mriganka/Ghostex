@@ -1,4 +1,4 @@
-//! `useExtensionsBrowserState` (packages/core-ui/extensions-modal/index.tsx): the installed list and
+//! `useExtensionsBrowserState` (packages/core-ui/extensions-modal/index.tsx (deleted 2026-10-01)): the installed list and
 //! the catalog read from gxserver, the extension being shown on the detail page, the one waiting
 //! for install consent, the operations in flight, the README and changelog of a Store entry, and
 //! the extension icons (`extensionStaticAssetUrl`).

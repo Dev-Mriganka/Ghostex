@@ -1,6 +1,6 @@
 //! The onboarding's fixed 1672x941 artboard: its geometry, the scale it is drawn at, colour
 //! helpers, easing curves and the small transition memory the stage animates with.
-//! SEE-ALSO: packages/core-ui/onboarding/stage.ts (the React twin of the geometry).
+//! SEE-ALSO: packages/core-ui/onboarding/stage.ts (deleted 2026-10-01) (the React twin of the geometry).
 use gpui::{Div, Hsla, Pixels, Rgba, Styled as _, div, px};
 use std::cell::RefCell;
 use std::collections::HashMap;

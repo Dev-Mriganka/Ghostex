@@ -1,5 +1,5 @@
 //! Panel 4, Mobile: the phone and notification switches and the looping Easy Connect pairing demo
-//! (panels/mobile.tsx, previews/phone-pairing.tsx, styles/mobile.css).
+//! (panels/mobile.tsx (deleted 2026-10-01), previews/phone-pairing.tsx (deleted 2026-10-01), styles/mobile.css).
 //!
 //! CDXC:Onboarding 2026-09-28 WHY:
 //! The React phone mockup leans back in 3D (`perspective(1400px) rotateY(-6deg) rotateX(2deg)

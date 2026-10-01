@@ -378,11 +378,19 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         / session / agent ids the daemon itself published.
         */
         | "/api/switchDraftAgent"
+        // CDXC:AgentBox 2026-10-01 WHY: same reasoning as switchDraftAgent above; where a draft
+        // runs is decided by the daemon that owns the row and runs its CLI.
+        | "/api/draftRunLocation"
         // CDXC:AgentProviders 2026-09-03: same reasoning as switchDraftAgent
         // above; the resume command is built by the daemon that owns the row.
         | "/api/switchSessionAgent"
         | "/api/agentCliMaintenance"
         | "/api/managedTools"
+        /*
+        CDXC:AgentBox 2026-10-01 WHY:
+        Remote-allowed like managedTools beside it: the boxes and the agentbox CLI belong to the machine that owns the project, so a client looking at a remote machine asks that machine. Setup commands come back as text gxserver chose, never text the caller supplied.
+        */
+        | "/api/agentbox"
         | "/api/agentAccounts"
         | "/api/readAgentLaunchPlan"
         | "/api/readAgentResumePlan"

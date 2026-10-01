@@ -416,7 +416,7 @@ lane inherits the same one — a size is chosen per lane, a rhythm is not.
   padding: 0;
 }
 
-/* Syntax highlighting (session-chat-code-highlight.ts). Shiki replaces the
+/* Syntax highlighting (session-chat-code-highlight.ts (deleted 2026-10-01)). Shiki replaces the
    plain <pre> with its own <pre class="shiki"><code> inside this wrapper, so
    every rule above — padding, overflow-x, the 0.8125rem code size — still
    applies to it and the swap costs no layout change, only colour.
@@ -512,7 +512,7 @@ lane inherits the same one — a size is chosen per lane, a rhythm is not.
 
 /* `<details>` / `<summary>`, which agents write whenever an answer carries
    something long the reader should be able to skip — a failing test's output, a
-   full diff, an env dump. session-chat-details.ts folds the tags out of the
+   full diff, an env dump. session-chat-details.ts (deleted 2026-10-01) folds the tags out of the
    mdast into a real <details>, so the open/close behaviour, the keyboard
    handling and the announced expanded state all come from the platform and this
    sheet only dresses them.
@@ -763,7 +763,7 @@ lane inherits the same one — a size is chosen per lane, a rhythm is not.
   vertical-align: middle;
 }
 
-/* Tables (MarkdownTable in session-chat-markdown.tsx).
+/* Tables (MarkdownTable in session-chat-markdown.tsx (deleted 2026-10-01)).
 
    The overflow lives on this wrapper rather than on the <table>. Putting it on
    the table means `display: block`, and a block table has no column algorithm:

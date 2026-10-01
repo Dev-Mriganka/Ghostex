@@ -154,7 +154,14 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
         .as_object()
         .map(|object| {
             let mut object = object.clone();
-            if let Some(model) = flag_text(&parsed.flags, "model") {
+            let model = flag_text(&parsed.flags, "model").or_else(|| {
+                agent_rows
+                    .iter()
+                    .find(|row| agents::text(row, "agentId") == agent_id)
+                    .filter(|row| agent_family(row) == Some("claude"))
+                    .map(|_| DEFAULT_CLAUDE_COORDINATOR_MODEL.to_string())
+            });
+            if let Some(model) = model {
                 object.insert("agentModel".to_string(), json!(model));
             }
             Value::Object(object)
@@ -222,23 +229,31 @@ pub(super) fn launch_settings_for(rows: &[Value], agent_id: &str) -> Value {
 }
 
 /// The first configured agent whose command runs Claude, else Codex.
+/// CDXC:Coordinators 2026-10-01 SEE-ALSO: DEFAULT_CLAUDE_COORDINATOR_MODEL in apps/desktop/src/app/window/new_coordinator_modal.rs (the user's Opus 5.5 decision); `create` on a Claude agent without `--model` uses the same, a Codex agent keeps its configured model.
+const DEFAULT_CLAUDE_COORDINATOR_MODEL: &str = "opus[1m]";
+
+/// `claude` or `codex` when a launcher row runs that executable or has that agent id.
+fn agent_family(row: &Value) -> Option<&'static str> {
+    let executable = agents::text(row, "command")
+        .split_whitespace()
+        .find(|word| !word.contains('='))
+        .map(|word| {
+            std::path::Path::new(word)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default()
+                .to_string()
+        })
+        .unwrap_or_default();
+    ["claude", "codex"]
+        .into_iter()
+        .find(|family| executable == *family || agents::text(row, "agentId") == *family)
+}
+
 fn default_coordinator_agent(rows: &[Value]) -> Option<String> {
-    let executable = |row: &Value| {
-        agents::text(row, "command")
-            .split_whitespace()
-            .find(|word| !word.contains('='))
-            .map(|word| {
-                std::path::Path::new(word)
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .unwrap_or_default()
-                    .to_string()
-            })
-            .unwrap_or_default()
-    };
     ["claude", "codex"].iter().find_map(|family| {
         rows.iter()
-            .find(|row| executable(row) == *family || agents::text(row, "agentId") == *family)
+            .find(|row| agent_family(row) == Some(*family))
             .map(|row| agents::text(row, "agentId").to_string())
     })
 }

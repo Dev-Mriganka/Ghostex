@@ -1,7 +1,7 @@
 //! `SessionCardHoverActionsField`: the session hover buttons as 32px icon toggles (dashed and
 //! faded when off, a raised fill with a 30% edge when on); a click toggles one, dragging reorders
 //! the strip, the chevron included (CDXC:Sessions 2026-09-12 DECISION in
-//! packages/core-ui/settings-modal/session-card-hover-actions-field.tsx).
+//! packages/core-ui/settings-modal/session-card-hover-actions-field.tsx (deleted 2026-10-01)).
 use super::super::super::native_modal_kit::*;
 use super::super::catalog::{module, settings_catalog};
 use super::super::palette::SettingsPalette;

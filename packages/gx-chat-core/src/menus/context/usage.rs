@@ -121,7 +121,7 @@ pub fn format_duration(ms: f64) -> String {
     format!("{}s", seconds as i64)
 }
 
-/// `formatResetCountdown`, `packages/shared/reset-countdown.ts`.
+/// `formatResetCountdown`, `packages/shared/reset-countdown.ts` (deleted 2026-10-01).
 ///
 /// CDXC:AgentProviders 2026-09-08 DECISION:
 /// User: every reset stat shows days and hours at 24 hours or more (5d 12h), and only shows
@@ -144,7 +144,7 @@ pub fn format_reset_countdown(ms: f64) -> String {
     }
 }
 
-/// `maskAccountText`, `packages/shared/account-display.ts`.
+/// `maskAccountText`, `packages/shared/account-display.ts` (deleted 2026-10-01).
 ///
 /// CDXC:AgentProviders 2026-09-10 DECISION:
 /// Hide emails keeps the first and last characters before `@` and replaces every domain with the

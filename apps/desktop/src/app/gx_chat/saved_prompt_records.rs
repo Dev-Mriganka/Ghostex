@@ -12,9 +12,9 @@
 //! is the TypeScript's once-per-page checkpoint thinning, a cleanup whose rows this listing folds
 //! into one row per session anyway.
 //!
-//! SEE-ALSO: packages/core-ui/chat/session-chat-draft-storage.ts,
-//! packages/core-ui/chat/session-chat-draft-recovery.ts,
-//! packages/core-ui/chat/session-chat-sent-history.ts,
+//! SEE-ALSO: packages/core-ui/chat/session-chat-draft-storage.ts (deleted 2026-10-01),
+//! packages/core-ui/chat/session-chat-draft-recovery.ts (deleted 2026-10-01),
+//! packages/core-ui/chat/session-chat-sent-history.ts (deleted 2026-10-01),
 //! apps/desktop/src/app/quick_access/storage.rs (the caller).
 
 use ghostex_gx_chat_core::StorageKey;

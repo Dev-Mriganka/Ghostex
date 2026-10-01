@@ -58,8 +58,7 @@ export const RELEASE_BUILD_SCRIPTS = Object.freeze([
   {
     // CI: same three desktop build scripts as build:sidebar-css, immediately after
     // it (Windows runs node_modules/.bin/vite.exe with the same arguments).
-    // Writes apps/desktop/dist/sidebar, which is gitignored. Also exercises
-    // tooling/shiki-classic-assets.mjs through the stageShikiChatRuntime plugin.
+    // Writes apps/desktop/dist/sidebar, which is gitignored.
     caller: 'release-gpui-{macos,linux,windows} -> apps/desktop/scripts/build-*-app',
     command: 'bunx vite build --config apps/desktop/vite.config.ts',
     timeoutMs: 10 * 60 * 1000,

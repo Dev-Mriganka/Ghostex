@@ -1,6 +1,6 @@
 //! The Hub's small building blocks, drawn from the modal kit's controls with the Hub's own
 //! tokens: the three shadcn `Button` variants it uses, icons, agent logos, status dots, pills
-//! and tinted icon tiles (packages/core-ui/agents-hub-sync/shared.tsx).
+//! and tinted icon tiles (packages/core-ui/agents-hub-sync/shared.tsx (deleted 2026-10-01)).
 use super::super::native_modal_kit::{
     ModalButtonSkin, ModalFieldSkin, hsla, modal_skinned_button, modal_text_input_skinned, rgba_of,
     transparent,
@@ -155,7 +155,7 @@ pub(crate) fn hub_search_input(
     )
 }
 
-/// The brand tint an agent logo mask takes (`AGENT_LOGO_COLORS` in packages/core-ui/agent-logos.ts);
+/// The brand tint an agent logo mask takes (`AGENT_LOGO_COLORS` in packages/core-ui/agent-logos.ts (deleted 2026-10-01));
 /// the white and near-white logos, Codex and Z.ai take the foreground in light themes.
 pub(crate) fn agent_logo_color(icon: &str, hp: &HubPalette) -> Rgba {
     let brand = match icon {
@@ -234,7 +234,7 @@ pub(crate) fn agent_logo(icon: &str, size: f32, hp: &HubPalette) -> Option<AnyEl
     )
 }
 
-/// `AgentLogo` (agents-hub-sync/shared.tsx): the brand logo, or the first letter of the name on
+/// `AgentLogo` (agents-hub-sync/shared.tsx (deleted 2026-10-01)): the brand logo, or the first letter of the name on
 /// a quiet 5px-rounded tile when the agent has no icon.
 pub(crate) fn sync_agent_logo(
     icon: Option<&str>,

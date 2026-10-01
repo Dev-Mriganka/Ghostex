@@ -192,6 +192,23 @@ pub(super) fn create_gxserver_agent_session(payload: &Value, flags: &Flags) -> C
             }
         }
     }
+    // CDXC:AgentBox 2026-10-01 SEE-ALSO: `--run-on docker|hetzner|…|docker:<host>` is the CLI spelling of the create's `runLocation` (server/src/agentbox/location.rs).
+    match payload.get("runOn") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(value)) => {
+            let location =
+                crate::agentbox::run_location_from_cli(value).map_err(CliError::Other)?;
+            if location != "local" {
+                params.insert("runLocation".to_string(), json!(location));
+            }
+        }
+        Some(_) => {
+            return Err(CliError::Other(
+                "create-agent --run-on needs a location such as local, docker or hetzner."
+                    .to_string(),
+            ))
+        }
+    }
     // CDXC:SessionChat 2026-09-09 SEE-ALSO:
     // Mobile uses --defer-start to open the durable draft immediately; its background attach owns provider startup.
     if flags.truthy("deferStart") {

@@ -4,7 +4,7 @@
 //! User: unsaved edits must survive unavailable connections and retry across restarts, with visible
 //! save failures, and saving must work quietly in the background without a routine saving indicator
 //! while typing. The outbox belongs to the HOST, not the brain: a platform-neutral core cannot own
-//! a disk-backed retry worker, so `packages/core-ui/chat/session-chat-draft-outbox.ts` is ported
+//! a disk-backed retry worker, so `packages/core-ui/chat/session-chat-draft-outbox.ts` (deleted 2026-10-01) is ported
 //! here rather than into `packages/gx-chat-core`.
 //!
 //! The shape is the TypeScript's `Worker`: one per session, at most one write in flight, and a

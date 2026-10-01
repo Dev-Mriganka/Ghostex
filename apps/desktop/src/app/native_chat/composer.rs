@@ -436,7 +436,7 @@ impl NativeChatView {
                     let reduce_motion = cx.reduce_motion();
                     let _ = measured.update(cx, |chat, cx| {
                         if chat.composer_animation.measured(natural, reduce_motion) {
-                            cx.notify();
+                            chat.notify_composer(cx);
                         }
                     });
                 });
@@ -554,6 +554,9 @@ impl NativeChatView {
                     .when(!collapsed, |this| this.child(measurement)),
             )
             .when(!maximized, |this| this.child(content_measure));
+        if !maximized && let Some(run_location) = self.render_run_location(p, cx) {
+            footer = footer.child(run_location);
+        }
         // CDXC:SessionChat 2026-09-18 WHY: React's inline composer had a zero-height notification section before its field, contributing one grid gap even while idle. Reserve that same gap here, after any cards or note.
         footer = footer.child(
             div()

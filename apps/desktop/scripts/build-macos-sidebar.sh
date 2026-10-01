@@ -15,30 +15,25 @@ build_cef_sidebar_bundle_if_needed() {
 	# Generated CSS is an output, so hashing it as an input invalidates the cache after Tailwind changes it.
 	# Hash the CEF entries, their shared imports and toolchain inputs so Rust-only edits reuse the web bundle.
 	bundle_digest="$(fingerprint_inputs \
-		--value "cef-sidebar-bundle-v2" \
+		--value "cef-sidebar-bundle-v3" \
 		--exclude-path "$REPO_ROOT/packages/core-ui/styles/shadcn.generated.css" \
 		--value "bun=$(bun --version 2>/dev/null || true)" \
 		--path "$SCRIPT_DIR/build-macos-sidebar.sh" \
 		--path "$GPUI_DIR/vite.config.ts" \
 		--path "$GPUI_DIR/tsconfig.json" \
 		--path "$GPUI_DIR/manage.html" \
-		--path "$GPUI_DIR/modal-host.html" \
 		--path "$GPUI_DIR/sidebar" \
 		--path "$GPUI_DIR/views" \
 		--path "$REPO_ROOT/packages/core-ui" \
 		--path "$REPO_ROOT/packages/components" \
 		--path "$REPO_ROOT/packages/shared" \
-		--path "$REPO_ROOT/tooling/shiki-classic-assets.mjs" \
-		--path "$REPO_ROOT/tooling/mermaid-classic-assets.mjs" \
+		--path "$REPO_ROOT/tooling/docs-classic-assets.ts" \
 		--path "$REPO_ROOT/package.json" \
 		--path "$REPO_ROOT/bun.lock" \
 		--path "$REPO_ROOT/tsconfig.json")"
 	bundle_outputs=(
 		"$REPO_ROOT/packages/core-ui/styles/shadcn.generated.css"
 		"$GPUI_DIR/dist/sidebar/manage.html"
-		"$GPUI_DIR/dist/sidebar/modal-host.html"
-		"$GPUI_DIR/dist/sidebar/monaco/vs/loader.js"
-		"$GPUI_DIR/dist/sidebar/mermaid/runtime.js"
 	)
 	if cache_matches "cef-sidebar-bundle" "$bundle_digest" "${bundle_outputs[@]}"; then
 		echo "CEF sidebar bundle is current; skipping web build."

@@ -65,7 +65,7 @@ impl GhostexGpuiApp {
                 ProjectWorkareaCefSurfaceSlotKey::Manage,
                 cef::ProjectWorkareaBridgeEvent::ManageFilesRequest(payload),
             ) => {
-                // CDXC:Docs 2026-09-06 SEE-ALSO: The shared Mermaid viewer opens through the same native child-window route as chat (packages/core-ui/mermaid/mermaid-diagram.tsx).
+                // CDXC:Docs 2026-09-06 SEE-ALSO: The shared Mermaid viewer opens through the same native child-window route as chat (packages/core-ui/mermaid/mermaid-diagram.tsx (deleted 2026-10-01)).
                 if let Ok(request) = serde_json::from_str::<serde_json::Value>(&payload)
                     && request.get("action").and_then(serde_json::Value::as_str)
                         == Some("openMermaidDiagram")

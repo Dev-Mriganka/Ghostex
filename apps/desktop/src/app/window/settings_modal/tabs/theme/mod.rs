@@ -1,4 +1,4 @@
-//! The Theme page (packages/core-ui/settings-modal/tabs/theme.tsx and theme-simple-controls.tsx):
+//! The Theme page (packages/core-ui/settings-modal/tabs/theme.tsx (deleted 2026-10-01) and theme-simple-controls.tsx (deleted 2026-10-01)):
 //! Colours, Transparency, Chat and terminal, App Icon (hidden while `APP_ICON_CONTROLS_VISIBLE` is
 //! off) and the links to related rows on General. Its rows are the General catalog's `theming`
 //! and `appIcon` sections, so the same search finds them.

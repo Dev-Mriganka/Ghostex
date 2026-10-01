@@ -1,6 +1,6 @@
 //! Panel 5, Get started: the project card (folder, first agent, default session view) and the look
-//! card (appearance, theme colour, Colourfulness, transparency) (panels/get-started.tsx,
-//! styles/get-started.css, settings-modal/theme-simple-controls.tsx, styles/settings-theme.css).
+//! card (appearance, theme colour, Colourfulness, transparency) (panels/get-started.tsx (deleted 2026-10-01),
+//! styles/get-started.css, settings-modal/theme-simple-controls.tsx (deleted 2026-10-01), styles/settings-theme.css).
 use super::GpuiOnboardingWindow;
 use super::interact;
 use super::model::{

@@ -165,7 +165,7 @@ pub(crate) fn secondary_button<V: 'static>(
         .child(label.into())
 }
 
-/// The app-wide switch shape (packages/components/ui/switch.tsx): 32x20 track, 6px track radius,
+/// The app-wide switch shape (packages/components/ui/switch.tsx (deleted 2026-10-01)): 32x20 track, 6px track radius,
 /// 16px thumb with a 4px radius.
 pub(crate) fn switch(p: &AutomatePalette, checked: bool, disabled: bool) -> Div {
     div()

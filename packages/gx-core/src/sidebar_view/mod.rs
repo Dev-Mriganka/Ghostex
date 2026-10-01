@@ -11,6 +11,7 @@
 pub(crate) mod agents;
 mod armed_actions;
 mod close_after_done;
+mod drop_landing;
 mod assemble;
 pub(crate) mod close_successor;
 pub(crate) mod collections;
@@ -21,6 +22,7 @@ pub(crate) mod membership;
 mod model;
 pub(crate) mod ordering;
 pub(crate) mod projects;
+mod project_drop_landing;
 mod reveal;
 pub(crate) mod rows;
 mod sections;
@@ -44,6 +46,8 @@ pub use close_successor::{
     close_project_successor_group_order, first_awake_successor_session_id, is_awake_successor_row,
 };
 pub use collections::{Collection, CollectionsState};
+pub use drop_landing::{DropLanding, DropWrites, TreeDropTarget};
+pub use project_drop_landing::{ProjectDropLanding, ProjectDropRow};
 pub use inputs::{
     BrowserTabInput, CloseAfterDoneInput, DelayedSendInput, MachineTabInput, ProjectDiffStats,
     SectionCollapse, SectionId, SessionSortMode, SidebarCollapseState, SidebarHiddenItems,
@@ -61,7 +65,7 @@ pub use space_switch::{plan_space_switch_restore, SpaceSwitchFocus};
 pub use spaces::{Space, SpacesState, OTHER_SPACE_ID};
 pub use tags::{TagListItem, TagListItemKind, TagPresentation, UNTAGGED_TAG_FILTER};
 pub use view::{
-    CollectionView, DelayedSendView, EmptyState, GroupCore, GroupSummary, GroupView, LabelDeadline,
+    CollectionView, CoordinatorBadge, CoordinatorBadgeTone, DelayedSendView, RowNesting, ThreadTally, EmptyState, GroupCore, GroupSummary, GroupView, LabelDeadline,
     MachineSummary, MachineTabView, OrderItem, OrderKind, ProjectContextView, RemoteMachineView,
     SectionView, SessionMenuFacts, SessionRow, SessionTiming, SessionView, SidebarView, SpaceView,
     WorktreeView,

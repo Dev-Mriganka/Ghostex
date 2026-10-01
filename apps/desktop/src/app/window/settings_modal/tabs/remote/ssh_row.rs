@@ -1,4 +1,4 @@
-//! The "SSH access is on / off" row (remote-ssh-access-row.tsx) shared by the Easy Connect card and
+//! The "SSH access is on / off" row (remote-ssh-access-row.tsx (deleted 2026-10-01)) shared by the Easy Connect card and
 //! the Tailscale card's step 2, and its per-OS "by hand" buttons with their instruction popovers.
 //!
 //! CDXC:RemotePairing 2026-09-03:

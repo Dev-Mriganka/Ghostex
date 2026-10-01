@@ -87,18 +87,49 @@ pub(crate) fn schedule_first_user_input_draft(state: AppState, target: FirstUser
     repaint, with nothing anywhere to recover it from.
     */
     tokio::spawn(async move {
-        crate::session_chat_composer::wait_for_session_chat_composer_by_ids(
+        let server_id = state.metadata.server_id.as_str();
+        // A box session's agent needs its box first; the draft never goes into boot output or
+        // agentbox's sign-in prompt (agentbox/input_ready.rs).
+        if crate::agentbox::is_agentbox_session_by_ids(
             &state.paths,
-            state.metadata.server_id.as_str(),
+            server_id,
             &target.project_id,
             &target.session_id,
-            crate::session_chat_composer::SessionChatComposerWaitPolicy {
-                settle_ms: 0,
-                timeout_ms: GXSERVER_PROVIDER_COMPOSER_WAIT_TIMEOUT_MS,
-                unknown_hold_ms: GXSERVER_FIRST_USER_INPUT_DRAFT_READY_DELAY_MS,
-            },
-        )
-        .await;
+        ) {
+            if !crate::agentbox::wait_for_box_agent_input(
+                &state.paths,
+                server_id,
+                &target.project_id,
+                &target.session_id,
+            )
+            .await
+            {
+                if let Ok(db) = open_gxserver_database(&state.paths) {
+                    let repository = DomainRepository::new(&db, server_id);
+                    let _ = update_first_user_input_draft_status(
+                        &repository,
+                        &target.project_id,
+                        &target.session_id,
+                        "failed",
+                    );
+                }
+                schedule_delta_for_ids(&state, &target.project_id, &target.session_id);
+                return;
+            }
+        } else {
+            crate::session_chat_composer::wait_for_session_chat_composer_by_ids(
+                &state.paths,
+                server_id,
+                &target.project_id,
+                &target.session_id,
+                crate::session_chat_composer::SessionChatComposerWaitPolicy {
+                    settle_ms: 0,
+                    timeout_ms: GXSERVER_PROVIDER_COMPOSER_WAIT_TIMEOUT_MS,
+                    unknown_hold_ms: GXSERVER_FIRST_USER_INPUT_DRAFT_READY_DELAY_MS,
+                },
+            )
+            .await;
+        }
         let Ok(db) = open_gxserver_database(&state.paths) else {
             return;
         };

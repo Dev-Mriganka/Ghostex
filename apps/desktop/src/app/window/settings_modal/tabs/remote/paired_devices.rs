@@ -1,4 +1,4 @@
-//! The paired device list (remote-paired-devices.tsx).
+//! The paired device list (remote-paired-devices.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:RemotePairing 2026-09-03:
 //! The friendly face of the pairing registry: one row per device with its platform glyph, when it paired, and whether it checked in within the last three minutes. Remove asks for confirmation inline, naming the device, and then posts `/api/removePairedDevice`, which also drops the device's SSH key.

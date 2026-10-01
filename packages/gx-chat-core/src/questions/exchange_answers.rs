@@ -409,6 +409,52 @@ fn parse_hermes_answers(
     None
 }
 
+/// The `A<n>: ` marker that opens question `n`'s answer line, as a byte range in `text`.
+pub(crate) fn antigravity_answer_markers(
+    text: &str,
+    question_count: usize,
+) -> Option<Vec<(usize, usize)>> {
+    let mut found = Vec::with_capacity(question_count);
+    let mut from = 0usize;
+    for number in 1..=question_count {
+        let marker = format!("A{number}: ");
+        let at = if number == 1 {
+            text.starts_with(&marker).then_some(0)?
+        } else {
+            from + text.get(from..)?.find(&format!("\n{marker}"))? + 1
+        };
+        found.push((at, at + marker.len()));
+        from = at + marker.len();
+    }
+    Some(found)
+}
+
+/*
+Antigravity's ask_question answers one line per question, in order: `A1: Apple, Cherry`, with a
+write-in answer appended to the picked labels the same way and `User Skipped` for a question the
+user skipped.
+*/
+const ANTIGRAVITY_SKIPPED_TEXT: &str = "User Skipped";
+
+fn parse_antigravity_answers(
+    entries: &[ParsedQuestion],
+    trimmed: &str,
+) -> Option<Vec<Option<ExchangeAnswer>>> {
+    let markers = antigravity_answer_markers(trimmed, entries.len())?;
+    Some(
+        markers
+            .iter()
+            .enumerate()
+            .map(|(index, (_, end))| {
+                let stop = markers.get(index + 1).map_or(trimmed.len(), |next| next.0);
+                let value = js_trim(&trimmed[*end..stop]);
+                (value != ANTIGRAVITY_SKIPPED_TEXT)
+                    .then(|| match_answer_to_options(&entries[index].question, value))
+            })
+            .collect(),
+    )
+}
+
 fn parse_answers(entries: &[ParsedQuestion], output: &str) -> Option<Vec<Option<ExchangeAnswer>>> {
     let trimmed = js_trim(output);
     if entries.len() == 1 {
@@ -435,6 +481,9 @@ fn parse_answers(entries: &[ParsedQuestion], output: &str) -> Option<Vec<Option<
     }
     if let Some(hermes) = parse_hermes_answers(entries, trimmed) {
         return Some(hermes);
+    }
+    if let Some(antigravity) = parse_antigravity_answers(entries, trimmed) {
+        return Some(antigravity);
     }
     let body = strip_answer_envelope(trimmed)?;
     // Locate each question's `"question"="` marker in order; a question whose marker is missing

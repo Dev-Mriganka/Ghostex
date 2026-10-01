@@ -6,7 +6,7 @@
 //! The filter list is a setting (`sidebarSessionTagListItems`); the custom tag catalog is the
 //! local daemon's (`customSessionTags` of the hydrate) and every create, delete or reorder is
 //! written straight through (`updateCustomSessionTags`), never through the settings draft
-//! (CDXC:Sessions 2026-09-11 WHY in packages/core-ui/settings-modal.tsx).
+//! (CDXC:Sessions 2026-09-11 WHY in packages/core-ui/settings-modal.tsx (deleted 2026-10-01)).
 use super::super::super::native_modal_kit::*;
 use super::super::super::space_editor_modal::{SPACE_EDITOR_ICONS, command_score};
 use super::super::catalog::{module, settings_catalog};

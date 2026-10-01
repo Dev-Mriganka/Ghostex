@@ -174,6 +174,8 @@ pub struct SidebarCollapseState {
     pub collapsed_collections: BTreeSet<String>,
     pub expanded_session_lists: BTreeSet<String>,
     pub expanded_hover_actions: BTreeSet<String>,
+    /// Coordinators whose threads are folded away, by the coordinator's sidebar row id.
+    pub collapsed_coordinators: BTreeSet<String>,
     pub section_collapse: BTreeMap<String, SectionCollapse>,
     /// Keyed by section key (`local`, `remote:<machine>`).
     pub selected_space_by_section: BTreeMap<String, String>,

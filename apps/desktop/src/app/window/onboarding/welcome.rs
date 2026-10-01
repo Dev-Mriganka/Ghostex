@@ -1,5 +1,5 @@
-//! Panel 1, Welcome: the three feature tabs and their live demos (panels/welcome.tsx,
-//! previews/welcome-demos.tsx, styles/welcome.css).
+//! Panel 1, Welcome: the three feature tabs and their live demos (panels/welcome.tsx (deleted 2026-10-01),
+//! previews/welcome-demos.tsx (deleted 2026-10-01), styles/welcome.css).
 use super::GpuiOnboardingWindow;
 use super::fonts::PLEX_MONO;
 use super::interact;

@@ -57,7 +57,7 @@ impl NativeChatView {
     }
 
     /// CDXC:SessionChat 2026-09-27 DECISION:
-    /// User: combine Simple, Verbose and Summary modes in the More actions menu. One View row opens a submenu with the three modes as independent checks, and its detail names the modes that are on. Summary is listed even while its toolbar button shows. The phone has no Simple mode, so its View row holds Verbose and Summary (apps/mobile/app/src/chat/native/composer/menus.ts).
+    /// User: combine Simple, Verbose and Summary modes in the More actions menu. One View row opens a submenu with the three modes as independent checks, and its detail names the modes that are on. Summary is listed even while its toolbar button shows. The phone's View row holds the same three modes (apps/mobile/app/src/chat/native/composer/menus.ts).
     fn view_modes_row(&self, appearance: &super::appearance::ChatAppearance) -> Value {
         let summary = self
             .composer_control_available("summary")

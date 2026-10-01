@@ -14,6 +14,7 @@
 //!   the revision.
 
 mod active_project_context;
+mod agentbox;
 mod app_lifecycle;
 mod attention;
 pub mod bot_feed;
@@ -50,6 +51,11 @@ pub use crate::active_project_context::{
     active_project_context_payload, project_context_payload, quick_automations_payload,
     quick_projectless_payload, ACTIVE_PROJECT_CONTEXT_MESSAGE_TYPE,
     ACTIVE_PROJECT_CONTEXT_MESSAGE_VERSION,
+};
+pub use crate::agentbox::{
+    agentbox_agent_family, agentbox_location_label, agentbox_locations_from_status,
+    is_agentbox_run_location, session_chat_view_unavailable, AgentboxLocation, AgentboxLocations,
+    SessionAgentbox, LOCAL_RUN_LOCATION,
 };
 pub use crate::app_lifecycle::{
     AppLifecycleAction, APP_LIFECYCLE_ACTIONS, APP_LIFECYCLE_MESSAGE_TYPE,
@@ -160,8 +166,10 @@ pub use crate::sidebar_command_run::{
 };
 pub use crate::sidebar_drag::{
     owns_order_write_message, owns_project_move_command, owns_project_order_message,
-    owns_session_move_command, plan_added_project_placement, plan_added_project_space_membership,
-    plan_order_write, plan_project_move, plan_project_order_write, plan_session_move,
+    owns_session_drop_command, owns_session_move_command, plan_added_project_placement, plan_added_project_space_membership,
+    plan_order_write, plan_project_move, plan_project_order_write, plan_section_move,
+    plan_session_drop, plan_session_move, project_drop_command, project_drop_landing,
+    SessionDrop,
     sidebar_group_membership, sidebar_project_group_order, AddedProjectPlacement, OrderWrite,
     OrderWritePlan, ProjectMovePlan, ProjectWrite, SessionMovePlan, ORDER_WRITE_MESSAGE_TYPES,
     PROJECT_MOVE_COMMAND_TYPES, PROJECT_ORDER_MESSAGE_TYPE,
@@ -186,10 +194,11 @@ pub use crate::sidebar_view::{
     plan_space_sleep, plan_space_switch_restore, project_slot_plan, rendered_session_ids,
     reveal_plan, session_is_snoozed, session_slot_plan, space_for_focused_row,
     space_landing_project_ids, ArmedAction, BrowserTabInput, CloseAfterDoneInput, Collection,
-    CollectionView, CollectionsState, DelayedSendInput, DelayedSendView, EmptyState,
+    CollectionView, CollectionsState, CoordinatorBadge, CoordinatorBadgeTone, DelayedSendInput,
+    DelayedSendView, DropLanding, DropWrites, EmptyState, RowNesting, ThreadTally, TreeDropTarget,
     FocusedRowSpace, GroupCore, GroupSummary, GroupView, LabelDeadline, MachineSummary,
     MachineTabInput, MachineTabView, OrderItem, OrderKind, ProjectContextView, ProjectDiffStats,
-    ProjectSlotPlan, RemoteMachineView, SectionCollapse, SectionId, SectionView, SessionMenuFacts,
+    ProjectDropLanding, ProjectDropRow, ProjectSlotPlan, RemoteMachineView, SectionCollapse, SectionId, SectionView, SessionMenuFacts,
     SessionRow, SessionSlotPlan, SessionSortMode, SessionTiming, SessionView, SidebarCollapseState,
     SidebarHiddenItems, SidebarHostInputs, SidebarInputs, SidebarMode, SidebarRevealPlan,
     SidebarSettings, SidebarUiState, SidebarUpdateWork, SidebarView, SidebarViewModel, Space,

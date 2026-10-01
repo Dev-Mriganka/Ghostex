@@ -79,6 +79,7 @@ impl NativeChatView {
     /// The floating sessions panel draws the chat in a window of its own and closes it when it goes away, and the chat's owned modals are restored when the pane is next shown, which comes before the chat is drawn in the window that shows it now. Opening them then read the closed panel window's frame, and GPUI's "window not found" landed in the chat's error banner and stayed there. A modal owed to a pane whose window is gone therefore waits for the pane's next draw, which names the window it belongs to, and opens once that draw has measured the pane there.
     pub(super) fn note_drawn_in(&mut self, window: &gpui::Window, cx: &mut Context<Self>) {
         self.drawn_native_view = window_native_view(window);
+        self.drawn_window_size = window.viewport_size();
         let window = window.window_handle();
         if self.main_window.replace(window) == Some(window) || self.pane_hidden {
             return;
@@ -107,6 +108,16 @@ impl NativeChatView {
                     .is_some_and(|window| cx.windows().contains(&window))
             })
             .unwrap_or(self.config.parent_native_view)
+    }
+
+    /// CDXC:SessionChat 2026-10-01 DECISION:
+    /// User: "When I click expand for a table or a diagram, or any of the things we expand out, we should show it large, outside the chat view itself, not constrained inside it." The table preview and the image viewer open over the whole window the chat is drawn in, not over the chat pane; the Mermaid viewer already opens as an app modal centred on the main window (mermaid_diagram_modal_lifecycle.rs). Supersedes the pane-sized frames of 2026-09-18 (image viewer) and 2026-09-24 (table preview).
+    pub(in crate::app::native_chat) fn expanded_area(&self) -> Bounds<Pixels> {
+        let size = self.drawn_window_size;
+        if size.width <= gpui::px(0.0) || size.height <= gpui::px(0.0) {
+            return self.bounds.get();
+        }
+        Bounds::new(gpui::Point::default(), size)
     }
 
     pub(super) fn pane_windows_open(&self) -> bool {
@@ -151,14 +162,17 @@ impl NativeChatView {
     /// React draws these as overlays inside the pane, so they follow it for free.
     pub(super) fn follow_pane_windows(&mut self, cx: &mut Context<Self>) {
         let pane = self.bounds.get();
+        let expanded = self.expanded_area();
         let parent = self.child_window_parent(cx);
         let scale = super::appearance::ChatAppearance::current(&self.snapshot).scale;
         let windows: [Option<(gpui::AnyWindowHandle, Bounds<Pixels>)>; 6] = [
-            self.image_viewer.handle.map(|handle| (handle.into(), pane)),
+            self.image_viewer
+                .handle
+                .map(|handle| (handle.into(), expanded)),
             self.table_preview.handle.map(|handle| {
                 (
                     handle.into(),
-                    super::table_preview::table_preview_frame(pane, scale),
+                    super::table_preview::table_preview_frame(expanded, scale),
                 )
             }),
             self.save_markdown_window

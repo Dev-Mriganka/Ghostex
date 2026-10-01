@@ -1,6 +1,6 @@
 //! The Config card of Settings > Agents: Default Prompt Agent, Title Generation Agent (the exact
 //! command in its info tooltip), Custom Title Command, and Agent approvals
-//! (`AgentApprovalPolicyControl`, packages/core-ui/agent-approval-policy-control.tsx) with its
+//! (`AgentApprovalPolicyControl`, packages/core-ui/agent-approval-policy-control.tsx (deleted 2026-10-01)) with its
 //! Skip permissions? confirmation.
 use super::super::super::catalog::{SettingOption, settings_catalog};
 use super::super::super::fields::{

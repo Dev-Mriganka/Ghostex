@@ -254,10 +254,24 @@ export interface GxserverPresentationCapabilities {
   worktreeSessions?: boolean;
 }
 
+/** The agentbox sandbox a session's agent runs in (`PresentationAgentbox` in gx-protocol). */
+export interface GxserverPresentationAgentbox {
+  /** `docker`, `hetzner`, `vercel`, `daytona`, `e2b`, `digitalocean`, or `docker:<host alias>`. */
+  provider: string;
+  /** The agentbox box name every `agentbox … <box>` command takes. */
+  boxName: string;
+  /** Short label for the provider, e.g. "Docker" or "Hetzner". */
+  providerLabel: string;
+  /** A draft whose chat Run on row picked this box; its first message creates the box. */
+  pending?: true;
+}
+
 export interface GxserverPresentationSession {
   accountId?: string;
   accountName?: string;
   accountSlot?: string;
+  /** Present only when the agent runs inside an agentbox sandbox instead of on this machine. */
+  agentbox?: GxserverPresentationAgentbox;
   actions: GxserverPresentationSessionActions;
   activity: GxserverPresentationSessionActivity;
   /** Unanswered async questions, independent of working/completion activity. */

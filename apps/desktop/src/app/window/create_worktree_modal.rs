@@ -1,9 +1,9 @@
 //! Native GPUI Add Worktree dialog, the desktop twin of the React
-//! `WorktreeCreateModal` in packages/core-ui/worktree-create-modal.tsx.
+//! `WorktreeCreateModal` in packages/core-ui/worktree-create-modal.tsx (deleted 2026-10-01).
 //!
 //! CDXC:Worktrees 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt in native GPUI one at a time, and "make sure the new gpui modal is EXACTLY 1 to 1 matching the react one": the same layout, copy, colors, radii, spacing, fonts, states, keyboard behaviour and bridge messages in both appearances. Add Worktree keeps its 17px child-window inset, its `#161616` field skin, the raised mode strip, the searchable branch and worktree pickers, and the image-link insertion into the first prompt.
-//! SEE-ALSO: packages/core-ui/worktree-create-modal.tsx and the `.worktree-create-*` rules in packages/core-ui/styles/modals.css and modals-light.css (the React twin), packages/components/ui/segmented-control.tsx and raised-tab-rail.css (the mode strip), packages/components/ui/select.tsx and searchable-dropdown.css (the pickers), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/create_worktree_modal_lifecycle.rs (open, bridge commands, results), apps/desktop/src/bin/native_modal_demo/create_worktree.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/worktree-create-modal.tsx (deleted 2026-10-01) and the `.worktree-create-*` rules in packages/core-ui/styles/modals.css and modals-light.css (the React twin), packages/components/ui/segmented-control.tsx (deleted 2026-10-01) and raised-tab-rail.css (the mode strip), packages/components/ui/select.tsx (deleted 2026-10-01) and searchable-dropdown.css (the pickers), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/create_worktree_modal_lifecycle.rs (open, bridge commands, results), apps/desktop/src/bin/native_modal_demo/create_worktree.rs (standalone preview).
 use super::native_modal_kit::*;
 use gpui::Focusable as _;
 use gpui::prelude::FluentBuilder as _;
@@ -1313,7 +1313,7 @@ impl GpuiCreateWorktreeModalWindow {
         }
     }
 
-    /// The plain shadcn `SelectContent` (`packages/components/ui/select.tsx`)
+    /// The plain shadcn `SelectContent` (`packages/components/ui/select.tsx` (deleted 2026-10-01))
     /// as the React modal renders it: `bg-popover` (the modal surface), the
     /// tooltip border, 8px radius, `shadow-lg`, a 4px-padded group of 28px rows
     /// at 14px with 6px 8px padding and 6px radius, the selected row on 12%

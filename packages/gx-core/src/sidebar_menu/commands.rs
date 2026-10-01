@@ -245,6 +245,38 @@ impl MenuCommand {
         }
         Self(Value::Object(object))
     }
+
+    /// `{ type: 'agentAccounts', groupId, action, runLocation? }`: the launcher's Run in a Box
+    /// pages (`box` lists the ready locations, `boxAgents` the agents one location can run).
+    pub(crate) fn agent_box_page(group_id: &str, action: &str, run_location: Option<&str>) -> Self {
+        let mut command = Self::agent_accounts(group_id, action, None);
+        if let (Some(run_location), Value::Object(object)) = (run_location, &mut command.0) {
+            object.insert(
+                "runLocation".to_string(),
+                Value::String(run_location.to_string()),
+            );
+        }
+        command
+    }
+
+    /// `{ type: 'projectAction', action: 'agent', groupId, agentId, runLocation }`: a Run in a Box
+    /// row, which launches the agent in that box (no account: the box has its own sign-in).
+    pub(crate) fn agent_run_in_box(group_id: &str, agent_id: &str, run_location: &str) -> Self {
+        let mut command = Self::project_action(group_id, "agent", Some(agent_id));
+        if let Value::Object(object) = &mut command.0 {
+            object.insert(
+                "runLocation".to_string(),
+                Value::String(run_location.to_string()),
+            );
+        }
+        command
+    }
+
+    /// `{ type: 'agentboxSessionAction', sessionId, action }`: a box session's Open Box Web App
+    /// (`openWeb`), Open Box Screen (`openScreen`), Stop Box (`stop`) and Destroy Box (`destroy`).
+    pub(crate) fn agentbox_session(session_id: &str, action: &str) -> Self {
+        Self(json!({ "type": "agentboxSessionAction", "sessionId": session_id, "action": action }))
+    }
 }
 
 /// The gxserver-bound messages a `command` row carries. One function per message so the set the

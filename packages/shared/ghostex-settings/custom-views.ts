@@ -5,7 +5,7 @@ export const CUSTOM_VIEW_ID_PREFIX = 'custom-view-';
 
 /**
  * CDXC:Extensions 2026-09-03 DECISION: Users can add any number of custom titlebar views, arrange them in their preferred order, and turn individual views off without deleting their name and HTTP or HTTPS URL.
- * CDXC:Extensions 2026-09-03 SEE-ALSO: The editor, native titlebar projection, and isolated CEF workarea must keep this ordered, enabled, name-and-URL contract aligned. See packages/core-ui/settings-modal/tabs/extensions.tsx, apps/desktop/src/app/helpers/titlebar/mode_switcher.rs, and apps/desktop/src/app/workarea.rs.
+ * CDXC:Extensions 2026-09-03 SEE-ALSO: The editor, native titlebar projection, and isolated CEF workarea must keep this ordered, enabled, name-and-URL contract aligned. See packages/core-ui/settings-modal/tabs/extensions.tsx (deleted 2026-10-01), apps/desktop/src/app/helpers/titlebar/mode_switcher.rs, and apps/desktop/src/app/workarea.rs.
  */
 export type GhostexCustomView = ProjectViewOptions & {
   enabled: boolean;

@@ -336,14 +336,30 @@ impl ChatCore {
             // twice (a page answer, then the loading flag) reads its panel clock twice.
             self.state.menus.panel_clock_ms = Some(self.context.clock_read(usize::MAX));
         }
-        self.document = assemble(&self.state, &self.context);
-        self.parts = frame_parts(&self.state, &self.context);
+        let document = assemble(&self.state, &self.context);
+        let parts = frame_parts(&self.state, &self.context);
+        // CDXC:SessionChat 2026-10-01 WHY: The imperative publishes above (`requested`) ship
+        // whether or not anything moved, and every keystroke asks for one (`composerSelection`
+        // follows the caret, the composer measures itself), so a typing user received about ten
+        // snapshots a second identical to the one before, and a streaming reply shipped the
+        // unchanged document again beside every row splice; each one redraws the whole chat on the
+        // desktop, the web build and the phone. The revision, which is what puts the document in a
+        // frame, now moves only when the document did; the rows, the minimap, the subagent list and
+        // the row details still ship whenever they change, on their own channels.
+        let document_moved = !self.published_once || document != self.document;
+        if !document_moved && parts == self.parts && !rebuilt {
+            return;
+        }
+        self.document = document;
+        self.parts = parts;
         if std::mem::take(&mut self.state.transcript_view.projection_rebuilt) {
             self.state.transcript_view.projection_revision += 1;
         }
         self.parts_revision = self.state.transcript_view.projection_revision;
         self.published_context = self.context.clone();
-        self.revision += 1;
+        if document_moved {
+            self.revision += 1;
+        }
         if !self.published_once {
             self.published_once = true;
             self.sent.minimap = None;

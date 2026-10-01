@@ -88,6 +88,8 @@ pub(crate) struct NativeChatView {
     pub(crate) main_window: Option<gpui::AnyWindowHandle>,
     /// The native view of `main_window`, which the chat's own child windows attach to and are placed in.
     pub(super) drawn_native_view: Option<*mut std::ffi::c_void>,
+    /// The content size of the window that drew the chat last, which an expanded table or picture opens over.
+    pub(in crate::app::native_chat) drawn_window_size: gpui::Size<gpui::Pixels>,
     /// Where the composer's model pill was last painted, which Option+P opens the model pop-up against.
     pub(super) model_pill_bounds: std::rc::Rc<std::cell::Cell<gpui::Bounds<gpui::Pixels>>>,
     /// Set while the next menu this view opens belongs to another surface (the terminal's model pill), not to its own pane.
@@ -158,18 +160,22 @@ pub(crate) struct NativeChatView {
     /// The details this frame's rows asked for, and the set last sent to the host.
     pub(super) detail_demand: std::collections::BTreeMap<String, Value>,
     pub(super) detail_sent: std::collections::BTreeMap<String, Value>,
+    /// Which transcript row asked for each detail, and the rows drawn since the last sync (row_details.rs).
+    pub(super) detail_rows: super::row_details::DetailRows,
     pub(super) detail_sync_scheduled: bool,
     /// Armed Delayed Send / Close After Done labels drawn on the working row, set by the app (session_chat_armed_actions.rs).
     pub(crate) armed_actions: Value,
     pub(crate) collapsed: HashSet<String>,
     /// How each fenced block the reader has touched wraps; the rest follow `code_wrap_default`.
     pub(super) code_wrap: HashMap<String, bool>,
-    /// React's remembered last choice (session-chat-code-wrap.ts): the blocks that
+    /// React's remembered last choice (session-chat-code-wrap.ts (deleted 2026-10-01)): the blocks that
     /// scroll into view after a toggle start the way the reader last asked for.
     pub(super) code_wrap_default: bool,
     pub(crate) list: gpui::ListState,
     /// The transcript's own cached view, created on the first draw (transcript_host.rs).
     pub(super) transcript_host: Option<Entity<super::transcript_host::TranscriptHost>>,
+    /// The composer's own view, which keystrokes notify instead of the chat (composer_host.rs).
+    pub(super) composer_host: Option<Entity<super::composer_host::ComposerHost>>,
     /// The loading hold and the fade that ends it (transcript_reveal.rs).
     pub(super) transcript_reveal: super::transcript_reveal::TranscriptReveal,
     /// The composer tween's bottom inset for the row list, computed once per chat render.
@@ -326,6 +332,7 @@ impl NativeChatView {
             pane_hidden: false,
             main_window: None,
             drawn_native_view: None,
+            drawn_window_size: gpui::Size::default(),
             model_pill_bounds: Default::default(),
             menu_outside_pane: false,
             pending_model_menu: None,
@@ -374,6 +381,7 @@ impl NativeChatView {
             row_details: Value::Null,
             detail_demand: Default::default(),
             detail_sent: Default::default(),
+            detail_rows: Default::default(),
             detail_sync_scheduled: false,
             armed_actions: Value::Array(Vec::new()),
             collapsed: HashSet::new(),
@@ -381,6 +389,7 @@ impl NativeChatView {
             code_wrap_default: false,
             list,
             transcript_host: None,
+            composer_host: None,
             transcript_reveal: Default::default(),
             transcript_inset: 0.0,
             minimap: Default::default(),
@@ -443,7 +452,7 @@ impl NativeChatView {
                 let caret_image = this.composer_caret_image(cx);
                 if this.composer_caret_image != caret_image {
                     this.composer_caret_image = caret_image;
-                    cx.notify();
+                    this.notify_composer(cx);
                 }
             }));
             self.input_subscription = Some(cx.subscribe_in(
@@ -463,7 +472,7 @@ impl NativeChatView {
                         this.draft_revision += 1;
                         this.persist_draft(cx);
                         cx.emit(NativeChatEvent::DraftState(this.draft.is_empty()));
-                        cx.notify();
+                        this.notify_composer(cx);
                     }
                     _ => {}
                 },

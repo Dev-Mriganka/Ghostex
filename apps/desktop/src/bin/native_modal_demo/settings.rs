@@ -15,6 +15,8 @@ use serde_json::{Value, json};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[path = "settings_cloud_boxes.rs"]
+mod settings_cloud_boxes;
 #[path = "settings_e.rs"]
 mod settings_e;
 #[path = "settings_f1.rs"]
@@ -26,7 +28,7 @@ type Slot = Rc<RefCell<Option<(WindowHandle<Root>, Entity<GpuiSettingsModalWindo
 
 fn story_settings(state: &str) -> serde_json::Map<String, Value> {
     let mut settings = serde_json::Map::new();
-    // `modalSettings` of packages/core-ui/settings-modal.stories.tsx.
+    // `modalSettings` of packages/core-ui/settings-modal.stories.tsx (deleted 2026-10-01).
     settings.insert("agentManagerZoomPercent".into(), json!(95));
     settings.insert(
         "sessionCardHoverButtons".into(),
@@ -147,6 +149,12 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
                 ..
             } => {
                 eprintln!("gxserver rpc: {path} {params}");
+                if let Some(answer) = settings_cloud_boxes::rpc(&host_state, &path, &params) {
+                    if let Some(result) = answer {
+                        cx.defer(move |cx| reply(result, cx));
+                    }
+                    return;
+                }
                 let result = match settings_f1::rpc(&host_state, &path, &params) {
                     settings_f1::Answer::Never => return,
                     settings_f1::Answer::Reply(result) => result,
@@ -185,6 +193,7 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
             json!({ "initialSection": "sidebarTags", "initialSidebarTagsAction": "createTag" })
         }
         _ => settings_f1::open_message(&state)
+            .or_else(|| settings_cloud_boxes::open_message(&state))
             .or_else(|| settings_f2::open_message(&state))
             .or_else(|| settings_e::open_message(&state))
             .unwrap_or_else(|| json!({})),
@@ -201,8 +210,11 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
     if state == "select" {
         request.open_select = Some("commandsPanelSide".to_string());
     }
-    request.gxserver_rpc_available =
-        settings_f2::gxserver_rpc_available(&state) || settings_f1::gxserver_rpc_available(&state);
+    request.gxserver_rpc_available = if settings_cloud_boxes::owns(&state) {
+        settings_cloud_boxes::gxserver_rpc_available(&state)
+    } else {
+        settings_f2::gxserver_rpc_available(&state) || settings_f1::gxserver_rpc_available(&state)
+    };
     request.preview_state = (!state.is_empty()).then(|| state.clone());
     // `GHOSTEX_NATIVE_MODAL_DEMO_GLASS=1`: the frosted palette the app passes under window glass
     // (a translucent fill stands in for the blurred one).

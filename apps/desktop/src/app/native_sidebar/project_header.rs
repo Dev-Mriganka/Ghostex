@@ -26,9 +26,6 @@ impl GhostexGpuiApp {
         cx: &mut gpui::Context<Self>,
     ) -> AnyElement {
         let id = group.group_id.clone();
-        let drop_position = self
-            .native_sidebar_drop_position("targetGroupId", &id)
-            .or_else(|| self.native_sidebar_drop_position("targetId", &id));
         let hover_id = id.clone();
         let drag_id = id.clone();
         let chevron_id = id.clone();
@@ -68,6 +65,7 @@ impl GhostexGpuiApp {
                 appearance: appearance.clone(),
                 width: px(0.0),
                 pointer_x: px(0.0),
+                grab: gpui::Point::default(),
             }),
             id: id.clone(),
             title: group.title.clone(),
@@ -205,9 +203,6 @@ impl GhostexGpuiApp {
             .when(group.collapsed && group.is_active, |row| {
                 row.bg(appearance.selected)
                     .child(super::decorations::selected_outline(appearance))
-            })
-            .when_some(drop_position, |row, position| {
-                row.child(super::drag::drop_line(position, scale))
             })
             .child(title)
             .when_some(bot_gateway_running, |row, running| {

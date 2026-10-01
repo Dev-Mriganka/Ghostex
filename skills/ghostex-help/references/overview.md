@@ -52,7 +52,7 @@ hotkeys Every shortcut and its default binding
   and closes the whole panel.
 - **Quick Access** (Cmd+Shift+P): search every command, pane action, settings
   shortcut, and recent session. Cmd+P opens it on Recent Sessions.
-- **Settings** (Cmd+,): pages for General, Integrations, Extensions, Remote,
+- **Settings** (Cmd+,): pages for General, Integrations, Cloud Boxes, Extensions, Remote,
   Projects, Agents, Accounts, Actions, Open In, Hotkeys, Debugging, and About, with one
   search box that finds rows on every page.
 - **Dialogs** such as Quick Access, Settings, Search by Prompt and Add Project open

@@ -28,7 +28,7 @@ pub(crate) enum GpuiAppModalKind {
     OpenTargets,
     /// CDXC:Onboarding 2026-09-27 SEE-ALSO:
     /// `onboarding` is the five-panel modal that the automatic first run, Tips > Setup and Quick Access > Setup open (user decision, see modals/modal_window.rs `open_gpui_first_launch_setup_with_sidebar_state`). The older first-launch setup modal was deleted on 2026-09-27 (user: "delete old setup one not new one that's active").
-    /// The guards that treat Onboarding as "setup in progress" (no-projects close guard, completion on close, `completeFirstLaunchSetup`) have a React twin, `isFirstLaunchSetupModalKind` in apps/desktop/views/modal-host/settings-routing.ts, and the component contract is packages/core-ui/onboarding/contract.ts.
+    /// The guards that treat Onboarding as "setup in progress" (no-projects close guard, completion on close, `completeFirstLaunchSetup`) have a React twin, `isFirstLaunchSetupModalKind` in apps/desktop/views/modal-host/settings-routing.ts (deleted 2026-10-01), and the component contract is packages/core-ui/onboarding/contract.ts (deleted 2026-10-01).
     Onboarding,
     RemoteGxserverInstall,
     RemoteSetup,
@@ -290,7 +290,7 @@ impl GpuiAppModalKind {
             Self::Onboarding => size(px(1400.0), px(788.0)),
             // CDXC:SessionChat 2026-09-06 DECISION:
             // User: start only the diagram dialog 20% wider and taller (1248x912, previously 1040x760).
-            // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size; packages/core-ui/mermaid/mermaid.css keeps it for the React viewer's in-page dialog.
+            // SEE-ALSO: apps/desktop/src/app/window/mermaid_diagram_modal.rs and markdown_table_modal.rs open at this size.
             Self::MermaidDiagram => size(px(1248.0), px(912.0)),
             Self::MarkdownTable => size(px(1248.0), px(912.0)),
         }

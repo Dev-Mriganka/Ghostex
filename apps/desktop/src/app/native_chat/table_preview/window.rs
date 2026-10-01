@@ -1,4 +1,4 @@
-//! The larger table preview, as a native child window over the chat pane.
+//! The larger table preview, as a native child window centred on the window the chat is drawn in.
 //!
 //! CDXC:SessionChat 2026-09-24 DECISION:
 //! "Make the bigger preview window that we show use gpui and render with glass effect matching the sidebar of the app when glass is enabled (solid, matching the chat view bg when not enabled)." It replaces the React table modal the app modal host drew for the GPUI chat. Under glass the window shows the main window's glass picture (`sync_overlay_window_glass`) under the sidebar's own tint, so it reads as the sidebar does; without glass the card is the chat's solid background.
@@ -69,13 +69,13 @@ impl NativeChatView {
             return;
         };
         self.table_preview.opening = true;
-        let pane = self.bounds.get();
+        let area = self.expanded_area();
         let parent = self.child_window_parent(cx);
         let chat = cx.entity();
         let scale = super::super::appearance::ChatAppearance::current(&self.snapshot).scale;
         let glass = crate::app::helpers::window_glass_active();
         cx.defer(move |cx| {
-            let frame = table_preview_frame(pane, scale);
+            let frame = table_preview_frame(area, scale);
             let result = main
                 .update(cx, |_, window, cx| {
                     let origin = super::super::child_window::content_bounds(window).origin;
@@ -176,18 +176,19 @@ impl NativeChatView {
     }
 }
 
-/// The preview card: React's 1248px table modal, centred in the pane and kept inside it.
+/// The preview card: React's 1248px table modal, centred in `area` (the window the chat is drawn
+/// in, `expanded_area`) and kept inside it.
 pub(in crate::app::native_chat) fn table_preview_frame(
-    pane: Bounds<Pixels>,
+    area: Bounds<Pixels>,
     scale: f32,
 ) -> Bounds<Pixels> {
-    let width = px(1248.0 * scale).min(pane.size.width - px(24.0));
-    let height = px(912.0 * scale).min(pane.size.height - px(32.0));
+    let width = px(1248.0 * scale).min(area.size.width - px(48.0));
+    let height = px(912.0 * scale).min(area.size.height - px(48.0));
     Bounds::new(
-        pane.origin
+        area.origin
             + gpui::point(
-                (pane.size.width - width) / 2.0,
-                (pane.size.height - height) / 2.0,
+                (area.size.width - width) / 2.0,
+                (area.size.height - height) / 2.0,
             ),
         gpui::size(width, height),
     )

@@ -1,9 +1,9 @@
 //! The commit review window's state and behaviour (`GitCommitModal` in
-//! packages/core-ui/git-commit-modal.tsx); drawing is in `render.rs`.
+//! packages/core-ui/git-commit-modal.tsx (deleted 2026-10-01)); drawing is in `render.rs`.
 //!
 //! CDXC:Git 2026-09-28 DECISION:
 //! User: migrate every React modal to GPUI with GPUI-Kit components, "looking and working exactly as now", so the app runs without CEF. The commit review keeps its two-pane workspace (file rail with Select and Show All, message editor, delete-after toggle; the diff pane with its three display controls), its footer agent select and actions, the Merge to main confirmation, the right-click Copy Path menu, and the same remembered agent (`ghostex.promptAgent.gitCommit`) and diff options (`ghostex.gitCommitModal.diffPreferences.v1`) in client storage.
-//! SEE-ALSO: packages/core-ui/git-commit-modal.tsx, git-file-diff-modal.tsx, changed-files-tree.tsx and changed-files-tree-utils.ts, and the `.git-commit-*`, `.git-file-diff-*` rules in packages/core-ui/styles/modals.css, modals-light.css and commands.css (the React twins); apps/desktop/src/app/git_commit_modal_lifecycle.rs (open, commands, diff delivery); apps/desktop/src/app/gx_store/git/review.rs (what the commands do); apps/desktop/src/bin/native_modal_demo/git_commit.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/git-commit-modal.tsx (deleted 2026-10-01), git-file-diff-modal.tsx (deleted 2026-10-01), changed-files-tree.tsx (deleted 2026-10-01) and changed-files-tree-utils.ts (deleted 2026-10-01), and the `.git-commit-*`, `.git-file-diff-*` rules in packages/core-ui/styles/modals.css, modals-light.css and commands.css (the React twins); apps/desktop/src/app/git_commit_modal_lifecycle.rs (open, commands, diff delivery); apps/desktop/src/app/gx_store/git/review.rs (what the commands do); apps/desktop/src/bin/native_modal_demo/git_commit.rs (standalone preview).
 use super::super::create_worktree_modal::trim_prompt_editor_trailing_spaces;
 use super::super::native_modal_kit::*;
 use super::diff::{GitDiffPrefs, GitDiffViewMode, all_files_diff_draft};

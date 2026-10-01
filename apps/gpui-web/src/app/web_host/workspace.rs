@@ -161,6 +161,9 @@ impl GhostexGpuiApp {
         preferred: crate::app::model::GpuiPreferredAgentInterface,
     ) -> bool {
         use crate::app::model::GpuiPreferredAgentInterface;
+        if ghostex_gx_core::session_chat_view_unavailable(&self.gx_store.core, session) {
+            return true;
+        }
         let kind = self
             .gx_store
             .core

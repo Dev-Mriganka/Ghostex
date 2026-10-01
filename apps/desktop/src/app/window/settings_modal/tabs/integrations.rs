@@ -1,5 +1,5 @@
-//! The Integrations page (packages/core-ui/settings-modal/tabs/integrations.tsx and
-//! integration-skills.tsx): the Ghostex CLI, Desktop control (Trycua and its system permissions),
+//! The Integrations page (packages/core-ui/settings-modal/tabs/integrations.tsx (deleted 2026-10-01) and
+//! integration-skills.tsx (deleted 2026-10-01)): the Ghostex CLI, Desktop control (Trycua and its system permissions),
 //! the bundled agent skills and App Shots. Every action posts the message the React page posted
 //! (`installGhostexCli`, `install*Skill`, `*CuaDriver`, `uninstallBundledAgentSkill(s)`, ...) and
 //! the app answers each with a fresh `ghostexCliStatus`, which ends the page's checking state.
@@ -62,7 +62,7 @@ fn skill_icon(skill_id: &str) -> &'static str {
     }
 }
 
-/// The install message of each bundled skill (`onInstallSkill` in integrations.tsx).
+/// The install message of each bundled skill (`onInstallSkill` in integrations.tsx (deleted 2026-10-01)).
 fn skill_install_message(skill_id: &str) -> Option<&'static str> {
     Some(match skill_id {
         "cli" => "installCliSkill",
@@ -144,7 +144,7 @@ fn visible_skills() -> Vec<Skill> {
         .unwrap_or_default()
 }
 
-/// `trycuaJobView` (packages/core-ui/trycua-job.ts): the background job the desktop app runs for
+/// `trycuaJobView` (packages/core-ui/trycua-job.ts (deleted 2026-10-01)): the background job the desktop app runs for
 /// Trycua's Install, Update, Reinstall and Uninstall, as the rows show it.
 struct TrycuaJob {
     running: bool,

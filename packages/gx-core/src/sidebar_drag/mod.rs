@@ -20,9 +20,11 @@
 mod added_project;
 mod inventory;
 mod order_write;
+mod project_drop;
 pub(crate) mod project_inventory;
 mod project_move;
 mod project_order_write;
+mod session_drop;
 mod session_move;
 
 pub use added_project::{
@@ -33,6 +35,7 @@ pub use order_write::{
     owns_order_write_message, plan_order_write, OrderWrite, OrderWritePlan,
     ORDER_WRITE_MESSAGE_TYPES,
 };
+pub use project_drop::{project_drop_command, project_drop_landing};
 pub use project_inventory::sidebar_project_group_order;
 pub use project_move::{
     owns_project_move_command, plan_project_move, ProjectMovePlan, ProjectWrite,
@@ -40,5 +43,8 @@ pub use project_move::{
 };
 pub use project_order_write::{
     owns_project_order_message, plan_project_order_write, PROJECT_ORDER_MESSAGE_TYPE,
+};
+pub use session_drop::{
+    owns_session_drop_command, plan_section_move, plan_session_drop, SessionDrop,
 };
 pub use session_move::{owns_session_move_command, plan_session_move, SessionMovePlan};

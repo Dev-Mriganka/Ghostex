@@ -26,6 +26,10 @@ const FIELD_EFFORT: &str = "Effort";
 /// CDXC:Coordinators 2026-09-30 DECISION:
 /// User (question 2, answer 2B): a coordinator runs at medium effort by default, and the user picks its model (and can change the effort) when creating it. Routing work does not need the deepest thinking, and a faster coordinator answers and reacts to reports sooner.
 const DEFAULT_COORDINATOR_EFFORT: &str = "medium";
+/// CDXC:Coordinators 2026-10-01 DECISION:
+/// User: a coordinator on a Claude launcher starts on Opus 5.5 at medium effort ("my preferences should be the preferences for this feature for customers using the same setup, since that's what I tested"). `opus[1m]` is Opus 5.5's row in the Claude lineup; a Codex lineup has no such row and keeps its own default model.
+/// SEE-ALSO: DEFAULT_CLAUDE_COORDINATOR_MODEL in server/src/ghostex_cli/coordinator/command.rs (`ghostex coordinator create` keeps the same default).
+const DEFAULT_CLAUDE_COORDINATOR_MODEL: &str = "opus[1m]";
 const FIELD_GOAL: &str = "Goal (optional)";
 const GOAL_PLACEHOLDER: &str = "One line it works toward, e.g. Ship the new checkout by Friday";
 const FIELD_REQUEST: &str = "First request (optional)";
@@ -178,11 +182,18 @@ impl GpuiNewCoordinatorModalWindow {
             .unwrap_or_default()
     }
 
-    /// The agent's default model, and medium effort when that model takes it.
+    /// Opus 5.5 on Claude, otherwise the agent's default model, and medium effort when that model
+    /// takes it.
     fn reset_model(&mut self) {
         self.model_index = self
             .agent()
-            .and_then(|agent| agent.models.iter().position(|model| model.default))
+            .and_then(|agent| {
+                agent
+                    .models
+                    .iter()
+                    .position(|model| model.value == DEFAULT_CLAUDE_COORDINATOR_MODEL)
+                    .or_else(|| agent.models.iter().position(|model| model.default))
+            })
             .unwrap_or(0);
         self.reset_effort();
     }

@@ -264,7 +264,9 @@ fn get_agent_launch_startup_text_for_session(session: &Value) -> Option<String> 
 /// CDXC:Cli 2026-09-27 WHY:
 /// A terminal made by `ghostex create-session --input` has no agent launch plan; its queued text is the session's own `launchSettings.startupText`, which the first provider start runs and then marks consumed like an agent launch.
 pub(crate) fn get_queued_agent_launch_startup_text_for_session(session: &Value) -> Option<String> {
-    if !has_queued_agent_launch_startup_text(session) {
+    if !has_queued_agent_launch_startup_text(session)
+        || crate::agentbox::pending_session_agentbox(session).is_some()
+    {
         return None;
     }
     get_agent_launch_startup_text_for_session(session).or_else(|| {
@@ -307,6 +309,15 @@ pub(crate) fn get_provider_restart_startup_text_for_session(
     session: &Value,
     agent_settings: &Map<String, Value>,
 ) -> Option<String> {
+    // A box session, draft or not, always comes back by reattaching to its box (agentbox/restore.rs).
+    if crate::agentbox::is_agentbox_session(session) {
+        return get_agent_startup_text_for_session(project, session, agent_settings);
+    }
+    // A draft whose Run on row picked a box runs nothing until its first message creates the box
+    // (agents/draft_run_location.rs); its stored plan is that box's create command.
+    if crate::agentbox::pending_session_agentbox(session).is_some() {
+        return None;
+    }
     if crate::agents::session_is_draft(session) {
         return get_agent_launch_startup_text_for_session(session);
     }

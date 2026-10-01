@@ -152,7 +152,7 @@ impl Render for NativeChatView {
         let composer = if self.transcript_only {
             div().into_any_element()
         } else if !covered {
-            self.render_composer(&p, window, cx)
+            self.render_composer_host(cx)
         } else if maximized {
             div().h(px(148.0 * s)).into_any_element()
         } else {

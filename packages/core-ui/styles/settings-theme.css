@@ -1,6 +1,6 @@
 /*
  * The Theme settings page: the theme colour squares, Colourfulness, each group's own More options, and the glass
- * picture flow. The squares' gradients are set inline (theme-simple-controls.tsx `swatchStyle`); the square shape,
+ * picture flow. The squares' gradients are set inline (theme-simple-controls.tsx (deleted 2026-10-01) `swatchStyle`); the square shape,
  * sheen and selected ring live here and are shared with the onboarding's look card (get-started.css sizes its row).
  */
 :is(.ghostex-settings-shadcn, .gx-onboarding) .theme-colour-grid {

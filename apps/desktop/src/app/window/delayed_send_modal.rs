@@ -1,9 +1,9 @@
 //! Native GPUI Session Automations dialog, the desktop twin of the React
-//! `DelayedSendModal` in packages/core-ui/delayed-send-modal.tsx.
+//! `DelayedSendModal` in packages/core-ui/delayed-send-modal.tsx (deleted 2026-10-01).
 //!
 //! CDXC:DelayedSend 2026-09-15 DECISION:
 //! User: the React app modals are being rebuilt in GPUI one at a time and each native dialog must match its React twin 1 to 1: the same layout, copy, colors, states and behaviour in both appearances. Session Automations keeps one trigger per send, whole hours and minutes for After a delay (remaining deadlines rounded up to the next minute), the awake-agent picker polled every 3 seconds while the dialog is open, and the reserved trigger detail slot so switching triggers never moves the footer.
-//! SEE-ALSO: packages/core-ui/delayed-send-modal.tsx and the `.delayed-send-*` rules in packages/core-ui/styles/modals.css and modals-light.css (the React twin), apps/desktop/views/delayed-send-agents.ts (the awake-agent polling mirrored here), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/delayed_send_modal_lifecycle.rs (open, bridge commands, agent replies), apps/desktop/src/bin/native_modal_demo/delayed_send.rs (standalone preview).
+//! SEE-ALSO: packages/core-ui/delayed-send-modal.tsx (deleted 2026-10-01) and the `.delayed-send-*` rules in packages/core-ui/styles/modals.css and modals-light.css (the React twin), apps/desktop/views/delayed-send-agents.ts (deleted 2026-10-01) (the awake-agent polling mirrored here), apps/desktop/src/app/window/native_modal_kit/ (shared chrome and controls), apps/desktop/src/app/delayed_send_modal_lifecycle.rs (open, bridge commands, agent replies), apps/desktop/src/bin/native_modal_demo/delayed_send.rs (standalone preview).
 use super::native_modal_kit::*;
 use chrono::{Local, NaiveTime, TimeZone as _};
 use gpui::{
@@ -358,7 +358,7 @@ impl GpuiDelayedSendModalWindow {
     /// CDXC:DelayedSend 2026-09-19 DECISION:
     /// User: the default Delayed Send trigger is When all agents finish.
     /// An already armed send still reopens on its own trigger; After a delay remains the fallback when the all-agents option is unavailable.
-    /// SEE-ALSO: packages/core-ui/delayed-send-modal.tsx, apps/mobile/app/src/components/sessions/DelayedSendDialog.tsx
+    /// SEE-ALSO: packages/core-ui/delayed-send-modal.tsx (deleted 2026-10-01), apps/mobile/app/src/components/sessions/DelayedSendDialog.tsx
     fn initial_trigger(&self) -> DelayedSendTrigger {
         let should_send_when_all_project_sessions_stop = self
             .supports_send_when_all_project_sessions_stop

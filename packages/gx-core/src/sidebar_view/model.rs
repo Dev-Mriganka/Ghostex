@@ -5,7 +5,7 @@
 //! Every publish of the TypeScript projection re-derived every row of the machine (title, tooltip, tag lookup, sorting), which cost 30 to 40 ms on the service thread while agents were running. Here a row is derived once and kept behind an `Arc` until the store says that session changed, a group is rebuilt only when one of its own inputs moved, and an update with an empty change summary and unchanged inputs does no work at all. The from-scratch build exists so the two can be compared: anything the incremental path forgets to invalidate shows up as a difference.
 
 use std::borrow::Cow;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use crate::change::ChangeSummary;
@@ -25,7 +25,8 @@ use super::projects::ProjectMeta;
 use super::rows::{browser_row, session_row, RowContext};
 use super::spaces::SpacesState;
 use super::tags::TagCatalog;
-use super::view::{MachineSummary, RemoteMachineView, SidebarView};
+use super::threads::tally_threads;
+use super::view::{MachineSummary, RemoteMachineView, SidebarView, ThreadTally};
 
 /// The inputs of one group, so a group that nothing touched is kept as it is.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -47,6 +48,10 @@ struct GroupKey {
     collapsed: bool,
     expanded: bool,
     hover_actions_expanded: bool,
+    /// The group's coordinator rows whose threads the user folded, by position.
+    collapsed_coordinators: Vec<usize>,
+    /// The threads of the group's coordinators, which may sit in other groups, by position.
+    coordinator_threads: Vec<(usize, ThreadTally)>,
     section_collapse: SectionCollapse,
     enable_parking: bool,
     compact_count: u32,
@@ -193,6 +198,20 @@ impl SidebarViewModel {
                 )
             })
             .collect()
+    }
+
+    /// The built group with this id and the inputs it was built from, for a drop preview
+    /// (drop_landing.rs).
+    pub(super) fn cached_group(&self, group_id: &str) -> Option<(&GroupBuild, &SidebarInputs)> {
+        let state = self.state.as_ref()?;
+        Some((&state.groups.get(group_id)?.build, &state.inputs))
+    }
+
+    /// Every built group, for finding the row a cross-group drop carries.
+    pub(super) fn cached_groups(&self) -> impl Iterator<Item = &GroupBuild> {
+        self.state
+            .iter()
+            .flat_map(|state| state.groups.values().map(|cached| &cached.build))
     }
 
     /// The next host time at which a row moves on its own (a new session stops leading the list, a
@@ -632,9 +651,16 @@ impl SidebarViewModel {
             }
         }
 
+        // Every coordinator's threads, wherever they are drawn: a worktree thread is in its
+        // worktree's group, not its coordinator's.
+        let thread_tallies = tally_threads(
+            plans
+                .iter()
+                .flat_map(|plan| plan.rows.iter().map(|row| &row.row)),
+        );
         let mut builds: BTreeMap<String, GroupBuild> = BTreeMap::new();
         for plan in &plans {
-            let key = group_key(plan, &state.focus, effective);
+            let key = group_key(plan, &state.focus, effective, &thread_tallies);
             let reuse = previous
                 .as_mut()
                 .and_then(|previous| previous.groups.remove(&plan.group_id))
@@ -654,6 +680,7 @@ impl SidebarViewModel {
                         &state.focus,
                         &effective.ui,
                         &effective.settings,
+                        &thread_tallies,
                         now_ms,
                     )
                 }
@@ -886,7 +913,12 @@ fn project_context(
     })
 }
 
-fn group_key(plan: &GroupPlan, focus: &FocusKey, inputs: &SidebarInputs) -> GroupKey {
+fn group_key(
+    plan: &GroupPlan,
+    focus: &FocusKey,
+    inputs: &SidebarInputs,
+    thread_tallies: &HashMap<SessionKey, ThreadTally>,
+) -> GroupKey {
     let is_active = focus.active_group_id.as_deref() == Some(plan.group_id.as_str());
     GroupKey {
         rows: plan.rows.iter().map(|row| row.id).collect(),
@@ -933,6 +965,30 @@ fn group_key(plan: &GroupPlan, focus: &FocusKey, inputs: &SidebarInputs) -> Grou
             .collapse
             .expanded_hover_actions
             .contains(&plan.storage_id),
+        collapsed_coordinators: plan
+            .rows
+            .iter()
+            .enumerate()
+            .filter(|(_, row)| {
+                row.row.is_coordinator
+                    && inputs
+                        .ui
+                        .collapse
+                        .collapsed_coordinators
+                        .contains(&row.row.sidebar_session_id)
+            })
+            .map(|(index, _)| index)
+            .collect(),
+        coordinator_threads: plan
+            .rows
+            .iter()
+            .enumerate()
+            .filter(|(_, row)| row.row.is_coordinator)
+            .filter_map(|(index, row)| {
+                let key = row.row.key.as_ref()?;
+                Some((index, thread_tallies.get(key).copied()?))
+            })
+            .collect(),
         section_collapse: inputs
             .ui
             .collapse

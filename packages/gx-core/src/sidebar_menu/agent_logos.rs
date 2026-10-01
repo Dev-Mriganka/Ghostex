@@ -2,7 +2,7 @@
 //!
 //! CDXC:Icons 2026-09-20 WHY:
 //! The artwork and the brand colours are `packages/core-ui/assets/*.svg` and `AGENT_LOGO_COLORS`
-//! in `packages/core-ui/agent-logos.ts`. The same SVG files are embedded here rather than copied,
+//! in `packages/core-ui/agent-logos.ts` (deleted 2026-10-01). The same SVG files are embedded here rather than copied,
 //! so there is one set of assets with two readers, and the transform below is
 //! `svgTextToColorizedDataUrl` step for step: a data URL that differs from the TypeScript's would
 //! decode to different artwork on the row. `examples/sidebar_menu_parity.rs` diffs all

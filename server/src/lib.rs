@@ -6,6 +6,7 @@ pub mod agent_prompt_search;
 pub mod agent_skills;
 pub mod agent_skills_remote;
 pub mod agent_transcripts;
+pub(crate) mod agentbox;
 pub mod agents;
 pub mod auth;
 pub mod automations;

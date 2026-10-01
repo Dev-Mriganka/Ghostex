@@ -1,4 +1,4 @@
-//! `AccountConnectFlow` (accounts/connect-flow.tsx): the email and shared-conversations consent,
+//! `AccountConnectFlow` (accounts/connect-flow.tsx (deleted 2026-10-01)): the email and shared-conversations consent,
 //! Add / Reconnect account (its login command in the tooltip), then while the sign-in runs its
 //! status, Open sign-in page, Show terminal, Cancel and a sign-in code field, the Codex windows
 //! that stopped it, and the helper's output.

@@ -30,7 +30,9 @@ impl GhostexGpuiApp {
         let id = collection.collection_id.clone();
         let hovered = self.native_sidebar.hovered_collection.as_ref() == Some(&id);
         let hover_id = id.clone();
-        let drop_position = self.native_sidebar_drop_position("targetId", &id);
+        // Drawn on the collection's whole block: a row dropped after an open collection lands
+        // after the projects inside it.
+        let drop_position = self.native_sidebar_project_drop_line("collection", &id);
         let drop_inside = self
             .native_sidebar
             .drop_command
@@ -54,6 +56,7 @@ impl GhostexGpuiApp {
                 appearance: appearance.clone(),
                 width: px(0.0),
                 pointer_x: px(0.0),
+                grab: gpui::Point::default(),
             }),
             id: id.clone(),
             title: collection.title.clone(),
@@ -87,11 +90,11 @@ impl GhostexGpuiApp {
         };
         v_flex().relative().when(self.native_sidebar.is_dragging("collection", &id), |row| row.opacity(0.28)).flex_shrink_0().ml(px(3.0 * scale)).mr(px(5.0 * scale)).mb(px(10.0 * scale)).pb(px(5.0 * scale)).pl(px((rail_width + 10.0) * scale))
             .child(div().absolute().left_0().top_0().bottom(px(5.0 * scale)).w(px(rail_width * scale)).bg(color.opacity(0.18)))
+            .when_some(drop_position, |column, position| column.child(super::drag::drop_line(position, scale)))
             .child(h_flex().id(format!("native-collection-{id}")).role(gpui::Role::TreeItem).aria_label(collection.title.clone()).aria_expanded(!collection.collapsed).relative().ml(px(-10.0 * scale)).h(px(30.0 * scale)).pl(px(8.0 * scale)).pr(px(8.0 * scale)).gap(px(5.0 * scale))
                 .bg(color.opacity(0.18))
                 .hover(|row| row.bg(color.opacity(0.22)))
                 .when(active, |row| row.bg(appearance.selected).rounded(px(5.0 * scale)).child(super::decorations::selected_outline(appearance)))
-                .when_some(drop_position, |row, position| row.child(super::drag::drop_line(position, scale)))
                 .when(drop_inside, |row| row.bg(color.opacity(0.28)))
                 .child(name)
                 .when(collection.collapsed && collection.working_count > 0, |row| row.child(div().text_size(px(10.0 * scale)).text_color(rgb(super::status::WORKING_COLOR)).child(collection.working_count.to_string())))

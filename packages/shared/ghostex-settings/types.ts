@@ -257,6 +257,12 @@ export type ghostexSettings = {
   /** After Floating Capture sends a prompt, the Ghostex window shows the session it went to. */
   ghostexCaptureSwitchToSession: boolean;
   /**
+   * Where new threads run unless the user picks another location, already in the
+   * `/api/createAgentSession` `runLocation` form: `local`, `agentbox:<provider>`, or
+   * `agentbox:docker:<alias>` for a registered remote Docker server.
+   */
+  agentboxDefaultLocation: string;
+  /**
    * CDXC:AgentProviders 2026-06-02-22:23:
    * This field is the sidebar render cache for gxserver-owned global agent approval
    * settings. Settings UI can display and edit it, but gxserver persists the
@@ -510,8 +516,8 @@ export type ghostexSettings = {
    */
   sessionCardHoverButtons: readonly SessionCardHoverButtonItem[];
   /**
-   * CDXC:Sessions 2026-09-15 DECISION:
-   * User: the enabled hover buttons also appear in the session context menu by default, leading the everyday rows in the card's right-to-left order. Close is the exception and never appears in the menu while it is on the card. Turning this off restores the 2026-09-12 rule where every enabled hover button leaves the context menu.
+   * CDXC:Sessions 2026-10-01 DECISION:
+   * User: the enabled hover buttons also appear in the session context menu by default, in the menu's own ChatGPT-style order (Rename, Pin, Snooze, Park, Sleep, Note, Tag As); this supersedes the 2026-09-15 rule that they led the menu in the card's right-to-left order. Close is the exception and never appears in the menu while it is on the card. Turning this off restores the 2026-09-12 rule where every enabled hover button leaves the context menu.
    */
   showSessionCardHoverButtonsInContextMenu: boolean;
   hideLastActiveTimeOnSessionCards: boolean;

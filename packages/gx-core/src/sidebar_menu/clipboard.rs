@@ -1,7 +1,8 @@
 //! The text Copy Details puts on the clipboard.
 //!
-//! SEE-ALSO: packages/shared/session-details-copy.ts, which records the decision that this copies
-//! stable row metadata and never terminal output or the saved first prompt.
+//! It copies stable row metadata and never terminal output or the saved first prompt, so the
+//! action stays useful for support and debug handoffs without silently putting prompt text on the
+//! clipboard (ported from the deleted packages/shared/session-details-copy.ts; see git history).
 
 use crate::sidebar_view::view::SessionRow;
 

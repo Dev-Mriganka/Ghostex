@@ -2827,7 +2827,7 @@ body.app-modal-host-body {
 /*
  * CDXC:DesignSystem 2026-08-24:
  * Canonical look for the shared SegmentedControl
- * (packages/components/ui/segmented-control.tsx): the stock shadcn
+ * (packages/components/ui/segmented-control.tsx (deleted 2026-10-01)): the stock shadcn
  * ButtonGroup shape, one bordered rounded container, flat segments sharing a
  * single hairline, only the outer corners rounded, and a highlighted fill on
  * the selected segment.

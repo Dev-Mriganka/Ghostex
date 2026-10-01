@@ -1,6 +1,6 @@
 //! What the onboarding reads and writes: the detected agents, the settings it shows, the choices
 //! that live only for the length of the flow, and the helpers the panels share
-//! (packages/core-ui/onboarding/onboarding-state.ts, contract.ts, apps/desktop/views/onboarding-host-adapter.ts).
+//! (packages/core-ui/onboarding/onboarding-state.ts (deleted 2026-10-01), contract.ts, apps/desktop/views/onboarding-host-adapter.ts (deleted 2026-10-01)).
 use serde_json::{Map, Value};
 
 /// README section listing every supported agent CLI; the Install guide popup and the finished screen open it.

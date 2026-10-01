@@ -1,4 +1,4 @@
-//! `HotkeyRecorderField` (packages/core-ui/hotkey-recorder-field.tsx): an outline button showing a
+//! `HotkeyRecorderField` (packages/core-ui/hotkey-recorder-field.tsx (deleted 2026-10-01)): an outline button showing a
 //! shortcut the way the app's menus label it, which records the next chord pressed while it is
 //! armed, with Reset and Remove chips that show while the field is hovered. Also the hotkey text
 //! helpers of packages/shared/ghostex-hotkeys.ts the recorder and the Hotkeys page need

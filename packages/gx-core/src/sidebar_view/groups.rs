@@ -5,16 +5,19 @@
 //!
 //! SEE-ALSO: packages/core-ui/group-session-summary.ts.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::inputs::{SidebarSettings, SidebarUiState};
+use crate::keys::SessionKey;
+
+use super::inputs::{SectionId, SidebarSettings, SidebarUiState};
 use super::ordering::{order_rows_for_display, row_deadline_ms};
-use super::sections::project_session_sections;
+use super::sections::{project_session_sections, SectionLayout};
 use super::tags::matches_tag_filters;
 use super::threads::nest_threads;
 use super::view::{
     GroupCore, GroupSummary, ProjectContextView, RemoteMachineView, SessionRow, SessionView,
-    WorktreeView,
+    ThreadTally, WorktreeView,
 };
 
 /// Where a group's rows come from.
@@ -115,6 +118,7 @@ pub(crate) fn build_group(
     focus: &FocusKey,
     ui: &SidebarUiState,
     settings: &SidebarSettings,
+    thread_tallies: &HashMap<SessionKey, ThreadTally>,
     now_ms: u64,
 ) -> GroupBuild {
     let rows: Vec<Arc<SessionRow>> = plan.rows.iter().map(|row| row.row.clone()).collect();
@@ -164,46 +168,36 @@ pub(crate) fn build_group(
         })
         .collect();
 
-    let ordered = order_rows_for_display(
-        &rows,
-        settings.sort_mode,
-        settings.enable_session_parking,
-        now_ms,
-    );
-    let sessions: Vec<SessionView> = ordered
-        .into_iter()
-        .map(|index| store_rows[index].clone())
-        .filter(|session| {
-            matches_tag_filters(
-                session.row.effective_tag.as_deref(),
-                &ui.selected_tag_filters,
-            )
-        })
-        .collect();
-    let tag_filtered_out = !ui.selected_tag_filters.is_empty() && sessions.is_empty();
-    let (sessions, section_by_session) =
-        nest_threads(sessions, settings.enable_session_parking, now_ms);
-
     let is_project_group = plan.project.is_some();
-    let section_collapse = ui
-        .collapse
-        .section_collapse
-        .get(&plan.storage_id)
-        .copied()
-        .unwrap_or_default();
     let expanded = ui
         .collapse
         .expanded_session_lists
         .contains(&plan.storage_id);
-    let layout = project_session_sections(
-        &sessions,
-        &section_by_session,
+    let GroupLayout {
+        mut sessions,
+        layout,
+        tag_filtered_out,
+        ..
+    } = lay_out_group_rows(
+        &store_rows,
+        &plan.storage_id,
         is_active,
         is_project_group,
-        section_collapse,
-        expanded,
-        settings.project_session_list_collapsed_count,
+        ui,
+        settings,
+        now_ms,
     );
+    for session in &mut sessions {
+        if let Some(tally) = session
+            .row
+            .key
+            .as_ref()
+            .filter(|_| session.row.is_coordinator)
+            .and_then(|key| thread_tallies.get(key))
+        {
+            session.nesting.threads = *tally;
+        }
+    }
     let summary = group_summary(&sessions);
     let core = GroupCore {
         group_id: plan.group_id.clone(),
@@ -246,6 +240,86 @@ pub(crate) fn build_group(
             .min(),
         core: Arc::new(core),
         store_rows,
+        tag_filtered_out,
+    }
+}
+
+/// What [`lay_out_group_rows`] returns.
+pub(crate) struct GroupLayout {
+    /// The rows in display order, after the tag filter, threads under their coordinators.
+    pub(crate) sessions: Vec<SessionView>,
+    /// The section each of those rows sits under.
+    pub(crate) section_by_session: Vec<SectionId>,
+    pub(crate) layout: SectionLayout,
+    /// The tag filter is on and left the group empty.
+    pub(crate) tag_filtered_out: bool,
+}
+
+/// A group's rows (in the group's own order) as the list draws them: sorted into display order, tag
+/// filtered, threads nested under their coordinators, and split into sections with the compact
+/// list's cut. Also says whether the tag filter left the group empty.
+///
+/// CDXC:Sidebar 2026-10-01 WHY:
+/// The list and a drag's drop line both call this, so the line is drawn where the row really lands
+/// (`SidebarViewModel::preview_session_drop`). A line computed from the hovered row alone was wrong
+/// wherever the layout rules move a row on their own: Last Activity order, new sessions leading,
+/// threads following their coordinator, drafts and parked rows.
+pub(crate) fn lay_out_group_rows(
+    store_rows: &[SessionView],
+    storage_id: &str,
+    is_active: bool,
+    is_project_group: bool,
+    ui: &SidebarUiState,
+    settings: &SidebarSettings,
+    now_ms: u64,
+) -> GroupLayout {
+    let rows: Vec<Arc<SessionRow>> = store_rows
+        .iter()
+        .map(|session| session.row.clone())
+        .collect();
+    let ordered = order_rows_for_display(
+        &rows,
+        settings.sort_mode,
+        settings.enable_session_parking,
+        now_ms,
+    );
+    let sessions: Vec<SessionView> = ordered
+        .into_iter()
+        .map(|index| store_rows[index].clone())
+        .filter(|session| {
+            matches_tag_filters(
+                session.row.effective_tag.as_deref(),
+                &ui.selected_tag_filters,
+            )
+        })
+        .collect();
+    let tag_filtered_out = !ui.selected_tag_filters.is_empty() && sessions.is_empty();
+    let (sessions, section_by_session) = nest_threads(
+        sessions,
+        settings.enable_session_parking,
+        &ui.collapse.collapsed_coordinators,
+        now_ms,
+    );
+    let section_collapse = ui
+        .collapse
+        .section_collapse
+        .get(storage_id)
+        .copied()
+        .unwrap_or_default();
+    let expanded = ui.collapse.expanded_session_lists.contains(storage_id);
+    let layout = project_session_sections(
+        &sessions,
+        &section_by_session,
+        is_active,
+        is_project_group,
+        section_collapse,
+        expanded,
+        settings.project_session_list_collapsed_count,
+    );
+    GroupLayout {
+        sessions,
+        section_by_session,
+        layout,
         tag_filtered_out,
     }
 }

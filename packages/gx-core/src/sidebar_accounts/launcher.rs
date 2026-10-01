@@ -19,7 +19,8 @@
 use serde_json::{json, Map, Value};
 
 use crate::sidebar_menu::{
-    account_provider, agent_launcher_items_with_accounts, LauncherAgent, MenuHost,
+    account_provider, agent_launcher_items_with_accounts, run_in_box_agents_page,
+    run_in_box_locations_page, LauncherAgent, MenuHost,
 };
 
 use super::data::AccountsState;
@@ -27,12 +28,14 @@ use super::items::{launcher_account_page, launcher_back, launcher_reading};
 use super::rpc::group_accounts_target;
 use super::{AccountMenuStep, AccountsRequest, RequestContext};
 
-/// `{ type: 'agentAccounts', groupId, action, agentId? }`.
+/// `{ type: 'agentAccounts', groupId, action, agentId?, runLocation? }`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LauncherCommand {
     pub group_id: String,
     pub action: String,
     pub agent_id: Option<String>,
+    /// The box location a Run in a Box agents page lists agents for.
+    pub run_location: Option<String>,
 }
 
 impl LauncherCommand {
@@ -45,6 +48,10 @@ impl LauncherCommand {
             action: command.get("action")?.as_str()?.to_string(),
             agent_id: command
                 .get("agentId")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            run_location: command
+                .get("runLocation")
                 .and_then(Value::as_str)
                 .map(str::to_string),
         })
@@ -84,6 +91,28 @@ impl LauncherAccounts {
             self.data = None;
         }
         self.generation += 1;
+        // The Run in a Box pages read nothing from the daemon: the ready locations are the host's.
+        match command.action.as_str() {
+            "box" => {
+                return vec![AccountMenuStep::Publish {
+                    owner_id: command.owner_id(),
+                    items: run_in_box_locations_page(&command.group_id, host),
+                    close: false,
+                }];
+            }
+            "boxAgents" => {
+                return vec![AccountMenuStep::Publish {
+                    owner_id: command.owner_id(),
+                    items: run_in_box_agents_page(
+                        &command.group_id,
+                        host,
+                        command.run_location.as_deref().unwrap_or_default(),
+                    ),
+                    close: false,
+                }];
+            }
+            _ => {}
+        }
         let agent = command.agent_id.as_deref().and_then(|agent_id| {
             host.agents
                 .iter()

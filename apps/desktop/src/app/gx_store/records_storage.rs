@@ -149,7 +149,7 @@ pub(crate) fn write_record(
 /// A real DELETE, because "write the empty string" is NOT a delete on this table and the other
 /// reader of these rows proves it. `getItem` in `packages/client-storage/service.ts` answers
 /// `entry.raw`, so an emptied row reads back as `""` rather than as absent, `managedKeys` still
-/// lists it, and `SessionChatStorageIndex` (`packages/core-ui/chat/session-chat-storage-index.ts`)
+/// lists it, and `SessionChatStorageIndex` (`packages/core-ui/chat/session-chat-storage-index.ts` (deleted 2026-10-01))
 /// decodes every key of its namespace with `JSON.parse`, which THROWS on `""` and takes the whole
 /// index down with it: one emptied `ghostex.sessionChat.outbox.` row would make `pendingDrafts`
 /// return nothing for every session, so the TypeScript outbox would stop retrying every unsaved

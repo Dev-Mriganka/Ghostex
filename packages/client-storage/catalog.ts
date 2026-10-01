@@ -56,21 +56,21 @@ export const storageCatalog = Object.freeze({
   exportOptions: define(
     'exportOptions',
     'Transcript export',
-    core + 'export-transcript-result-modal.tsx',
+    desktop + 'src/app/export_transcript_modal_lifecycle.rs',
     'ghostex.exportTranscript.includeOptions',
     objectCodec
   ),
   exportMode: define(
     'exportMode',
     'Transcript export',
-    core + 'export-transcript-result-modal.tsx',
+    desktop + 'src/app/export_transcript_modal_lifecycle.rs',
     'ghostex.exportTranscript.mode',
     enumCodec(['export', 'handoff'])
   ),
   gitDiff: define(
     'gitDiff',
     'Git diff preferences',
-    core + 'git-commit-modal.tsx',
+    desktop + 'src/app/git_commit_modal_lifecycle.rs',
     'ghostex.gitCommitModal.diffPreferences.v1',
     objectCodec
   ),
@@ -92,14 +92,14 @@ export const storageCatalog = Object.freeze({
   launcher: define(
     'launcher',
     'Agent launcher',
-    core + 'primary-agent-launcher.ts',
+    'apps/desktop/src/app/gx_store/primary_launcher.rs',
     'ghostex-sidebar-project-terminal-launcher',
     textCodec
   ),
   accountOwner: define(
     'accountOwner',
     'Account setup identity',
-    core + 'accounts/setup-monitor.ts',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostex.accountSetupOwner',
     textCodec,
     { policy: 'protected' }
@@ -107,7 +107,7 @@ export const storageCatalog = Object.freeze({
   machineTab: define(
     'machineTab',
     'Selected machine',
-    core + 'sidebar-app/machine-tab-selection.ts',
+    'packages/gx-core/src/sidebar_ui/persist.rs',
     'ghostex-sidebar-selected-machine-tab',
     textCodec,
     { ...collection }
@@ -123,7 +123,7 @@ export const storageCatalog = Object.freeze({
   codeWrap: define(
     'codeWrap',
     'Chat code wrapping',
-    chat + 'session-chat-code-wrap.ts',
+    'packages/client-storage-native/src/storage_catalog.rs',
     'ghostex.sessionChat.codeWrap',
     binary
   ),
@@ -251,7 +251,7 @@ export const storageCatalog = Object.freeze({
   chatClient: define(
     'chatClient',
     'Chat client identity',
-    chat + 'session-chat-client-id.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.clientId',
     textCodec,
     { policy: 'protected' }
@@ -267,7 +267,7 @@ export const storageCatalog = Object.freeze({
   sentHistory: define(
     'sentHistory',
     'Sent prompt history',
-    chat + 'session-chat-sent-history.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.sent.',
     objectCodec,
     { ...cache, maxEntries: 50, maxAgeMs: null, retainedAt: (raw) => Date.parse(JSON.parse(raw).createdAt) }
@@ -275,7 +275,7 @@ export const storageCatalog = Object.freeze({
   deliveryReceipts: define(
     'deliveryReceipts',
     'Prompt delivery receipts',
-    chat + 'session-chat-sent-history.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.delivered.',
     stringListCodec,
     protectedDisk
@@ -283,7 +283,7 @@ export const storageCatalog = Object.freeze({
   drafts: define(
     'drafts',
     'Unsent chat drafts',
-    chat + 'session-chat-draft-storage.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.draft.',
     textCodec,
     protectedDisk
@@ -291,7 +291,7 @@ export const storageCatalog = Object.freeze({
   recovery: define(
     'recovery',
     'Draft recovery checkpoints',
-    chat + 'session-chat-draft-recovery.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.recovery.',
     textCodec,
     protectedDisk
@@ -299,7 +299,7 @@ export const storageCatalog = Object.freeze({
   recoveryDismissed: define(
     'recoveryDismissed',
     'Draft dismissal receipts',
-    chat + 'session-chat-draft-dismissals.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.recoveryDismissed.',
     arrayCodec,
     protectedDisk
@@ -307,7 +307,7 @@ export const storageCatalog = Object.freeze({
   draftOutbox: define(
     'draftOutbox',
     'Pending draft revisions',
-    chat + 'session-chat-draft-outbox.ts',
+    desktop + 'src/app/gx_chat/storage.rs',
     'ghostex.sessionChat.outbox.',
     objectCodec,
     protectedDisk
@@ -457,14 +457,14 @@ export const storageCatalog = Object.freeze({
   commitAgent: define(
     'commitAgent',
     'Commit prompt agent',
-    desktop + 'views/modal-host.tsx',
+    desktop + 'src/app/git_commit_modal_lifecycle.rs',
     'ghostex.promptAgent.gitCommit',
     textCodec
   ),
   renameAgent: define(
     'renameAgent',
     'Rename prompt agent',
-    desktop + 'views/modal-host.tsx',
+    desktop + 'src/app/rename_session_modal_lifecycle.rs',
     'ghostex.promptAgent.renameSession',
     textCodec
   ),

@@ -516,6 +516,12 @@ pub(super) fn match_grok_segment(segment: &str) -> Option<SessionChatDetectedSel
 
 const ANTIGRAVITY_EFFORTS: &[&str] = &["low", "medium", "high"];
 
+/// Shift+Tab cycles agy's mode default → accept-edits → plan, and the footer names a
+/// non-default mode in front of the model (`plan · Gemini 3.8 Flash · high`). The values match
+/// the mode pill's choices in `packages/gx-chat-core/src/menus/option_catalog.rs`.
+const ANTIGRAVITY_DEFAULT_MODE: (&str, &str) = ("default", "Default");
+const ANTIGRAVITY_MODES: &[(&str, &str)] = &[("accept-edits", "Accept edits"), ("plan", "Plan")];
+
 /// `Gemini 3.8 Flash` ⇒ `gemini-3.8-flash`; `Gemini 3.1 Pro` ⇒ `gemini-3.1-pro`.
 ///
 /// The live catalog answers first: `agy models` folds a fixed reasoning mode
@@ -546,16 +552,30 @@ fn antigravity_trailing_name(segment: &str) -> &str {
 
 pub(super) fn match_antigravity_statusline(line: &str) -> Option<SessionChatDetectedSelection> {
     let segments = line_segments(line);
-    let (name, effort) = match segments.as_slice() {
-        [.., model, effort]
-            if ANTIGRAVITY_EFFORTS.contains(&effort.to_ascii_lowercase().as_str()) =>
+    let (effort, rest) = match segments.split_last() {
+        Some((last, rest))
+            if !rest.is_empty()
+                && ANTIGRAVITY_EFFORTS.contains(&last.to_ascii_lowercase().as_str()) =>
         {
-            (
-                antigravity_trailing_name(model),
-                Some(effort.to_ascii_lowercase()),
-            )
+            (Some(last.to_ascii_lowercase()), rest)
         }
-        [only] => match only
+        _ => (None, segments.as_slice()),
+    };
+    let (model, before) = rest.split_last()?;
+    let mode = before
+        .last()
+        .map(|segment| antigravity_trailing_name(segment))
+        .and_then(|name| {
+            ANTIGRAVITY_MODES
+                .iter()
+                .find(|(value, _)| *value == name)
+                .copied()
+        });
+    if effort.is_none() && !before.is_empty() && mode.is_none() {
+        return None;
+    }
+    let (name, effort, banner) = match (effort, before.is_empty()) {
+        (None, true) => match model
             .trim_end()
             .strip_suffix(')')
             .and_then(|rest| rest.rsplit_once(" ("))
@@ -567,12 +587,15 @@ pub(super) fn match_antigravity_statusline(line: &str) -> Option<SessionChatDete
                 (
                     antigravity_trailing_name(name),
                     Some(effort.to_ascii_lowercase()),
+                    true,
                 )
             }
-            _ => (antigravity_trailing_name(only), None),
+            _ => (antigravity_trailing_name(model), None, false),
         },
-        _ => return None,
+        (effort, _) => (antigravity_trailing_name(model), effort, false),
     };
+    // The banner says nothing about the mode; the footer leaves the default one unnamed.
+    let mode = (!banner).then(|| mode.unwrap_or(ANTIGRAVITY_DEFAULT_MODE));
     let value = antigravity_model_id(name)?;
     Some(SessionChatDetectedSelection {
         model: Some(SessionChatDetectedChoice {
@@ -585,7 +608,11 @@ pub(super) fn match_antigravity_statusline(line: &str) -> Option<SessionChatDete
             value: effort,
             source: SessionChatOptionEvidence::Terminal,
         }),
-        mode: None,
+        mode: mode.map(|(value, label)| SessionChatDetectedChoice {
+            value: value.to_string(),
+            label: label.to_string(),
+            source: SessionChatOptionEvidence::Terminal,
+        }),
         context_window: None,
         terminal_status_line: None,
         fast: None,

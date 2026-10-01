@@ -12,7 +12,7 @@
 //! window paints it, owns the search field, hover, scroll and keyboard, and posts interactions back.
 //! SEE-ALSO: packages/shared/native-quick-access.ts (the contract), packages/gx-core/src/quick_access/ (the controller),
 //! apps/desktop/src/app/quick_access_modal_lifecycle.rs (open, snapshot routing, close),
-//! packages/core-ui/command-palette.tsx, recent-projects-modal.tsx, previous-sessions-modal.tsx, stashed-prompts-modal.tsx (the retained React twins).
+//! packages/core-ui/command-palette.tsx (deleted 2026-10-01), recent-projects-modal.tsx (deleted 2026-10-01), previous-sessions-modal.tsx (deleted 2026-10-01), stashed-prompts-modal.tsx (deleted 2026-10-01) (the retained React twins).
 use super::actions_menu::{QuickAccessMenuRequest, QuickAccessOpenMenu};
 use super::chrome::{
     QuickAccessMenuFrames, QuickAccessMenuPaint, QuickAccessMenuState, capture_bounds,

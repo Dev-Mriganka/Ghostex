@@ -1,6 +1,6 @@
 //! Agents Hub preview, on the React stories' fixtures (the catalog of
-//! packages/core-ui/agents-hub-modal.stories.tsx and the Agent Sync report and plan of
-//! packages/core-ui/agents-hub-sync/agent-sync-fixture.ts, dumped to agents_hub_fixture/).
+//! packages/core-ui/agents-hub-modal.stories.tsx (deleted 2026-10-01) and the Agent Sync report and plan of
+//! packages/core-ui/agents-hub-sync/agent-sync-fixture.ts (deleted 2026-10-01), dumped to agents_hub_fixture/).
 //! States (`GHOSTEX_NATIVE_MODAL_DEMO_STATE`): `skills` (default), `mds`, `hooks`, `configs`,
 //! `expanded` (Configs with its first group open), `profiles` (MDs with a group open),
 //! `search` (Skills filtered by "asc"), `nomatch`, `dirty` (an unsaved edit), `empty` (an empty

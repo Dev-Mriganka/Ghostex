@@ -1,4 +1,4 @@
-//! The About page (packages/core-ui/settings-modal/tabs/about.tsx): the Ghostex mark, the version,
+//! The About page (packages/core-ui/settings-modal/tabs/about.tsx (deleted 2026-10-01)): the Ghostex mark, the version,
 //! and the Discord, GitHub and Sponsor links, which open in the system browser.
 use super::super::super::native_modal_kit::*;
 use super::super::fields::{FieldStates, SettingsPage, settings_icon};

@@ -1,4 +1,4 @@
-//! The extension card grid (extensions-modal/extension-card.tsx, extension-surface.tsx and
+//! The extension card grid (extensions-modal/extension-card.tsx (deleted 2026-10-01), extension-surface.tsx (deleted 2026-10-01) and
 //! extension-grid.css): `ExtensionGridCard`, the three-to-a-row `ExtensionCardGrid` whose wide
 //! cells (an inline editor) land under the row holding their card, the labelled
 //! `ExtensionCardGroup`, the icon tiles, the empty states and the dashed Add view cell.

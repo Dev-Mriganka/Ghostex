@@ -58,7 +58,9 @@ pub fn parse_questions_with_ids(
     }
     let normalized = tool_name.map(normalize_tool_name).unwrap_or_default();
     let is_hermes_clarify = normalized == "clarify";
-    let is_cursor_ask_question = normalized == "askquestion";
+    // Antigravity's snake_case `ask_question` normalizes to Cursor's name but is not its
+    // always-checkbox panel; it says per question with `is_multi_select`.
+    let is_cursor_ask_question = normalized == "askquestion" && tool_name != Some("ask_question");
     let raw_questions = input.get("questions");
     let candidates: Vec<&Value> = match raw_questions {
         Some(Value::Array(items)) if !items.is_empty() => items.iter().collect(),
@@ -95,11 +97,12 @@ pub fn parse_questions_with_ids(
         if text.is_empty() && options.is_empty() {
             continue;
         }
-        // `multi_select` is Hermes' spelling, `multi` is omp's; Hermes honors it only when
-        // choices exist.
+        // `multi_select` is Hermes' spelling, `multi` is omp's, `is_multi_select` Antigravity's;
+        // Hermes honors it only when choices exist.
         let flagged = is_cursor_ask_question
             || is_true(raw.get("multiSelect"))
             || is_true(raw.get("multi_select"))
+            || is_true(raw.get("is_multi_select"))
             || is_true(raw.get("multi"));
         let multi_select = flagged && !(is_hermes_clarify && options.is_empty());
         let id = raw

@@ -95,6 +95,9 @@ impl GhostexGpuiApp {
                 storage_id: text("groupId")?,
                 section: section_id(command.get("section").and_then(Value::as_str)?)?,
             }),
+            "toggleCoordinator" => Some(SidebarUiIntent::ToggleCoordinatorCollapsed {
+                sidebar_session_id: text("sessionId")?,
+            }),
             "selectSpace" => Some(SidebarUiIntent::SelectSpace {
                 space_id: text("spaceId")?,
             }),
@@ -122,6 +125,7 @@ impl GhostexGpuiApp {
             return;
         }
         if self.web_answer_session_menu(&command, cx)
+            || self.web_run_in_box_page(&command, cx)
             || self.gx_store_run_sidebar_git(&command, cx)
             || self.gx_store_run_sidebar_action(&command, cx)
             || self.gx_store_run_sidebar_lifecycle(&command, cx)
@@ -166,6 +170,54 @@ impl GhostexGpuiApp {
             return;
         }
         log::info!("sidebar command not handled on web: {}", command["type"]);
+    }
+
+    /// The launcher's Run in a Box pages (`agentAccounts` `box` and `boxAgents`, and `root` for
+    /// their back row), built by gx-core's launcher state and put in the panel the launcher opened.
+    /// The account pages stay out of the page, so `root` here is always the way back from a box page.
+    fn web_run_in_box_page(&mut self, command: &Value, cx: &mut gpui::Context<Self>) -> bool {
+        if command["type"] != "agentAccounts" {
+            return false;
+        }
+        let Some(group_id) = command["groupId"].as_str() else {
+            return false;
+        };
+        let host = self.gx_store.menu_host.clone();
+        let items: Vec<MenuItem> = match command["action"].as_str() {
+            Some("box" | "boxAgents") => {
+                let account_host = ghostex_gx_core::AccountMenuHost {
+                    menu: &host,
+                    hide_account_emails: false,
+                    session_working: false,
+                };
+                let steps = self
+                    .gx_store
+                    .launcher_box_pages
+                    .command(command, &account_host)
+                    .unwrap_or_default();
+                let Some(items) = steps.into_iter().find_map(|step| match step {
+                    ghostex_gx_core::AccountMenuStep::Publish { items, .. } => Some(items),
+                    _ => None,
+                }) else {
+                    return false;
+                };
+                items
+            }
+            Some("root") => {
+                ghostex_gx_core::agent_launcher_items_with_accounts(group_id, &host, None)
+            }
+            _ => return false,
+        };
+        let owner = format!("group:{group_id}");
+        if let Some(menu) = self.native_sidebar.menu.as_mut()
+            && let Some((panel_owner, index)) = menu.account_panel.clone()
+            && panel_owner == owner
+            && let Some(panel) = menu.panels.get_mut(index)
+        {
+            panel.replace_items(items.iter().map(MenuItem::to_json).collect());
+            cx.notify();
+        }
+        true
     }
 
     /// `?session=<projectId>:<sessionId>` opens that session once the list has it, and `&surface=terminal` shows its terminal: a deep link, and what the screenshot driver uses.
@@ -236,8 +288,12 @@ impl GhostexGpuiApp {
     ) {
         self.open_session = Some(session.clone());
         self.web_report_shown_sessions(cx);
-        self.ensure_native_chat(&session, cx);
-        if self.show_terminal {
+        let chat_view_unavailable =
+            ghostex_gx_core::session_chat_view_unavailable(&self.gx_store.core, &session);
+        if !chat_view_unavailable {
+            self.ensure_native_chat(&session, cx);
+        }
+        if self.web_shows_terminal(&session) {
             self.ensure_terminal(&session, cx);
         }
         self.gx_store_handle(

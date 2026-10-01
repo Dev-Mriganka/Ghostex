@@ -119,7 +119,7 @@ pub(super) fn chat_settings() -> ChatSettings {
 /// against itself. The Step 4 host read the record and answered with an empty string when it was
 /// absent, which is a fresh install, a new profile, or any user who had never opened chat: every
 /// draft echo then came back unattributed and the outbox rows carried no `clientId` at all. The
-/// shape is `packages/core-ui/chat/session-chat-client-id.ts`'s, `gx-` then two base-36 runs,
+/// shape is `packages/core-ui/chat/session-chat-client-id.ts` (deleted 2026-10-01)'s, `gx-` then two base-36 runs,
 /// because an id is compared and stored but never parsed. A refused write is counted and the
 /// in-memory id is used anyway, which is what the TypeScript's `catch` does for private mode.
 pub(super) fn client_id(now_ms: i64, errors: &mut BootReads) -> String {

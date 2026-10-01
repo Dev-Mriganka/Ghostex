@@ -1,6 +1,6 @@
 //! Preview fixtures for the Theme, Hotkeys, Open In, Debugging, About, Integrations and OS
 //! Integration Settings pages: the settings each state starts from (the matching Storybook
-//! stories of packages/core-ui/settings-modal.stories.tsx) and the answers to the messages those
+//! stories of packages/core-ui/settings-modal.stories.tsx (deleted 2026-10-01)) and the answers to the messages those
 //! pages post (`requestGhostexCliStatus`, `requestOSIntegrationStatus`, the file pickers, ...).
 //!
 //! States: `about`, `debugging`, `open-in`, `open-in-editor` (Add target open),

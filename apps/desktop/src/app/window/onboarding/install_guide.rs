@@ -1,5 +1,5 @@
-//! The in-stage popups: `<Popup>` from primitives.tsx and the "Install another agent" guide
-//! (install-guide-popup.tsx, `.modal*` and `.install-*` in styles/base.css).
+//! The in-stage popups: `<Popup>` from primitives.tsx (deleted 2026-10-01) and the "Install another agent" guide
+//! (install-guide-popup.tsx (deleted 2026-10-01), `.modal*` and `.install-*` in styles/base.css).
 use super::GpuiOnboardingWindow;
 use super::OnboardingCommand;
 use super::fonts::{MANROPE, PLEX_MONO};

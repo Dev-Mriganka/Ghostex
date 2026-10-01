@@ -203,7 +203,10 @@ impl GhostexGpuiApp {
                     );
                 self.render_native_disclosure(key, content.into_any_element(), cx)
             });
-        v_flex()
+        // The line of a project drop is drawn on the project's whole block, header and sessions,
+        // because a project dropped after an expanded one lands after its sessions too.
+        let drop_line = self.native_sidebar_project_drop_line("group", &group.group_id);
+        let block = v_flex()
             .when(
                 self.native_sidebar.is_dragging("group", &group.group_id),
                 |row| row.opacity(0.18),
@@ -222,7 +225,15 @@ impl GhostexGpuiApp {
             .w_full()
             .flex_shrink_0()
             .child(self.render_native_project_header(group, hud, appearance, cx))
-            .children(body)
+            .children(body);
+        div()
+            .relative()
+            .w_full()
+            .flex_shrink_0()
+            .child(block)
+            .when_some(drop_line, |row, position| {
+                row.child(super::drag::drop_line(position, scale))
+            })
             .into_any_element()
     }
 }

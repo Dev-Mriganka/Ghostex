@@ -1,7 +1,11 @@
 import { formatSidebarHotkeyLabel } from '@/packages/core-ui/hotkey-label';
 import Fuse from 'fuse.js';
 import { Command } from '@/packages/components/ui/command';
-import { DIAGNOSTIC_LOGGING_SCENARIOS, SESSION_TITLE_GENERATION_AGENT_OPTIONS } from '../../shared/ghostex-settings';
+import {
+  AGENTBOX_DEFAULT_LOCATION_OPTIONS,
+  DIAGNOSTIC_LOGGING_SCENARIOS,
+  SESSION_TITLE_GENERATION_AGENT_OPTIONS,
+} from '../../shared/ghostex-settings';
 import { BUILT_IN_WORKSPACE_OPEN_TARGETS } from '../../shared/workspace-open-targets';
 import { BUNDLED_GHOSTEX_AGENT_SKILLS } from '../../shared/ghostex-agent-skills';
 import { DEFAULT_SIDEBAR_AGENTS } from '../../shared/sidebar-agents';
@@ -227,6 +231,7 @@ export type SearchableExtraSettingsTabId =
   | 'actions'
   | 'agents'
   | 'accounts'
+  | 'cloudBoxes'
   | 'extensions'
   | 'integrations'
   | 'openTargets'
@@ -480,6 +485,131 @@ export const EXTRA_SETTINGS_TAB_SEARCH_SECTIONS: Record<
       },
     ],
     title: 'Integrations',
+  },
+  /*
+   * CDXC:AgentBox 2026-10-01 SEE-ALSO:
+   * Settings > Cloud Boxes (apps/desktop/src/app/window/settings_modal/tabs/cloud_boxes.rs and
+   * tabs/cloud-boxes.tsx (deleted 2026-10-01)). `agentboxDefaultLocation` is the page's one setting; the other rows are
+   * keyed by UI ids so the search and Ghostex Help can find every part of the page.
+   */
+  cloudBoxes: {
+    sections: [
+      {
+        id: 'overview',
+        settings: [
+          {
+            key: 'agentboxStatus',
+            subtitle:
+              'Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check.',
+            title: 'agentbox',
+          },
+          {
+            key: 'agentboxSetUpForMe',
+            subtitle:
+              'Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes.',
+            title: 'Set it up for me',
+          },
+          {
+            key: 'agentboxWhatIsABox',
+            subtitle:
+              "A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer.",
+            title: 'What is a box?',
+          },
+        ],
+        title: 'Cloud Boxes',
+      },
+      {
+        id: 'providers',
+        settings: [
+          {
+            key: 'agentboxProviders',
+            options: [
+              { label: 'Docker on this computer', value: 'docker' },
+              { label: 'Hetzner', value: 'hetzner' },
+              { label: 'Vercel', value: 'vercel' },
+              { label: 'Daytona', value: 'daytona' },
+              { label: 'E2B', value: 'e2b' },
+              { label: 'DigitalOcean', value: 'digitalocean' },
+            ],
+            subtitle:
+              'Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist.',
+            title: 'Where boxes run',
+          },
+          {
+            key: 'agentboxRemoteDocker',
+            subtitle:
+              'Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there.',
+            title: 'Your own server (SSH)',
+          },
+        ],
+        title: 'Where boxes run',
+      },
+      {
+        id: 'agentSignIn',
+        settings: [
+          {
+            key: 'agentboxClaudeSignIn',
+            subtitle:
+              'Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it.',
+            title: 'Claude in boxes',
+          },
+          {
+            key: 'agentboxCodexSignIn',
+            subtitle:
+              'Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in.',
+            title: 'Codex in boxes',
+          },
+        ],
+        title: 'Agent sign-in',
+      },
+      {
+        id: 'newThreads',
+        settings: [
+          {
+            key: 'agentboxDefaultLocation',
+            options: AGENTBOX_DEFAULT_LOCATION_OPTIONS,
+            subtitle: 'Where new threads run unless you pick another location.',
+            title: 'Default location',
+          },
+        ],
+        title: 'New threads',
+      },
+      {
+        id: 'boxes',
+        settings: [
+          {
+            key: 'agentboxBoxes',
+            subtitle: "See every box, open a box's web app, stop a box, or destroy it to delete it for good.",
+            title: 'Your boxes',
+          },
+        ],
+        title: 'Your boxes',
+      },
+      {
+        id: 'howTo',
+        settings: [
+          {
+            key: 'agentboxStartThread',
+            subtitle: 'Open New Thread and pick where it runs under Run on. Boxes open in the terminal view.',
+            title: 'Start a thread in a box',
+          },
+          {
+            key: 'agentboxWebApp',
+            subtitle:
+              'Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically.',
+            title: "Open a box's web app",
+          },
+          {
+            key: 'agentboxBilling',
+            subtitle:
+              'Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box.',
+            title: 'Cloud boxes bill until stopped',
+          },
+        ],
+        title: 'How it works',
+      },
+    ],
+    title: 'Cloud Boxes',
   },
   /*
    * CDXC:Extensions 2026-08-30:

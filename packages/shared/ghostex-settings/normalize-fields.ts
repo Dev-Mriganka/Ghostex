@@ -2,6 +2,7 @@ import { clampCompletionSoundPreference } from '../completion-sound';
 import { getGhosttyFontFamilyForPreset, normalizeTerminalFontPreset } from '../terminal-font-preset';
 import { DEFAULT_ghostex_SETTINGS } from './defaults';
 import {
+  AGENTBOX_PROVIDER_IDS,
   AUTO_SLEEP_IDLE_MINUTE_OPTIONS,
   CHAT_FILE_OPEN_VIEW_SET,
   DEFAULT_CHAT_FILE_OPEN_VIEW,
@@ -189,6 +190,29 @@ export function normalizeAppIconSourceId(value: string | undefined): string {
 
 export function normalizeDefaultPromptAgentId(value: string | undefined): string {
   return ((value ?? '').trim() || DEFAULT_ghostex_SETTINGS.defaultPromptAgentId).slice(0, 120);
+}
+
+/** A remote Docker alias agentbox accepts (`agentbox remote-docker add <alias> <ssh>`). */
+const AGENTBOX_REMOTE_DOCKER_ALIAS_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
+
+/**
+ * `local`, `agentbox:<provider>` for a known provider, or `agentbox:docker:<alias>`; anything
+ * else is `local`. The desktop reads the same rule in `normalize_agentbox_location`
+ * (apps/desktop/src/shared_settings/normalize.rs).
+ */
+export function normalizeAgentboxDefaultLocation(value: string | undefined): string {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed.startsWith('agentbox:')) {
+    return DEFAULT_ghostex_SETTINGS.agentboxDefaultLocation;
+  }
+  const provider = trimmed.slice('agentbox:'.length);
+  if ((AGENTBOX_PROVIDER_IDS as readonly string[]).includes(provider)) {
+    return trimmed;
+  }
+  if (provider.startsWith('docker:') && AGENTBOX_REMOTE_DOCKER_ALIAS_PATTERN.test(provider.slice('docker:'.length))) {
+    return trimmed;
+  }
+  return DEFAULT_ghostex_SETTINGS.agentboxDefaultLocation;
 }
 
 /*

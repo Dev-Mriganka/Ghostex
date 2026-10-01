@@ -500,6 +500,35 @@ pub(crate) fn ingest_terminal_title_event_with_home(
     home_dir: &Path,
 ) -> Result<TerminalTitleIngestOutput, DomainStateError> {
     let current = require_session(repository, lifecycle)?;
+    /*
+    CDXC:AgentBox 2026-10-01 WHY:
+    A box session's terminal title comes through the box's tmux and agentbox's attach wrapper: the box name, or Codex's raw `<spinner> <conversation id> <spinner>` (observed live 2026-10-01 as the session title). It names no conversation on this computer, carries no status a box session can use, and a local Codex session only shows its thread name because the local session index replaces that title. The box poller (agentbox/activity.rs) owns a box session's activity and title instead, so a title event changes nothing here.
+    */
+    if crate::agentbox::is_agentbox_session(&current) {
+        let activity = crate::session_status::normalize_agent_activity_value(
+            object_field(&current, "runtimeSettings").get("agentActivity"),
+            "idle",
+        );
+        let previous_activity = activity
+            .get("activity")
+            .and_then(Value::as_str)
+            .unwrap_or("idle")
+            .to_string();
+        return Ok(TerminalTitleIngestOutput {
+            result: json!({
+                "agentSessionId": Value::Null,
+                "activity": activity,
+                "changed": false,
+                "enteredAttention": false,
+                "previousActivity": previous_activity,
+                "projection": project_session_title_projection(&current),
+                "reason": "agentbox-session-title-from-box",
+                "session": current,
+                "visibleTitle": Value::Null,
+            }),
+            schedule_presentation_delta: false,
+        });
+    }
     let (current, repaired_working_directory_title) =
         repair_session_working_directory_title(repository, lifecycle, current)?;
     let raw_title = read_text(params, "rawTitle");

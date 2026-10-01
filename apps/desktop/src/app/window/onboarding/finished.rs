@@ -1,5 +1,5 @@
 //! The "You're set" screen: the summary of every choice, the mock window of the first session and
-//! the after-onboarding Install guide prompt (panels/finished.tsx, styles/get-started.css).
+//! the after-onboarding Install guide prompt (panels/finished.tsx (deleted 2026-10-01), styles/get-started.css).
 use super::FinishTarget;
 use super::GpuiOnboardingWindow;
 use super::fonts::PLEX_MONO;

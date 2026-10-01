@@ -86,7 +86,7 @@ pub fn fork_branch_key(branch: &ForkBranch) -> String {
 /// `formatRelativeTimeLabel(iso, { nowMs })` for a branch's last activity.
 ///
 /// Only the compact sidebar form is reachable from here (`allowJustNow` defaults on), so this is
-/// the whole of `packages/core-ui/relative-time.ts` the chat needs.
+/// the whole of `packages/core-ui/relative-time.ts` (deleted 2026-10-01) the chat needs.
 fn relative_time_label(last_active_ms: f64, now_ms: f64) -> String {
     let diff_ms = (now_ms - last_active_ms).max(0.0);
     let seconds = (diff_ms / 1000.0).floor();

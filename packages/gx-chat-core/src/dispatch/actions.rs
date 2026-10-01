@@ -118,6 +118,7 @@ pub fn owner(kind: &ActionKind) -> Option<Family> {
         | ActionKind::ModelMenuTrait
         | ActionKind::Accounts
         | ActionKind::SwitchDraftAgent
+        | ActionKind::SwitchDraftRunLocation
         | ActionKind::SelectForkBranch
         | ActionKind::ContextEdit
         | ActionKind::ContextCancel

@@ -8,6 +8,7 @@ pub(crate) enum SettingsTabId {
     General,
     Theme,
     Integrations,
+    CloudBoxes,
     Extensions,
     OsIntegration,
     Remote,
@@ -24,12 +25,13 @@ pub(crate) enum SettingsTabId {
 impl SettingsTabId {
     /// The rail order (`createSettingsSidebarPages`); OS Integration and Debugging are filtered
     /// by the shell, and About is pinned to the rail's bottom.
-    pub(crate) const RAIL_ORDER: [SettingsTabId; 14] = [
+    pub(crate) const RAIL_ORDER: [SettingsTabId; 15] = [
         SettingsTabId::General,
         SettingsTabId::Theme,
         SettingsTabId::Agents,
         SettingsTabId::Accounts,
         SettingsTabId::Integrations,
+        SettingsTabId::CloudBoxes,
         SettingsTabId::Extensions,
         SettingsTabId::Remote,
         SettingsTabId::Projects,
@@ -47,6 +49,7 @@ impl SettingsTabId {
             SettingsTabId::General => "settings",
             SettingsTabId::Theme => "theme",
             SettingsTabId::Integrations => "integrations",
+            SettingsTabId::CloudBoxes => "cloudBoxes",
             SettingsTabId::Extensions => "extensions",
             SettingsTabId::OsIntegration => "osIntegration",
             SettingsTabId::Remote => "remote",
@@ -71,6 +74,7 @@ impl SettingsTabId {
             SettingsTabId::General => "General",
             SettingsTabId::Theme => "Theme",
             SettingsTabId::Integrations => "Integrations",
+            SettingsTabId::CloudBoxes => "Cloud Boxes",
             SettingsTabId::Extensions => "Extensions",
             SettingsTabId::OsIntegration => "OS Integration",
             SettingsTabId::Remote => "Remote",
@@ -85,12 +89,13 @@ impl SettingsTabId {
         }
     }
 
-    /// The rail icon (the Tabler icon `sidebar-pages.ts` draws).
+    /// The rail icon (the Tabler icon `sidebar-pages.ts` (deleted 2026-10-01) draws).
     pub(crate) fn icon(self) -> &'static str {
         match self {
             SettingsTabId::General => "modals/settings/settings.svg",
             SettingsTabId::Theme => "modals/settings/palette.svg",
             SettingsTabId::Integrations => "modals/settings/tools.svg",
+            SettingsTabId::CloudBoxes => "modals/settings/box.svg",
             SettingsTabId::Extensions => "modals/settings/puzzle.svg",
             SettingsTabId::OsIntegration => "modals/settings/device-desktop.svg",
             SettingsTabId::Remote => "modals/settings/cloud.svg",
@@ -106,7 +111,7 @@ impl SettingsTabId {
     }
 }
 
-/// The deep-link fields of a Settings `open` message (`modal-host.tsx`), kept for the pages that
+/// The deep-link fields of a Settings `open` message (`modal-host.tsx` (deleted 2026-10-01)), kept for the pages that
 /// honour them. Only an open of the `settings` kind carries them; the other kinds pick the start
 /// page (`getSettingsInitialTab`).
 #[derive(Clone, Debug, Default)]
@@ -145,7 +150,7 @@ fn optional_text(message: &Value, key: &str) -> Option<String> {
 
 impl SettingsOpenRequest {
     /// Reads an `open` message for one of the Settings kinds (`settings`, `hotkeys`,
-    /// `configureAgents`, `configureActions`, `openTargets`), the way modal-host.tsx does.
+    /// `configureAgents`, `configureActions`, `openTargets`), the way modal-host.tsx (deleted 2026-10-01) does.
     pub(crate) fn from_open_message(modal_id: &str, message: &Value) -> Self {
         let kind_tab = match modal_id {
             "configureAgents" => Some(SettingsTabId::Agents),

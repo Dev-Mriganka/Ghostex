@@ -362,6 +362,24 @@ fn label_action_button(
     .into_any_element()
 }
 
+/// `SettingDescriptionTooltip` for a row built outside `setting_row` (a management list item):
+/// the info icon that appears while the row's `group` is hovered, with `tooltip` behind it.
+pub(crate) fn description_info_button(
+    p: &SettingsPalette,
+    id: impl Into<ElementId>,
+    group: SharedString,
+    tooltip: impl Into<SharedString>,
+) -> AnyElement {
+    label_action_button(
+        p,
+        id.into(),
+        group,
+        icon::INFO_CIRCLE,
+        p.muted,
+        tooltip.into(),
+    )
+}
+
 /// `SettingRow`: the label line on the left (asterisk, `↳` prefix, label, badge, advanced arrow
 /// and info icon) and the control on the right, or under the label for a wide row.
 pub(crate) fn setting_row<V: SettingsPage>(

@@ -39,6 +39,7 @@ pub(crate) fn fork_session(
         )
         .into());
     }
+    crate::agentbox::refuse_for_agentbox_session(&source_session, "Fork")?;
     let settings = read_agent_settings(db)?;
     let plan = build_agent_fork_plan(&project, &source_session, &settings);
     if plan

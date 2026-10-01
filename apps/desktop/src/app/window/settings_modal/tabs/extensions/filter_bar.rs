@@ -1,4 +1,4 @@
-//! `ExtensionsFilterBar` (extensions-modal/extension-filter-bar.tsx) and the page's counts: the
+//! `ExtensionsFilterBar` (extensions-modal/extension-filter-bar.tsx (deleted 2026-10-01)) and the page's counts: the
 //! search field, the source select (only when more than one source is on the page), the type and
 //! category selects (searchable: eight or more items), "N shown", and the refresh button. The bar
 //! stays pinned to the top of the page while it scrolls under it (`position: sticky`).

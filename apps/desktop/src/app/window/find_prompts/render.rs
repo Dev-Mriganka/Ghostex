@@ -1,6 +1,6 @@
 //! Drawing Search by Prompt: the query toolbar, the result list, the selected prompt's pane, the
 //! fork picker, the notice line and the `^e` full-prompt view, measured against the React page
-//! (packages/core-ui/find/find-prompts-view.tsx, find-prompt-row.tsx, find-prompts-overlays.tsx).
+//! (apps/mobile/app/views/find/find-prompts-view.tsx, find-prompt-row.tsx, find-prompts-overlays.tsx).
 //!
 //! CDXC:PromptSearch 2026-09-16 DECISION:
 //! User: the top-right controls match the Quick Access Sessions tab in size, show their hotkey in the app's regular tooltip for the one control under the pointer, and read as toggles (Days, Fav, View, Fork) or dropdowns (agents, projects) so the active state is obvious.

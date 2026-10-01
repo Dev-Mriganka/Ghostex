@@ -1,5 +1,5 @@
 //! The commit review's data: the review draft gxserver's Git menu opens it with, one file's
-//! diff draft, and the changed-files tree (`packages/core-ui/changed-files-tree-utils.ts`).
+//! diff draft, and the changed-files tree (`packages/core-ui/changed-files-tree-utils.ts` (deleted 2026-10-01)).
 use serde_json::Value;
 use std::cmp::Ordering;
 

@@ -1,7 +1,7 @@
 //! Path helpers of the Add Project dialog: the Rust twin of
-//! packages/core-ui/remote-project-picker/remote-project-paths.ts, `filterBrowseEntries` from
-//! remote-command-palette-logic.ts and `isRepositoryCloneBranchNameInputValid` from
-//! packages/shared/repository-clone.ts. Separators are ASCII, so byte offsets stand in for the
+//! packages/core-ui/remote-project-picker/remote-project-paths.ts (deleted 2026-10-01), `filterBrowseEntries` from
+//! remote-command-palette-logic.ts (deleted 2026-10-01) and `isRepositoryCloneBranchNameInputValid` from
+//! packages/shared/repository-clone.ts (deleted 2026-10-01). Separators are ASCII, so byte offsets stand in for the
 //! UTF-16 offsets the TypeScript slices at.
 use super::model::AddProjectBrowseEntry;
 

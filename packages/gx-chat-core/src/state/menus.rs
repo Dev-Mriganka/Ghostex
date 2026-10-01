@@ -68,6 +68,8 @@ pub struct MenusState {
     pub panel_clock_ms: Option<f64>,
     /// A `switchDraftAgent` in flight: `await composer('flush')`, then the call, then `refresh()`.
     pub draft_agent_switch: Option<DraftAgentSwitch>,
+    /// The Run on row of a draft (where it will run: this computer or an agentbox box).
+    pub run_location: crate::menus::run_location::RunLocationState,
     /// The option values and the changes still in flight.
     pub options: OptionStore,
     /// The agent the option store was built for, so an agent change rebuilds it.
@@ -130,6 +132,7 @@ impl Default for MenusState {
             meter_now_ms: None,
             panel_clock_ms: None,
             draft_agent_switch: None,
+            run_location: Default::default(),
             options: OptionStore::default(),
             options_agent: None,
             options_catalog_generation: 0,

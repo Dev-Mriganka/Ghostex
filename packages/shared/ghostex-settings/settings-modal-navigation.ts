@@ -4,6 +4,7 @@ export const SETTINGS_MODAL_NAVIGATION_TABS = [
   'settings',
   'theme',
   'integrations',
+  'cloudBoxes',
   'extensions',
   'osIntegration',
   'remote',

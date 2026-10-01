@@ -61,7 +61,7 @@ impl GpuiAppModalHostWindow {
             pane_prepaint_background_color(),
             app_modal_host_background(),
         );
-        // CDXC:AppModal 2026-09-14 WHY: modal-host.html needs the resolved app appearance before its first paint. Comparing prepaint colors sent "dark" even in light mode because pane white (#ffffff) differs from the chat/find light constant (#fdfdfd).
+        // CDXC:AppModal 2026-09-14 WHY: modal-host.html (deleted 2026-10-01) needs the resolved app appearance before its first paint. Comparing prepaint colors sent "dark" even in light mode because pane white (#ffffff) differs from the chat/find light constant (#fdfdfd).
         let url = if uses_react_modal_host {
             gpui::http_client::Url::parse(&url)
                 .map(|mut parsed| {

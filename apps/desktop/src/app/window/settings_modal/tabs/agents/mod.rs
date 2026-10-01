@@ -1,4 +1,4 @@
-//! The Agents page (packages/core-ui/settings-modal/tabs/agents.tsx): the Config card (Default
+//! The Agents page (packages/core-ui/settings-modal/tabs/agents.tsx (deleted 2026-10-01)): the Config card (Default
 //! Prompt Agent, Title Generation Agent and its custom command, Agent approvals with the Skip
 //! permissions? confirmation) and the Agents roster (session resume hooks toolbar, one
 //! drag-to-reorder row per launcher with its hook status and CLI action, the expanded panel with

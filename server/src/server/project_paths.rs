@@ -52,7 +52,7 @@ pub(crate) fn handle_browse_project_directories_http(
 
 /// CDXC:AddProject 2026-09-11 DECISION:
 /// User: offer Open existing project for registered paths and the repository root for a pasted file inside a repository.
-/// SEE-ALSO: packages/core-ui/add-project-modal/types.ts, apps/desktop/src/app/helpers/project/add_project_dialog.rs.
+/// SEE-ALSO: packages/core-ui/add-project-modal/types.ts (deleted 2026-10-01), apps/desktop/src/app/helpers/project/add_project_dialog.rs.
 fn browse_project_directories_with_inspection(
     params: &Map<String, Value>,
     state: &AppState,
@@ -296,7 +296,7 @@ pub(crate) fn read_project_directory_browse_params(
 /// The root chooser on a native Windows host lists all logical drives. Its isDriveList flag prevents clients from adding the virtual root or creating a folder there, and each fullPath belongs to the host regardless of the client's OS.
 /// CDXC:AddProject 2026-09-28 WHY:
 /// Local folder opens this list on native Windows hosts instead of `~/`, so the host's home folder leads it and stays one click away.
-/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-modal.tsx (source rows).
+/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-modal.tsx (deleted 2026-10-01) (source rows).
 pub(crate) fn browse_project_directories(
     params: &Map<String, Value>,
     home_dir: &Path,

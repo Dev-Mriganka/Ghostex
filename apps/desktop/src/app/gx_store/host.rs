@@ -518,6 +518,8 @@ impl GhostexGpuiApp {
         // The list reads the store, so it is brought up to date once per burst rather than per
         // event, and does nothing at all when the burst changed nothing it draws.
         self.gx_store_update_sidebar_list(cx);
+        // A draft whose first message started its agentbox box leaves Chat View for its terminal.
+        self.leave_chat_view_for_unavailable_sessions(cx);
         outcome.thread_ended
     }
 }

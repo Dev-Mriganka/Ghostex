@@ -54,6 +54,7 @@
 
 mod activation_focus;
 mod added_project;
+mod agentbox;
 mod attention;
 mod burst;
 mod capture_targets;
@@ -147,6 +148,9 @@ pub(crate) use sidebar_ui_storage::{
 };
 
 pub(crate) use activation_focus::{menu_bar_session_focus_id, palette_session_focus_id};
+pub(crate) use agentbox::{
+    AGENTBOX_STATUS_ON_OPEN, cached_agentbox_locations, invalidate_agentbox_status,
+};
 pub(crate) use capture_targets::CaptureTargetProject;
 pub(crate) use client_storage_init::initialize_client_storage_at_start;
 pub(crate) use host::GxStoreHost;

@@ -185,6 +185,9 @@ export {
   type GhostexViewScopes,
 } from './ghostex-settings/view-scopes';
 export {
+  AGENTBOX_DEFAULT_LOCATION_OPTIONS,
+  AGENTBOX_PROVIDER_IDS,
+  type AgentboxProviderId,
   WEB_LINK_OPEN_TARGET_OPTIONS,
   CHAT_FILE_OPEN_VIEW_OPTIONS,
   MEDIA_FILE_OPEN_TARGET_OPTIONS,

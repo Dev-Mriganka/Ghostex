@@ -368,6 +368,27 @@ pub struct SessionGitStatus {
     pub pr_url: Option<String>,
 }
 
+/// The agentbox sandbox a session's agent runs in.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresentationAgentbox {
+    /// `docker`, `hetzner`, `vercel`, `daytona`, `e2b`, `digitalocean`, or `docker:<ssh host>`.
+    pub provider: String,
+    /// The agentbox box name every `agentbox … <box>` command takes.
+    pub box_name: String,
+    /// Short label for the provider, e.g. "Docker" or "Hetzner".
+    #[serde(default, deserialize_with = "crate::de::null_as_default")]
+    pub provider_label: String,
+    /// A draft whose chat Run on row picked this box: nothing runs in a box yet, and its first
+    /// message creates it. Until then the draft keeps Chat View.
+    #[serde(
+        default,
+        deserialize_with = "crate::de::null_as_default",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    pub pending: bool,
+}
+
 /// One session row. Unique only together with `project_id`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -481,6 +502,9 @@ pub struct PresentationSession {
     pub account_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub account_slot: Option<String>,
+    /// Present only when the agent runs inside an agentbox sandbox instead of on this machine.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agentbox: Option<PresentationAgentbox>,
     /// Accounts or agents this session can be resumed under; element shape kept loose.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub switchable_agents: Option<Value>,

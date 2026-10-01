@@ -297,3 +297,31 @@ pub(crate) fn json_number_value_to_f32(value: &Value) -> Option<f32> {
     let number = value.as_f64()?;
     number.is_finite().then_some(number as f32)
 }
+
+/// Normalizes an `agentboxDefaultLocation` (or `/api/createAgentSession` `runLocation`) value:
+/// `"local"`, `"agentbox:<provider>"` for a known provider, or `"agentbox:docker:<alias>"` for a
+/// registered remote Docker server. Anything else is `"local"`, the same rule as
+/// `normalizeAgentboxDefaultLocation` in `packages/shared/ghostex-settings/normalize-fields.ts`.
+pub fn normalize_agentbox_location(value: Option<&str>) -> String {
+    let value = value.unwrap_or("").trim();
+    let Some(provider) = value.strip_prefix("agentbox:") else {
+        return DEFAULT_AGENTBOX_LOCATION.to_string();
+    };
+    if AGENTBOX_PROVIDER_IDS.contains(&provider) {
+        return value.to_string();
+    }
+    match provider.strip_prefix("docker:") {
+        Some(alias) if is_valid_agentbox_remote_docker_alias(alias) => value.to_string(),
+        _ => DEFAULT_AGENTBOX_LOCATION.to_string(),
+    }
+}
+
+/// A remote Docker alias agentbox accepts (`agentbox remote-docker add <alias> <ssh>`): letters,
+/// digits, `.`, `_` and `-`.
+pub fn is_valid_agentbox_remote_docker_alias(alias: &str) -> bool {
+    !alias.is_empty()
+        && alias.len() <= 64
+        && alias
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+}

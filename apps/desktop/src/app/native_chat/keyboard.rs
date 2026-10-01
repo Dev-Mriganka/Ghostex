@@ -128,7 +128,7 @@ impl NativeChatView {
         /*
         CDXC:SessionChat 2026-09-18 WHY:
         React's image viewer closed on Escape from a capture listener on the whole chat surface
-        (session-chat-image-viewer.tsx), ahead of the composer's interrupt. The native viewer is a
+        (session-chat-image-viewer.tsx (deleted 2026-10-01)), ahead of the composer's interrupt. The native viewer is a
         child window over the same pane, so the pane answers Escape for it too and the picture
         closes whichever of the two windows the keystroke reached.
         */

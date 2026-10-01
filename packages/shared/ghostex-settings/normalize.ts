@@ -76,6 +76,7 @@ import {
   normalizeCustomDefaultEditorCommand,
   normalizeAppIconSourceId,
   normalizeDefaultPromptAgentId,
+  normalizeAgentboxDefaultLocation,
   normalizeWebLinkOpenTarget,
   normalizeMediaFileOpenTarget,
   normalizeChatFileOpenView,
@@ -224,6 +225,9 @@ export function normalizeghostexSettings(candidate: unknown): ghostexSettings {
       source,
       'ghostexCaptureSwitchToSession',
       DEFAULT_ghostex_SETTINGS.ghostexCaptureSwitchToSession
+    ),
+    agentboxDefaultLocation: normalizeAgentboxDefaultLocation(
+      readString(source, 'agentboxDefaultLocation', DEFAULT_ghostex_SETTINGS.agentboxDefaultLocation)
     ),
     agentAcceptAllEnabled: readBoolean(source, 'agentAcceptAllEnabled', DEFAULT_ghostex_SETTINGS.agentAcceptAllEnabled),
     agentManagerZoomPercent: clampAgentManagerZoomPercent(

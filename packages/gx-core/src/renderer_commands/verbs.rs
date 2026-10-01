@@ -29,10 +29,11 @@ use crate::sidebar_view::text::{js_trim, utf16_len, utf16_prefix};
 
 /// `SETTINGS_MODAL_NAVIGATION_TABS`, the tabs `ghostex settings open --tab` may name.
 /// SEE-ALSO: packages/shared/ghostex-settings/settings-modal-navigation.ts (keep in lockstep).
-pub const SETTINGS_MODAL_TABS: [&str; 14] = [
+pub const SETTINGS_MODAL_TABS: [&str; 15] = [
     "settings",
     "theme",
     "integrations",
+    "cloudBoxes",
     "extensions",
     "osIntegration",
     "remote",

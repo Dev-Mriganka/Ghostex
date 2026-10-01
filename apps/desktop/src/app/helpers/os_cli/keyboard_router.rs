@@ -356,7 +356,7 @@ pub(crate) fn route_gpui_native_keyboard_event(
         let owner = target.owner;
         let native_hotkey_text = gpui_native_hotkey_text(keycode, modifiers, shortcut_characters);
         // CDXC:Sessions 2026-09-08 SEE-ALSO:
-        // previous-sessions-modal.tsx owns Option+C scope cycling; reserve the native chord before configured app shortcuts can consume it.
+        // previous-sessions-modal.tsx (deleted 2026-10-01) owns Option+C scope cycling; reserve the native chord before configured app shortcuts can consume it.
         let sessions_scope_shortcut = native_hotkey_text.as_deref() == Some("alt+c")
             && matches!(
                 owner,

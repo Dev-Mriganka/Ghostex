@@ -6,7 +6,7 @@
 //! of one draft are folded into `[start, end]` revision ranges under a single
 //! `ghostex.sessionChat.recoveryDismissed.["<sessionKey>","<draftId>"]` record, gaps preserved, and
 //! only then are the markers removed. This is the Rust port of `compactDraftRecoveryDismissals` in
-//! `packages/core-ui/chat/session-chat-draft-dismissals.ts`, writing the same bytes: the same key,
+//! `packages/core-ui/chat/session-chat-draft-dismissals.ts` (deleted 2026-10-01), writing the same bytes: the same key,
 //! `JSON.stringify` of an array of two-element arrays, no spaces.
 //!
 //! Two rules from the TypeScript are load bearing and are kept in its order:

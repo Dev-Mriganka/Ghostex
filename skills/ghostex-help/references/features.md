@@ -402,10 +402,10 @@ where they are while you open, change and close views.
   chevron, Close, so a hovered card shows a chevron and Close until you open
   it. Hover an icon on a card to see its name; buttons flip
   to the reverse action on an active row (Unpin, Wake, Unsnooze, Unpark,
-  Cancel Close After Done). The enabled buttons also lead the session's
-  right-click menu, top to bottom in the card's right-to-left order (Sleep,
-  Park, Tag As by default), with the other actions after them; Note is under
-  the menu's Advanced submenu unless its hover button is on. Close is the
+  Cancel Close After Done). The enabled buttons also stay in the
+  session's right-click menu, which always runs Rename, Pin, Snooze, Park,
+  Sleep, then Tag As after a line, like ChatGPT's menu; Note is under the
+  menu's Advanced submenu unless its hover button is on. Close is the
   exception: while it is on the card it is never in the menu, and turning it
   off puts Close back as the menu's last row. Hover buttons also in context
   menu (on by default) controls the rest; turn it off and every enabled
@@ -425,7 +425,10 @@ where they are while you open, change and close views.
   `projectSessionListCollapsedCount`.
 - Drag a session onto another section of its project (its heading or any row
   in it) to move it there: Pinned pins it, Sessions unpins and unparks it, and
-  Parked parks it. While you drag, an empty Pinned, Sessions or Parked section
+  Parked parks it. Dropped between two pinned sessions, it is pinned right
+  there; dropped on the Pinned heading, it goes to the end of Pinned. Sessions
+  and Parked keep their own order, so the drop line shows where the session
+  will sit in them. While you drag, an empty Pinned, Sessions or Parked section
   shows its heading so you can drop onto it.
 - Sidebar section headings (Pinned, Sessions, Drafts, Parked, and
   Snoozed) show an orange dot when a session is working, a blue dot when
@@ -574,8 +577,10 @@ when you open it.
   wakes only when you click the pane or press a key
   (`wakeSleepingSessionsOnSelect`).
 - Drag pinned sessions to reorder them within their project. Rows stay in place
-  while an icon-and-title ghost follows the pointer; the insertion line marks
-  where the session moves when you drop it.
+  while an icon-and-title ghost follows just below and right of the pointer; the
+  insertion line marks where the session moves when you drop it, and no line
+  means the drop would change nothing. Projects and project groups show the same
+  line where they will land, after an open project's whole list of sessions.
 - Recent Sessions (Cmd+P) opens Quick Access to jump between sessions, and
   Cmd+Option+Shift+O opens it on recent projects.
   Its four tabs are Commands, Projects, Sessions, and Saved Prompts; they sit
@@ -686,6 +691,14 @@ model to save the default, or right-click to apply it only to this session.
 Use `/compact` to summarize the conversation. Forms with conditional fields or
 external sign-in steps offer an Open terminal action. Commands:
 `ghostex send-session-chat-message`, `ghostex answer-session-chat-prompt`.
+Antigravity CLI chats show its replies, its thinking, the commands it runs, the
+files it reads and searches, and its file edits with their changes. When
+Antigravity asks questions, they appear as a card in the chat: pick options,
+write your own answer, or skip a question, and the answer goes to Antigravity
+as if you had answered in its terminal. The mode button next to the model pill
+switches Antigravity between Default, Accept edits and Plan (Shift+Tab in its
+terminal). Commands: `ghostex send-session-chat-message`,
+`ghostex answer-session-chat-prompt`.
 Sending a message to a sleeping session wakes it. While the agent is still
 starting, the message shows in the chat right away and is typed in as soon as
 the agent's input box appears. If Claude Code has its settings, a plugin
@@ -905,7 +918,9 @@ without a message above them collapse to a tool-call count, and tool rows hide
 command previews; expand a tool to inspect its full input and result. File edits
 collapse under "Edited 1 file" or "Edited X files", counting each path once; expand
 the row to see the usual file and diff cards. The menu and Settings use the same
-toggle (`sessionChatSimpleMode`, on by default).
+toggle (`sessionChatSimpleMode`, on by default). The phone app has Simple mode too,
+under More actions > View in its chat box or in its Settings > Chat; the phone keeps
+its own switch, also on by default.
 
 Summary mode folds each turn down to your prompt and an "Agent reply" row; the
 newest reply stays open, and older ones open with a click. The row holds every
@@ -921,6 +936,9 @@ Summary mode (under View), Session note, Stash prompt, Attach, Maximize, then Te
 If the context ring still does not fit beside the model, it moves into Model
 settings at the top of More actions; the model pill shortens instead of moving.
 Controls return as space opens up; More actions and Send or Stop stay visible.
+On the phone, Stash prompt with an empty chat box (or a long press on it) opens
+Saved prompts for this project: tap one to put it in the chat box, or delete it
+with its trash button. Tags and editing stay on the computer.
 Click the model pill or the context meter to open it; hovering does not open either control.
 Hover the model pill to see the configured Model & Effort Picker shortcut
 (Option+P by default on macOS). Hover the context circle to read the agent's
@@ -1365,16 +1383,21 @@ version of the Projects features in Cursor and Claude Code.
 
 - **Start one**: hover a project in the sidebar, open the Select Agent menu (the
   arrow beside its agent button) and choose **New Coordinator…**. Name it, pick
-  Claude or Codex and its model and effort (medium by default, which is plenty
-  for routing work), and optionally give it a one-line goal and a first request;
+  Claude or Codex and its model and effort (Opus 5.5 on Claude, medium effort
+  by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
   it opens in chat. A project can have several coordinators, one per stream of
   work.
-- **Threads in the sidebar**: a coordinator's row shows a crew icon with the
-  number of open threads (light blue when one waits on you, orange while one
-  works), and its threads sit indented right under it with their own status
-  dots. Click a thread to watch it or talk to it directly; answer its
-  questions and approvals there. Pinning the coordinator takes its threads
-  along. A thread the coordinator marks done is parked and leaves the tree.
+- **Threads in the sidebar**: a coordinator's row shows a crown in
+  place of its agent's logo (on the phone's session list too), and a crew icon
+  with a number: how many threads are working while any are (orange, or light
+  blue when one waits on you), otherwise how many of its threads are not done,
+  followed by a moon with the sleeping threads and a check with the done ones. Its
+  threads sit indented right under it with their own status dots; the chevron
+  beside the crown folds them away and back (remembered across restarts), and a
+  folded coordinator keeps its counts and colour. Click a thread to watch it or
+  talk to it directly; answer its questions and approvals there. Pinning the
+  coordinator takes its threads along. A thread the coordinator marks done is
+  parked and leaves the tree.
 - **Threads panel in the chat**: above the coordinator's message box, the
   Threads panel lists its threads under Waiting on you, Working and Finished,
   each with one line (what it asks, what it is doing, or how its last report
@@ -1384,16 +1407,24 @@ version of the Projects features in Cursor and Claude Code.
   sends its final message to the coordinator (a "Message from" card in its
   chat); when a thread waits on a question, an approval, or a screen such as
   folder trust or an expired login, the coordinator is told what it is asking.
-  The coordinator then checks the work, starts the next step, and tells you
+  The coordinator then checks the work, commits it (only that thread's files,
+  and it never pushes unless you ask), starts the next step, and tells you
   what needs you. Nobody has to poll.
-- **Worktrees**: the coordinator can give a thread its own git worktree and
-  branch, so parallel threads never edit the same checkout. A coordinator's
+- **Thread models**: the coordinator picks each Claude thread's model when it
+  starts it: Opus 5.5 at high effort for substantial work, Opus 5.5 at medium
+  for hard but small changes, Sonnet 5.5 at high for small contained fixes. It
+  never switches a running thread's model (that throws away its prompt cache);
+  a follow-up that needs a stronger model gets a new thread.
+- **Worktrees**: threads that need the same files run one after another; when
+  running them in parallel matters, the coordinator gives a thread its own git
+  worktree and branch, so parallel threads never edit the same checkout. A coordinator's
   threads trust the project's own folder and the worktrees Ghostex makes for
   them, so they start without stopping at the agent's folder-trust question.
 - **Goal, standing instructions and memory**: every thread's brief carries the
   coordinator's goal, its standing instructions (rules such as which branch to
-  target or how to verify work) and its memory notes. Tell the coordinator
-  "remember that…" and it saves a note that every later thread receives; ask it
+  target or how to verify work) and its memory notes. When you state a lasting
+  preference, the coordinator proposes the exact wording and saves it as a
+  note every later thread receives once you confirm; ask it
   to change the goal or the instructions the same way.
 - **Just ask**: "run these three as separate threads", "use worktrees", "give me
   a status of every thread", "use a cheaper model for threads", "don't merge
@@ -1596,6 +1627,48 @@ Credential Manager.
 Related settings: Settings > Remote (all rows are user-only; open them with
 `ghostex settings open --tab remote`), `hideKeepAwakeTitlebarControl` and the
 Keep Awake rows for machines that must stay reachable.
+
+## Cloud Boxes (agents in a box, here or in the cloud)
+
+A box is an isolated copy of your project where an agent works without touching
+this computer. Boxes run on this computer with Docker (free), in the cloud on
+Hetzner, Vercel, Daytona, E2B or DigitalOcean, or on your own server over SSH.
+Ghostex drives agentbox, a free open-source command line tool
+(https://github.com/madarco/agentbox); Claude, Codex, OpenCode and Pi can run
+in a box. Your agent's settings, skills and Codex sign-in go with it. Claude
+needs its own one-time sign-in for boxes, so Claude on this computer stays
+signed in.
+
+- **Set up**: Settings > Cloud Boxes. "Set It Up for Me" starts an agent that
+  installs agentbox, asks which clouds you want before anything that costs
+  money, creates the provider API token in your browser, and signs Claude and
+  Codex in for boxes. To do it by hand: Install agentbox, then Set Up for
+  Docker, or Log In (paste an API token from the provider's console) and
+  Prepare (once, builds the base image) for a cloud. Add Server registers your
+  own server by a name and its SSH address; Check tests it. Claude in boxes >
+  Sign In opens the sign-in page. Each step runs in a terminal tab; the page
+  updates while it runs. Run Check shows agentbox's own health check.
+- **Use**: pick a box under Run on in New Thread (Cmd+Left and Cmd+Right switch
+  location), or choose Run in a Box in a project's Select Agent menu. A new
+  chat thread also shows a Run on row above its message box until you send the
+  first message: pick This computer or a box there, and the box starts with
+  that first message. Box sessions open in the terminal view and show a badge with where they run. The
+  first Claude box asks you to sign in right in its terminal: approve in the
+  browser page that opens and paste the code. Right-click a box session for Open
+  Box Web App (the app it serves, opened on this computer), Open Box Screen (the
+  box's own browser), Stop Box and Destroy Box. Add an `agentbox.yaml` with
+  `services.web.expose.port` to your project to start your dev server in the box
+  automatically. Sleeping or waking a session, or restarting Ghostex, reconnects
+  to the same box and conversation.
+- **Cost**: cloud boxes bill while they exist. Closing or deleting a session
+  stops its box and keeps its work; Settings > Cloud Boxes > Your boxes lists
+  every box with Open Web App, Stop and Destroy (deletes the box for good).
+- Boxes run on macOS and Linux; on Windows, use Ghostex inside WSL.
+
+Related settings: `agentboxDefaultLocation` (where new threads run unless you
+pick another location; default `local`, this computer). CLI:
+`ghostex agentbox status`, `ghostex agentbox list`,
+`ghostex create-agent <agent> --project-id <id> --run-on docker`.
 
 ## Notifications and status
 
@@ -1841,7 +1914,10 @@ docs directory), `hideProjectHeaderDiffStats`,
   next to the look: Appearance, the theme colour squares (Dark and Light tabs),
   Colourfulness and one Transparency row (the simple choices from Settings >
   Theme), with a "More theme options in Settings > Theme" link that opens the
-  Theme page. Turning transparency on there also switches Appearance to Dark. "I already know Ghostex" on the first panel skips the rest. Reopen it any
+  Theme page. Turning transparency on there also switches Appearance to Dark. The very first run opens on a short
+  intro video before the panels: it plays from YouTube (on Linux it opens in
+  the browser), shows once, and Continue goes on to setup at any time; the
+  video is also at https://youtu.be/QzjFB4J6-8E. Reopen the setup any
   time from Tips > Setup or Quick Access > Commands > Setup.
 
 ## Appearance and app

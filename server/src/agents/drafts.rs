@@ -537,6 +537,7 @@ pub(crate) fn switch_draft_agent(
     let lifecycle = read_lifecycle(params)?;
     let project = require_project(repository, &lifecycle.project_id)?;
     let session = require_session(repository, &lifecycle)?;
+    crate::agentbox::refuse_for_agentbox_session(&session, "Switching the agent")?;
     if !session_is_draft(&session) {
         return Err(DomainStateError {
             code: "invalidState",
@@ -673,16 +674,33 @@ pub(crate) fn switch_draft_agent(
     }
     // CDXC:AgentProviders 2026-09-16 DECISION:
     // User: switching Codex to Claude or Claude to Codex must choose the same account as launching the target agent from the sidebar button.
+    // A draft whose Run on row picked a box keeps that box when the new agent can run in one; its
+    // pane stays at the login shell until the first message starts the box (draft_run_location.rs).
+    let keep_box = crate::agentbox::pending_session_agentbox(&session)
+        .filter(|_| {
+            resume_agent_family_id(Some(agent_id.clone()), &agent_config, &Map::new())
+                .is_some_and(|family| crate::agentbox::AGENTBOX_AGENTS.contains(&family.as_str()))
+        })
+        .map(|agentbox| agentbox.provider);
+    if let Some(provider) = keep_box.as_deref() {
+        create_params.insert(
+            "runLocation".to_string(),
+            json!(format!("agentbox:{provider}")),
+        );
+    }
     let mut resolved = create_agent_session_params_for_project(db, &project, &create_params)?;
+    if keep_box.is_some() {
+        hold_box_launch(&mut resolved);
+    }
     /*
     The line the live pane will be typed, read out BEFORE the row is written so
     a plan that somehow carries no command leaves the draft exactly as it was
     instead of claiming an agent nobody can launch.
     */
-    let reuse_command = provider_exists
+    let reuse_command = (provider_exists && keep_box.is_none())
         .then(|| draft_switch_reuse_command(&resolved))
         .transpose()?;
-    if provider_exists {
+    if provider_exists && keep_box.is_none() {
         if let Some(launch_settings) =
             crate::zmx::launch_settings_with_consumed_agent_launch_startup_text(&Value::Object(
                 resolved.clone(),
@@ -850,6 +868,22 @@ pub(crate) fn build_draft_agent_switch_steps(
     command: &str,
 ) -> Vec<crate::session_chat_send::SessionChatSendStep> {
     use crate::session_chat_send::SessionChatSendStep;
+    let mut steps = build_draft_agent_exit_steps();
+    steps.push(SessionChatSendStep::Write(command.to_string()));
+    steps.push(SessionChatSendStep::SleepMs(
+        crate::session_chat_send::SESSION_CHAT_SUBMIT_DELAY_MS,
+    ));
+    steps.push(SessionChatSendStep::Write(
+        crate::session_chat_send::SESSION_CHAT_SUBMIT.to_string(),
+    ));
+    steps
+}
+
+/// The first half of [`build_draft_agent_switch_steps`]: exit the draft's CLI and wait for its
+/// login shell. On its own it stops a draft whose Run on row picked a box, which starts nothing
+/// until the first message (agents/draft_run_location.rs).
+pub(crate) fn build_draft_agent_exit_steps() -> Vec<crate::session_chat_send::SessionChatSendStep> {
+    use crate::session_chat_send::SessionChatSendStep;
     let mut steps = Vec::new();
     for interrupt in 0..3 {
         steps.push(SessionChatSendStep::Write(
@@ -867,13 +901,6 @@ pub(crate) fn build_draft_agent_switch_steps(
         home_dir: crate::paths::get_gxserver_paths(None).home_dir,
         timeout_ms: DRAFT_SWITCH_EXIT_TIMEOUT_MS,
     });
-    steps.push(SessionChatSendStep::Write(command.to_string()));
-    steps.push(SessionChatSendStep::SleepMs(
-        crate::session_chat_send::SESSION_CHAT_SUBMIT_DELAY_MS,
-    ));
-    steps.push(SessionChatSendStep::Write(
-        crate::session_chat_send::SESSION_CHAT_SUBMIT.to_string(),
-    ));
     steps
 }
 

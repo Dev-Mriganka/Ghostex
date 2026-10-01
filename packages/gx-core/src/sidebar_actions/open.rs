@@ -30,7 +30,7 @@
 //! `editNativeSidebarSpace` (all three frozen in the since-deleted
 //! `tooling/gx-core/sidebar-page-frozen/`) and its `controller.ts` (the `machineAction` arm).
 //!
-//! SEE-ALSO: packages/core-ui/app-modal-host-bridge.ts (`openQuickAccess`, the translation this reproduces),
+//! SEE-ALSO: packages/core-ui/app-modal-host-bridge.ts (deleted 2026-10-01) (`openQuickAccess`, the translation this reproduces),
 //! apps/desktop/src/app/gx_store/sidebar_open.rs.
 
 use serde_json::{json, Map, Value};

@@ -626,7 +626,7 @@
     {
       "key": "showSessionCardHoverButtonsInContextMenu",
       "title": "Hover buttons also in context menu",
-      "subtitle": "Keep the enabled hover buttons at the top of the session right-click menu too, in their right-to-left order on the card. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.",
+      "subtitle": "Also list the enabled hover buttons in the session right-click menu, in their usual place in the menu. Close is never listed while it is on the card. Turn off to leave every button out of the menu once it is on the card.",
       "tab": "settings",
       "tabTitle": "General",
       "group": "sidebar",
@@ -8578,6 +8578,195 @@
       "type": "boolean",
       "default": true,
       "agentWritable": true
+    },
+    {
+      "key": "agentboxStatus",
+      "title": "agentbox",
+      "subtitle": "Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "overview",
+      "sectionTitle": "Cloud Boxes",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxSetUpForMe",
+      "title": "Set it up for me",
+      "subtitle": "Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "overview",
+      "sectionTitle": "Cloud Boxes",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxWhatIsABox",
+      "title": "What is a box?",
+      "subtitle": "A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "overview",
+      "sectionTitle": "Cloud Boxes",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxProviders",
+      "title": "Where boxes run",
+      "subtitle": "Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "providers",
+      "sectionTitle": "Where boxes run",
+      "type": "ui",
+      "options": [
+        {
+          "label": "Docker on this computer",
+          "value": "docker"
+        },
+        {
+          "label": "Hetzner",
+          "value": "hetzner"
+        },
+        {
+          "label": "Vercel",
+          "value": "vercel"
+        },
+        {
+          "label": "Daytona",
+          "value": "daytona"
+        },
+        {
+          "label": "E2B",
+          "value": "e2b"
+        },
+        {
+          "label": "DigitalOcean",
+          "value": "digitalocean"
+        }
+      ],
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxRemoteDocker",
+      "title": "Your own server (SSH)",
+      "subtitle": "Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "providers",
+      "sectionTitle": "Where boxes run",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxClaudeSignIn",
+      "title": "Claude in boxes",
+      "subtitle": "Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "agentSignIn",
+      "sectionTitle": "Agent sign-in",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxCodexSignIn",
+      "title": "Codex in boxes",
+      "subtitle": "Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "agentSignIn",
+      "sectionTitle": "Agent sign-in",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxDefaultLocation",
+      "title": "Default location",
+      "subtitle": "Where new threads run unless you pick another location.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "newThreads",
+      "sectionTitle": "New threads",
+      "type": "enum",
+      "default": "local",
+      "options": [
+        {
+          "label": "This computer",
+          "value": "local"
+        },
+        {
+          "label": "Docker on this computer",
+          "value": "agentbox:docker"
+        },
+        {
+          "label": "Hetzner",
+          "value": "agentbox:hetzner"
+        },
+        {
+          "label": "Vercel",
+          "value": "agentbox:vercel"
+        },
+        {
+          "label": "Daytona",
+          "value": "agentbox:daytona"
+        },
+        {
+          "label": "E2B",
+          "value": "agentbox:e2b"
+        },
+        {
+          "label": "DigitalOcean",
+          "value": "agentbox:digitalocean"
+        }
+      ],
+      "agentWritable": true
+    },
+    {
+      "key": "agentboxBoxes",
+      "title": "Your boxes",
+      "subtitle": "See every box, open a box's web app, stop a box, or destroy it to delete it for good.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "boxes",
+      "sectionTitle": "Your boxes",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxStartThread",
+      "title": "Start a thread in a box",
+      "subtitle": "Open New Thread and pick where it runs under Run on. Boxes open in the terminal view.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "howTo",
+      "sectionTitle": "How it works",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxWebApp",
+      "title": "Open a box's web app",
+      "subtitle": "Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "howTo",
+      "sectionTitle": "How it works",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "agentboxBilling",
+      "title": "Cloud boxes bill until stopped",
+      "subtitle": "Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box.",
+      "tab": "cloudBoxes",
+      "tabTitle": "Cloud Boxes",
+      "section": "howTo",
+      "sectionTitle": "How it works",
+      "type": "ui",
+      "agentWritable": false
     },
     {
       "key": "titlebarViewOrder",

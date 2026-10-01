@@ -500,6 +500,98 @@ pub fn build_hermes_ask_answer_keys(
 }
 
 /*
+CDXC:SessionChat 2026-10-01 WHY: Antigravity's ask_question panel (agy 1.2.14) shows one
+question at a time (`Question 1/3: …`) and its highlight starts on the first row of every
+question. Rows are numbered and a digit is an absolute address: on a single-select question it
+picks the row and advances (on the last question it submits everything); on a multi-select
+question it toggles the row. The row one past the last option is "Write-in...", whose digit
+opens a one-line answer field where Enter commits the question the same way. A multi-select
+question is left with → (Enter only on the last, where it reads "Submit All"), and Esc skips a
+question, recorded as `User Skipped`. Digits stop at 9, so a row past the ninth is reached with
+arrows from wherever the last digit left the highlight. Typing the answer into the composer
+instead (the old fallback) did nothing: the panel owns the input while it is open.
+*/
+pub fn build_antigravity_ask_answer_keys(
+    questions: &[SessionChatQuestion],
+    selections: &[SessionChatQuestionSelection],
+) -> Vec<AskAnswerKeyGroup> {
+    const ASK_UP: &str = "\u{1b}[A";
+    const ASK_SKIP: &str = "\u{1b}";
+    let mut groups: Vec<AskAnswerKeyGroup> = Vec::new();
+    for (question_index, question) in questions.iter().enumerate() {
+        let last = question_index + 1 == questions.len();
+        let selection = selections.get(question_index);
+        let other = selection_other(selection);
+        let indices: Vec<usize> = selection
+            .map(|selection| selection.indices.as_slice())
+            .unwrap_or_default()
+            .iter()
+            .copied()
+            .filter(|index| *index < question.options.len())
+            .collect();
+        let write_in_row = question.options.len();
+        // Where the highlight sits; every question opens on its first row.
+        let mut cursor = 0usize;
+        // Puts the highlight on `row`; `then` is the key that acts on it when it had to be
+        // reached by arrows (a digit acts by itself).
+        let mut reach = |groups: &mut Vec<AskAnswerKeyGroup>, row: usize, then: &str| {
+            if row < 9 {
+                groups.push(AskAnswerKeyGroup::Raw((row + 1).to_string()));
+            } else {
+                let key = if row > cursor { ASK_NEXT_ROW } else { ASK_UP };
+                groups.push(AskAnswerKeyGroup::Raw(key.repeat(row.abs_diff(cursor))));
+                groups.push(AskAnswerKeyGroup::Raw(then.to_string()));
+            }
+            cursor = row;
+        };
+        if indices.is_empty() && other.is_empty() {
+            groups.push(AskAnswerKeyGroup::Raw(ASK_SKIP.to_string()));
+            continue;
+        }
+        if question.multi_select {
+            for index in &indices {
+                reach(&mut groups, *index, ASK_SPACE);
+            }
+            if !other.is_empty() {
+                reach(&mut groups, write_in_row, ASK_ENTER);
+                groups.push(AskAnswerKeyGroup::Text(other.to_string()));
+                groups.push(AskAnswerKeyGroup::Raw(ASK_ENTER.to_string()));
+            } else if last {
+                groups.push(AskAnswerKeyGroup::Raw(ASK_ENTER.to_string()));
+            } else {
+                groups.push(AskAnswerKeyGroup::Raw(ASK_NEXT_TAB.to_string()));
+            }
+            continue;
+        }
+        if !other.is_empty() {
+            // Single-value answer: picked labels join the write-in text as one string (the
+            // Claude single-select rule).
+            reach(&mut groups, write_in_row, ASK_ENTER);
+            groups.push(AskAnswerKeyGroup::Text(
+                answer_labels(question, selection).join(", "),
+            ));
+            groups.push(AskAnswerKeyGroup::Raw(ASK_ENTER.to_string()));
+            continue;
+        }
+        reach(&mut groups, indices[0], ASK_ENTER);
+    }
+    groups
+}
+
+/// Whether Antigravity's ask_question panel is on screen at its first question, which is where
+/// the key plan starts. Esc on a screen without the panel would interrupt the agent's turn.
+pub fn antigravity_question_panel_at_start(
+    questions: &[SessionChatQuestion],
+    screen_text: &str,
+) -> bool {
+    let header = format!("Question 1/{}:", questions.len());
+    screen_text
+        .lines()
+        .any(|line| line.trim_start().starts_with(&header))
+        && screen_text.lines().any(|line| line.contains("esc Skip"))
+}
+
+/*
 omp's built-in `ask` tool opens its rich dialog (one tab per question plus a
 Submit tab whenever there is more than one question or any multi question).
 The cursor opens on the `recommended` row and ↑/↓ move it WITHOUT wrapping;

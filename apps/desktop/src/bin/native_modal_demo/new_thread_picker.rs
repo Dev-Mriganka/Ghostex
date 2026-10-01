@@ -2,7 +2,11 @@
 //! default (nine agents, two Codex and one Claude account), `accounts` (the
 //! Codex account list opens after a moment), `noaccounts` (accounts read but
 //! none for Codex: Current CLI login and Add account), `error` (the accounts
-//! list could not be read: Try again), `loading` (agents not read yet).
+//! list could not be read: Try again), `loading` (agents not read yet), `boxes`
+//! (the Run on row with Docker, Hetzner, an SSH host and Daytona ready, Docker
+//! picked), `boxes-ssh` (the same, the SSH host picked: the chips scroll to it),
+//! `noboxes` (agentbox installed, no box ready: the Settings link). Every other
+//! state has no Run on row.
 use super::new_thread_picker::*;
 use gpui::{App, AppContext as _, Entity, WindowHandle};
 use gpui_component::Root;
@@ -125,8 +129,13 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
         NewThreadPickerCommand::LaunchAgent {
             agent_id,
             account_id,
+            run_location,
         } => {
-            eprintln!("launch {agent_id} with account {account_id:?}");
+            eprintln!("launch {agent_id} with account {account_id:?} in {run_location:?}");
+            cx.quit();
+        }
+        NewThreadPickerCommand::OpenCloudBoxesSettings => {
+            eprintln!("open Settings > Cloud Boxes");
             cx.quit();
         }
         NewThreadPickerCommand::OpenBrowser => {
@@ -164,20 +173,60 @@ pub(super) fn open(demo: &super::DemoEnv, cx: &mut App) {
             cx.quit();
         }
     });
+    let location = |run_location: &str, label: &str, kind: &str| NewThreadPickerLocation {
+        run_location: run_location.to_string(),
+        label: label.to_string(),
+        kind: kind.to_string(),
+        tooltip: run_location
+            .strip_prefix("agentbox:docker:")
+            .map(|alias| format!("Your server {alias} over SSH")),
+    };
+    let boxes = match state.as_str() {
+        "boxes" | "boxes-ssh" => NewThreadPickerBoxes::Ready(vec![
+            location("agentbox:docker", "Docker", "local"),
+            location("agentbox:hetzner", "Hetzner", "cloud"),
+            location("agentbox:docker:selfhost", "selfhost", "remoteDocker"),
+            location("agentbox:daytona", "Daytona", "cloud"),
+        ]),
+        "noboxes" => NewThreadPickerBoxes::NotSetUp,
+        _ => NewThreadPickerBoxes::Unknown,
+    };
+    let run_on_shown = boxes.shows_run_on();
     let config = NewThreadPickerConfig {
         palette: demo.palette,
         agents: agents.clone(),
         agents_loaded: state != "loading",
         accounts: accounts(&state),
+        boxes,
+        default_run_location: match state.as_str() {
+            "boxes" => "agentbox:docker".to_string(),
+            "boxes-ssh" => "agentbox:docker:selfhost".to_string(),
+            _ => "local".to_string(),
+        },
         close_when_inactive: false,
     };
     let (window, view) = super::open_modal_window(
         NEW_THREAD_PICKER_WIDTH,
-        new_thread_picker_window_height(agents.len()),
+        new_thread_picker_window_height(agents.len(), run_on_shown),
         move |window, cx| cx.new(|cx| GpuiNewThreadPickerWindow::new(config, host, window, cx)),
         cx,
     );
     *slot.borrow_mut() = Some((window, view.clone()));
+    if state == "boxes-ssh" {
+        // A background preview draws one frame; a second one shows the chips scrolled to the pick.
+        let view = view.clone();
+        cx.spawn(async move |cx| {
+            cx.background_executor()
+                .timer(Duration::from_millis(300))
+                .await;
+            let _ = cx.update(|cx| {
+                let _ = window.update(cx, |_root, _window, cx| {
+                    view.update(cx, |_, cx| cx.notify())
+                });
+            });
+        })
+        .detach();
+    }
     if state == "accounts" || state == "noaccounts" || state == "error" {
         let error = state == "error";
         cx.spawn(async move |cx| {

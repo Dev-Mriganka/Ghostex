@@ -522,6 +522,8 @@ fn to_mobile_session_summary(session: &Value) -> Value {
     insert_js(&mut map, "activity", &[s("activity")]);
     insert_js(&mut map, "agent", &[s("agent"), s("agentId")]);
     insert_js(&mut map, "agentIcon", &[s("agentIcon")]);
+    // CDXC:AgentBox 2026-10-01 SEE-ALSO: the box a session runs in (`PresentationAgentbox`); the phone keeps a started box session on its terminal like gx-core's `session_chat_view_unavailable`.
+    insert_non_null(&mut map, "agentbox", s("agentbox"));
     insert_js(&mut map, "agentName", &[s("agentName")]);
     insert_js(&mut map, "alias", &[s("alias")]);
     insert_js(&mut map, "displayTitle", &[s("displayTitle"), s("title")]);
@@ -604,6 +606,8 @@ fn to_mobile_session_summary(session: &Value) -> Value {
      */
     insert_js(&mut map, "sessionNote", &[s("sessionNote")]);
     insert_js(&mut map, "agentSessionId", &[s("agentSessionId")]);
+    // CDXC:Coordinators 2026-10-01 WHY: the same second-whitelist trap: the phone draws the coordinator crown in place of the agent logo from this field.
+    insert_js(&mut map, "coordinatorRole", &[s("coordinatorRole")]);
     /*
      * CDXC:DelayedSend 2026-09-03:
      * Same SECOND-whitelist trap once more: `to_cli_session` forwarded the

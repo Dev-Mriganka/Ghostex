@@ -132,6 +132,16 @@ fn render_session_icon(
     if dragging {
         opacity = 1.0;
     }
+    if super::threads::is_coordinator(session) {
+        return div()
+            .size(px(15.0 * scale))
+            .flex()
+            .items_center()
+            .justify_center()
+            .opacity(opacity)
+            .child(super::threads::coordinator_icon(appearance))
+            .into_any_element();
+    }
     let image = session
         .favicon_data_url
         .as_deref()

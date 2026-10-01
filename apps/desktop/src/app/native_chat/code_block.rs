@@ -73,7 +73,7 @@ fn action(
 /// Which block a wrap choice belongs to: the message's own Markdown plus where the fence starts.
 ///
 /// React keys the same state on the fence's start offset
-/// (`code-wrap:${node.position.start.offset}` in session-chat-markdown.tsx), so a block keeps its
+/// (`code-wrap:${node.position.start.offset}` in session-chat-markdown.tsx (deleted 2026-10-01)), so a block keeps its
 /// choice while a turn streams and loses it only when the fence itself moves.
 pub(super) fn wrap_key(id: &str, block: &CodeBlock) -> String {
     match block.span {

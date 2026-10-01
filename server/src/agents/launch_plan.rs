@@ -65,6 +65,25 @@ pub(crate) fn create_agent_session_params_for_project(
         params,
         configured_command,
     )?;
+    let agentbox_provider = crate::agentbox::requested_agentbox_provider(params)?;
+    // Only a box create writes a box record; a client cannot make a session a box session.
+    if agentbox_provider.is_none() {
+        runtime_settings.remove("agentbox");
+    }
+    let agentbox_family = match agentbox_provider {
+        Some(_) => {
+            if crate::coordinators::coordinator_create_request(params)?.is_some() {
+                return Err(DomainStateError::bad_request(
+                    "A coordinator runs on this computer. Start it without a box.",
+                ));
+            }
+            Some(crate::agentbox::box_agent_family(
+                resume_agent_family_id(Some(agent_id.clone()), &agent_config, &launch_settings)
+                    .as_deref(),
+            )?)
+        }
+        None => None,
+    };
     let configured_command = apply_coordinator_role(
         &agent_id,
         &agent_config,
@@ -72,17 +91,21 @@ pub(crate) fn create_agent_session_params_for_project(
         params,
         configured_command,
     )?;
-    if let Some(command) = configured_command.as_ref() {
-        runtime_settings
-            .entry("accountBaseCommand")
-            .or_insert(json!(command));
-    }
-    let account_command = crate::accounts::launch::apply_new_session(
-        db,
-        &agent_id,
-        agent_icon.as_deref(),
-        &mut runtime_settings,
-    )?;
+    let account_command = if agentbox_provider.is_some() {
+        None
+    } else {
+        if let Some(command) = configured_command.as_ref() {
+            runtime_settings
+                .entry("accountBaseCommand")
+                .or_insert(json!(command));
+        }
+        crate::accounts::launch::apply_new_session(
+            db,
+            &agent_id,
+            agent_icon.as_deref(),
+            &mut runtime_settings,
+        )?
+    };
     /*
     CDXC:SessionIdentity 2026-09-30 WHY: A create that names no agent Ghostex knows and only carries a command (Find's resume sends `os-integration-terminal` with `claude --resume <id>`, as `ghostex://terminal` does) locked the row to that placeholder id, so `launch_agent_mismatch` refused every hook the agent sent and only the ~20s live-process scan could name it. Chat View cannot open before that, so a session resumed from Find sat in the terminal (observed 2026-09-30, session S90:P3lv0:G41ci: its SessionStart hook arrived 1.5s after launch and was dropped). The agent the command starts is the session's agent from creation; the launch command and account are still resolved under the requested id, so the command runs exactly as given.
     */
@@ -97,20 +120,38 @@ pub(crate) fn create_agent_session_params_for_project(
     })
     .flatten()
     .unwrap_or_else(|| agent_id.clone());
-    let launch_plan = build_agent_launch_plan(AgentLaunchInput {
-        accept_all_mode: read_text_from_map(&agent_config, "acceptAllMode")
-            .or_else(|| read_text_from_map(&launch_settings, "acceptAllMode")),
-        agent_id: agent_id.clone(),
-        agent_session_id: read_text_from_map(&runtime_settings, "agentSessionId"),
-        command: account_command.or(configured_command),
-        delayed_send_deadline_at: read_text_from_map(&launch_settings, "delayedSendDeadlineAt"),
-        first_user_message: read_text_from_map(&runtime_settings, "firstUserMessage"),
-        global_accept_all_enabled: settings
-            .get("agentAcceptAllEnabled")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        icon: agent_icon.clone(),
-    });
+    let launch_plan = match (agentbox_provider.as_deref(), agentbox_family.as_deref()) {
+        (Some(provider), Some(family)) => {
+            let project_path = read_text(params, "cwd")
+                .or_else(|| read_text_value(project, "path"))
+                .unwrap_or_default();
+            let claude_sign_in_first = crate::accounts::launch::home()
+                .is_ok_and(|home| !crate::agentbox::claude_signed_in_for_boxes(&home));
+            crate::agentbox::prepare_box_launch(
+                provider,
+                family,
+                &project_path,
+                configured_command.as_deref(),
+                claude_sign_in_first,
+                &mut runtime_settings,
+            )
+            .launch_plan
+        }
+        _ => build_agent_launch_plan(AgentLaunchInput {
+            accept_all_mode: read_text_from_map(&agent_config, "acceptAllMode")
+                .or_else(|| read_text_from_map(&launch_settings, "acceptAllMode")),
+            agent_id: agent_id.clone(),
+            agent_session_id: read_text_from_map(&runtime_settings, "agentSessionId"),
+            command: account_command.or(configured_command),
+            delayed_send_deadline_at: read_text_from_map(&launch_settings, "delayedSendDeadlineAt"),
+            first_user_message: read_text_from_map(&runtime_settings, "firstUserMessage"),
+            global_accept_all_enabled: settings
+                .get("agentAcceptAllEnabled")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            icon: agent_icon.clone(),
+        }),
+    };
     let launch_plan_object = launch_plan.as_object().cloned().unwrap_or_default();
     let has_launch_command = launch_plan_object
         .get("command")
@@ -127,8 +168,10 @@ pub(crate) fn create_agent_session_params_for_project(
     /*
     CDXC:SessionStatus 2026-09-27 WHY: A new session starts "working" only when its launch submits a first prompt (`firstUserMessage`). The launch plan's startup text is the agent command alone and every agent launch has one, so keying on it started every session "working". Claude and Codex hide that by projection and settle it with their own titles and hooks, but an agent that fires nothing before its first turn (Hermes runs `on_session_start` from its first conversation turn) read "working" at an empty prompt until the user typed.
     */
-    let launch_submits_prompt =
-        read_text_from_map(&launch_plan_object, "firstUserMessage").is_some();
+    // A box session starts idle: its box takes a minute to come up, and the box activity poller
+    // reports working once the agent's screen shows it (see agentbox/activity.rs).
+    let launch_submits_prompt = agentbox_provider.is_none()
+        && read_text_from_map(&launch_plan_object, "firstUserMessage").is_some();
     let agent_activity = if runtime_settings.get("agentActivity").is_some() {
         normalize_agent_activity_value(runtime_settings.get("agentActivity"), "idle")
     } else {

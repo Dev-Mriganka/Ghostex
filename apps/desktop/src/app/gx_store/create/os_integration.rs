@@ -18,9 +18,10 @@
 //! apps/desktop/src/app/titlebar/help_menu.rs.
 
 use ghostex_gx_core::{
-    AgentRecordOptions, ProjectKey, agent_record_params, created_session,
-    first_prompt_title_runtime_settings, normalize_project_path, os_integration_command_params,
-    project_name_from_path, resolve_sidebar_agent, terminal_create_params,
+    AgentRecordOptions, ProjectKey, agent_record_params, check_startup_prompt_receipt,
+    created_session, first_prompt_title_runtime_settings, normalize_project_path,
+    os_integration_command_params, project_name_from_path, queue_startup_prompt_params,
+    resolve_sidebar_agent, start_provider_params, terminal_create_params,
 };
 use serde_json::{Value, json};
 
@@ -75,6 +76,9 @@ impl GhostexGpuiApp {
                     .unwrap_or_default()
                     .to_string();
                 self.gx_store_create_ghostex_help_chat(question, text("projectPath"), cx);
+            }
+            "createAgentboxSetupChat" => {
+                self.gx_store_create_agentbox_setup_chat(text("projectPath"), cx);
             }
             _ => self.gx_store_create_toast(
                 "warning",
@@ -352,6 +356,142 @@ impl GhostexGpuiApp {
         self.gx_store_create_toast("error", "Ghostex Help failed", Some(message), cx);
     }
 
+    /// "Set it up for me" on Settings > Cloud Boxes: the default prompt agent, in the Ghostex
+    /// folder project the Help chats use, starts on `AGENTBOX_SETUP_PROMPT` straight away.
+    ///
+    /// CDXC:AgentBox 2026-10-01 WHY:
+    /// The user's decision lives on the Cloud Boxes page (settings_modal/tabs/cloud_boxes.rs): "a prompt to an agent that configures it with computer use". The prompt is sent, not staged as an editable draft like a Help question, because the button's whole point is to start the setup; the prompt itself makes the agent ask before anything that costs money. `createAgentSession` only records the prompt as `firstUserMessage` (and marks the session a draft until it is delivered); nothing types it, so the create is followed by `startSessionProvider` and one `queueSessionChatPrompt` with `startupSend`, exactly as the Project Board's create-with-prompt does, and the startup queue's delivery promotes the draft.
+    fn gx_store_create_agentbox_setup_chat(
+        &mut self,
+        project_path: Option<String>,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let hud = self.gx_store_launch_hud();
+        let agent_id = hud
+            .as_deref()
+            .and_then(|hud| hud.get("settings"))
+            .and_then(|settings| settings.get("defaultPromptAgentId"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+            .unwrap_or(DEFAULT_PROMPT_AGENT_ID)
+            .to_string();
+        let Some(agent) = resolve_sidebar_agent(hud.as_deref(), &agent_id)
+            .filter(|agent| agent.launch_command().is_some())
+        else {
+            self.gx_store_create_toast(
+                "warning",
+                "Couldn't start the setup agent",
+                Some("Choose a default prompt agent in Settings > Agents first."),
+                cx,
+            );
+            return;
+        };
+        let Some(project_path) = project_path else {
+            self.gx_store_create_toast(
+                "error",
+                "Couldn't start the setup agent",
+                Some("The Ghostex config folder is unknown, so no project could host the setup."),
+                cx,
+            );
+            return;
+        };
+        let preferred_interface = self.gx_store_preferred_interface(&agent.agent_id);
+        let known_project = self.gx_store_local_project_at_path(&project_path);
+        let runtime_settings = first_prompt_title_runtime_settings(
+            &self.gx_store_title_generation_settings(),
+            hud.as_deref(),
+            Some(AGENTBOX_SETUP_PROMPT),
+            None,
+        );
+        cx.spawn(async move |this, cx| {
+            let project_id = match known_project {
+                Some(project_id) => Some(project_id),
+                None => gx_rpc(
+                    None,
+                    "/api/addProjectPath",
+                    json!({ "name": "Ghostex", "path": project_path }),
+                )
+                .await
+                .ok()
+                .as_ref()
+                .and_then(project_id_of),
+            };
+            let Some(project_id) = project_id else {
+                let _ = this.update(cx, |this, cx| {
+                    this.gx_store_agentbox_setup_failed("gxserver is unavailable.", cx)
+                });
+                return;
+            };
+            let params = agent_record_params(
+                &agent,
+                &project_id,
+                AGENTBOX_SETUP_PROMPT,
+                runtime_settings,
+                &AgentRecordOptions {
+                    title: Some("Set up Cloud Boxes".to_string()),
+                    ..AgentRecordOptions::default()
+                },
+                &ghostex_gx_core::agent_session_default_title(Some(&agent.name)),
+            );
+            let created = match gx_rpc(None, "/api/createAgentSession", params).await {
+                Ok(response) => created_session(&response, Some(&project_id)),
+                Err(error) => {
+                    let _ = this.update(cx, |this, cx| {
+                        this.gx_store_agentbox_setup_failed(&error.message, cx)
+                    });
+                    return;
+                }
+            };
+            let Some((_, session_id)) = created else {
+                let _ = this.update(cx, |this, cx| {
+                    this.gx_store_agentbox_setup_failed(
+                        "Ghostex could not start the setup session.",
+                        cx,
+                    )
+                });
+                return;
+            };
+            let _ = this.update(cx, |this, cx| {
+                this.gx_store_focus_created_session(
+                    &project_id,
+                    &session_id,
+                    false,
+                    (preferred_interface == "chat").then_some("chat"),
+                    cx,
+                );
+            });
+            let delivered: Result<(), String> = async {
+                gx_rpc(
+                    None,
+                    "/api/startSessionProvider",
+                    start_provider_params(&project_id, &session_id),
+                )
+                .await
+                .map_err(|error| error.message)?;
+                let receipt = gx_rpc(
+                    None,
+                    "/api/queueSessionChatPrompt",
+                    queue_startup_prompt_params(&project_id, &session_id, AGENTBOX_SETUP_PROMPT),
+                )
+                .await
+                .map_err(|error| error.message)?;
+                check_startup_prompt_receipt(&receipt).map_err(str::to_string)
+            }
+            .await;
+            if let Err(message) = delivered {
+                let _ = this.update(cx, |this, cx| {
+                    this.gx_store_agentbox_setup_failed(&message, cx)
+                });
+            }
+        })
+        .detach();
+    }
+
+    fn gx_store_agentbox_setup_failed(&mut self, message: &str, cx: &mut gpui::Context<Self>) {
+        self.gx_store_create_toast("error", "Couldn't start the setup agent", Some(message), cx);
+    }
+
     /// `resolveDomainProjectScope({ projectPath })`: this computer's project registered at that
     /// folder, as the store holds it.
     fn gx_store_local_project_at_path(&self, path: &str) -> Option<String> {
@@ -374,6 +514,36 @@ impl GhostexGpuiApp {
             .map(|project| project.project_id.clone())
     }
 }
+
+/// The first prompt of the "Set it up for me" session on Settings > Cloud Boxes.
+///
+/// CDXC:AgentBox 2026-10-01 WHY:
+/// agentbox's provider logins, `claude login` and its install wizard refuse to run without a terminal, and an agent's own shell has none, so the prompt has the agent run them in Ghostex terminals (`ghostex terminal`, `read-text`, `send-text`) and save provider tokens straight into `~/.agentbox/secrets.env`, which is where `agentbox <provider> login` keeps them. `agentbox install -p docker -y` sets up Docker without the interactive wizard.
+const AGENTBOX_SETUP_PROMPT: &str = "Set up Cloud Boxes for me on this computer. Ghostex runs agent sessions in isolated boxes through agentbox, a free, open-source command line tool (https://github.com/madarco/agentbox), either on this computer with Docker or in the cloud. Work through the steps below and tell me briefly what you did after each one.
+
+Ground rules:
+- Ask me which places I want boxes to run before you create anything that costs money. Docker on this computer is free; Hetzner, Vercel, Daytona, E2B, DigitalOcean and my own server bill while a box exists.
+- Never show an API token, key or sign-in code in this chat or in a command you print. Save provider tokens straight into ~/.agentbox/secrets.env as KEY=value lines (keep the file mode 600) and check them with `agentbox <provider> login --status`, which shows them masked.
+- agentbox logins and wizards need a real terminal. Run them with `ghostex terminal --title \"<title>\" -- <command>`, read the screen with `ghostex read-text \"<title>\"`, and answer prompts with `ghostex send-text` and `ghostex send-enter` (see `ghostex --help`).
+- Use $ghostex-browser-use to work in my browser, or $ghostex-computer-use when a page needs the desktop. If neither skill is installed, open the page and tell me exactly what to click. When a page asks for my password or a two-factor code, stop and let me type it.
+
+Steps:
+1. See what is already done: `ghostex agentbox status --json` and `agentbox --version`. Skip every step that is already done.
+2. If agentbox is missing, install it: `npm install -g @madarco/agentbox`. If npm is missing, install Node.js from Ghostex Settings > Integrations > Tools first, or ask me.
+3. Docker on this computer: if Docker is running, run `agentbox install -p docker -y` (it builds the box image once and skips agentbox's interactive wizard). If Docker is missing or stopped, tell me and suggest Docker Desktop, OrbStack or Colima.
+4. Ask me which cloud providers I want, if any. For each one I pick, create an API token in my browser and save it:
+   - Hetzner: Cloud Console, open or create a project, Security > API tokens, generate a token with Read & Write. Save it as HCLOUD_TOKEN.
+   - Vercel: Account Settings > Tokens (https://vercel.com/account/settings/tokens), create a token for the right team. Also copy the Team ID (team Settings > General) and a Project ID (project Settings > General). Save them as VERCEL_TOKEN, VERCEL_TEAM_ID and VERCEL_PROJECT_ID.
+   - Daytona: the Daytona dashboard > API Keys, create a key. Save it as DAYTONA_API_KEY.
+   - E2B: the E2B dashboard > API Keys (https://e2b.dev/dashboard?tab=keys). Save it as E2B_API_KEY.
+   - DigitalOcean: API > Tokens (https://cloud.digitalocean.com/account/api/tokens), generate a token with read and write scopes. Save it as DIGITALOCEAN_TOKEN.
+   Confirm each with `agentbox <provider> login --status`. If that does not show the token as set, run `agentbox <provider> login` in a Ghostex terminal and enter the token there instead.
+   Then run `agentbox prepare --provider <provider>` once for each provider in a Ghostex terminal. It builds the base image and can take several minutes; wait for it to finish.
+5. My own server over SSH, only if I ask for it: run `agentbox remote-docker add <name> <ssh>` in a Ghostex terminal (ssh is user@host, host:port, or a name from ~/.ssh/config), then `agentbox remote-docker doctor <name>`.
+6. Claude in boxes: boxes keep their own Claude sign-in so Claude on this computer stays signed in. Run `agentbox claude login` in a Ghostex terminal, open the sign-in link it prints in my browser, let me approve it, then enter the code the page shows into that terminal.
+7. Codex in boxes: boxes on this computer reuse my Codex sign-in. If the status from step 1 says Codex is not signed in for boxes and I picked a cloud provider, run `agentbox codex login` in a Ghostex terminal and finish the device sign-in in my browser.
+8. Ask whether I want box web apps at https://<box>.localhost addresses. If yes, run `agentbox install portless`.
+9. Finish with `ghostex agentbox status` and a short summary: which places are ready, what still needs me, and a reminder that cloud boxes keep billing until I stop or destroy them in Ghostex Settings > Cloud Boxes.";
 
 /// `response.project.projectId`.
 fn project_id_of(response: &Value) -> Option<String> {

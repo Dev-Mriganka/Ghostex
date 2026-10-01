@@ -132,7 +132,7 @@ impl ActionEditor {
 
 /// `hasDuplicateTitle`.
 ///
-/// CDXC:CommandPane 2026-05-16-15:08 SEE-ALSO: one action title per project, because command-pane reuse identifies a pane by its action title (packages/core-ui/settings-modal/tabs/actions.tsx).
+/// CDXC:CommandPane 2026-05-16-15:08 SEE-ALSO: one action title per project, because command-pane reuse identifies a pane by its action title (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)).
 fn has_duplicate_title(editor: &ActionEditor, existing: &[CommandButton]) -> bool {
     let key = title_key(&editor.title());
     existing.iter().any(|command| {
@@ -531,7 +531,7 @@ pub(crate) fn render_editor(
 /// `Open links when this action runs`: a URL field, an Integrated/External select and a remove
 /// button per link, right-aligned, then Add link.
 ///
-/// CDXC:Projects 2026-07-31-12:00 SEE-ALSO: terminal actions can open saved links whenever they run (packages/core-ui/settings-modal/tabs/actions.tsx).
+/// CDXC:Projects 2026-07-31-12:00 SEE-ALSO: terminal actions can open saved links whenever they run (packages/core-ui/settings-modal/tabs/actions.tsx (deleted 2026-10-01)).
 fn links_row(
     tab: &mut ActionsTab,
     p: &SettingsPalette,

@@ -1,4 +1,4 @@
-//! The onboarding's own controls and type, ported from packages/core-ui/onboarding/primitives.tsx
+//! The onboarding's own controls and type, ported from packages/core-ui/onboarding/primitives.tsx (deleted 2026-10-01)
 //! and styles/base.css.
 //!
 //! CDXC:Onboarding 2026-09-28 WHY:
@@ -6,7 +6,7 @@
 //! it (the 60x34 blue-glow switches, the flat indigo call to action, the tracked mono eyebrows) is
 //! the prototype's own design rather than the app's shared controls. GPUI-Kit's controls draw at
 //! fixed pixel metrics that do not follow the stage scale and cannot take these shapes, so, like the
-//! React page did with its own primitives.tsx, the stage draws them here; Kit tooltips, scrolling
+//! React page did with its own primitives.tsx (deleted 2026-10-01), the stage draws them here; Kit tooltips, scrolling
 //! and the window root are still used around them.
 use super::fonts::{DM_SANS, MANROPE, PLEX_MONO};
 use super::interact::{BUTTON_MS, hover_color, hovered, tween_color, tween_value};
@@ -242,7 +242,7 @@ pub(crate) fn agent_logo(
         .into_any_element()
 }
 
-/// `AGENT_LOGO_COLORS` (packages/core-ui/agent-logos.ts); the onboarding is always dark, so the
+/// `AGENT_LOGO_COLORS` (packages/core-ui/agent-logos.ts (deleted 2026-10-01)); the onboarding is always dark, so the
 /// light-mode overrides never apply.
 pub(crate) fn agent_logo_color(icon: &str) -> u32 {
     match icon {

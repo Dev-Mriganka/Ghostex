@@ -1,7 +1,7 @@
 //! What the Remote page reads from the daemon and the pure rules around it: the readers and
-//! formatters of packages/core-ui/settings-modal/tabs/remote-easy-connect-model.ts, the pairing-code
+//! formatters of packages/core-ui/settings-modal/tabs/remote-easy-connect-model.ts (deleted 2026-10-01), the pairing-code
 //! reader of packages/shared/ghostex-remote-pairing.ts (`readPairingCode`), the per-OS SSH steps of
-//! ssh-access-instructions.ts, and the saved-machine draft of remote-machine-fields.tsx.
+//! ssh-access-instructions.ts (deleted 2026-10-01), and the saved-machine draft of remote-machine-fields.tsx (deleted 2026-10-01).
 //!
 //! CDXC:RemotePairing 2026-09-03:
 //! Everything the daemon returns passes through a reader here so a malformed reply surfaces as one error line on the page instead of a card rendering nothing. Identifiers still say "tailcat" where they name the gxserver endpoint or its payload; user-facing copy says "Easy Connect".
@@ -430,7 +430,7 @@ pub(super) const SSH_ACCESS_PLATFORMS: [(&str, &str); 3] = [
 ];
 
 /// CDXC:RemotePairing 2026-09-03:
-/// Per-OS "turn on SSH access by hand" steps, the same text as ssh-access-instructions.ts and the mobile app's help sheet. Product copy says "SSH access"; the OS's own feature name appears only inside the path the user has to find on that OS.
+/// Per-OS "turn on SSH access by hand" steps, the same text as ssh-access-instructions.ts (deleted 2026-10-01) and the mobile app's help sheet. Product copy says "SSH access"; the OS's own feature name appears only inside the path the user has to find on that OS.
 pub(super) fn ssh_access_instructions(platform: &str) -> SshAccessInstructions {
     match platform {
         "windows" => SshAccessInstructions {
@@ -604,7 +604,7 @@ pub(super) fn read_easy_connect_code_input(input: &str) -> CodeReading {
     }
 }
 
-// ---- saved machines (remote-machine-fields.tsx) --------------------------------------------
+// ---- saved machines (remote-machine-fields.tsx (deleted 2026-10-01)) --------------------------------------------
 
 /// `RemoteMachineDraft`.
 #[derive(Clone, Debug, Default, PartialEq)]

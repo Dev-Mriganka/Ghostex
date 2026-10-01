@@ -128,6 +128,12 @@ export type GxserverEndpointPath =
    * first prompt reaches the agent the session's agent is fixed.
    */
   | "/api/switchDraftAgent"
+  /**
+   * CDXC:AgentBox 2026-10-01:
+   * Reads, and with `runLocation` changes, where a DRAFT will run: this computer or an agentbox
+   * box. A box picked here starts with the draft's first message.
+   */
+  | "/api/draftRunLocation"
   /*
    * CDXC:AgentProviders 2026-09-03:
    * Moves a PROMPTED session onto another agent configuration of the same CLI
@@ -137,6 +143,12 @@ export type GxserverEndpointPath =
   | "/api/switchSessionAgent"
   | "/api/agentCliMaintenance"
   | "/api/managedTools"
+  /**
+   * CDXC:AgentBox 2026-10-01 SEE-ALSO:
+   * agentbox readiness, the box list, box web app / screen URLs, stop/destroy, and the setup
+   * commands the Cloud Boxes page runs (server/src/agentbox/endpoint.rs).
+   */
+  | "/api/agentbox"
   | "/api/agentAccounts"
   | "/api/readAgentLaunchPlan"
   | "/api/readAgentResumePlan"

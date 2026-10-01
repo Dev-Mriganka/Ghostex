@@ -546,7 +546,7 @@ pub(crate) fn load_gpui_gxserver_presentation_focus_state() -> GpuiGxserverPrese
         .unwrap_or_default()
 }
 
-// Revision markers mirror packages/shared/first-launch-setup-settings.ts
+// Revision markers mirror packages/shared/first-launch-setup-settings.ts (deleted 2026-10-01)
 // (FIRST_LAUNCH_SETUP_CURRENT_REVISION / HIGHLIGHTED_FEATURES_CURRENT_REVISION);
 // keep them in sync when the shared revisions bump so both apps replay the
 // refreshed onboarding exactly once.

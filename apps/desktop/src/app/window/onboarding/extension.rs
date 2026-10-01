@@ -1,5 +1,5 @@
 //! The Agents panel's right-hand explainers: what the Ghostex integration adds and what Computer Use
-//! can do (previews/agent-extension-panels.tsx, `.xpanel` and `.pv-*` in styles/agents.css).
+//! can do (previews/agent-extension-panels.tsx (deleted 2026-10-01), `.xpanel` and `.pv-*` in styles/agents.css).
 use super::GpuiOnboardingWindow;
 use super::OnboardingCommand;
 use super::fonts::PLEX_MONO;

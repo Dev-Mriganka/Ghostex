@@ -1,7 +1,7 @@
 //! What a Markdown href points at, and the editor coordinates it carries.
 //!
 //! **To fold into family b.** `packages/shared/session-chat-presentation/links.ts` and
-//! `file-position.ts` are family b's on the port list, but the reference menu and the transcript
+//! `file-position.ts` (deleted 2026-10-01) are family b's on the port list, but the reference menu and the transcript
 //! menu (both family d's pure queries) are the only callers that have landed so far. When family b
 //! ports them, delete this file and call theirs; the behaviour below is the same walk.
 

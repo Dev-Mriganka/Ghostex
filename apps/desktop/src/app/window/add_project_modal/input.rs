@@ -1,5 +1,5 @@
 //! What the Add Project dialog makes of a pasted or typed line: the Rust twin of
-//! packages/core-ui/add-project-modal/add-project-input.ts (`classifyAddProjectInput`,
+//! packages/core-ui/add-project-modal/add-project-input.ts (deleted 2026-10-01) (`classifyAddProjectInput`,
 //! `normalizePastedProjectPath`, `parseAddProjectCloneInput`). URLs go through the `url` crate,
 //! which implements the same WHATWG parser as the browser's `URL`.
 use super::model::{AddProjectMachineOption, AddProjectSourceId};
@@ -62,7 +62,7 @@ fn is_repository_shorthand(value: &str, allow_subgroups: bool) -> bool {
 
 /// CDXC:AddProject 2026-09-11 DECISION:
 /// User: use the local machine for pasted paths unless a machine was selected; detect cd commands, escaped spaces, provider URLs, clone options, and saved-machine paths; offer a choice when a folder and repository shorthand both make sense.
-/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-input.ts (the React twin).
+/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-input.ts (deleted 2026-10-01) (the React twin).
 pub(crate) fn classify_add_project_input(
     input: &str,
     machines: &[AddProjectMachineOption],

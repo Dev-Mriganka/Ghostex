@@ -1,5 +1,5 @@
 //! Panel 2, Agents: the detected and missing agent rows, the integration and Computer Use switches,
-//! the scan console / extension previews on the right and the phase tracker (panels/agents.tsx,
+//! the scan console / extension previews on the right and the phase tracker (panels/agents.tsx (deleted 2026-10-01),
 //! styles/agents.css).
 use super::agent_cli::InstallEvent;
 use super::interact;

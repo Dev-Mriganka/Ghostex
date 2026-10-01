@@ -19,7 +19,6 @@ The full-repo formatting pass is:
 
 # TS/JS/JSON/MD/YAML — app-owned trees only, never .dependencies/ or generated output
 bunx prettier --write "apps/desktop/{sidebar,views,test,scripts}/**/*.{ts,tsx,mjs,md}" \
-  "apps/mobile/views/**/*.{ts,tsx}" \
   "packages/{shared,core-ui,components}/**/*.{ts,tsx,md}" \
   "server/**/*.mjs" "tooling/**/*.{mjs,ts}" "*.{json,md,ts}" ".github/**/*.yml"
 ```

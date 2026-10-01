@@ -1,4 +1,4 @@
-//! `AccountConnectionGuide` (accounts/connection-guide.tsx): the "Connect your accounts" dialog
+//! `AccountConnectionGuide` (accounts/connection-guide.tsx (deleted 2026-10-01)): the "Connect your accounts" dialog
 //! over Settings, at most 90% of the Settings window's height, with the shared steps once, a card
 //! per provider (the chosen one highlighted, its helper's install command while it is missing) and
 //! the sign-in form for the chosen provider.

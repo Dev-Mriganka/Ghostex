@@ -15,6 +15,11 @@ impl GhostexGpuiApp {
         session_id: TerminalSessionId,
     ) -> Option<&'static str> {
         let session = self.agents_workspace.session(session_id)?;
+        // Every desktop chat entry point asks here first, so a session gx-core rules out of Chat
+        // View (an agentbox box's, CDXC:AgentBox in gx-core agentbox.rs) stays on its terminal.
+        if session.agent_icon.is_some() && self.agents_session_chat_view_unavailable(session_id) {
+            return None;
+        }
         match session.agent_icon {
             Some("antigravity-cli") => Some("antigravity"),
             Some("claude") => Some("claude"),
@@ -27,6 +32,24 @@ impl GhostexGpuiApp {
             Some("omp") => Some("omp"),
             Some("zcode") => Some("zcode"),
             _ => None,
+        }
+    }
+
+    /// Hands every session on Chat View that gx-core has since ruled out of it (a draft whose
+    /// first message just started its agentbox box) to its terminal. Asked after each store burst,
+    /// so the switch follows the presentation change that caused it.
+    pub(crate) fn leave_chat_view_for_unavailable_sessions(
+        &mut self,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let leaving = self
+            .agents_chat_mode_sessions
+            .iter()
+            .copied()
+            .filter(|session_id| self.agents_session_chat_view_unavailable(*session_id))
+            .collect::<Vec<_>>();
+        for session_id in leaving {
+            self.toggle_agents_session_chat_mode(session_id, cx);
         }
     }
 

@@ -159,7 +159,7 @@ fn parse_http_repository_token(token: &str) -> Option<(&str, &str)> {
 
 /// CDXC:AddProject 2026-09-11 WHY:
 /// Azure clone URLs use _git/repository or v3/organization/project/repository; appending .git changes the repository name.
-/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-input.ts.
+/// SEE-ALSO: packages/core-ui/add-project-modal/add-project-input.ts (deleted 2026-10-01).
 fn normalize_repository_clone_path_for_host(host: &str, path: &str) -> String {
     let host = host.rsplit('@').next().unwrap_or(host).to_ascii_lowercase();
     if host == "dev.azure.com" || host == "ssh.dev.azure.com" || host.ends_with(".visualstudio.com")

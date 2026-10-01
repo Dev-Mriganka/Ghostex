@@ -1,4 +1,4 @@
-//! The Advanced collapsible at the bottom of Settings > Remote (remote-advanced.tsx).
+//! The Advanced collapsible at the bottom of Settings > Remote (remote-advanced.tsx (deleted 2026-10-01)).
 //!
 //! CDXC:RemotePairing 2026-09-03:
 //! One collapsible for the controls a regular user never needs: the ports Easy Connect serves, the raw allowed client key list (Paired devices above is its friendly face), the bare pairing address for pasting by hand, the binary, the local gxserver endpoint, and the raw sidecar status for bug reports.

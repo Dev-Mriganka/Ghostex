@@ -1,5 +1,5 @@
-//! `AccountManager`, `DefaultAccountRow` and `AccountSetup` (accounts/manager.tsx) with
-//! `PolicySettingRows` (accounts/policy-setting-rows.tsx): one section per provider with Connection
+//! `AccountManager`, `DefaultAccountRow` and `AccountSetup` (accounts/manager.tsx (deleted 2026-10-01)) with
+//! `PolicySettingRows` (accounts/policy-setting-rows.tsx (deleted 2026-10-01)): one section per provider with Connection
 //! guide and Add account in its header, the sign-in in progress, the add-account setup, the saved
 //! accounts (Automatic/Manual, star, expand into the editor), New session defaults, and the helper
 //! tool rows.
@@ -231,6 +231,9 @@ impl AccountsTab {
             let id = id.clone();
             move |page: &mut Self, _window: &mut Window, cx: &mut Context<Self>| {
                 page.editing = if page.editing.as_deref() == Some(id.as_str()) {
+                    // Closing saves what the focused field still holds; reopening starts fresh.
+                    page.commit_editor(&id, cx);
+                    page.editors.remove(&id);
                     None
                 } else {
                     Some(id.clone())

@@ -1,5 +1,5 @@
 //! The stage's two animated backgrounds, drawn on the CPU: the faint blue nebula behind the whole
-//! stage (packages/core-ui/onboarding/nebula.tsx) and the dark veil behind the preview column
+//! stage (packages/core-ui/onboarding/nebula.tsx (deleted 2026-10-01)) and the dark veil behind the preview column
 //! (dark-veil.tsx), plus the static vignette.
 //!
 //! CDXC:Onboarding 2026-09-28 WHY:
@@ -60,7 +60,7 @@ fn layer(buf: &[[f32; 4]; 8], terms: &[(M4, usize)], bias: &[f32; 4]) -> [f32; 4
     out
 }
 
-// The CPPN weights, transcribed from the GLSL in packages/core-ui/onboarding/dark-veil.tsx.
+// The CPPN weights, transcribed from the GLSL in packages/core-ui/onboarding/dark-veil.tsx (deleted 2026-10-01).
 const W0: M4 = [
     [6.5404263, -3.6126034, 0.7590882, -1.13613],
     [2.4582713, 3.1660357, 1.2219609, 0.06276096],

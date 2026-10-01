@@ -1,6 +1,13 @@
-//! `AccountEditor` (accounts/manager.tsx): an expanded saved account's name, indicator, session
-//! icon preview, automatic switching, slot swap, and its actions (Remove, Sign in again, Cancel,
-//! Save changes), with the reconnect flow and the remove confirmation under them.
+//! `AccountEditor` (accounts/manager.tsx (deleted 2026-10-01)): an expanded saved account's name, indicator, session
+//! icon preview, automatic switching, slot swap, and its actions (Remove, Sign in again), with the
+//! reconnect flow and the remove confirmation under them.
+//!
+//! CDXC:AgentProviders 2026-10-01 DECISION:
+//! User: drop the Save changes button and apply edits right away. The name and indicator save when
+//! their field loses focus or takes Enter (and when the editor closes), automatic switching saves
+//! when it is flipped, so Cancel, which only discarded unsaved edits, is gone too. Removing an
+//! account and swapping slots still ask for their own confirmation click. Every button here is the
+//! 32px outlined Settings button, the height and corners of the editor's fields.
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::catalog::SettingOption;
 use super::super::super::fields::{
@@ -15,9 +22,10 @@ use super::manager::account_inset;
 use super::widgets::{account_logo, account_text};
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AnyElement, Context, FontWeight, IntoElement, ParentElement as _, SharedString, Styled as _,
-    Window, div, px,
+    AnyElement, Context, Entity, FontWeight, IntoElement, ParentElement as _, SharedString,
+    Styled as _, Window, div, px,
 };
+use gpui_component::input::{InputEvent, InputState};
 use gpui_component::{h_flex, v_flex};
 use serde_json::json;
 
@@ -59,6 +67,68 @@ impl AccountsTab {
         }
     }
 
+    /// Saves the editor's name, indicator and automatic switching when they differ from the saved
+    /// account. A blank name goes back to the saved one instead.
+    pub(crate) fn commit_editor(&mut self, id: &str, cx: &mut Context<Self>) {
+        let Some(draft) = self.editors.get(id).cloned() else {
+            return;
+        };
+        let Some(account) = self.client.read(cx).data.as_ref().and_then(|data| {
+            data.accounts()
+                .into_iter()
+                .find(|account| account.id() == id)
+        }) else {
+            return;
+        };
+        if draft.name.trim().is_empty() {
+            self.update_editor(id, cx, |draft| draft.name = account.name());
+            return;
+        }
+        if draft.name.trim() == account.name()
+            && draft.indicator == account.indicator()
+            && draft.eligible == account.eligible()
+        {
+            return;
+        }
+        self.account_request(
+            json!({
+                "operation": "update",
+                "id": id,
+                "name": draft.name.trim(),
+                "color": account.color(),
+                "eligible": draft.eligible,
+                "indicator": draft.indicator,
+            }),
+            None,
+            cx,
+        );
+    }
+
+    /// Saves the editor when `input` loses focus or takes Enter (subscribed once per input).
+    fn commit_on_blur(
+        &mut self,
+        input_id: &SharedString,
+        input: &Entity<InputState>,
+        id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.commit_inputs.insert(input_id.clone()) {
+            return;
+        }
+        let id = id.to_string();
+        let subscription = cx.subscribe_in(
+            input,
+            window,
+            move |page: &mut Self, _input, event: &InputEvent, _window, cx| {
+                if matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. }) {
+                    page.commit_editor(&id, cx);
+                }
+            },
+        );
+        self.fields.subscriptions.push(subscription);
+    }
+
     /// Closes the editor and forgets its draft (`close()`).
     fn close_editor(&mut self, id: &str, cx: &mut Context<Self>) {
         self.editors.remove(id);
@@ -98,6 +168,7 @@ impl AccountsTab {
             window,
             cx,
         );
+        self.commit_on_blur(&name_id, &name_input, &id, window, cx);
         let masked = hide && draft.name.contains('@');
         super::widgets::sync_masked(
             &mut self.masked_inputs,
@@ -139,6 +210,7 @@ impl AccountsTab {
             window,
             cx,
         );
+        self.commit_on_blur(&indicator_id, &indicator_input, &id, window, cx);
         rows.push(setting_row(
             p,
             SharedString::from(format!("account-editor-{id}-indicator-row")),
@@ -196,7 +268,8 @@ impl AccountsTab {
                 {
                     let id = id.clone();
                     move |page: &mut Self, next, _window, cx| {
-                        page.update_editor(&id, cx, |draft| draft.eligible = next)
+                        page.update_editor(&id, cx, |draft| draft.eligible = next);
+                        page.commit_editor(&id, cx);
                     }
                 },
                 cx,
@@ -249,7 +322,7 @@ impl AccountsTab {
                     None,
                     None,
                     SizedButtonVariant::Outline,
-                    SizedButtonSize::Sm,
+                    SizedButtonSize::Default,
                     busy || draft.swap_target.is_empty(),
                     None,
                     move |page: &mut Self, _window, cx| {
@@ -275,6 +348,7 @@ impl AccountsTab {
                 None,
                 h_flex()
                     .items_center()
+                    .gap(px(8.0))
                     .child(select)
                     .child(swap)
                     .into_any_element(),
@@ -287,17 +361,17 @@ impl AccountsTab {
             "{sessions} session{} use this account.",
             if sessions == 1 { "" } else { "s" }
         );
-        let ghost = |label: &'static str,
-                     action: Box<dyn Fn(&mut Self, &mut Window, &mut Context<Self>)>,
-                     cx: &mut Context<Self>| {
+        let outline = |label: &'static str,
+                       action: Box<dyn Fn(&mut Self, &mut Window, &mut Context<Self>)>,
+                       cx: &mut Context<Self>| {
             settings_sized_button(
                 p,
                 SharedString::from(format!("account-editor-{id}-{label}")),
                 label,
                 None,
                 None,
-                SizedButtonVariant::Ghost,
-                SizedButtonSize::Sm,
+                SizedButtonVariant::Outline,
+                SizedButtonSize::Default,
                 false,
                 None,
                 move |page: &mut Self, window, cx| action(page, window, cx),
@@ -306,7 +380,7 @@ impl AccountsTab {
         };
         let remove = {
             let id = id.clone();
-            ghost(
+            outline(
                 "Remove",
                 Box::new(move |page, _window, cx| {
                     page.update_editor(&id, cx, |draft| draft.remove = !draft.remove)
@@ -316,59 +390,11 @@ impl AccountsTab {
         };
         let sign_in = {
             let id = id.clone();
-            ghost(
+            outline(
                 "Sign in again",
                 Box::new(move |page, _window, cx| {
                     page.update_editor(&id, cx, |draft| draft.reconnect = !draft.reconnect)
                 }),
-                cx,
-            )
-        };
-        let cancel = {
-            let id = id.clone();
-            ghost(
-                "Cancel",
-                Box::new(move |page, _window, cx| page.close_editor(&id, cx)),
-                cx,
-            )
-        };
-        let save = {
-            let id = id.clone();
-            let color = account.color();
-            settings_sized_button(
-                p,
-                SharedString::from(format!("account-editor-{id}-save")),
-                "Save changes",
-                None,
-                None,
-                SizedButtonVariant::Default,
-                SizedButtonSize::Sm,
-                busy || draft.name.trim().is_empty(),
-                None,
-                move |page: &mut Self, _window, cx| {
-                    let Some(draft) = page.editors.get(&id).cloned() else {
-                        return;
-                    };
-                    let this = cx.weak_entity();
-                    let close_id = id.clone();
-                    page.account_request(
-                        json!({
-                            "operation": "update",
-                            "id": id,
-                            "name": draft.name,
-                            "color": color,
-                            "eligible": draft.eligible,
-                            "indicator": draft.indicator,
-                        }),
-                        Some(Box::new(move |ok, cx| {
-                            if ok {
-                                let _ =
-                                    this.update(cx, |page, cx| page.close_editor(&close_id, cx));
-                            }
-                        })),
-                        cx,
-                    );
-                },
                 cx,
             )
         };
@@ -385,8 +411,6 @@ impl AccountsTab {
                     .gap(px(8.0))
                     .child(remove)
                     .child(sign_in)
-                    .child(cancel)
-                    .child(save)
                     .into_any_element(),
             ),
         ));
@@ -415,7 +439,7 @@ impl AccountsTab {
                 None,
                 None,
                 SizedButtonVariant::Destructive,
-                SizedButtonSize::Sm,
+                SizedButtonSize::Default,
                 busy,
                 None,
                 move |page: &mut Self, _window, cx| {

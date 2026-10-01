@@ -1,4 +1,4 @@
-//! The stock `SegmentedControl` (packages/components/ui/segmented-control.tsx with its canonical
+//! The stock `SegmentedControl` (packages/components/ui/segmented-control.tsx (deleted 2026-10-01) with its canonical
 //! rules in packages/core-ui/styles.css) outside a setting row: one 32px bordered box with an 8px
 //! radius around flat segments sized to their labels (or stretched to fill), split by the same
 //! hairline, 14px labels at 78% foreground, a 6% wash on hover and a 14% one on the pressed

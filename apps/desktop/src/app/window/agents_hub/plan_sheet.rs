@@ -1,4 +1,4 @@
-//! Agent Sync's plan sheet (packages/core-ui/agents-hub-sync/sync-plan-sheet.tsx): the plan as
+//! Agent Sync's plan sheet (packages/core-ui/agents-hub-sync/sync-plan-sheet.tsx (deleted 2026-10-01)): the plan as
 //! switchable groups of operations over a scrim, then the apply result.
 use super::super::native_modal_kit::{
     MODAL_MONO_FONT, MODAL_UI_FONT, hsla, modal_rgba, modal_switch,

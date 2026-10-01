@@ -47,6 +47,7 @@ impl GhostexGpuiApp {
                 appearance: appearance.clone(),
                 width: px(0.0),
                 pointer_x: px(0.0),
+                grab: gpui::Point::default(),
             }),
             id: session_id.clone(),
             title: session.title().to_owned(),
@@ -61,7 +62,7 @@ impl GhostexGpuiApp {
             .get("isMultiSelected")
             .and_then(Value::as_bool)
             == Some(true);
-        let drop_position = self.native_sidebar_drop_position("targetSessionId", &session_id);
+        let drop_position = self.native_sidebar_session_drop_line(&session_id);
         let scale = appearance.scale;
         let hovered = self.native_sidebar.hovered_session.as_deref() == Some(&session_id);
         // CDXC:Sidebar 2026-09-19 WHY: sidebar clicks and tab selections must show in the same frame (user decision in gx_store/local_focus.rs). The focused and visible fills of a local session row read the Rust store, which a selection changes in the same frame; the snapshot's flags arrive a sidebar projection later. This supersedes the click-only `optimistic_focus` mark and its 1.5 second timeout of earlier the same day.
@@ -159,10 +160,12 @@ impl GhostexGpuiApp {
                 .when_some(question_fill, |row, fill| row.bg(fill).hover(move |row| row.bg(fill)))
                 .children(super::threads::thread_connector(session, appearance))
                 .child(self.render_native_session_identity(session, icon, appearance, cx))
+                .children(self.render_coordinator_chevron(session, appearance, cx))
                 .children(self.render_native_session_decorations(session, appearance, cx))
                 .when_some(self.native_sidebar.reveal_flash.as_ref().filter(|(id, _)| id == &session.session_id).map(|(_, start)| *start), |row, start| row.child(super::scroll::reveal_flash(start, scale)))
                 .child(div().id(format!("native-session-title-{session_id}")).flex_1().min_w_0().h_full().flex().items_center().child(div().min_w_0().truncate().child(session.title().to_owned())).when(self.native_sidebar.pointer_inside && self.native_sidebar.menu.is_none() && !cx.has_active_drag(), |row| row.managed_discrete_tooltip_with_placement(tooltip_span.placement(), appearance.tooltip_delay, move |window, cx| super::tooltips::sidebar_tooltip(tooltip.clone(), tooltip_span, scale, window, cx))))
                 .when(!hovered, |row| row.children(super::threads::coordinator_badge(session, appearance)))
+                .when(!hovered, |row| row.children(super::agentbox::agentbox_badge(session, appearance, tooltip_span, self.native_sidebar.pointer_inside && self.native_sidebar.menu.is_none() && !cx.has_active_drag())))
                 .when(!hovered && !question, |row| row.children(super::status::activity_indicator(&session.activity, session.has_background_work, session.model_selection_failed, scale)))
                 .when(!hovered && !question && !session.model_selection_failed && (timer.is_some() || (show_time && session.activity != "working" && session.activity != "attention" && !session.has_background_work)), |row| row.child(div().text_size(px(13.55 * scale)).text_color(if sleeping { chrome_color(0x686868, 0x959595) } else { chrome_color(0xa6a6a6, 0x424242) }).child(time)))
                 .when(hovered, |row| row.child(self.render_native_session_hover_actions(group, session, appearance, cx)))

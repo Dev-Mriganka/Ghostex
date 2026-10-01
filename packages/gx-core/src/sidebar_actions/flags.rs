@@ -49,6 +49,9 @@ pub struct SessionFlags {
     pub is_favorite: Option<bool>,
     /// `Some(None)` is the explicit clear.
     pub session_tag: Option<Option<String>>,
+    /// A pin dropped at a position in Pinned names the order the row takes there, which gxserver
+    /// keeps instead of putting a newly pinned row at the bottom (sidebar_drag/session_drop.rs).
+    pub sidebar_order: Option<i64>,
 }
 
 impl SessionFlags {
@@ -64,6 +67,9 @@ impl SessionFlags {
         }
         if let Some(is_pinned) = self.is_pinned {
             params.insert("isPinned".to_string(), Value::Bool(is_pinned));
+        }
+        if let Some(sidebar_order) = self.sidebar_order {
+            params.insert("sidebarOrder".to_string(), Value::from(sidebar_order));
         }
         if let Some(session_tag) = &self.session_tag {
             params.insert(
@@ -198,6 +204,7 @@ pub(super) fn session_flags_of(
     let flags = match text_field(message, "type")? {
         "setSessionPinned" => SessionFlags {
             is_pinned: Some(message.get("pinned")?.as_bool()?),
+            sidebar_order: message.get("sidebarOrder").and_then(Value::as_i64),
             ..SessionFlags::default()
         },
         "setSessionParked" => {

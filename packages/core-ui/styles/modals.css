@@ -3160,7 +3160,7 @@ html:has(body.app-modal-host-native-window-body) {
  * rgba(255,255,255,0.08) edges, 12px sections / 8px controls / 6px menu items,
  * one 32px control height, no bold weights, and full-width paired outline
  * footer buttons. Every app modal opts in through the AppModalShell component
- * (packages/core-ui/app-modal-shell.tsx), which applies `.gx-app-modal`.
+ * (packages/core-ui/app-modal-shell.tsx (deleted 2026-10-01)), which applies `.gx-app-modal`.
  * Restyle every modal at once by editing these tokens and slot rules; add
  * per-modal rules only for layout that is unique to that modal.
  * `--app-modal-background` is redeclared here (instead of fighting the
@@ -3170,7 +3170,7 @@ html:has(body.app-modal-host-native-window-body) {
 /* CDXC:Theming 2026-09-23 DECISION:
  * User: app modals (the commit review first) match the rest of the app instead of a fixed neutral
  * grey. The window takes the theme's chrome colour that the modal host publishes as
- * --gx-theme-chrome (modal-host.tsx), and panels and raised controls are the same steps toward
+ * --gx-theme-chrome (modal-host.tsx (deleted 2026-10-01)), and panels and raised controls are the same steps toward
  * white the neutral design used (#161616 / #1d1d1d / #232323 over #0e0e0e), so a tinted theme
  * carries into every modal. Without the variable the neutral values stay.
  */

@@ -17,6 +17,9 @@ pub(crate) fn build_agent_resume_plan(
     session: &Value,
     settings: &Map<String, Value>,
 ) -> Value {
+    if let Some(plan) = crate::agentbox::box_resume_plan(session) {
+        return plan;
+    }
     let input = to_agent_resume_input(project, session, settings);
     // CDXC:Sessions 2026-09-08 WHY:
     // Detected conversations already have an exact transcript and provider home; resolving by title or the current account could open a different conversation.

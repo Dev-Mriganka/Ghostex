@@ -11,7 +11,7 @@ use crate::*;
 impl GhostexGpuiApp {
     /// CDXC:ManagedTools 2026-09-29 WHY:
     /// Settings > Integrations > Tools installs Linux system tools with one password prompt; where polkit has no dialog to show (WSL, a headless session) gxserver answers with the `sudo` command instead, and the prompt has to be a real terminal. The page sends only the tool id: the command is read from gxserver here, so a page can never make the app run text of its choosing.
-    /// SEE-ALSO: server/src/managed_tools/system_tools.rs, packages/core-ui/settings-modal/tabs/managed-tools-section.tsx.
+    /// SEE-ALSO: server/src/managed_tools/system_tools.rs, packages/core-ui/settings-modal/tabs/managed-tools-section.tsx (deleted 2026-10-01).
     pub(crate) fn run_managed_tool_terminal_command(
         &mut self,
         tool_id: String,

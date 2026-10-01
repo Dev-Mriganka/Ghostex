@@ -1,5 +1,5 @@
 //! The Sessions tab: the open and closed merge, the scope, tag and project filters, paging, day
-//! grouping and rows of packages/core-ui/previous-sessions-modal.tsx.
+//! grouping and rows of packages/core-ui/previous-sessions-modal.tsx (deleted 2026-10-01).
 //!
 //! Ported from `apps/desktop/sidebar/native-quick-access/sessions.ts` (deleted; see git history).
 //!

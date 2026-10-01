@@ -552,9 +552,16 @@ impl GhostexGpuiApp {
                     .is_none()
                 {
                     let agent_name = agent_name.unwrap_or("This agent");
-                    state.disabled_reason = Some(format!(
-                        "{agent_name} isn't supported by Ghostex Chat View yet\nOnly Claude, Codex, Cursor, Antigravity, Pi, Omp, Grok, and Hermes are supported\nPlease request other agents on X or the Discord"
-                    ));
+                    let in_box = self.agents_session_chat_view_unavailable(session_id);
+                    state.disabled_reason = Some(if in_box {
+                        format!(
+                            "{agent_name} runs in a cloud box\nChat View needs the agent on this computer"
+                        )
+                    } else {
+                        format!(
+                            "{agent_name} isn't supported by Ghostex Chat View yet\nOnly Claude, Codex, Cursor, Antigravity, Pi, Omp, Grok, and Hermes are supported\nPlease request other agents on X or the Discord"
+                        )
+                    });
                 } else if !self.agents_session_chat_eligible(session_id) {
                     // CDXC:AgentHooks 2026-09-03: the session id Chat
                     // View needs arrives through the agent's Ghostex hook, so

@@ -237,6 +237,8 @@ pub(crate) struct GpuiFirstRunOnboardingState {
     pub(crate) os_integration_onboarding_seen: bool,
     pub(crate) first_launch_setup_complete: bool,
     pub(crate) windows_terminal_setup_complete: bool,
+    /// The first-run intro video page was left (Continue), so it never opens again.
+    pub(crate) intro_video_seen: bool,
 }
 
 /// CDXC:Onboarding 2026-08-18: the markers whose surfaces are
@@ -247,6 +249,7 @@ pub(crate) enum GpuiFirstRunOnboardingMarker {
     /// The first-launch window was given up before its page was ready, so the next launch shows it again.
     FirstLaunchSetupNotShown,
     OsIntegrationOnboardingSeen,
+    IntroVideoSeen,
 }
 
 pub(crate) fn load_gpui_first_run_onboarding_state() -> GpuiFirstRunOnboardingState {
@@ -283,6 +286,10 @@ pub(crate) fn load_gpui_first_run_onboarding_state() -> GpuiFirstRunOnboardingSt
             .get("windowsTerminalSetupComplete")
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false),
+        intro_video_seen: value
+            .get("introVideoSeen")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false),
     }
 }
 
@@ -298,6 +305,7 @@ pub(crate) fn persist_gpui_first_run_onboarding_state(state: &GpuiFirstRunOnboar
         "tipsAndTricksSeen": state.tips_and_tricks_seen,
         "firstLaunchSetupComplete": state.first_launch_setup_complete,
         "windowsTerminalSetupComplete": state.windows_terminal_setup_complete,
+        "introVideoSeen": state.intro_video_seen,
     });
     let _ = fs::write(path, payload.to_string());
 }

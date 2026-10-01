@@ -73,6 +73,10 @@ impl GhostexGpuiApp {
                     .detach();
                 }
             }
+        } else if action.command["type"] == "agentboxSessionAction" {
+            // A box session's Open Box Web App, Open Box Screen, Stop Box and Destroy Box
+            // (native_sidebar/agentbox.rs); Destroy asks first, which needs this window.
+            self.run_native_sidebar_agentbox_action(&action.command, window, cx);
         } else if action
             .command
             .get("type")
@@ -129,6 +133,11 @@ impl GhostexGpuiApp {
         // old runtime (gx_store/sidebar_menus.rs).
         if self.gx_store_answer_session_menu(&command, cx) {
             return;
+        }
+        // The launcher opening re-reads this computer's agentbox boxes for its Run in a Box page
+        // (gx_store/agentbox.rs).
+        if command["type"] == "agentAccounts" && command["action"] == "load" {
+            self.refresh_agentbox_locations(crate::app::gx_store::AGENTBOX_STATUS_ON_OPEN, cx);
         }
         // The launcher's account pages and a row's Switch Account flyout call the daemon from here
         // and fill the panel the menu already opened (gx_store/sidebar_accounts.rs).

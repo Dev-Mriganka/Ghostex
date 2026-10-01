@@ -163,7 +163,6 @@ impl GhostexGpuiApp {
                 .id("native-docs")
                 .track_focus(&focus)
                 .key_context("NativeDocs")
-                .on_action(cx.listener(Self::handle_native_docs_action))
                 .on_key_down(cx.listener(Self::native_docs_key_down))
                 .on_mouse_down(
                     MouseButton::Left,

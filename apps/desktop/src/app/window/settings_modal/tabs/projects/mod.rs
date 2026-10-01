@@ -1,4 +1,4 @@
-//! The Projects page (packages/core-ui/settings-modal/tabs/projects.tsx): Files (the Docs folders
+//! The Projects page (packages/core-ui/settings-modal/tabs/projects.tsx (deleted 2026-10-01)): Files (the Docs folders
 //! list), Global Defaults, then the Project section for the project chosen in the searchable
 //! selector (worktree command, ticket key, Beads directory, Docs directory, each saved with its
 //! own button) and that project's custom view settings (views.rs).
