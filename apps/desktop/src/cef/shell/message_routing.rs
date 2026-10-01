@@ -1,6 +1,6 @@
 // C4 light split: bridge/popup event taxonomy, dispatch-policy
 // classification, the V8Handler impls, and the sidebar/project-workarea/
-// app-modal-host/native-host/session-chat JS bridge install, update, send,
+// native-host JS bridge install, update, send,
 // and (de)serialization plumbing. Pure move out of `cef/shell.rs`; the only
 // edit is the `pub(crate) ` prefix moved items need to stay callable from
 // their siblings and from `shell` itself. See
@@ -79,37 +79,6 @@ pub(crate) fn browser_popup_placement_for_disposition(
     }
 }
 
-/// Path markers that identify app-bundled first-party CEF entries in each
-/// OS packaging layout; dev builds always serve from `dist/sidebar`.
-#[cfg(target_os = "macos")]
-pub(crate) const FIRST_PARTY_CEF_ENTRY_PATH_MARKERS: [&str; 2] =
-    ["/Contents/Resources/sidebar/", "/dist/sidebar/"];
-// Windows and Linux share the bundle-less flat layout: the sidebar ships at
-// dist/sidebar beside the executable (see build-windows-app.ps1 /
-// build-linux-app.sh).
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-pub(crate) const FIRST_PARTY_CEF_ENTRY_PATH_MARKERS: [&str; 2] =
-    ["/resources/sidebar/", "/dist/sidebar/"];
-
-pub(crate) fn is_gpui_first_party_cef_entry_url(url: &str, entry_file_name: &str) -> bool {
-    let Some(base) = url.split(['?', '#']).next() else {
-        return false;
-    };
-    base.starts_with("file://")
-        && base.ends_with(&format!("/{entry_file_name}"))
-        && FIRST_PARTY_CEF_ENTRY_PATH_MARKERS
-            .iter()
-            .any(|marker| base.contains(marker))
-}
-
-pub(crate) fn app_modal_host_bridge_surface_for_frame_url(
-    url: &str,
-) -> Option<AppModalHostBridgeSurface> {
-    APP_MODAL_HOST_BRIDGE_SURFACE_SPECS
-        .iter()
-        .find(|spec| is_gpui_first_party_cef_entry_url(url, spec.entry_file_name))
-        .map(|spec| spec.surface)
-}
 /// Where a CEF-requested link open should land in the Browser tab strip.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BrowserPopupPlacement {
@@ -135,10 +104,7 @@ pub type ProjectWorkareaBridgeEventHandler = StdRc<dyn Fn(ProjectWorkareaBridgeE
 
 /// Plain Rust shared with the native app, which names no CEF type; see
 /// `app/helpers/web_bridge_types.rs`.
-pub use crate::app::helpers::web_bridge_types::{
-    AppModalHostBridgeEvent, AppModalHostBridgeEventHandler, PageLoadEndHandler,
-    SidebarGxserverBootstrap,
-};
+pub use crate::app::helpers::web_bridge_types::PageLoadEndHandler;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExtensionBridgeEvent {
@@ -310,39 +276,6 @@ wrap_v8_handler! {
 }
 
 wrap_v8_handler! {
-    pub(crate) struct GhostexGpuiAppModalHostBridgeV8Handler;
-
-    impl V8Handler {
-        fn execute(
-            &self,
-            name: Option<&CefString>,
-            _object: Option<&mut V8Value>,
-            arguments: Option<&[Option<V8Value>]>,
-            retval: Option<&mut Option<V8Value>>,
-            _exception: Option<&mut CefString>,
-        ) -> c_int {
-            let name = name.map(CefString::to_string);
-            if name.as_deref() != Some(WEBKIT_POST_MESSAGE_JS_FUNCTION) {
-                return 0;
-            }
-
-            let payload = arguments
-                .and_then(|arguments| arguments.first())
-                .and_then(Option::as_ref)
-                .and_then(app_modal_host_payload_from_v8_value);
-            let Some(payload) = payload else {
-                set_v8_bool_return(retval, false);
-                return 1;
-            };
-
-            let sent = send_app_modal_host_bridge_process_message(&payload);
-            set_v8_bool_return(retval, sent);
-            1
-        }
-    }
-}
-
-wrap_v8_handler! {
     pub(crate) struct GhostexGpuiExtensionBridgeV8Handler;
 
     impl V8Handler {
@@ -374,298 +307,6 @@ wrap_v8_handler! {
     }
 }
 
-pub(crate) fn send_session_chat_gxserver_bootstrap_process_message(
-    frame: &mut Frame,
-    entry_identity: &str,
-    gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
-) {
-    if !trusted_gxserver_frame_matches(frame, entry_identity) {
-        return;
-    }
-    let mut message = match cef::process_message_create(Some(&CefString::from(
-        SESSION_CHAT_GXSERVER_BOOTSTRAP_MESSAGE_NAME,
-    ))) {
-        Some(message) => message,
-        None => return,
-    };
-    attach_sidebar_gxserver_bootstrap_to_process_message(
-        &mut message,
-        0,
-        gxserver_bootstrap.as_ref(),
-    );
-    frame.send_process_message(ProcessId::RENDERER, Some(&mut message));
-}
-
-pub(crate) fn attach_sidebar_gxserver_bootstrap_to_process_message(
-    message: &mut ProcessMessage,
-    offset: usize,
-    gxserver_bootstrap: Option<&SidebarGxserverBootstrap>,
-) {
-    let Some(arguments) = message.argument_list() else {
-        return;
-    };
-    let Some(gxserver_bootstrap) = gxserver_bootstrap else {
-        arguments.set_size(offset + 1);
-        arguments.set_bool(
-            offset + SIDEBAR_GXSERVER_BOOTSTRAP_PRESENT_ARGUMENT_INDEX,
-            bool_to_cef_int(false),
-        );
-        return;
-    };
-
-    let visible_session_count = gxserver_bootstrap.visible_session_ids.len();
-    arguments.set_size(
-        offset
-            + SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS
-            + visible_session_count,
-    );
-    arguments.set_bool(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_PRESENT_ARGUMENT_INDEX,
-        bool_to_cef_int(true),
-    );
-    arguments.set_string(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_ARGUMENT_INDEX,
-        Some(&CefString::from(gxserver_bootstrap.base_url.as_str())),
-    );
-    arguments.set_string(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_ARGUMENT_INDEX,
-        Some(&CefString::from(gxserver_bootstrap.auth_token.as_str())),
-    );
-    arguments.set_int(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_ARGUMENT_INDEX,
-        gxserver_bootstrap.protocol_version,
-    );
-    arguments.set_string(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_ARGUMENT_INDEX,
-        Some(&CefString::from(gxserver_bootstrap.client_id.as_str())),
-    );
-    arguments.set_string(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_ARGUMENT_INDEX,
-        Some(&CefString::from(
-            gxserver_bootstrap
-                .initial_active_project_id
-                .as_deref()
-                .unwrap_or(""),
-        )),
-    );
-    arguments.set_string(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_ARGUMENT_INDEX,
-        Some(&CefString::from(
-            gxserver_bootstrap
-                .focused_session_id
-                .as_deref()
-                .unwrap_or(""),
-        )),
-    );
-    arguments.set_int(
-        offset + SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_COUNT_ARGUMENT_INDEX,
-        visible_session_count as c_int,
-    );
-    for (index, session_id) in gxserver_bootstrap.visible_session_ids.iter().enumerate() {
-        arguments.set_string(
-            offset + SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS + index,
-            Some(&CefString::from(session_id.as_str())),
-        );
-    }
-}
-
-pub(crate) fn sidebar_gxserver_bootstrap_from_process_message(
-    message: &mut ProcessMessage,
-    offset: usize,
-) -> Option<SidebarGxserverBootstrap> {
-    let arguments = message.argument_list()?;
-    if arguments.size() <= offset
-        || arguments.get_type(offset + SIDEBAR_GXSERVER_BOOTSTRAP_PRESENT_ARGUMENT_INDEX)
-            != ValueType::BOOL
-        || arguments.bool(offset + SIDEBAR_GXSERVER_BOOTSTRAP_PRESENT_ARGUMENT_INDEX) == 0
-    {
-        return None;
-    }
-    if arguments.size() < offset + SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS {
-        return None;
-    }
-    for index in [
-        SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_ARGUMENT_INDEX,
-        SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_ARGUMENT_INDEX,
-        SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_ARGUMENT_INDEX,
-        SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_ARGUMENT_INDEX,
-        SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_ARGUMENT_INDEX,
-    ] {
-        if arguments.get_type(offset + index) != ValueType::STRING {
-            return None;
-        }
-    }
-    if arguments.get_type(offset + SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_ARGUMENT_INDEX)
-        != ValueType::INT
-        || arguments
-            .get_type(offset + SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_COUNT_ARGUMENT_INDEX)
-            != ValueType::INT
-    {
-        return None;
-    }
-
-    let visible_session_count =
-        arguments.int(offset + SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_COUNT_ARGUMENT_INDEX);
-    if visible_session_count < 0 {
-        return None;
-    }
-    let visible_session_count = visible_session_count as usize;
-    if arguments.size()
-        < offset
-            + SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS
-            + visible_session_count
-    {
-        return None;
-    }
-    let mut visible_session_ids = Vec::with_capacity(visible_session_count);
-    for index in 0..visible_session_count {
-        let argument_index =
-            offset + SIDEBAR_GXSERVER_BOOTSTRAP_ARGUMENT_COUNT_WITHOUT_VISIBLE_IDS + index;
-        if arguments.get_type(argument_index) != ValueType::STRING {
-            return None;
-        }
-        let value = CefString::from(&arguments.string(argument_index)).to_string();
-        if !value.trim().is_empty() {
-            visible_session_ids.push(value);
-        }
-    }
-
-    Some(SidebarGxserverBootstrap {
-        base_url: CefString::from(
-            &arguments.string(offset + SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_ARGUMENT_INDEX),
-        )
-        .to_string(),
-        auth_token: CefString::from(
-            &arguments.string(offset + SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_ARGUMENT_INDEX),
-        )
-        .to_string(),
-        protocol_version: arguments
-            .int(offset + SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_ARGUMENT_INDEX),
-        client_id: CefString::from(
-            &arguments.string(offset + SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_ARGUMENT_INDEX),
-        )
-        .to_string(),
-        initial_active_project_id: non_empty_cef_argument_string(
-            &arguments,
-            offset + SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_ARGUMENT_INDEX,
-        ),
-        focused_session_id: non_empty_cef_argument_string(
-            &arguments,
-            offset + SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_ARGUMENT_INDEX,
-        ),
-        visible_session_ids,
-    })
-}
-
-pub(crate) fn non_empty_cef_argument_string(
-    arguments: &cef::ListValue,
-    index: usize,
-) -> Option<String> {
-    let value = CefString::from(&arguments.string(index)).to_string();
-    (!value.trim().is_empty()).then_some(value)
-}
-
-pub(crate) fn install_sidebar_gxserver_bootstrap_v8_object(
-    namespace: &mut V8Value,
-    gxserver_bootstrap: Option<SidebarGxserverBootstrap>,
-) -> Option<V8Value> {
-    let Some(mut bootstrap_object) = cef::v8_value_create_object(None, None) else {
-        return None;
-    };
-    if let Some(gxserver_bootstrap) = gxserver_bootstrap {
-        set_v8_string_property(
-            &bootstrap_object,
-            SIDEBAR_GXSERVER_BOOTSTRAP_BASE_URL_JS_FIELD,
-            &gxserver_bootstrap.base_url,
-        );
-        set_v8_string_property(
-            &bootstrap_object,
-            SIDEBAR_GXSERVER_BOOTSTRAP_AUTH_TOKEN_JS_FIELD,
-            &gxserver_bootstrap.auth_token,
-        );
-        set_v8_int_property(
-            &mut bootstrap_object,
-            SIDEBAR_GXSERVER_BOOTSTRAP_PROTOCOL_VERSION_JS_FIELD,
-            gxserver_bootstrap.protocol_version,
-        );
-        set_v8_string_property(
-            &bootstrap_object,
-            SIDEBAR_GXSERVER_BOOTSTRAP_CLIENT_ID_JS_FIELD,
-            &gxserver_bootstrap.client_id,
-        );
-        if let Some(initial_active_project_id) = gxserver_bootstrap.initial_active_project_id {
-            set_v8_string_property(
-                &bootstrap_object,
-                SIDEBAR_GXSERVER_BOOTSTRAP_INITIAL_ACTIVE_PROJECT_ID_JS_FIELD,
-                &initial_active_project_id,
-            );
-        }
-        if let Some(focused_session_id) = gxserver_bootstrap.focused_session_id {
-            set_v8_string_property(
-                &bootstrap_object,
-                SIDEBAR_GXSERVER_BOOTSTRAP_FOCUSED_SESSION_ID_JS_FIELD,
-                &focused_session_id,
-            );
-        }
-        if !gxserver_bootstrap.visible_session_ids.is_empty() {
-            set_v8_string_array_property(
-                &mut bootstrap_object,
-                SIDEBAR_GXSERVER_BOOTSTRAP_VISIBLE_SESSION_IDS_JS_FIELD,
-                &gxserver_bootstrap.visible_session_ids,
-            );
-        }
-    }
-
-    let bootstrap_key = CefString::from(SIDEBAR_GXSERVER_BOOTSTRAP_JS_OBJECT);
-    namespace.set_value_bykey(
-        Some(&bootstrap_key),
-        Some(&mut bootstrap_object),
-        V8Propertyattribute::default(),
-    );
-    Some(bootstrap_object)
-}
-
-pub(crate) fn notify_sidebar_gxserver_bootstrap_changed(
-    context: &mut cef::V8Context,
-    namespace: &mut V8Value,
-    bootstrap_object: V8Value,
-) {
-    let callback_key = CefString::from(SIDEBAR_GXSERVER_BOOTSTRAP_CHANGED_JS_CALLBACK);
-    let Some(callback) = namespace
-        .value_bykey(Some(&callback_key))
-        .filter(|value| value.is_function() != 0)
-    else {
-        return;
-    };
-    let arguments = [Some(bootstrap_object)];
-    callback.execute_function_with_context(Some(context), Some(namespace), Some(&arguments));
-}
-
-pub(crate) fn set_v8_int_property(object: &mut V8Value, key: &str, value: i32) {
-    let key = CefString::from(key);
-    let mut value = cef::v8_value_create_int(value);
-    object.set_value_bykey(Some(&key), value.as_mut(), V8Propertyattribute::default());
-}
-
-pub(crate) fn set_v8_string_array_property(object: &mut V8Value, key: &str, values: &[String]) {
-    let Some(mut array) = cef::v8_value_create_array(values.len() as c_int) else {
-        return;
-    };
-    for (index, value) in values.iter().enumerate() {
-        let value = CefString::from(value.as_str());
-        let Some(mut value) = cef::v8_value_create_string(Some(&value)) else {
-            return;
-        };
-        array.set_value_byindex(index as c_int, Some(&mut value));
-    }
-    let key = CefString::from(key);
-    object.set_value_bykey(Some(&key), Some(&mut array), V8Propertyattribute::default());
-}
-
-pub(crate) fn bool_to_cef_int(value: bool) -> c_int {
-    if value { 1 } else { 0 }
-}
-
 pub(crate) fn send_project_workarea_bridge_process_message(
     process_message_name: &str,
     payload: &str,
@@ -688,32 +329,6 @@ pub(crate) fn send_project_workarea_bridge_process_message(
             Some(message) => message,
             None => return false,
         };
-    let Some(arguments) = message.argument_list() else {
-        return false;
-    };
-    arguments.set_size(1);
-    arguments.set_string(0, Some(&CefString::from(payload)));
-    frame.send_process_message(ProcessId::BROWSER, Some(&mut message));
-    true
-}
-
-pub(crate) fn send_app_modal_host_bridge_process_message(payload: &str) -> bool {
-    if payload.chars().count() > APP_MODAL_HOST_BRIDGE_PAYLOAD_MAX_CHARS {
-        return false;
-    }
-
-    let Some(context) = cef::v8_context_get_current_context() else {
-        return false;
-    };
-    let Some(frame) = context.frame() else {
-        return false;
-    };
-    let mut message = match cef::process_message_create(Some(&CefString::from(
-        APP_MODAL_HOST_BRIDGE_PROCESS_MESSAGE_NAME,
-    ))) {
-        Some(message) => message,
-        None => return false,
-    };
     let Some(arguments) = message.argument_list() else {
         return false;
     };

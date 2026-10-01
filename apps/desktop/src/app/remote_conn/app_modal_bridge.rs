@@ -96,13 +96,6 @@ impl GhostexGpuiApp {
             "open" => {
                 self.open_app_modal_from_bridge(message, cx);
             }
-            "ready" | "presented" | "contentHeightMeasured" => {
-                if let Some(handle) = self.app_modal_window.clone() {
-                    let _ = handle.update(cx, |host, modal_window, cx| {
-                        host.receive_bridge_message(message, modal_window, cx);
-                    });
-                }
-            }
             "updateSettings" => {
                 self.handle_gpui_app_modal_update_settings_message(&message, cx);
             }

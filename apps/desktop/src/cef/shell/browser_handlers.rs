@@ -31,7 +31,6 @@ pub(crate) fn show_browser_dev_tools(
         None,
         None,
         None,
-        None,
         Some(GhostexGpuiCefFocusHandler::new()),
         None,
     ));
@@ -394,7 +393,6 @@ wrap_display_handler! {
 
 wrap_permission_handler! {
     pub(crate) struct GhostexGpuiPermissionHandler {
-        trusted_loopback_entry_identity: Option<String>,
         trusted_clipboard_origin: Option<String>,
         media_access_handler: Option<BrowserMediaAccessHandler>,
     }
@@ -445,52 +443,13 @@ wrap_permission_handler! {
 
         fn on_show_permission_prompt(
             &self,
-            browser: Option<&mut cef::Browser>,
+            _browser: Option<&mut cef::Browser>,
             _prompt_id: u64,
             requesting_origin: Option<&CefString>,
             requested_permissions: u32,
             callback: Option<&mut PermissionPromptCallback>,
         ) -> c_int {
-            /*
-            CDXC:PlatformSupport 2026-09-27:
-            Current Windows CEF asks for LOCAL_NETWORK or LOOPBACK_NETWORK
-            before a bundled file:// app surface may call the authenticated
-            loopback gxserver API (CEF 150 retired the combined
-            LOCAL_NETWORK_ACCESS bit, so it is no longer accepted). Alloy has no permission
-            UI for these hidden first-party surfaces, so leaving the prompt to
-            default handling strands fetch (and therefore sleeping-session
-            wake) indefinitely.
-            Accept only a pure local-network request on surfaces that were
-            explicitly constructed with the sidebar gxserver bridge/bootstrap;
-            Browser, editor, project-workarea, and modal surfaces keep their
-            existing permission behavior.
-            */
-            let local_network_permissions = PermissionRequestTypes::LOCAL_NETWORK.get_raw() as u32
-                | PermissionRequestTypes::LOOPBACK_NETWORK.get_raw() as u32;
             let requesting_origin = requesting_origin.map(CefString::to_string).unwrap_or_default();
-            let trusted_loopback_request = self.trusted_loopback_entry_identity.as_deref().is_some_and(|entry_identity| {
-                browser.as_ref().and_then(|browser| browser.main_frame()).is_some_and(|frame| {
-                    let frame_url = CefString::from(&frame.url()).to_string();
-                    first_party_loopback_request_matches(entry_identity, &frame_url, &requesting_origin)
-                })
-            });
-            if trusted_loopback_request
-                && requested_permissions & local_network_permissions != 0
-                && requested_permissions & !local_network_permissions == 0
-            {
-                let Some(callback) = callback else {
-                    return 0;
-                };
-                crate::support_logs::append(
-                    crate::support_logs::GpuiSupportLog::TerminalFocus,
-                    "gpui.cef.firstPartyLoopbackPermissionAccepted",
-                    serde_json::json!({
-                        "requestedPermissions": requested_permissions,
-                    }),
-                );
-                callback.cont(PermissionRequestResult::ACCEPT);
-                return 1;
-            }
             /*
             macOS `GhostexCEFBrowserClient::OnShowPermissionPrompt` parity: only
             clipboard prompts are decided here (anything else keeps CEF's

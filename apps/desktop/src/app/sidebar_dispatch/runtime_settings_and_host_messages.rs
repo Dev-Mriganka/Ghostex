@@ -179,7 +179,6 @@ impl GhostexGpuiApp {
         for surface in live.chain(parked) {
             surface.update(cx, |surface, _| surface.refresh_workarea_theme(light));
         }
-        self.refresh_app_modal_pages_window_glass(cx);
         // Browser pages: the colour GPUI paints under the CEF child view must
         // follow the theme, or hiding a page on a switch flashes the old one.
         let browser_background = rgb(if light { 0xffffff } else { 0x0d0d0d }).into();
@@ -227,14 +226,9 @@ impl GhostexGpuiApp {
             return false;
         }
 
-        self.sidebar_gxserver_bootstrap = next_bootstrap.clone();
+        self.sidebar_gxserver_bootstrap = next_bootstrap;
         self.sync_gx_store_transport(cx);
         self.refresh_session_chat_runtime_endpoints(false, cx);
-        if let Some(handle) = self.app_modal_window {
-            let _ = handle.update(cx, |host, _, cx| {
-                host.refresh_gxserver_bootstrap(next_bootstrap.clone(), cx);
-            });
-        }
         self.refresh_extensions_in_background(cx);
         self.reconcile_agents_pane_surfaces(cx);
         true

@@ -14,19 +14,6 @@ pub(crate) struct ProjectWorkareaBridgeFunctionSpec {
     pub(crate) process_message_name: &'static str,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AppModalHostBridgeSurface {
-    NativeWindow,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct AppModalHostBridgeSurfaceSpec {
-    pub(crate) surface: AppModalHostBridgeSurface,
-    pub(crate) entry_file_name: &'static str,
-    pub(crate) extra_info_value: &'static str,
-    pub(crate) exposes_native_window_identity: bool,
-}
-
 pub(crate) const SIDEBAR_PROJECT_CONTEXT_JS_NAMESPACE: &str = "ghostexGpui";
 pub(crate) const PROJECT_WORKAREA_BRIDGE_INSTALL_MESSAGE_NAME: &str =
     "ghostex.gpui.projectWorkarea.installBridge";
@@ -57,25 +44,13 @@ pub(crate) const PROJECT_WORKAREA_MANAGE_DOCS_RESOURCE_BASE_URL: &str =
     "https://ghostex-docs.invalid/";
 pub(crate) const PROJECT_WORKAREA_MANAGE_DOCS_RESOURCE_BASE_URL_JS_FIELD: &str =
     "manageDocsResourceBaseUrl";
-pub(crate) const APP_MODAL_HOST_BRIDGE_PROCESS_MESSAGE_NAME: &str =
-    "ghostex.gpui.appModalHost.message";
-pub(crate) const APP_MODAL_HOST_BRIDGE_PAYLOAD_MAX_CHARS: usize = 1024 * 1024;
 pub(crate) const EXTENSION_BRIDGE_INSTALL_MESSAGE_NAME: &str =
     "ghostex.gpui.extension.installBridge";
 pub(crate) const EXTENSION_BRIDGE_PROCESS_MESSAGE_NAME: &str = "ghostex.gpui.extension.message";
 pub(crate) const EXTENSION_BRIDGE_PAYLOAD_MAX_CHARS: usize = 4 * 1024 * 1024;
 pub(crate) const WEBKIT_EXTENSION_HOST_MESSAGE_HANDLER_JS_OBJECT: &str = "ghostexExtensionHost";
-#[allow(dead_code)] // protocol manifest: the extra_info key is part of the CEF bridge contract even where Rust does not read it (matches the neighbouring allows)
-pub(crate) const APP_MODAL_HOST_BRIDGE_SURFACE_EXTRA_INFO_KEY: &str =
-    "ghostexGpuiAppModalHostSurface";
-const APP_MODAL_HOST_BRIDGE_SURFACE_NATIVE_WINDOW: &str = "nativeWindow";
-pub(crate) const APP_MODAL_HOST_SURFACE_JS_FIELD: &str = "__ghostex_APP_MODAL_HOST_SURFACE__";
-pub(crate) const APP_MODAL_HOST_ID_JS_FIELD: &str = "__ghostex_APP_MODAL_HOST_ID__";
-pub(crate) const APP_MODAL_HOST_SURFACE_VALUE: &str = "nativeWindow";
-pub(crate) const APP_MODAL_HOST_ID_VALUE: &str = "gpui";
 pub(crate) const WEBKIT_JS_OBJECT: &str = "webkit";
 pub(crate) const WEBKIT_MESSAGE_HANDLERS_JS_OBJECT: &str = "messageHandlers";
-pub(crate) const WEBKIT_APP_MODAL_HOST_MESSAGE_HANDLER_JS_OBJECT: &str = "ghostexAppModalHost";
 pub(crate) const WEBKIT_POST_MESSAGE_JS_FUNCTION: &str = "postMessage";
 
 /*
@@ -261,7 +236,7 @@ pub(crate) fn extension_bridge_context_changed_message(
 
 /*
 CDXC:CefRuntime 2026-06-29-14:45:
-GPUI CEF bridge names, payload budgets, and allowed app-modal/project-workarea surfaces live in this Rust manifest so the macOS browser process and helper renderer consume one ownership point. Keep project-workarea and app-modal handlers surface-specific; this manifest is an allowlist, not a generic IPC bus.
+GPUI CEF bridge names, payload budgets, and allowed project-workarea and extension surfaces live in this Rust manifest so the macOS browser process and helper renderer consume one ownership point. Keep handlers surface-specific; this manifest is an allowlist, not a generic IPC bus.
 */
 pub(crate) const PROJECT_WORKAREA_BRIDGE_FUNCTION_SPECS: [ProjectWorkareaBridgeFunctionSpec; 4] = [
     ProjectWorkareaBridgeFunctionSpec {
@@ -285,42 +260,6 @@ pub(crate) const PROJECT_WORKAREA_BRIDGE_FUNCTION_SPECS: [ProjectWorkareaBridgeF
         process_message_name: PROJECT_WORKAREA_MANAGE_FILES_REQUEST_PROCESS_MESSAGE_NAME,
     },
 ];
-
-pub(crate) const APP_MODAL_HOST_BRIDGE_SURFACE_SPECS: [AppModalHostBridgeSurfaceSpec; 1] =
-    [AppModalHostBridgeSurfaceSpec {
-        surface: AppModalHostBridgeSurface::NativeWindow,
-        entry_file_name: "modal-host.html",
-        extra_info_value: APP_MODAL_HOST_BRIDGE_SURFACE_NATIVE_WINDOW,
-        exposes_native_window_identity: true,
-    }];
-
-impl AppModalHostBridgeSurface {
-    #[allow(dead_code)]
-    pub(crate) fn extra_info_value(self) -> &'static str {
-        app_modal_host_bridge_surface_spec(self).extra_info_value
-    }
-
-    pub(crate) fn exposes_native_window_identity(self) -> bool {
-        app_modal_host_bridge_surface_spec(self).exposes_native_window_identity
-    }
-
-    #[allow(dead_code)] // protocol manifest: reverse lookup of the CEF extra_info contract, kept alongside the forward mapping
-    pub(crate) fn from_extra_info_value(value: &str) -> Option<Self> {
-        APP_MODAL_HOST_BRIDGE_SURFACE_SPECS
-            .iter()
-            .find(|spec| spec.extra_info_value == value)
-            .map(|spec| spec.surface)
-    }
-}
-
-pub(crate) fn app_modal_host_bridge_surface_spec(
-    surface: AppModalHostBridgeSurface,
-) -> &'static AppModalHostBridgeSurfaceSpec {
-    APP_MODAL_HOST_BRIDGE_SURFACE_SPECS
-        .iter()
-        .find(|spec| spec.surface == surface)
-        .expect("app-modal host surface must be listed in bridge manifest")
-}
 
 pub(crate) fn project_workarea_bridge_function_spec_for_js_function(
     function_name: &str,

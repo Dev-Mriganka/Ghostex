@@ -6,7 +6,7 @@ use crate::*;
 impl GhostexGpuiApp {
     /// CDXC:AppModal 2026-09-26 WHY:
     /// Every app-modal open used to read projects, agents, actions, Recent Projects, pinned prompts and session tags from gxserver synchronously on the UI thread before its window existed. That was about 60 ms on macOS, but on Windows gxserver usually runs inside WSL, so each fresh connection crossed WSL's localhost relay while the app, CEF's message pump included, stood still.
-    /// An open now assembles the message from fresh local settings plus the gxserver data held from the previous read, and refreshes that data in the background; the open modal receives a corrected hydrate only when gxserver's data actually changed. Only the first open of a launch still reads synchronously, and the warm spare's preload normally makes that read first, in the background.
+    /// An open now assembles the message from fresh local settings plus the gxserver data held from the previous read, and refreshes that data in the background. Only the first open of a launch still reads synchronously, and the warm spare's preload normally makes that read first, in the background.
     pub(crate) fn gpui_app_modal_sidebar_state_message_from_held_hydrate(
         &mut self,
         cx: &mut gpui::Context<Self>,
@@ -57,29 +57,16 @@ impl GhostexGpuiApp {
                     gpui_fetch_app_modal_gxserver_hydrate(None, active_project_id.as_deref())
                 })
                 .await;
-            let _ = this.update(cx, |this, cx| {
-                this.receive_gpui_app_modal_gxserver_hydrate(hydrate, cx);
+            let _ = this.update(cx, |this, _cx| {
+                this.receive_gpui_app_modal_gxserver_hydrate(hydrate);
             });
         })
         .detach();
     }
 
-    fn receive_gpui_app_modal_gxserver_hydrate(
-        &mut self,
-        hydrate: GpuiAppModalGxserverHydrate,
-        cx: &mut gpui::Context<Self>,
-    ) {
+    fn receive_gpui_app_modal_gxserver_hydrate(&mut self, hydrate: GpuiAppModalGxserverHydrate) {
         self.app_modal_gxserver_hydrate_refreshing = false;
-        let changed = self.app_modal_gxserver_hydrate.as_ref() != Some(&hydrate);
-        self.app_modal_gxserver_hydrate = Some(hydrate.clone());
-        if changed && let Some(handle) = self.app_modal_window {
-            let message = self.gpui_app_modal_sidebar_state_message_for_hydrate(&hydrate);
-            let _ = handle.update(cx, |host, _window, cx| {
-                if host.current_modal.requires_sidebar_state() {
-                    host.refresh_sidebar_state_message(message, cx);
-                }
-            });
-        }
+        self.app_modal_gxserver_hydrate = Some(hydrate);
     }
 
     fn gpui_app_modal_hydrate_active_project_id(&self) -> Option<String> {

@@ -836,7 +836,6 @@ pub struct GhostexGpuiApp {
     pub(crate) app_modal_window: Option<WindowHandle<GpuiAppModalHostWindow>>,
     pub(crate) app_modal_window_id: Rc<Cell<Option<gpui::WindowId>>>,
     pub(crate) app_modal_open_attempt_id: u64,
-    pub(crate) app_modal_ready_retry_used: bool,
     pub(crate) app_modal_gxserver_hydrate: Option<GpuiAppModalGxserverHydrate>,
     pub(crate) app_modal_gxserver_hydrate_refreshing: bool,
     pub(crate) app_modal_command_return_focus_target: Option<CommandPaneAppModalReturnFocusTarget>,

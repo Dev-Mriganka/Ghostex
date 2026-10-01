@@ -11,7 +11,6 @@ wrap_client! {
         find_handler: Option<FindHandler>,
         load_handler: Option<LoadHandler>,
         project_workarea_bridge_event_handler: Option<ProjectWorkareaBridgeEventHandler>,
-        app_modal_host_bridge_event_handler: Option<AppModalHostBridgeEventHandler>,
         extension_bridge_surface: Option<ExtensionBridgeSurfaceSpec>,
         extension_bridge_event_handler: Option<ExtensionBridgeEventHandler>,
         request_handler: Option<RequestHandler>,
@@ -74,14 +73,9 @@ wrap_client! {
             let message_name = CefString::from(&message.name()).to_string();
             let project_workarea_event_kind =
                 project_workarea_bridge_event_kind_for_process_message(&message_name);
-            let is_app_modal_host_message =
-                message_name == APP_MODAL_HOST_BRIDGE_PROCESS_MESSAGE_NAME;
             let is_extension_bridge_message =
                 message_name == EXTENSION_BRIDGE_PROCESS_MESSAGE_NAME;
-            if project_workarea_event_kind.is_none()
-                && !is_app_modal_host_message
-                && !is_extension_bridge_message
-            {
+            if project_workarea_event_kind.is_none() && !is_extension_bridge_message {
                 return 0;
             }
             if frame.as_ref().map(|frame| frame.is_main() == 0).unwrap_or(true) {
@@ -143,22 +137,6 @@ wrap_client! {
                     extension_id: surface.id.clone(),
                     payload,
                 });
-                return 1;
-            }
-
-            if is_app_modal_host_message {
-                let Some(handler) = self.app_modal_host_bridge_event_handler.clone() else {
-                    return 0;
-                };
-                /*
-                CDXC:AppModal 2026-06-24-10:42:
-                The GPUI app-modal host reuses the macOS React bridge shape, but CEF forwards each message as a single bounded JSON string from first-party bundled pages only. Keep this main-frame-only and handler-scoped so Browser tabs, workarea pages, logs, persistence, raw URLs, page titles, and generic IPC never receive app-modal payloads.
-                */
-                if payload.chars().count() > APP_MODAL_HOST_BRIDGE_PAYLOAD_MAX_CHARS {
-                    return 1;
-                }
-
-                handler(AppModalHostBridgeEvent::Message(payload));
                 return 1;
             }
 
@@ -296,53 +274,6 @@ wrap_load_handler! {
 }
 
 wrap_load_handler! {
-    pub(crate) struct GhostexGpuiSessionChatGxserverBootstrapLoadHandler {
-        gxserver_bootstrap: StdRc<RefCell<Option<SidebarGxserverBootstrap>>>,
-        entry_identity: Option<String>,
-        page_load_end_handler: Option<PageLoadEndHandler>,
-    }
-
-    impl LoadHandler {
-        fn on_load_end(
-            &self,
-            browser: Option<&mut cef::Browser>,
-            frame: Option<&mut Frame>,
-            _http_status_code: c_int,
-        ) {
-            let Some(frame) = frame else {
-                return;
-            };
-            if frame.is_main() != 0 {
-                report_main_frame_load_end(&self.page_load_end_handler);
-            }
-            let Some(entry_identity) = self.entry_identity.as_deref() else { return; };
-            if !trusted_gxserver_frame_matches(frame, entry_identity) {
-                return;
-            }
-
-            /*
-            CDXC:SessionChat 2026-09-21 WHY:
-            Bootstrap-only CEF clients receive only the gxserver bootstrap so the
-            bundled page can call gxserver and open /api/events directly,
-            matching the sidebar's loopback token scope.
-            No sidebar post functions, runtime settings, or workarea bridges are
-            installed for this surface, and ordinary Browser/workarea/modal
-            clients never attach this load handler. The page polls for the
-            installed object, so load-end delivery cannot strand it.
-            */
-            if let Some(browser) = browser {
-                apply_page_color_scheme(browser, BrowserPageAppearance::System);
-            }
-            send_session_chat_gxserver_bootstrap_process_message(
-                frame,
-                entry_identity,
-                self.gxserver_bootstrap.borrow().clone(),
-            );
-        }
-    }
-}
-
-wrap_load_handler! {
     pub(crate) struct GhostexGpuiProjectWorkareaBridgeLoadHandler {
         manage_docs_resource_base_url: Option<String>,
         page_load_end_handler: Option<PageLoadEndHandler>,
@@ -389,36 +320,6 @@ wrap_render_process_handler! {
     pub(crate) struct GhostexGpuiRenderProcessHandler;
 
     impl RenderProcessHandler {
-        fn on_context_created(
-            &self,
-            _browser: Option<&mut cef::Browser>,
-            frame: Option<&mut Frame>,
-            context: Option<&mut cef::V8Context>,
-        ) {
-            let Some(frame) = frame else {
-                return;
-            };
-            if frame.is_main() == 0 {
-                return;
-            }
-            let frame_url = CefString::from(&frame.url()).to_string();
-            let surface = app_modal_host_bridge_surface_for_frame_url(&frame_url);
-            let Some(surface) = surface else {
-                return;
-            };
-            let Some(context) = context else {
-                return;
-            };
-            /*
-            CDXC:AppModal 2026-06-24-11:09:
-            Install the CEF-compatible `window.webkit.messageHandlers.ghostexAppModalHost` shim at V8 context creation for only the bundled entries in the bridge manifest (modal-host.html (deleted 2026-10-01)). The shared React modal host posts `ready` during mount, so waiting for load-end would race real presentation. Only native-window entries in the shared bridge manifest receive the native-window identity fields; Browser tabs, project workareas, arbitrary pages, raw URLs, titles, logs, persistence, and generic IPC do not receive these bridges.
-
-            CDXC:Diagnostics 2026-06-28-17:06:
-            App-modal CEF setup keeps only the functional host message bridge. Do not emit lifecycle diagnostic IPC or renderer logging events from bridge installation while GPUI logging is intentionally removed.
-            */
-            install_app_modal_host_v8_bridge(Some(&mut *context), surface);
-        }
-
         fn on_process_message_received(
             &self,
             _browser: Option<&mut cef::Browser>,
@@ -433,27 +334,17 @@ wrap_render_process_handler! {
                 return 0;
             };
             let message_name = CefString::from(&message.name()).to_string();
-            let is_session_chat_gxserver_bootstrap_message =
-                message_name == SESSION_CHAT_GXSERVER_BOOTSTRAP_MESSAGE_NAME;
             let is_project_workarea_install_message =
                 message_name == PROJECT_WORKAREA_BRIDGE_INSTALL_MESSAGE_NAME;
             let is_extension_bridge_install_message =
                 message_name == EXTENSION_BRIDGE_INSTALL_MESSAGE_NAME;
-            if !is_session_chat_gxserver_bootstrap_message
-                && !is_project_workarea_install_message
-                && !is_extension_bridge_install_message
-            {
+            if !is_project_workarea_install_message && !is_extension_bridge_install_message {
                 return 0;
             }
             let Some(frame) = frame else {
                 return 1;
             };
             if frame.is_main() == 0 {
-                return 1;
-            }
-            if is_session_chat_gxserver_bootstrap_message
-                && app_modal_host_bridge_surface_for_frame_url(&CefString::from(&frame.url()).to_string()).is_none()
-            {
                 return 1;
             }
             let Some(mut context) = frame.v8_context() else {
@@ -464,7 +355,7 @@ wrap_render_process_handler! {
             }
             if is_extension_bridge_install_message {
                 install_extension_v8_bridge(Some(&mut context));
-            } else if is_project_workarea_install_message {
+            } else {
                 let manage_docs_resource_base_url = message
                     .argument_list()
                     .filter(|arguments| {
@@ -475,18 +366,6 @@ wrap_render_process_handler! {
                 install_project_workarea_v8_bridge(
                     Some(&mut context),
                     manage_docs_resource_base_url.as_deref(),
-                );
-            } else {
-                /*
-                CDXC:SessionChat 2026-07-31:
-                Session Chat bootstrap install creates the ghostexGpui
-                namespace when missing and sets only the gxserverBootstrap
-                object plus the fixed changed callback, nothing else.
-                */
-                let gxserver_bootstrap = sidebar_gxserver_bootstrap_from_process_message(message, 0);
-                install_session_chat_gxserver_bootstrap_v8_bridge(
-                    Some(&mut context),
-                    gxserver_bootstrap,
                 );
             }
             context.exit();

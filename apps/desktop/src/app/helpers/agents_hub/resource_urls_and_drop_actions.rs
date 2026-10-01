@@ -78,8 +78,8 @@ pub(crate) fn gpui_cef_html_entry_url(env_var: &str, entry_file_name: &str) -> R
     CDXC:PlatformSupport 2026-08-04:
     Packaged Windows and Linux builds stage every first-party CEF entry in
     dist/sidebar beside the executable. Resolve that directory before the
-    compile-time checkout path so an installed Ghostex never loads modal-host,
-    Kanban, Manage, or Chat artifacts from the source tree that
+    compile-time checkout path so an installed Ghostex never loads Manage
+    artifacts from the source tree that
     happened to build the binary.
     */
     #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -98,11 +98,6 @@ pub(crate) fn gpui_cef_html_entry_url(env_var: &str, entry_file_name: &str) -> R
     }
 
     anyhow::bail!("GPUI CEF workarea bundle entry was not found")
-}
-
-pub(crate) fn app_modal_host_url() -> Result<String> {
-    gpui_cef_html_entry_url("GHOSTEX_GPUI_APP_MODAL_HOST_URL", "modal-host.html")
-        .context("failed to resolve GPUI app-modal host bundle URL")
 }
 
 /// Where a command tab dropped into the Agents workspace should land.

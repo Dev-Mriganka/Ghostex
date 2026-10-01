@@ -41,11 +41,8 @@ impl CefSurface {
         popup_open_handler: Option<cef::BrowserPopupOpenHandler>,
         page_metadata_handler: Option<cef::BrowserPageMetadataHandler>,
         media_access_handler: Option<cef::BrowserMediaAccessHandler>,
-        sidebar_gxserver_bootstrap: Option<cef::SidebarGxserverBootstrap>,
         project_workarea_bridge_event_handler: Option<cef::ProjectWorkareaBridgeEventHandler>,
         manage_docs_resource_scope: Option<cef::ManageDocsResourceScope>,
-        app_modal_host_bridge_surface: Option<cef::AppModalHostBridgeSurface>,
-        app_modal_host_bridge_event_handler: Option<cef::AppModalHostBridgeEventHandler>,
         page_load_end_handler: Option<cef::PageLoadEndHandler>,
         cx: &mut gpui::App,
     ) -> Result<gpui::Entity<Self>, String> {
@@ -59,11 +56,8 @@ impl CefSurface {
             popup_open_handler,
             page_metadata_handler,
             media_access_handler,
-            sidebar_gxserver_bootstrap,
             project_workarea_bridge_event_handler,
             manage_docs_resource_scope,
-            app_modal_host_bridge_surface,
-            app_modal_host_bridge_event_handler,
             None,
             None,
             page_load_end_handler,
@@ -92,9 +86,6 @@ impl CefSurface {
             &profile,
             prepaint_background_color,
             uses_system_page_appearance,
-            None,
-            None,
-            None,
             None,
             None,
             None,
@@ -176,20 +167,6 @@ impl CefSurface {
         }
     }
 
-    pub(crate) fn refresh_session_chat_gxserver_bootstrap(
-        &mut self,
-        gxserver_bootstrap: Option<cef::SidebarGxserverBootstrap>,
-    ) {
-        /*
-        CDXC:SessionChat 2026-07-31:
-        Session Chat surfaces refresh their bootstrap through the dedicated
-        chat process message, with the same non-logging/no-persistence scope
-        as the sidebar refresh above.
-        */
-        self.browser
-            .refresh_session_chat_gxserver_bootstrap(gxserver_bootstrap);
-    }
-
     pub(crate) fn can_go_back(&self) -> bool {
         self.browser.can_go_back()
     }
@@ -252,10 +229,6 @@ impl CefSurface {
 
     pub(crate) fn focus(&mut self) {
         self.browser.focus();
-    }
-
-    pub(crate) fn is_loading(&self) -> bool {
-        self.browser.is_loading()
     }
 
     /// The surface's CEF child view, for the AppKit pointer observer that turns

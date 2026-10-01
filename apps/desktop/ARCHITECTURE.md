@@ -135,18 +135,16 @@ Main code:
 
 Vite emits `manage.html`. Rust creates a project-scoped CEF surface when Manage is available and active. Manage file requests leave the renderer only through fixed bridge functions and are handled by Rust-side project/file policy code instead of trusting arbitrary renderer paths.
 
-### App modals: Settings, Hotkeys, Command Palette, Previous Sessions, Agents Hub
+### App modals: Settings, Quick Access, Agents Hub, Onboarding and the rest
 
-**Technology:** separate GPUI-owned window containing the shared React modal host inside CEF.
+**Technology:** native GPUI child windows.
 
 Main code:
 
-- `gpui/modal-host.html`
-- `native/sidebar/modal-host.tsx`
-- `gpui/src/main.rs`
-- `gpui/src/cef/macos.rs`
+- `src/app/native_app_modal_lifecycle.rs` (`try_open_native_app_modal`, one arm per modal kind)
+- `src/app/window/` (each modal's view)
 
-App modals are not transparent overlays. GPUI opens a real window, creates a `CefSurface`, loads `modal-host.html`, and that entry imports the existing shared React modal host. CEF installs a WebKit-compatible `ghostexAppModalHost` shim only for first-party modal/sidebar entries so the existing React modal code can send lifecycle and command messages.
+Every built-in app modal is a native GPUI window; the React modal host (`modal-host.html`) was deleted on 2026-10-01. The only app modal that still loads a CEF page is an extension modal: `open_gpui_app_modal_window_inner` (`src/app/modals/modal_window.rs`) opens a child window (`src/app/window/modal_host.rs`) with the extension's own page and the extension bridge.
 
 ### Prompt editor
 
@@ -162,9 +160,9 @@ Examples:
 
 - Sidebar bridge functions post active project, readiness, and native action messages.
 - Project workarea bridge functions post Kanban board/beads/image requests and Manage file requests.
-- App modal bridge functions post modal lifecycle and sidebar command messages.
+- Extension bridge functions (`window.ghostex`) post extension calls from extension views, popups and modals.
 
-The bridge is installed only for first-party CEF entries and only forwards bounded string payloads to Rust. Browser tabs and arbitrary web pages do not receive sidebar/workarea/modal bridge functions.
+The bridge is installed only for first-party CEF entries and only forwards bounded string payloads to Rust. Browser tabs and arbitrary web pages do not receive workarea or extension bridge functions.
 
 ## Terminal mount model
 
@@ -196,7 +194,6 @@ Build pieces:
 - Vite builds and inlines the CEF HTML entries:
   - `index.html`
   - `manage.html`
-  - `modal-host.html`
 - The app packager creates a macOS `.app` bundle with CEF frameworks, helper apps, sidebar resources, sounds, CLI resources, Web resources, and optional remote gxserver packages.
 
 ## Current caveats
