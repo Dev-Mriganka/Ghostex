@@ -143,3 +143,58 @@ fn same_drawn_rows(left: &[SectionView], right: &[SectionView]) -> bool {
             .zip(right)
             .all(|(left, right)| left.id == right.id && left.session_ids == right.session_ids)
 }
+
+/// What a drop on a row of a coordinator's tree aims at.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TreeDropTarget {
+    /// The hovered row is in no tree, or the dragged row belongs to it: aim at the row itself.
+    Row,
+    /// The dragged row is the coordinator and the hovered row is one of its own threads.
+    OwnTree,
+    /// Aim at the tree's coordinator, `before` it or `after` its whole tree.
+    Coordinator {
+        session_id: String,
+        position: &'static str,
+    },
+}
+
+impl SidebarViewModel {
+    /// CDXC:Sidebar 2026-10-01 DECISION:
+    /// User: "If I drag over the coordinator, we should show the drop above the coordinator when coming from below, and below it when the session is coming from above it." A coordinator and the open threads drawn under it are one block for a drop: a session dragged over any row of that block lands above the coordinator when it comes from below the block and after the block's last thread when it comes from above, whichever half of the row the pointer is in.
+    pub fn tree_drop_target(&self, group_id: &str, moved: &str, hovered: &str) -> TreeDropTarget {
+        let Some((build, _)) = self.cached_group(group_id) else {
+            return TreeDropTarget::Row;
+        };
+        let rows = &build.core.sessions;
+        let index_of = |id: &str| rows.iter().position(|row| row.row.sidebar_session_id == id);
+        let Some(hovered_index) = index_of(hovered) else {
+            return TreeDropTarget::Row;
+        };
+        let Some(root) = (0..=hovered_index)
+            .rev()
+            .find(|index| rows[*index].nesting.depth == 0)
+        else {
+            return TreeDropTarget::Row;
+        };
+        let end = (root + 1..rows.len())
+            .find(|index| rows[*index].nesting.depth == 0)
+            .unwrap_or(rows.len());
+        if end == root + 1 {
+            return TreeDropTarget::Row;
+        }
+        let root_id = &rows[root].row.sidebar_session_id;
+        let moved_index = index_of(moved);
+        if moved_index == Some(root) {
+            return TreeDropTarget::OwnTree;
+        }
+        if moved_index.is_some_and(|index| index > root && index < end) {
+            return TreeDropTarget::Row;
+        }
+        // A row the group does not draw (another group's) counts as coming from below.
+        let from_above = moved_index.is_some_and(|index| index < root);
+        TreeDropTarget::Coordinator {
+            session_id: root_id.clone(),
+            position: if from_above { "after" } else { "before" },
+        }
+    }
+}

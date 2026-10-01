@@ -46,7 +46,7 @@ pub use close_successor::{
     close_project_successor_group_order, first_awake_successor_session_id, is_awake_successor_row,
 };
 pub use collections::{Collection, CollectionsState};
-pub use drop_landing::{DropLanding, DropWrites};
+pub use drop_landing::{DropLanding, DropWrites, TreeDropTarget};
 pub use project_drop_landing::{ProjectDropLanding, ProjectDropRow};
 pub use inputs::{
     BrowserTabInput, CloseAfterDoneInput, DelayedSendInput, MachineTabInput, ProjectDiffStats,

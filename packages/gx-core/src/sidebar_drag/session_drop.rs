@@ -11,7 +11,9 @@ use serde_json::{json, Value};
 
 use crate::core::Core;
 use crate::keys::{parse_workspace_subgroup_id, SessionKey};
-use crate::sidebar_view::{DropLanding, DropWrites, SidebarInputs, SidebarViewModel};
+use crate::sidebar_view::{
+    DropLanding, DropWrites, SidebarInputs, SidebarViewModel, TreeDropTarget,
+};
 
 use super::inventory::{group_by_id, group_of_session, MoveGroup};
 use super::session_move::plan_session_move;
@@ -24,6 +26,9 @@ pub struct SessionDrop {
     pub messages: Vec<Value>,
     /// `None` when the list did not build the group (the row cannot be drawn there).
     pub landing: Option<DropLanding>,
+    /// The command as planned: a drop on a row of a coordinator's tree aims at the coordinator
+    /// (`SidebarViewModel::tree_drop_target`), so this is what the host must perform.
+    pub command: Value,
 }
 
 /// Whether this payload is one [`plan_session_drop`] answers.
@@ -43,17 +48,38 @@ pub fn plan_session_drop(
     now_ms: u64,
 ) -> Option<SessionDrop> {
     let session_id = command.get("sessionId")?.as_str()?;
+    let mut command = command.clone();
+    if let (Some(group_id), Some(hovered)) = (
+        command.get("groupId").and_then(Value::as_str),
+        command.get("targetSessionId").and_then(Value::as_str),
+    ) {
+        match model.tree_drop_target(group_id, session_id, hovered) {
+            TreeDropTarget::Row => {}
+            TreeDropTarget::OwnTree => return None,
+            TreeDropTarget::Coordinator {
+                session_id: coordinator,
+                position,
+            } => {
+                command["targetSessionId"] = json!(coordinator);
+                command["position"] = json!(position);
+            }
+        }
+    }
     let messages = match command.get("type")?.as_str()? {
-        "moveSession" => plan_session_move(core, inputs, command)?.messages,
-        "moveSessionToSection" => plan_section_move(core, inputs, command)?,
+        "moveSession" => plan_session_move(core, inputs, &command)?.messages,
+        "moveSessionToSection" => plan_section_move(core, inputs, &command)?,
         _ => return None,
     };
     if messages.is_empty() {
         return None;
     }
-    let writes = drop_writes(core, inputs, command, session_id, &messages)?;
+    let writes = drop_writes(core, inputs, &command, session_id, &messages)?;
     let landing = model.preview_session_drop(session_id, &writes, now_ms);
-    Some(SessionDrop { messages, landing })
+    Some(SessionDrop {
+        messages,
+        landing,
+        command,
+    })
 }
 
 /// `moveSessionToSection`: the flags of the section the row is dropped into, and for Pinned the

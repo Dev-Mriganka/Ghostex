@@ -193,8 +193,8 @@ impl GhostexGpuiApp {
 
     /// A project or collection drop with the place its row lands, from the same plan the drop
     /// performs (gx-core `sidebar_drag/project_drop.rs`); `None` for a drop that does nothing.
-    fn with_native_sidebar_project_drop_landing(&mut self, mut command: Value) -> Option<Value> {
-        let landing = self.gx_store_preview_project_drop(&command)?;
+    fn with_native_sidebar_project_drop_landing(&mut self, command: Value) -> Option<Value> {
+        let (mut command, landing) = self.gx_store_preview_project_drop(&command)?;
         if landing.unchanged {
             return None;
         }
@@ -254,10 +254,14 @@ impl GhostexGpuiApp {
             if stale(session_id) || target.is_some_and(stale) {
                 return None;
             }
-            let landing = self.gx_store_plan_sidebar_session_drop(&command)?.landing?;
+            // The planned command, which may aim at a coordinator instead of the hovered thread,
+            // is the one the drop performs.
+            let drop = self.gx_store_plan_sidebar_session_drop(&command)?;
+            let landing = drop.landing?;
             if landing.unchanged {
                 return None;
             }
+            command = drop.command;
             command["landing"] = json!({
                 "groupId": landing.group_id,
                 "section": landing.section,

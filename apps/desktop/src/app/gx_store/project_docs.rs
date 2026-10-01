@@ -26,7 +26,8 @@
 
 use ghostex_gx_core::{
     CollectionsDocument, MachineId, ProjectDropLanding, ProjectWrite, SideStateUpdate,
-    SpacesDocument, owns_project_move_command, plan_project_move, project_drop_landing,
+    SpacesDocument, owns_project_move_command, plan_project_move, project_drop_command,
+    project_drop_landing,
 };
 use serde_json::{Value, json};
 
@@ -220,14 +221,17 @@ impl GhostexGpuiApp {
     }
 
     /// Where the row a `moveGroup`, `moveCollection` or `moveToCollection` drag moves would land,
-    /// from the same plan the drop performs, for its drop line. `None` is a drop that does nothing.
+    /// from the same plan the drop performs, for its drop line, with the command as planned (a drop
+    /// on a worktree family aims at its parent; gx-core `project_drop_command`), which is the one
+    /// to perform. `None` is a drop that does nothing.
     pub(crate) fn gx_store_preview_project_drop(
         &mut self,
         command: &Value,
-    ) -> Option<ProjectDropLanding> {
+    ) -> Option<(Value, ProjectDropLanding)> {
         if !self.gx_store_sidebar_list_ready() {
             return None;
         }
+        let command = &project_drop_command(self.gx_store.sidebar_list.view(), command);
         let text = |key: &str| command.get(key).and_then(Value::as_str);
         let (kind, id) = match text("type")? {
             "moveGroup" => ("group", text("groupId")?),
@@ -250,6 +254,7 @@ impl GhostexGpuiApp {
             super::host::now_ms() as i64,
         )?;
         project_drop_landing(store.sidebar_list.view(), &collections, &plan, kind, id)
+            .map(|landing| (command.clone(), landing))
     }
 
     /// The two documents a gesture is computed against: this app's own for this computer, and the
