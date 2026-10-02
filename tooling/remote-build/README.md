@@ -34,7 +34,9 @@ cargo xtask start --install-only       # install that staged build later
    committed in a private copy of the git index (your index, working tree and
    branch are not touched) and force-pushed to the `remote-build/linux-x64`
    branch of the build repository.
-2. That push starts `tooling/remote-build/linux-x64.yml` on Blacksmith. Two
+2. `remote-start` then starts `tooling/remote-build/linux-x64.yml` on that
+   branch on Blacksmith (the build repository's `main` holds only that
+   workflow, because GitHub needs it there to start it by hand). Two
    sticky disks (persistent disks) keep the checkout with its `target/`
    folders, and the Rust, Zig and Bun toolchains and caches, between runs, so
    only what changed is rebuilt.

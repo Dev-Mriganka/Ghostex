@@ -20,6 +20,8 @@ use crate::start;
 use crate::util::{self, env_trimmed, format_duration, output, root, sleep_ms, Res};
 
 const BRANCH: &str = "remote-build/linux-x64";
+/// The build repository's default branch, which holds only the workflow so workflow_dispatch can find it.
+const DISPATCH_BRANCH: &str = "main";
 const WORKFLOW_TEMPLATE: &str = "tooling/remote-build/linux-x64.yml";
 const WORKFLOW_FILE: &str = "remote-build-linux-x64.yml";
 const ARTIFACT: &str = "remote-build-linux-x64";
@@ -92,9 +94,11 @@ pub fn run(args: &[String]) -> Res<i32> {
     }
 
     println!("[2] Pushing it to {repo}...");
-    push(&repo, &snapshot.commit)?;
+    ensure_dispatch_workflow(&repo)?;
+    push(&repo, &snapshot.commit, BRANCH)?;
 
     println!("[3] Building on Blacksmith...");
+    dispatch(&repo)?;
     let run_id = find_run(&repo, &snapshot.commit)?;
     println!("    https://github.com/{repo}/actions/runs/{run_id}");
     println!("    (Ctrl+C stops watching here; the build keeps running and can be cancelled on that page.)");
@@ -416,7 +420,79 @@ fn gitlinks(treeish: &str) -> Res<BTreeMap<String, String>> {
     Ok(links)
 }
 
-fn push(repo: &str, commit: &str) -> Res {
+/// CDXC:Build 2026-10-02 WHY:
+/// GitHub started no workflow at all for the snapshot pushes (a parentless commit adding about 10,600 files), while a tiny probe push on the same repository ran at once, so the build is started with workflow_dispatch instead of relying on the push event.
+/// workflow_dispatch only finds workflows on the default branch, so the build repository's `main` holds just this workflow file; the run itself uses the copy inside the snapshot.
+fn ensure_dispatch_workflow(repo: &str) -> Res {
+    let template = fs::read(root().join(WORKFLOW_TEMPLATE))?;
+    let blob = git_text_with_input(git(None).args(["hash-object", "-w", "--stdin"]), &template)?;
+    let published = util::stdout_if_ok(util::command("gh").args([
+        "api",
+        &format!("repos/{repo}/contents/.github/workflows/{WORKFLOW_FILE}?ref={DISPATCH_BRANCH}"),
+        "--jq",
+        ".sha",
+    ]));
+    let default_branch = util::stdout_if_ok(util::command("gh").args([
+        "api",
+        &format!("repos/{repo}"),
+        "--jq",
+        ".default_branch",
+    ]))
+    .unwrap_or_default();
+    if published.as_deref().map(str::trim) == Some(blob.as_str())
+        && default_branch.trim() == DISPATCH_BRANCH
+    {
+        return Ok(());
+    }
+    let mktree = |entry: String| {
+        git_text_with_input(git(None).arg("mktree"), format!("{entry}\n").as_bytes())
+    };
+    let workflows = mktree(format!("100644 blob {blob}\t{WORKFLOW_FILE}"))?;
+    let github = mktree(format!("040000 tree {workflows}\tworkflows"))?;
+    let tree = mktree(format!("040000 tree {github}\t.github"))?;
+    let commit = git_text(git(None).args(["commit-tree", &tree, "-m", "Remote build workflow"]))?;
+    push(repo, &commit, DISPATCH_BRANCH)?;
+    if default_branch.trim() != DISPATCH_BRANCH {
+        util::check(util::command("gh").args([
+            "api",
+            "--silent",
+            "-X",
+            "PATCH",
+            &format!("repos/{repo}"),
+            "-f",
+            &format!("default_branch={DISPATCH_BRANCH}"),
+        ]))?;
+    }
+    Ok(())
+}
+
+/// Starts the workflow on the snapshot branch, retrying while GitHub registers a just-published workflow.
+fn dispatch(repo: &str) -> Res {
+    let deadline = Instant::now() + Duration::from_secs(90);
+    loop {
+        let out = output(util::command("gh").args([
+            "workflow",
+            "run",
+            WORKFLOW_FILE,
+            "-R",
+            repo,
+            "--ref",
+            BRANCH,
+        ]))?;
+        if out.status.success() {
+            return Ok(());
+        }
+        if Instant::now() > deadline {
+            bail!(
+                "GitHub refused to start the build workflow: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+        }
+        sleep_ms(5000);
+    }
+}
+
+fn push(repo: &str, commit: &str, branch: &str) -> Res {
     util::check(util::command("git").args([
         "-c",
         "credential.helper=",
@@ -426,7 +502,7 @@ fn push(repo: &str, commit: &str) -> Res {
         "--force",
         "--no-verify",
         &format!("https://github.com/{repo}.git"),
-        &format!("{commit}:refs/heads/{BRANCH}"),
+        &format!("{commit}:refs/heads/{branch}"),
     ]))
 }
 
@@ -498,8 +574,10 @@ fn watch_run(repo: &str, run_id: u64) -> Res {
                 if status == "completed" {
                     if conclusion == "success" {
                         println!("    [{}] Build finished.", clock(started.elapsed()));
+                        record_step_timings(repo, &id);
                         return Ok(());
                     }
+                    record_step_timings(repo, &id);
                     print_failed_log(repo, &id);
                     bail!("The remote build ended with '{conclusion}': https://github.com/{repo}/actions/runs/{id}");
                 }
@@ -522,6 +600,35 @@ fn watch_run(repo: &str, run_id: u64) -> Res {
             }
         }
         sleep_ms(10_000);
+    }
+}
+
+/// CDXC:Build 2026-10-02 DECISION:
+/// User asked to track how long each part of a remote build takes, to decide whether to do all dev builds on Blacksmith. Every finished run prints its step durations and appends them to build/remote-build/linux-x64/timings.tsv (run, date, step, seconds).
+fn record_step_timings(repo: &str, id: &str) {
+    let steps = r#".jobs[0] as $job | ($job.steps[]? | select(.status == "completed" and .startedAt != null) | [.name, ((.completedAt | fromdateiso8601) - (.startedAt | fromdateiso8601))] | @tsv), (["Whole job", (($job.completedAt | fromdateiso8601) - ($job.startedAt | fromdateiso8601))] | @tsv)"#;
+    let Some(table) = util::stdout_if_ok(util::command("gh").args([
+        "run", "view", id, "-R", repo, "--json", "jobs", "--jq", steps,
+    ])) else {
+        return;
+    };
+    let date = util::local_timestamp();
+    let mut log = String::new();
+    println!("    Step timings:");
+    for line in table.lines() {
+        let Some((name, seconds)) = line.split_once('\t') else {
+            continue;
+        };
+        let seconds: u64 = seconds.trim().parse().unwrap_or(0);
+        if seconds >= 1 || name == "Whole job" {
+            println!("      {:>7}  {name}", clock(Duration::from_secs(seconds)));
+        }
+        log.push_str(&format!("{id}\t{date}\t{name}\t{seconds}\n"));
+    }
+    let path = root().join("build/remote-build/linux-x64/timings.tsv");
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = file.write_all(log.as_bytes());
+        println!("      (all runs: {})", path.display());
     }
 }
 

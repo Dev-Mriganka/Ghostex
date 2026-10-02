@@ -1,6 +1,6 @@
 # CDXC:Build 2026-10-02 DECISION:
 # User chose Blacksmith's per-minute machines to build the Linux x64 desktop app because their Linux laptop is too weak to build it.
-# `cargo xtask remote-start` (tooling/xtask/src/remote_build.rs) pushes a snapshot of the working tree to the private build repository; this file rides along as that snapshot's only workflow, so it never runs in the public repository.
+# `cargo xtask remote-start` (tooling/xtask/src/remote_build.rs) pushes a snapshot of the working tree to the private build repository's remote-build/linux-x64 branch and starts this workflow there with workflow_dispatch; this file rides along as that snapshot's only workflow (and alone on that repository's main), so it never runs in the public repository.
 #
 # CDXC:Build 2026-10-02 WHY:
 # Two Blacksmith sticky disks keep the build warm between runs: the whole checkout (target folders, node_modules, CEF cache, submodules) and the toolchains and download caches.
@@ -10,8 +10,7 @@
 name: Remote build - Linux x64
 
 on:
-  push:
-    branches: [remote-build/linux-x64]
+  workflow_dispatch:
 
 concurrency:
   group: remote-build-linux-x64
