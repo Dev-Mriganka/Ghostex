@@ -6,6 +6,7 @@ mod gxserver;
 mod help;
 mod http;
 mod isolated;
+mod remote_build;
 mod start;
 mod start_server;
 mod tasks;
@@ -14,8 +15,12 @@ mod util;
 const USAGE: &str = "Usage: cargo xtask <command> [arguments]
 
 Desktop app
-  start [--optimized] [--verbose] [--profile] [--build-only] [--isolated[=<variant>]] [--prepare-only]
-                          build, install and launch the desktop app (a fast dev build; --optimized for performance work)
+  start [--optimized] [--verbose] [--profile] [--build-only] [--install-only] [--isolated[=<variant>]] [--prepare-only]
+                          build, install and launch the desktop app (a fast dev build; --optimized for performance work;
+                          Linux --install-only installs the already staged build)
+  remote-start [--repo <owner/name>] [--build-only]
+                          Linux x64: build the desktop app on a Blacksmith machine, then install and launch it here
+                          (setup: tooling/remote-build/README.md)
   start-server [--optimized]
                           macOS: rebuild only gxserver and swap it into /Applications/Ghostex.app
   build                   macOS: package the app bundle without installing it
@@ -49,6 +54,8 @@ Other
                           package gxserver for remote Linux hosts
   history [<arguments>]   run the ghostex-history CLI
   cli [<arguments>]       run the checkout's ghostex CLI
+  remote-build-pack --stage <dir> --base <manifest> --out <dir>
+                          (runs on the remote build machine) pack the files that differ from the laptop's staged app
 
 Release commands stay in package.json for now (`bun run release:*`).";
 
@@ -63,6 +70,8 @@ fn main() {
     let result = match name.as_str() {
         "start" => start::run(&args),
         "start-server" => start_server::run(&args),
+        "remote-start" => remote_build::run(&args),
+        "remote-build-pack" => remote_build::pack(&args),
         "build" => tasks::build(&args),
         "gx-isolated" => isolated::run_cli(&args),
         "setup-windows" => tasks::setup_windows(&args),

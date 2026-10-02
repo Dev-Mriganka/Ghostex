@@ -22,6 +22,7 @@ pub struct Options {
     pub optimized: bool,
     pub prepare_only: bool,
     pub build_only: bool,
+    pub install_only: bool,
 }
 
 /// Everything one start resolves up front: the app identity, where it is staged and installed, and the build environment.
@@ -47,7 +48,7 @@ pub struct Start {
     pub code_server_store_root: PathBuf,
 }
 
-const USAGE: &str = "cargo xtask start [--verbose|-v] [--profile] [--optimized] [--build-only] [--isolated[=<variant>]] [--prepare-only (Windows)]";
+const USAGE: &str = "cargo xtask start [--verbose|-v] [--profile] [--optimized] [--build-only] [--install-only (Linux)] [--isolated[=<variant>]] [--prepare-only (Windows)]";
 
 pub fn run(args: &[String]) -> Res<i32> {
     if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(windows)) {
@@ -178,6 +179,9 @@ pub fn run(args: &[String]) -> Res<i32> {
 
 impl Start {
     fn run(&mut self) -> Res<i32> {
+        if self.opts.install_only {
+            return self.install_staged_build();
+        }
         let gpui_dir = root().join("apps").join("desktop");
         let require_wsl_runtime =
             env_var("GHOSTEX_WINDOWS_REQUIRE_WSL_RUNTIME").as_deref() != Some("0");
@@ -369,6 +373,28 @@ impl Start {
         }
         self.install_and_launch()?;
         self.prune_stale_incremental_caches();
+        self.log.finish_step();
+        println!("{}", util::local_timestamp());
+        Ok(0)
+    }
+
+    /// CDXC:Build 2026-10-02 WHY:
+    /// `cargo xtask remote-start` builds on a rented Blacksmith machine and writes the result into the staged app here. Installing it must take the same path as a local start (close the running app, hand gxserver over, sync in place so live zmx sessions survive), so it reuses install_and_launch instead of copying files by hand.
+    fn install_staged_build(&mut self) -> Res<i32> {
+        if self.is_darwin || self.targets_windows {
+            bail!("--install-only only installs Linux builds for now.");
+        }
+        if !self.app_path.join(&self.app_name).exists() {
+            bail!(
+                "There is no staged build at {}. Run `cargo xtask remote-start` or `cargo xtask start` first.",
+                self.app_path.display()
+            );
+        }
+        self.log.step(&format!(
+            "Installing the staged build from {}...",
+            self.app_path.display()
+        ));
+        self.install_and_launch()?;
         self.log.finish_step();
         println!("{}", util::local_timestamp());
         Ok(0)
@@ -641,6 +667,7 @@ fn parse_options(args: &[String], targets_windows: bool) -> Res<Options> {
         optimized: false,
         prepare_only: false,
         build_only: false,
+        install_only: false,
     };
     for arg in args {
         match arg.as_str() {
@@ -650,10 +677,14 @@ fn parse_options(args: &[String], targets_windows: bool) -> Res<Options> {
             // macOS only: build the app and gxserver crates with full release optimization (see build-macos-rust.sh).
             "--optimized" => opts.optimized = true,
             "--build-only" => opts.build_only = true,
+            "--install-only" => opts.install_only = true,
             "--verbose" | "-v" => opts.verbose = true,
             other if isolated::parse_argument(other)?.is_some() => {}
             other => bail!("Unknown start argument: {other}. Usage: {USAGE}"),
         }
+    }
+    if opts.install_only && (opts.build_only || opts.prepare_only) {
+        bail!("--install-only installs an existing staged build; it cannot be combined with --build-only or --prepare-only.");
     }
     Ok(opts)
 }

@@ -72,6 +72,13 @@ executable and Visual Studio installation. The Windows build invokes
 `apps/desktop/scripts/build-windows-code-server.ps1` and reuses its output when
 the editor sources and toolchain have not changed.
 
+#### Building Linux on a remote machine
+
+On a Linux x64 computer that is too slow to build Ghostex, `cargo xtask remote-start` builds
+the desktop app on a rented Blacksmith machine, downloads only the files that changed, and
+installs and launches the result like `cargo xtask start`. Setup and costs:
+`tooling/remote-build/README.md`.
+
 #### Shared Rust build cache
 
 Both crates set `rustc-wrapper = "sccache"` in their `.cargo/config.toml`, so every `cargo` invocation
