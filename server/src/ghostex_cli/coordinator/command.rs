@@ -145,7 +145,14 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
             )
         })?,
     };
-    let title = flag_text(&parsed.flags, "title").unwrap_or_else(|| "Coordinator".to_string());
+    let named = flag_text(&parsed.flags, "title");
+    // CDXC:Coordinators 2026-10-03 SEE-ALSO: coordinator_keeps_its_title in server/src/coordinators/title.rs; an unnamed coordinator's "Coordinator" is a placeholder the agent's first name may replace.
+    let title_source = if named.is_some() {
+        "user"
+    } else {
+        "placeholder"
+    };
+    let title = named.unwrap_or_else(|| "Coordinator".to_string());
     let goal = flag_text(&parsed.flags, "goal").unwrap_or_default();
     let created = call_gxserver_rpc(
         "/api/createAgentSession",
@@ -154,6 +161,7 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
             "agentId": agent_id,
             "launchSettings": launch_settings_for(&agent_rows, &agent_id),
             "title": title,
+            "runtimeSettings": { "titleSource": title_source },
             "coordinator": { "goal": goal },
             // CDXC:Coordinators 2026-09-30 SEE-ALSO: DEFAULT_COORDINATOR_EFFORT in apps/desktop/src/app/window/new_coordinator_modal.rs (the user's medium-effort decision); the CLI keeps the same default.
             "agentEffort": flag_text(&parsed.flags, "effort").unwrap_or_else(|| "medium".to_string()),

@@ -9,6 +9,7 @@ mod presentation;
 mod records;
 mod role;
 mod state;
+mod title;
 
 pub use brief::*;
 pub use create::*;
@@ -18,3 +19,4 @@ pub use presentation::*;
 pub use records::*;
 pub use role::*;
 pub use state::*;
+pub use title::*;

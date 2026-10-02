@@ -1403,8 +1403,11 @@ version of the Projects features in Cursor and Claude Code.
   arrow beside its agent button) and choose **New Coordinator…**. Name it, pick
   Claude or Codex and its model and effort (Opus 5.5 on Claude, medium effort
   by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
-  it opens in chat. A project can have several coordinators, one per stream of
-  work.
+  it opens in chat. The name is what its sidebar row shows, and the
+  coordinator keeps it: unlike other sessions it is not renamed from your
+  first message (Rename in the sidebar still changes it; left blank, it is
+  named once from its first conversation). A project can have several
+  coordinators, one per stream of work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo (on the phone's session list too), and a crew icon
   with one number: how many thread sessions it has in the sidebar, whatever

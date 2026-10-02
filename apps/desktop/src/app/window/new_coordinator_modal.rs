@@ -19,7 +19,9 @@ pub(crate) const NEW_COORDINATOR_MODAL_INITIAL_HEIGHT: f32 = 640.0;
 
 const TITLE: &str = "New Coordinator";
 const FIELD_NAME: &str = "Name";
-const NAME_PLACEHOLDER: &str = "What this stream of work is, e.g. Checkout redesign";
+const NAME_PLACEHOLDER: &str = "e.g. Checkout redesign";
+const NAME_HINT: &str =
+    "Shown in the sidebar so you can find this coordinator later. It keeps this name.";
 const FIELD_AGENT: &str = "Agent";
 const FIELD_MODEL: &str = "Model";
 const FIELD_EFFORT: &str = "Effort";
@@ -278,11 +280,7 @@ impl GpuiNewCoordinatorModalWindow {
         let name = self.name.split_whitespace().collect::<Vec<_>>().join(" ");
         let command = NewCoordinatorModalCommand::Create {
             agent_id: agent.agent_id,
-            name: if name.is_empty() {
-                "Coordinator".to_string()
-            } else {
-                name
-            },
+            name,
             goal: self.goal.trim().to_string(),
             first_request: self.request.trim().to_string(),
             model: self.model().map(|model| model.value.clone()),
@@ -369,10 +367,14 @@ impl GpuiNewCoordinatorModalWindow {
     fn render_body(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let p = self.palette;
         let mut body = v_flex().w_full().flex_1().min_h_0().gap(px(16.0));
-        body = body.child(self.field(
-            FIELD_NAME,
-            modal_text_input(&p, &self.name_input, false, window, cx),
-        ));
+        body = body.child(
+            v_flex()
+                .w_full()
+                .gap(px(8.0))
+                .child(modal_section_title(&p, FIELD_NAME))
+                .child(modal_text_input(&p, &self.name_input, false, window, cx))
+                .child(modal_hint(&p, NAME_HINT)),
+        );
         if self.agents.is_empty() {
             body = body.child(modal_error(
                 &p,

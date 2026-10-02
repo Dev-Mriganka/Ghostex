@@ -153,6 +153,21 @@ pub(crate) fn reconcile_agent_metadata_title(
         metadata_title.record_revision.as_deref(),
     );
 
+    // CDXC:Coordinators 2026-10-03 SEE-ALSO: coordinator_keeps_its_title in server/src/coordinators/title.rs; only a rename the user requested (the pending title) may replace a coordinator's name.
+    let user_requested_title = pending_title
+        .as_deref()
+        .is_some_and(|pending_title| titles_match(pending_title, &metadata_title.title));
+    if !user_requested_title
+        && session.get("title").and_then(Value::as_str) != Some(metadata_title.title.as_str())
+        && crate::coordinators::coordinator_keeps_its_title(db, &session)
+    {
+        return Ok(AgentTitleReconcileResult {
+            changed: false,
+            metadata_title_found: true,
+            reason: "coordinator-keeps-its-title".to_string(),
+            session: Some(session),
+        });
+    }
     let pending_status = pending_title.as_deref().map(|pending_title| {
         if titles_match(pending_title, &metadata_title.title) {
             "confirmed"

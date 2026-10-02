@@ -2,7 +2,7 @@
 //! coordinator role, its optional first request, and opening it in chat.
 //!
 //! CDXC:Coordinators 2026-09-30 WHY:
-//! A coordinator is created like any sidebar agent launch (the same launch settings, the same focus of the created session), with three differences: the `coordinator` object that makes gxserver add the role and the record; no draft, because a draft can switch its agent before the first prompt and the role would not follow; and a title the user chose, saved as the user's so the agent's own naming does not replace it. It opens in chat, where the coordinator's reports read best.
+//! A coordinator is created like any sidebar agent launch (the same launch settings, the same focus of the created session), with three differences: the `coordinator` object that makes gxserver add the role and the record; no draft, because a draft can switch its agent before the first prompt and the role would not follow; and a title the user chose, saved as the user's so gxserver keeps it when the agent names the conversation. It opens in chat, where the coordinator's reports read best.
 //! SEE-ALSO: apps/desktop/src/app/window/new_coordinator_modal.rs, apps/desktop/src/app/new_coordinator_modal_lifecycle.rs, server/src/server/route_http.rs (`/api/createAgentSession` with `coordinator`).
 
 use ghostex_gx_core::{
@@ -59,9 +59,21 @@ fn coordinator_models(family: &str) -> Vec<NewCoordinatorModel> {
         .collect()
 }
 
+/// The title a coordinator is created with, and its source: an unnamed coordinator is a placeholder
+/// "Coordinator" the agent's first name may replace (see coordinator_keeps_its_title in
+/// server/src/coordinators/title.rs).
+fn coordinator_title(name: &str) -> (&str, &'static str) {
+    if name.trim().is_empty() {
+        ("Coordinator", "placeholder")
+    } else {
+        (name, "user")
+    }
+}
+
 /// The create parameters every coordinator shares, on top of an agent launch's.
 fn coordinator_params(
     mut params: Value,
+    title_source: &str,
     goal: &str,
     model: Option<&str>,
     effort: Option<&str>,
@@ -79,7 +91,7 @@ fn coordinator_params(
             .entry("runtimeSettings")
             .or_insert_with(|| Value::Object(Map::new()));
         if let Some(runtime) = runtime.as_object_mut() {
-            runtime.insert("titleSource".to_string(), json!("user"));
+            runtime.insert("titleSource".to_string(), json!(title_source));
         }
     }
     params
@@ -135,6 +147,7 @@ impl GhostexGpuiApp {
         };
         let hud = self.gx_store_launch_hud();
         let first_request = first_request.trim().to_string();
+        let (name, title_source) = coordinator_title(name);
         if let Some(machine_id) = project.machine.remote_id().map(str::to_string) {
             let params = coordinator_params(
                 remote_agent_launch_params(
@@ -144,6 +157,7 @@ impl GhostexGpuiApp {
                     None,
                     name,
                 ),
+                title_source,
                 goal,
                 model,
                 effort,
@@ -227,6 +241,7 @@ impl GhostexGpuiApp {
         };
         let params = coordinator_params(
             local_agent_launch_params(&agent, &project_id, Map::new(), None, name),
+            title_source,
             goal,
             model,
             effort,
