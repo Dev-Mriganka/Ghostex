@@ -6,6 +6,7 @@
   "type": "module",
   "packageManager": "bun@1.4.0",
   "scripts": {
+    "start": "cargo xtask start",
     "release:actions": "node tooling/release-gpui-actions.mjs start",
     "release:actions:publish": "node tooling/release-gpui-actions.mjs publish",
     "release:homebrew": "node tooling/release-gpui-homebrew.mjs",
