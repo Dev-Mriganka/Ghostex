@@ -321,9 +321,12 @@ pub(crate) fn modal_shell_scrolling<V: Render>(
 // `Button` variants with caller-chosen colors.
 // ---------------------------------------------------------------------------
 
-/// The corner close button's size and its distance from the window's top and right edges.
+/// The corner close button's size and its distance from the window's top and right edges: as
+/// close to the corner as the window's rounded corner allows without clipping the circle.
 pub(crate) const MODAL_CORNER_CLOSE_SIZE: f32 = 24.0;
-pub(crate) const MODAL_CORNER_CLOSE_INSET: f32 = 8.0;
+pub(crate) const MODAL_CORNER_CLOSE_INSET: f32 = 3.0;
+/// How far from the window's top and right edges the pointer reveals the corner close button.
+pub(crate) const MODAL_CORNER_CLOSE_ZONE: f32 = 56.0;
 
 /// The hover-only close button a native app modal's window frame draws in its top-right corner
 /// (window/modal_window_frame.rs).

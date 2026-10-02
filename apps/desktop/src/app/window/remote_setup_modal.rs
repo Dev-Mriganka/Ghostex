@@ -32,7 +32,6 @@ const ICON_QRCODE_CARD: &str = "modals/remote-setup/qrcode-card.svg";
 const ICON_QRCODE_BUTTON: &str = "modals/remote-setup/qrcode-button.svg";
 const ICON_SHIELD: &str = "modals/remote-setup/shield.svg";
 const ICON_LOADER: &str = "modals/remote-setup/loader-2.svg";
-const ICON_X: &str = "modals/remote-setup/x.svg";
 
 const EYEBROW: &str = "MOBILE & REMOTE";
 const TITLE: &str = "Remote Setup";
@@ -307,15 +306,6 @@ impl GpuiRemoteSetupModalWindow {
             rgb(0xf1f1f1)
         } else {
             self.palette.accent
-        }
-    }
-
-    /// shadcn `--secondary`: `oklch(0.274 0.006 286.033)` = #27272a in dark, #f1f1f1 in light; the close button fill.
-    fn shadcn_secondary(&self) -> Rgba {
-        if self.palette.light {
-            rgb(0xf1f1f1)
-        } else {
-            rgb(0x27272a)
         }
     }
 
@@ -916,31 +906,6 @@ impl GpuiRemoteSetupModalWindow {
             )
             .into_any_element()
     }
-
-    /// The dialog's `showCloseButton`: a 28px ghost icon button on `--secondary`
-    /// 16px from the top-right corner, its fill clipped inside a 1px transparent border.
-    fn render_close_button(&self, cx: &mut Context<Self>) -> AnyElement {
-        let p = self.palette;
-        let hover = self.shadcn_muted();
-        div()
-            .id("remote-setup-close")
-            .absolute()
-            .top(px(17.0))
-            .right(px(17.0))
-            .flex()
-            .items_center()
-            .justify_center()
-            .size(px(26.0))
-            .rounded(px(9.0))
-            .bg(hsla(self.shadcn_secondary()))
-            .cursor_pointer()
-            .hover(move |this| this.bg(hsla(hover)))
-            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
-                this.close(window, cx);
-            }))
-            .child(modal_icon(ICON_X, 16.0, p.foreground))
-            .into_any_element()
-    }
 }
 
 impl Render for GpuiRemoteSetupModalWindow {
@@ -965,17 +930,11 @@ impl Render for GpuiRemoteSetupModalWindow {
             None,
             cx,
         )
-        .child(self.render_close_button(cx))
     }
 }
 
 impl ModalCornerClose for GpuiRemoteSetupModalWindow {
     fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.close(window, cx);
-    }
-
-    /// It draws its own close button in that corner.
-    fn shows_corner_close(&self, _cx: &App) -> bool {
-        false
     }
 }
