@@ -1,4 +1,9 @@
-use super::{codex_blockers, endpoint, helpers, model::Provider, store};
+use super::{
+    codex_blockers, endpoint, helpers,
+    model::Provider,
+    setup_terminal::{LoginTerminal, COLS, ROWS},
+    store,
+};
 use crate::{domain::DomainStateError, server::AppState};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use serde_json::{json, Map, Value};
@@ -156,8 +161,8 @@ pub(crate) fn dispatch(
         }
         let pair = native_pty_system()
             .openpty(PtySize {
-                rows: 30,
-                cols: 160,
+                rows: ROWS,
+                cols: COLS,
                 pixel_width: 0,
                 pixel_height: 0,
             })
@@ -287,7 +292,7 @@ pub(crate) fn dispatch(
     Ok(response(views))
 }
 fn read_output(mut reader: Box<dyn Read + Send>, job: Arc<Mutex<SetupJob>>) -> String {
-    let mut output = String::new();
+    let mut terminal = LoginTerminal::new();
     let mut bytes = [0; 4096];
     loop {
         let Ok(n) = reader.read(&mut bytes) else {
@@ -296,15 +301,13 @@ fn read_output(mut reader: Box<dyn Read + Send>, job: Arc<Mutex<SetupJob>>) -> S
         if n == 0 {
             break;
         }
-        output.push_str(&String::from_utf8_lossy(&bytes[..n]));
-        if output.len() > 65536 {
-            let mut boundary = output.len() - 49152;
-            while !output.is_char_boundary(boundary) {
-                boundary += 1;
-            }
-            output.drain(..boundary);
-        }
+        let replies = terminal.process(&bytes[..n]);
+        let output = terminal.text();
         if let Ok(mut job) = job.lock() {
+            // A login that already exited or was cancelled has no one left to answer.
+            if let Some(writer) = job.writer.as_mut().filter(|_| !replies.is_empty()) {
+                let _ = writer.write_all(&replies);
+            }
             job.view["output"] = json!(output);
             for word in output.split_whitespace() {
                 if let Some(start) = word.find("https://") {
@@ -328,5 +331,5 @@ fn read_output(mut reader: Box<dyn Read + Send>, job: Arc<Mutex<SetupJob>>) -> S
             }
         }
     }
-    output
+    terminal.text()
 }
