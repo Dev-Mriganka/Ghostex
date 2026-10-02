@@ -97,8 +97,31 @@ impl GhostexGpuiApp {
             .collect::<Vec<_>>();
         let mut shell_state_changed = false;
         let keyboard_owner_before = self.keyboard_owner_session();
+        /*
+        CDXC:Sessions 2026-10-03 WHY:
+        A Full Reload's sleep kills the daemon, so the row's attach client exits, often before the sleep's answer marks the row Sleeping (which is what keeps an ordinary sleep's placeholder tab). Closing that tab here moved the focus to a neighbour in the middle of the reload, against the user's decision in gx-core reload.rs. Its dead viewer goes, as the wake's `forceRemount` would drop it, together with the viewer recipe so nothing re-attaches to the daemon being killed; the tab and its mapping stay for the wake to re-attach in place.
+        */
+        let reloading_shell_session_ids = self
+            .gx_store
+            .reloading_sessions
+            .iter()
+            .filter_map(|session| {
+                self.local_workspace_session_mappings
+                    .get(&GpuiLocalWorkspaceSessionKey {
+                        project_id: session.project_id.clone(),
+                        session_id: session.session_id.clone(),
+                    })
+                    .copied()
+            })
+            .collect::<HashSet<_>>();
         for session_id in exited_session_ids {
             self.agents_gpui_engine_terminals.remove(&session_id);
+            if reloading_shell_session_ids.contains(&session_id) {
+                self.agents_gpui_terminal_viewer_recipes.remove(&session_id);
+                self.agents_terminal_chat_claims.remove(&session_id);
+                cx.notify();
+                continue;
+            }
             let Some(pane_id) = self.agents_workspace.pane_id_for_session(session_id) else {
                 continue;
             };

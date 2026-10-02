@@ -238,8 +238,9 @@ pub fn plan_lifecycle_request(core: &Core, message: &Value) -> Option<LifecycleR
             true => Value::Null,
             false => lifecycle_params(&session),
         },
-        // Only a sleep moves the focus off the row, and only when that row holds it.
-        replacement_focus: match quick || !sleeping {
+        // Only a sleep moves the focus off the row, and only when that row holds it. A Full
+        // Reload's sleep asks to keep it (`keepFocus`, reload.rs), because its wake follows.
+        replacement_focus: match quick || !sleeping || keeps_focus(message) {
             true => None,
             false => replacement_focus_for_transition(core, &session, focused_before.as_ref()),
         },
@@ -248,6 +249,15 @@ pub fn plan_lifecycle_request(core: &Core, message: &Value) -> Option<LifecycleR
         session,
         call,
     })
+}
+
+/// Whether the payload asks the sleep to leave the focus on its row. Only the store's own Full
+/// Reload sets it; a message from the renderer does not carry it.
+fn keeps_focus(message: &Value) -> bool {
+    message
+        .get("keepFocus")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
 }
 
 /// `setSessionSleeping`'s own fields: which call, and the sidebar session id it names. One parse for

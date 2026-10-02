@@ -125,6 +125,9 @@ pub(crate) struct GxStoreHost {
     pub(super) menu_host: super::sidebar_menus::MenuHostCache,
     pub(super) sidebar_actions: super::sidebar_actions::SidebarActionCounters,
     pub(super) sidebar_lifecycle: super::sidebar_lifecycle::SidebarLifecycleCounters,
+    /// Local rows a Full Reload is cycling, once per reload in flight (sidebar_reload.rs). The
+    /// workspace keeps their tabs when the sleep kills the attach client.
+    pub(crate) reloading_sessions: Vec<ghostex_gx_core::SessionKey>,
     pub(super) sidebar_flags: super::sidebar_flags::SidebarFlagsCounters,
     pub(super) sidebar_modals: super::sidebar_modals::SidebarModalCounters,
     pub(super) sidebar_open: super::sidebar_open::SidebarOpenCounters,

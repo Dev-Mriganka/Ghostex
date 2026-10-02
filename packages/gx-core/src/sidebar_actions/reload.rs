@@ -90,12 +90,16 @@ pub fn plan_full_reload(core: &Core, message: &Value) -> Option<ReloadPlan> {
 }
 
 /// The two `setSessionSleeping` messages a Full Reload is, in order, for either machine.
+///
+/// CDXC:Sessions 2026-10-03 DECISION:
+/// User: "when i go ahead and full reload the session i'm currently focused on then we should never switch away from that session we should stay on it". The sleep leg carries `keepFocus`, so the single-session path resolves no replacement focus for it (an ordinary Sleep of the focused row still hands the focus to the next running row), and the wake leg then finds the row still focused and re-selects it with the remount. The desktop also keeps the row's tab while the reload's sleep kills its attach client (`reloading_sessions`, gpui_engine_terminal_sync.rs), because closing that tab moves the focus as surely as a replacement does.
 pub(super) fn reload_leg_messages(sidebar_session_id: &str) -> [Value; 2] {
     [
         json!({
             "type": "setSessionSleeping",
             "sessionId": sidebar_session_id,
             "sleeping": true,
+            "keepFocus": true,
         }),
         json!({
             "type": "setSessionSleeping",

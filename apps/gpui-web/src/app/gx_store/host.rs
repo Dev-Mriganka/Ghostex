@@ -33,6 +33,8 @@ pub(crate) struct GxStoreHost {
     pub(crate) sidebar_modals: super::sidebar_modals::SidebarModalCounters,
     pub(crate) sidebar_open: super::sidebar_open::SidebarOpenCounters,
     pub(crate) sidebar_lifecycle: super::sidebar_lifecycle::SidebarLifecycleCounters,
+    /// The desktop's Full Reload marker (`sidebar_reload.rs`); the page has no pane workspace to read it.
+    pub(crate) reloading_sessions: Vec<ghostex_gx_core::SessionKey>,
     pub(crate) sidebar_flags: super::sidebar_flags::SidebarFlagsCounters,
     pub(crate) sidebar_snooze: super::sidebar_snooze::SidebarSnoozeCounters,
     pub(crate) sidebar_bulk: super::sidebar_bulk::SidebarBulkCounters,

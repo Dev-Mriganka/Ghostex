@@ -64,7 +64,13 @@ impl GhostexGpuiApp {
             .diagnostics
             .sidebar_reload_ran(&plan, self.gx_store.sidebar_lifecycle);
         let legs = plan.legs;
+        let session = plan.session;
+        // Held until the wake has come home, so the workspace keeps this row's tab (and with it the
+        // focus) while the sleep kills its attach client (`CDXC:Sessions 2026-10-03 DECISION` in
+        // gx-core reload.rs).
+        self.gx_store.reloading_sessions.push(session.clone());
         Some(cx.spawn(async move |this, cx| {
+            let mut completed = true;
             for leg in legs {
                 // Each leg goes through the single-session path, which owns the call, the declined
                 // leg, the replacement focus and the echo guard. The wait is for the ANSWER and not
@@ -73,16 +79,24 @@ impl GhostexGpuiApp {
                 // rejecting did.
                 let started = this.update(cx, |this, cx| this.gx_store_start_lifecycle(&leg, cx));
                 let Ok(Some(task)) = started else {
-                    return false;
+                    completed = false;
+                    break;
                 };
                 if !reload_continues_after(task.await) {
                     let _ = this.update(cx, |this, _| {
                         this.gx_store.sidebar_lifecycle.reloads_stopped += 1;
                     });
-                    return false;
+                    completed = false;
+                    break;
                 }
             }
-            true
+            let _ = this.update(cx, |this, _| {
+                let reloading = &mut this.gx_store.reloading_sessions;
+                if let Some(index) = reloading.iter().position(|held| *held == session) {
+                    reloading.remove(index);
+                }
+            });
+            completed
         }))
     }
 
