@@ -211,7 +211,6 @@ impl GpuiAddProjectModalWindow {
                 "add-project-new-folder-submit",
                 label,
                 None,
-                false,
                 empty || self.busy.is_some(),
                 |this, window, cx| this.submit_new_folder(window, cx),
                 cx,
@@ -228,7 +227,6 @@ impl GpuiAddProjectModalWindow {
                 "add-project-repository-action",
                 label,
                 None,
-                false,
                 self.query.trim().is_empty() || self.busy.is_some(),
                 |this, window, cx| this.submit_repository(window, cx),
                 cx,
@@ -239,7 +237,6 @@ impl GpuiAddProjectModalWindow {
                 "add-project-new-folder",
                 "New Folder",
                 Some(ICON_FOLDER_PLUS),
-                false,
                 !d.can_create_new_folder || self.busy.is_some(),
                 |this, window, cx| this.start_new_folder(window, cx),
                 cx,
@@ -257,7 +254,6 @@ impl GpuiAddProjectModalWindow {
                 "add-project-submit",
                 label,
                 None,
-                true,
                 !d.can_submit_browse_path || self.busy.is_some(),
                 |this, window, cx| this.submit_resolved_path(window, cx),
                 cx,
@@ -301,13 +297,25 @@ impl GpuiAddProjectModalWindow {
                             .text_color(hsla(p.foreground)),
                     ),
             )
-            .children(actions)
+            .when(has_actions, |this| {
+                this.child(
+                    h_flex()
+                        .flex_shrink_0()
+                        .items_center()
+                        .gap(px(6.0))
+                        .pr(px(6.0))
+                        .children(actions),
+                )
+            })
             .into_any_element()
     }
 
-    /// A path-bar action: full height, flush to its neighbours, one left hairline as the only
-    /// separator (CDXC:AddProject 2026-08-18 titlebar-strip rule). The submit action sits one
-    /// raised step above the bar in the normal text colour; the others are ghost buttons.
+    /// A path-bar action: a filled pill inset in the bar, in the primary colour (white in dark
+    /// mode) with a slightly dimmer hover, so it reads as a button. Every action in the bar shares
+    /// this one look.
+    ///
+    /// CDXC:AddProject 2026-10-02 DECISION:
+    /// User: "i want the new folder button to match the style of the add project button. and they kind of don't look clickable now, please make them look clickable (i think white bg for example and hovering over them should change the bg slightly to indicate that htye're clickable)". This supersedes the flush full-height actions with hairline separators (2026-08-18 titlebar-strip rule) and the ghost New Folder button.
     #[allow(clippy::too_many_arguments)]
     fn bar_button(
         &self,
@@ -315,51 +323,39 @@ impl GpuiAddProjectModalWindow {
         id: &'static str,
         label: &'static str,
         icon: Option<&'static str>,
-        raised: bool,
         disabled: bool,
         on_click: impl Fn(&mut Self, &mut Window, &mut Context<Self>) + 'static,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let p = skin.p;
-        let (background, text, hover_background, hover_text) = if raised {
-            (p.raised, p.foreground, p.raised_hover, p.foreground)
-        } else {
-            (
-                css_fade(p.raised, 0.0),
-                skin.muted(),
-                skin.muted_fill,
-                p.foreground,
-            )
-        };
+        let background = p.primary;
+        let text = p.primary_foreground;
+        let hover_background = css_mix(p.primary, 0.86, p.solid_surface);
         h_flex()
             .id(id)
-            .group(id)
             .flex_shrink_0()
-            .h_full()
+            .h(px(28.0))
             .items_center()
             .gap(px(6.0))
-            .pl(px(if icon.is_some() { 8.0 } else { 12.0 }))
-            .pr(px(12.0))
-            .border_l_1()
-            .border_color(hsla(skin.border_at(0.7)))
+            .pl(px(if icon.is_some() { 8.0 } else { 10.0 }))
+            .pr(px(10.0))
+            .rounded(px(6.0))
             .bg(hsla(background))
             .text_size(px(14.0))
             .line_height(px(20.0))
+            .font_weight(FontWeight::MEDIUM)
             .text_color(hsla(text))
             .whitespace_nowrap()
             .when(disabled, |this| this.opacity(0.5))
             .when(!disabled, |this| {
-                this.hover(move |this| this.bg(hsla(hover_background)).text_color(hsla(hover_text)))
+                this.cursor_pointer()
+                    .hover(move |this| this.bg(hsla(hover_background)))
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
                     .on_click(cx.listener(move |this, _: &ClickEvent, window, cx| {
                         on_click(this, window, cx);
                     }))
             })
-            .children(icon.map(|icon| {
-                modal_icon(icon, 12.0, text).when(!disabled, |svg| {
-                    svg.group_hover(id, move |style| style.text_color(hsla(hover_text)))
-                })
-            }))
+            .children(icon.map(|icon| modal_icon(icon, 12.0, text)))
             .child(label)
             .into_any_element()
     }
