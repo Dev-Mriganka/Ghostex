@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## 10.9.1 - 2026-10-02
+
+**Ghostex 10.9.1 is out, and it brings 10.9.0 to macOS:** Cloud Boxes, more windows for other monitors and Spaces, menus and dialogs that open on the monitor you are using, and everything else in the 10.9.0 notes below. Every platform also gets files that open in the browser, highlighted chat search and a clear message when a remote computer can't connect.
+
+### 📂 Files
+- **Open HTML, Markdown and drawings in your browser** with the open-in-browser button in the Files header. Markdown opens as a rendered page with its diagrams, and a drawing opens as an editor that saves back to the file. The button's Open With arrow, and Open Externally and Open With on a file's right-click menu, open the file in another browser or app.
+- **Pinch to zoom an Excalidraw drawing** with the trackpad.
+- **The Show files button is the last button in the header row,** so it no longer covers the other buttons, and the Open Files close-all x sits in a circle.
+
+### 💬 Chat
+- **Search highlights the words it found,** yellow for every match and orange for the selected one, and scrolls the selected match into view, on the computer and the phone.
+- **Cmd+F opens chat search from the chat box,** and typing in the search field keeps its focus when another session switches to Chat.
+
+### 🌐 Remote computers
+- **A remote computer that can't connect says why** in its sidebar tab, with Reconnect and Remote Settings buttons, and its cloud turns red.
+- **A wrong SSH password is no longer retried every minute,** so the account is not locked out. Saving the new password reconnects.
+
+### 🩹 Fixes and polish
+- **The Search by Prompt placeholder is never cut off** by the filter buttons in a narrow window.
+- **A modal's close button sits in its corner** and appears when the pointer comes near it.
+- **New Folder in Add Project looks like a button you can click.**
+
 ## 10.9.0 - 2026-10-01
 
 **Ghostex 10.9.0 is out.** Run agent threads in Cloud Boxes on this computer, in the cloud or on your own server, open more Ghostex windows for other monitors and Spaces, turn Actions, Open In and Spaces on or off as built-in extensions, and get wrapping tables, Antigravity questions in chat and native Find on the phone.
