@@ -92,6 +92,10 @@ pub(super) fn compare_views(
     );
     top("order", incremental.order == scratch.order);
     top("emptyState", incremental.empty_state == scratch.empty_state);
+    top(
+        "machineNotice",
+        incremental.machine_notice == scratch.machine_notice,
+    );
 
     for group in &incremental.groups {
         let Some(fresh) = scratch.group(&group.core.group_id) else {

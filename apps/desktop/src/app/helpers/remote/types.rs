@@ -62,53 +62,18 @@ pub(crate) fn render_agents_remote_connect_status_overlay(
         .into_any_element()
 }
 
-/// Overlay copy for a remote machine's latest connect wire state. Mirrors the
-/// sidebar's `remoteMachineBusyLabel` / `remoteMachineFailureLabel` vocabulary so
-/// the terminal area and the sidebar row never disagree about one machine.
+/// Overlay copy for a remote machine's latest connect wire state: the sidebar's own copy
+/// (`ghostex_gx_core::machine_state_copy`), so the terminal area and the sidebar never disagree
+/// about one machine.
 pub(crate) fn gpui_remote_connect_overlay_labels(
     state: Option<&str>,
 ) -> (&'static str, Option<&'static str>) {
     match state {
-        Some("installing") => ("Installing gxserver…", None),
-        Some("downloadingRemoteServerPackage") => ("Downloading server package…", None),
-        Some("installApprovalRequired") => (
-            "Remote setup needed",
-            Some("Approve the gxserver install for this machine."),
-        ),
-        Some("installFailed") => (
-            "Remote setup failed",
-            Some("Reconnect the machine to try again."),
-        ),
-        Some("sshFailed") => ("Cannot reach machine", Some("SSH connection failed.")),
-        Some("tunnelFailed") => ("Cannot reach machine", Some("SSH tunnel failed.")),
-        Some("keychainFailed") => (
-            "Cannot reach machine",
-            Some("Saved credentials are unavailable."),
-        ),
-        Some("tokenUnavailable") => (
-            "Cannot reach machine",
-            Some("The remote gxserver token is unavailable."),
-        ),
-        Some("presentationSubscribeFailed") | Some("presentationStreamFailed") => (
-            "Reconnecting to machine…",
-            Some("The remote session stream dropped."),
-        ),
-        Some("unsupported") | Some("unsupportedRemotePlatform") => (
-            "Machine unsupported",
-            Some("This remote platform cannot host gxserver."),
-        ),
-        Some("invalid") => (
-            "Machine unavailable",
-            Some("The saved machine settings are incomplete."),
-        ),
-        Some("failed") => (
-            "Cannot reach machine",
-            Some("Reconnect the machine to try again."),
-        ),
-        // `connecting`, `disconnected`, and the pre-first-status cold-start
-        // window all describe the same user-visible situation: the machine is
-        // not reachable yet and a connect attempt is expected.
-        _ => ("Connecting to machine…", None),
+        // `disconnected` and the pre-first-status cold-start window describe the same situation
+        // as `connecting` here: the machine is not reachable yet and a connect attempt is
+        // expected.
+        None | Some("disconnected") => ghostex_gx_core::machine_state_copy("connecting"),
+        Some(state) => ghostex_gx_core::machine_state_copy(state),
     }
 }
 
@@ -219,6 +184,10 @@ pub(crate) enum GpuiRemoteGxserverConnectState {
     InstallApprovalRequired,
     InstallFailed,
     Invalid,
+    /// SSH reached the machine and it refused the saved username, password or key. Retrying
+    /// cannot fix that, and every retry is another failed login the machine may lock the account
+    /// over, so the reconnect ladder stops here until the user reconnects or saves a new password.
+    AuthFailed,
     SshFailed,
     TokenUnavailable,
     KeychainFailed,
@@ -239,6 +208,7 @@ impl GpuiRemoteGxserverConnectState {
             | Self::Unsupported
             | Self::UnsupportedRemotePlatform => "warning",
             Self::InstallFailed
+            | Self::AuthFailed
             | Self::SshFailed
             | Self::TokenUnavailable
             | Self::KeychainFailed
@@ -256,6 +226,7 @@ impl GpuiRemoteGxserverConnectState {
             Self::InstallApprovalRequired => "Install approval required",
             Self::InstallFailed => "Remote install failed",
             Self::Invalid => "Remote connect failed",
+            Self::AuthFailed => "Remote sign-in failed",
             Self::SshFailed => "Remote SSH failed",
             Self::TokenUnavailable => "Remote token unavailable",
             Self::KeychainFailed => "Remote token not saved",
@@ -275,6 +246,7 @@ impl GpuiRemoteGxserverConnectState {
             Self::InstallApprovalRequired => "installApprovalRequired",
             Self::InstallFailed => "installFailed",
             Self::Invalid => "invalid",
+            Self::AuthFailed => "authFailed",
             Self::SshFailed => "sshFailed",
             Self::TokenUnavailable => "tokenUnavailable",
             Self::KeychainFailed => "keychainFailed",
@@ -294,6 +266,7 @@ impl GpuiRemoteGxserverConnectState {
             Self::InstallApprovalRequired => "installApprovalRequired",
             Self::InstallFailed => "installFailed",
             Self::Invalid => "invalid",
+            Self::AuthFailed => "authFailed",
             Self::SshFailed => "sshFailed",
             Self::TokenUnavailable => "tokenUnavailable",
             Self::KeychainFailed => "keychainFailed",
@@ -325,6 +298,7 @@ pub(crate) fn gpui_remote_gxserver_connect_state_from_wire_status(
         "presentationStreamFailed" => {
             Some(GpuiRemoteGxserverConnectState::PresentationStreamFailed)
         }
+        "authFailed" => Some(GpuiRemoteGxserverConnectState::AuthFailed),
         "sshFailed" => Some(GpuiRemoteGxserverConnectState::SshFailed),
         "tokenUnavailable" => Some(GpuiRemoteGxserverConnectState::TokenUnavailable),
         "tunnelFailed" => Some(GpuiRemoteGxserverConnectState::TunnelFailed),
@@ -344,7 +318,8 @@ pub(crate) fn gpui_remote_gxserver_status_state_is_known(state: &str) -> bool {
 pub(crate) fn gpui_remote_gxserver_status_state_is_broken(state: &str) -> bool {
     matches!(
         state,
-        "disconnected"
+        "authFailed"
+            | "disconnected"
             | "failed"
             | "keychainFailed"
             | "presentationStreamFailed"

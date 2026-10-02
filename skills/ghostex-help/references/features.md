@@ -495,7 +495,8 @@ where they are while you open, change and close views.
   passes it returns to its usual place, still asleep until you open it.
   Unsnooze brings it back early. Snooze needs no setting; it is always
   available.
-- Remote machines appear as their own sidebar sections when connected.
+- Remote machines appear as their own sidebar tabs; a red cloud means the
+  machine could not connect, and its tab explains why.
 
 Related settings: everything under General > Sidebar, `agentManagerZoomPercent`
 (sidebar interface size), `sidebarSpacesEnabled`,
@@ -1628,6 +1629,10 @@ sessions, so any client can control agents on any machine.
   the remote folder in Code.
   Remote localhost links open in the built-in Browser through that computer,
   even when ordinary web links are set to open in your external browser.
+  When a machine cannot connect, its tab's cloud turns red and its list says
+  why, with Reconnect and Remote Settings buttons. Ghostex keeps retrying a
+  dropped connection, but a rejected username or password is not retried (so
+  the account is not locked out); saving a new SSH password reconnects it.
 - **Web app**: the desktop's sidebar (with its session, group and project
   actions, the Git menu and Quick Access), chat and terminal running in a
   browser and talking to gxserver; remote machines, Settings and the commit
@@ -1638,7 +1643,9 @@ sessions, so any client can control agents on any machine.
 
 Windows computers accept Android, macOS, and Linux desktop connections over SSH.
 Install Ghostex on Windows, enable SSH, and add the Windows address with your
-Windows username. Leave Advanced > Windows WSL distribution blank to use the
+Windows username and the Windows account password (a Microsoft account's
+password when you sign in with one; SSH never accepts the Windows Hello PIN).
+Leave Advanced > Windows WSL distribution blank to use the
 Windows Environment selected in Windows Ghostex: native PowerShell with Windows
 folders (the default), or WSL with Linux folders. Enter a distribution name to
 use that WSL2 distribution instead. Windows agent CLIs must be installed for native

@@ -180,12 +180,18 @@ impl GhostexGpuiApp {
         */
         self.remote_machine_connect_states
             .insert(remote_machine_id.to_string(), state.to_string());
-        // The sanitized summary of THIS transition, which the machine tab draws
-        // (gx_store/remote_clients.rs). The page's copy was never cleared either: a transition
-        // without a message leaves the last one standing, exactly as `metadata.ts` did.
+        // The sanitized summary of THIS transition, which the machine tab and the sidebar's
+        // machine notice draw (gx_store/remote_clients.rs). A transition without a message leaves
+        // the last failure's standing, but a new attempt or a connection clears it so a later
+        // failure never explains itself with an earlier one's reason.
         if let Some(message) = message.map(str::trim).filter(|message| !message.is_empty()) {
             self.remote_machine_status_messages
                 .insert(remote_machine_id.to_string(), message.to_string());
+        } else if state == GpuiRemoteGxserverConnectState::Connected.wire_status_state()
+            || gpui_remote_gxserver_status_state_is_connect_progress(state)
+        {
+            self.remote_machine_status_messages
+                .remove(remote_machine_id);
         }
         // Every connect transition funnels through here, so this is also where the store learns
         // whether it still has a daemon to subscribe to on that machine: a client starts on the

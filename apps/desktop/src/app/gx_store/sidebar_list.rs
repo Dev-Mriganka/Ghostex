@@ -596,6 +596,7 @@ impl GhostexGpuiApp {
                 "canAddProject": false,
                 "copy": Value::Null,
             }),
+            machine_notice: None,
             hud: std::sync::Arc::new(Value::Null),
             groups: Vec::new(),
             selected_machine_id: view.selected_machine_id.clone(),

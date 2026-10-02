@@ -43,6 +43,21 @@ pub struct SidebarView {
     /// The top-level row sequence: a project group or a collection of them.
     pub order: Vec<OrderItem>,
     pub empty_state: EmptyState,
+    /// The selected remote machine is not connected, so the list says why above whatever it still
+    /// holds (`machines::machine_notice`). Absent for this computer and a connected machine.
+    pub machine_notice: Option<MachineNotice>,
+}
+
+/// What the list of a remote machine that is not connected says about its connection.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct MachineNotice {
+    pub machine_id: String,
+    pub title: String,
+    pub detail: Option<String>,
+    /// A connect attempt is running: the notice draws a spinner and no buttons.
+    pub busy: bool,
+    /// The last attempt failed, so the notice draws in the error colour and offers Reconnect.
+    pub failed: bool,
 }
 
 impl SidebarView {

@@ -203,13 +203,24 @@ impl GhostexGpuiApp {
                                             cx,
                                         ))
                                     })
-                                    .when(content.order.is_empty(), |column| {
-                                        column.child(self.render_native_sidebar_empty(
-                                            &content,
+                                    .when_some(content.machine_notice.as_ref(), |column, notice| {
+                                        column.child(self.render_native_sidebar_machine_notice(
+                                            notice,
                                             &appearance,
                                             cx,
                                         ))
                                     })
+                                    .when(
+                                        content.order.is_empty()
+                                            && content.machine_notice.is_none(),
+                                        |column| {
+                                            column.child(self.render_native_sidebar_empty(
+                                                &content,
+                                                &appearance,
+                                                cx,
+                                            ))
+                                        },
+                                    )
                                     .children(content.order.iter().filter_map(|item| {
                                         if item.kind == "collection" {
                                             content

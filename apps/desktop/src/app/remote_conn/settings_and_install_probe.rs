@@ -334,6 +334,16 @@ impl GhostexGpuiApp {
             },
             cx,
         );
+        // A refused login is never retried automatically (`reconnect_ladder.rs`), so the new
+        // password is what tries again.
+        if has_password
+            && self
+                .remote_machine_connect_states
+                .get(remote_machine_id.as_str())
+                .is_some_and(|state| state == "authFailed")
+        {
+            self.remote_reconnect_from_sidebar(&remote_machine_id, cx);
+        }
     }
 
     pub(crate) fn handle_gpui_probe_remote_gxserver_install_message(

@@ -363,6 +363,7 @@ pub(super) fn snapshot_from_view(
             "canAddProject": view.empty_state.can_add_project,
             "copy": view.empty_state.copy,
         }),
+        machine_notice: view.machine_notice.clone(),
         hud: std::sync::Arc::clone(input.hud),
         groups,
         selected_machine_id: view.selected_machine_id.clone(),

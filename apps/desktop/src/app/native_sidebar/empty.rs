@@ -3,12 +3,151 @@ use crate::{GhostexGpuiApp, app::helpers::*};
 use gpui::prelude::FluentBuilder;
 use gpui::{
     AnyElement, FontWeight, InteractiveElement, IntoElement, MouseButton, ParentElement,
-    StatefulInteractiveElement, Styled, div, px, relative,
+    StatefulInteractiveElement, Styled, div, px, relative, rgb,
 };
 use gpui_component::{h_flex, v_flex};
 use serde_json::json;
 
+/// The bordered pill both the empty list's action and the machine notice's buttons draw.
+fn empty_action_button(
+    id: &'static str,
+    label: &'static str,
+    icon: Option<&'static str>,
+    appearance: &SidebarAppearance,
+) -> gpui::Stateful<gpui::Div> {
+    let scale = appearance.scale;
+    h_flex()
+        .id(id)
+        .h(px(30.0 * scale))
+        .pl(px(10.0 * scale))
+        .pr(px(12.0 * scale))
+        .gap(px(6.0 * scale))
+        .rounded(px(8.0 * scale))
+        .border_1()
+        .border_color(appearance.foreground.opacity(0.22))
+        .text_color(appearance.foreground.opacity(0.8))
+        .text_size(px(12.5 * scale))
+        .font_weight(FontWeight::SEMIBOLD)
+        .cursor_pointer()
+        .hover(|row| row.bg(appearance.hover))
+        .when_some(icon, |row, icon| {
+            row.child(titlebar_svg_icon(icon, 14.0 * scale, appearance.foreground))
+        })
+        .child(label)
+}
+
 impl GhostexGpuiApp {
+    /// What a remote machine that is not connected says above its list: the state, the reason of
+    /// a failure, and the way out (`ghostex_gx_core::MachineNotice`).
+    pub(crate) fn render_native_sidebar_machine_notice(
+        &self,
+        notice: &ghostex_gx_core::MachineNotice,
+        appearance: &SidebarAppearance,
+        cx: &mut gpui::Context<Self>,
+    ) -> AnyElement {
+        let scale = appearance.scale;
+        let error = rgb(0xff9494);
+        let reconnect_id = notice.machine_id.clone();
+        let configure_id = notice.machine_id.clone();
+        let icon = gpui::svg()
+            .path(if notice.busy {
+                "titlebar/loader2.svg"
+            } else if notice.failed {
+                "titlebar/alert-triangle.svg"
+            } else {
+                "titlebar/cloud.svg"
+            })
+            .size(px(15.0 * scale))
+            .flex_shrink_0()
+            .text_color(if notice.failed {
+                error.into()
+            } else {
+                appearance.muted
+            });
+        let icon = if notice.busy {
+            icon.with_throttled_animation(
+                format!("native-machine-notice-busy-{}", notice.machine_id),
+                std::time::Duration::from_millis(900),
+                |icon, progress| {
+                    icon.with_transformation(gpui::Transformation::rotate(gpui::percentage(
+                        progress,
+                    )))
+                },
+            )
+            .into_any_element()
+        } else {
+            icon.into_any_element()
+        };
+        v_flex()
+            .id("native-sidebar-machine-notice")
+            .w_full()
+            .mt(px(8.0 * scale))
+            .px(px(12.0 * scale))
+            .gap(px(4.0 * scale))
+            .child(
+                h_flex()
+                    .gap(px(8.0 * scale))
+                    .child(icon)
+                    .child(
+                        div()
+                            .min_w_0()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(if notice.failed {
+                                error.into()
+                            } else {
+                                appearance.foreground.opacity(0.85)
+                            })
+                            .child(notice.title.clone()),
+                    ),
+            )
+            .when_some(notice.detail.clone(), |column, detail| {
+                column.child(
+                    div()
+                        .pl(px(23.0 * scale))
+                        .text_size(px(12.0 * scale))
+                        .text_color(appearance.muted)
+                        .child(detail),
+                )
+            })
+            .when(!notice.busy, |column| {
+                column.child(
+                    h_flex()
+                        .mt(px(8.0 * scale))
+                        .pl(px(23.0 * scale))
+                        .gap(px(8.0 * scale))
+                        .flex_wrap()
+                        .child(
+                            empty_action_button(
+                                "native-sidebar-machine-notice-connect",
+                                if notice.failed { "Reconnect" } else { "Connect" },
+                                Some("titlebar/cloud.svg"),
+                                appearance,
+                            )
+                            .on_click(cx.listener(move |app, _, _, cx| {
+                                cx.stop_propagation();
+                                app.remote_reconnect_from_sidebar(&reconnect_id, cx);
+                            })),
+                        )
+                        .child(
+                            empty_action_button(
+                                "native-sidebar-machine-notice-settings",
+                                "Remote Settings",
+                                Some("titlebar/settings.svg"),
+                                appearance,
+                            )
+                            .on_click(cx.listener(move |app, _, _, cx| {
+                                cx.stop_propagation();
+                                app.dispatch_native_sidebar_ui(
+                                    json!({"type": "machineAction", "action": "configure", "machineId": configure_id}),
+                                    cx,
+                                );
+                            })),
+                        ),
+                )
+            })
+            .into_any_element()
+    }
+
     pub(crate) fn render_native_sidebar_empty(
         &self,
         snapshot: &NativeSidebarSnapshot,
@@ -65,40 +204,24 @@ impl GhostexGpuiApp {
             .child(state["copy"].as_str().unwrap_or_default().to_owned())
             .when(error || add, |column| {
                 column.child(
-                    h_flex()
-                        .id("native-sidebar-empty-action")
-                        .mt(px(12.0 * scale))
-                        .h(px(30.0 * scale))
-                        .pl(px(10.0 * scale))
-                        .pr(px(12.0 * scale))
-                        .gap(px(6.0 * scale))
-                        .rounded(px(8.0 * scale))
-                        .border_1()
-                        .border_color(appearance.foreground.opacity(0.22))
-                        .text_color(appearance.foreground.opacity(0.8))
-                        .text_size(px(12.5 * scale))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .cursor_pointer()
-                        .hover(|row| row.bg(appearance.hover))
-                        .when(!error, |row| {
-                            row.child(titlebar_svg_icon(
-                                "titlebar/plus.svg",
-                                14.0 * scale,
-                                appearance.foreground,
-                            ))
-                        })
-                        .child(if error {
+                    empty_action_button(
+                        "native-sidebar-empty-action",
+                        if error {
                             "Load Sessions"
                         } else {
                             "Add Project"
-                        })
-                        .on_click(cx.listener(move |app, _, _, cx| {
-                            cx.stop_propagation();
-                            app.dispatch_native_sidebar_ui(
-                                json!({"type": "sidebarAction", "action": action}),
-                                cx,
-                            );
-                        })),
+                        },
+                        (!error).then_some("titlebar/plus.svg"),
+                        appearance,
+                    )
+                    .mt(px(12.0 * scale))
+                    .on_click(cx.listener(move |app, _, _, cx| {
+                        cx.stop_propagation();
+                        app.dispatch_native_sidebar_ui(
+                            json!({"type": "sidebarAction", "action": action}),
+                            cx,
+                        );
+                    })),
                 )
             })
             .when(add, |column| {

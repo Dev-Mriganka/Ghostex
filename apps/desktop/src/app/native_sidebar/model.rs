@@ -9,6 +9,9 @@ pub(crate) struct NativeSidebarSnapshot {
     pub(crate) rename_request: Option<NativeSidebarRenameRequest>,
     pub(crate) reveal_request: Option<NativeSidebarRevealRequest>,
     pub(crate) empty_state: Value,
+    /// The selected remote machine is not connected: the list says why above what it holds.
+    #[serde(skip)]
+    pub(crate) machine_notice: Option<ghostex_gx_core::MachineNotice>,
     /// Shared with the store's runtime facts holder rather than copied per install
     /// (gx_store/runtime_facts.rs).
     pub(crate) hud: std::sync::Arc<Value>,

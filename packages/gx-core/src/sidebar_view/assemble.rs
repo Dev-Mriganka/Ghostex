@@ -421,6 +421,9 @@ pub(crate) fn assemble(input: AssembleInput<'_>) -> SidebarView {
         groups,
         collections,
         order,
+        machine_notice: super::machine_connection::machine_notice(
+            input.host.machine(&input.ui.selected_machine_id),
+        ),
         empty_state: {
             let empty = empty_state(&input, selection.as_ref());
             // Bots changes only the copy of a loaded, empty list; loading and a load failure read
@@ -449,8 +452,8 @@ fn empty_state(input: &AssembleInput<'_>, selection: Option<&SpaceSelection>) ->
             .machine(&input.ui.selected_machine_id)
             .is_some_and(super::inputs::MachineTabInput::is_connected);
     if !is_local && !can_add_project {
-        // `createNativeEmptyState` returns early here: a machine tab that is not connected says
-        // nothing at all rather than "No projects".
+        // A machine tab that is not connected never says "No projects": its `machine_notice`
+        // explains the connection instead.
         return EmptyState::default();
     }
     // `unavailable` is the local placeholder group, so the loading and error branches are this

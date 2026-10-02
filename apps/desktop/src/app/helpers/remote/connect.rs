@@ -121,6 +121,17 @@ pub(crate) fn gpui_connect_remote_gxserver_platform_inner(
         gpui_remote_token_read_command(),
         GPUI_REMOTE_GXSERVER_CONNECT_TIMEOUT,
     );
+    if gpui_remote_process_failure_is_authentication(&token_result) {
+        // The login itself was refused: probing the platform would only be another failed login.
+        return GpuiRemoteGxserverConnectResult::without_connection(
+            GpuiRemoteGxserverConnectState::AuthFailed,
+            gpui_remote_sanitized_process_failure(
+                "Remote gxserver SSH setup failed.",
+                &token_result,
+            )
+            .as_str(),
+        );
+    }
     if token_result.exit_code != 0 {
         /*
         CDXC:RemoteMachines 2026-07-26:
@@ -145,7 +156,7 @@ pub(crate) fn gpui_connect_remote_gxserver_platform_inner(
             Ok(GpuiRemoteExecutionTarget::PosixHost) => {}
             Err(GpuiRemoteExecutionTargetProbeError::Ssh(probe_result)) => {
                 return GpuiRemoteGxserverConnectResult::without_connection(
-                    GpuiRemoteGxserverConnectState::SshFailed,
+                    gpui_remote_ssh_failure_state(&probe_result),
                     gpui_remote_sanitized_process_failure(
                         "Remote gxserver SSH setup failed.",
                         &probe_result,
@@ -156,7 +167,7 @@ pub(crate) fn gpui_connect_remote_gxserver_platform_inner(
             Err(GpuiRemoteExecutionTargetProbeError::Unsupported(message)) => {
                 if gpui_remote_process_failure_is_ssh_transport(&token_result) {
                     return GpuiRemoteGxserverConnectResult::without_connection(
-                        GpuiRemoteGxserverConnectState::SshFailed,
+                        gpui_remote_ssh_failure_state(&token_result),
                         gpui_remote_sanitized_process_failure(
                             "Remote gxserver SSH setup failed.",
                             &token_result,
@@ -209,6 +220,12 @@ pub(crate) fn gpui_connect_remote_gxserver_platform_inner(
     if let Some(state) =
         gpui_remote_token_read_failure_state(token_result.exit_code, install_approved)
     {
+        let state = match state {
+            GpuiRemoteGxserverConnectState::SshFailed => {
+                gpui_remote_ssh_failure_state(&token_result)
+            }
+            state => state,
+        };
         return GpuiRemoteGxserverConnectResult::without_connection(
             state,
             gpui_remote_token_read_failure_message(state, &token_result).as_str(),
@@ -271,10 +288,9 @@ pub(crate) fn gpui_remote_token_read_failure_message(
         GpuiRemoteGxserverConnectState::InstallFailed => {
             "Remote gxserver install failed.".to_string()
         }
-        GpuiRemoteGxserverConnectState::SshFailed => gpui_remote_sanitized_process_failure(
-            "Remote gxserver SSH setup failed.",
-            result,
-        ),
+        GpuiRemoteGxserverConnectState::SshFailed | GpuiRemoteGxserverConnectState::AuthFailed => {
+            gpui_remote_sanitized_process_failure("Remote gxserver SSH setup failed.", result)
+        }
         _ => "Remote gxserver connect failed.".to_string(),
     }
 }
@@ -297,7 +313,7 @@ pub(crate) fn gpui_remote_sanitized_process_failure(
         return default_message.to_string();
     }
     if stderr.contains("permission denied") {
-        return "SSH authentication failed for the remote machine.".to_string();
+        return "The machine rejected the saved SSH username, password or key. On Windows, use the account password, not the Windows Hello PIN.".to_string();
     }
     if stderr.contains("could not resolve hostname") {
         return "SSH could not resolve the remote host.".to_string();
@@ -351,6 +367,30 @@ pub(crate) fn gpui_remote_process_stderr_category(
         return "sshExit255";
     }
     "other"
+}
+
+/// SSH reached the machine and the login was refused (`user@host: Permission denied (publickey,
+/// password,…)`), as opposed to a remote command that hit a permission error after logging in.
+pub(crate) fn gpui_remote_process_failure_is_authentication(
+    result: &GpuiRemoteProcessResult,
+) -> bool {
+    result.exit_code == 255
+        && result
+            .stderr
+            .to_ascii_lowercase()
+            .contains("permission denied (")
+}
+
+/// The state of an SSH transport failure: a refused login is `authFailed`, which the reconnect
+/// ladder does not retry; everything else is `sshFailed`.
+pub(crate) fn gpui_remote_ssh_failure_state(
+    result: &GpuiRemoteProcessResult,
+) -> GpuiRemoteGxserverConnectState {
+    if gpui_remote_process_failure_is_authentication(result) {
+        GpuiRemoteGxserverConnectState::AuthFailed
+    } else {
+        GpuiRemoteGxserverConnectState::SshFailed
+    }
 }
 
 pub(crate) fn gpui_remote_process_failure_is_ssh_transport(

@@ -25,8 +25,8 @@ impl GhostexGpuiApp {
                 let reconnect = id.clone();
                 let menu_id = id.clone();
                 let selected = snapshot.selected_machine_id == id;
-                let busy = matches!(machine.state.as_str(), "connecting" | "installing" | "busy");
-                let failed = matches!(machine.state.as_str(), "failed" | "error");
+                let busy = ghostex_gx_core::machine_state_is_busy(&machine.state);
+                let failed = id != "local" && ghostex_gx_core::machine_state_is_failure(&machine.state);
                 let tooltip = machine.message.as_ref().map(|message| format!("{}: {message}", machine.label)).unwrap_or_else(|| machine.label.clone());
                 let icon = gpui::svg().path(if id == "local" { "titlebar/device-desktop.svg" } else if busy { "titlebar/loader2.svg" } else { "titlebar/cloud.svg" }).size(px(14.0 * scale)).text_color(if failed { rgb(0xff9494).into() } else { appearance.muted });
                 let glyph = if busy { icon.with_throttled_animation(format!("native-machine-busy-{id}"), std::time::Duration::from_millis(900), |icon, progress| icon.with_transformation(gpui::Transformation::rotate(gpui::percentage(progress)))).into_any_element() } else { icon.into_any_element() };

@@ -17,6 +17,7 @@ pub(crate) mod close_successor;
 pub(crate) mod collections;
 mod groups;
 mod inputs;
+mod machine_connection;
 mod machines;
 pub(crate) mod membership;
 mod model;
@@ -54,6 +55,7 @@ pub use inputs::{
     SidebarHostInputs, SidebarInputs, SidebarMode, SidebarSettings, SidebarUiState,
     UnavailableState, LOCAL_MACHINE_ID, MACHINE_STATE_CONNECTED, MAX_RECENT_SPACE_SESSION_IDS,
 };
+pub use machine_connection::{machine_state_copy, machine_state_is_busy, machine_state_is_failure};
 pub use model::{SidebarUpdateWork, SidebarViewModel};
 pub use ordering::session_is_snoozed;
 pub use reveal::{reveal_plan, space_for_focused_row, FocusedRowSpace, SidebarRevealPlan};
@@ -66,7 +68,7 @@ pub use spaces::{Space, SpacesState, OTHER_SPACE_ID};
 pub use tags::{TagListItem, TagListItemKind, TagPresentation, UNTAGGED_TAG_FILTER};
 pub use view::{
     CollectionView, CoordinatorBadge, CoordinatorBadgeTone, DelayedSendView, RowNesting, ThreadTally, EmptyState, GroupCore, GroupSummary, GroupView, LabelDeadline,
-    MachineSummary, MachineTabView, OrderItem, OrderKind, ProjectContextView, RemoteMachineView,
+    MachineNotice, MachineSummary, MachineTabView, OrderItem, OrderKind, ProjectContextView, RemoteMachineView,
     SectionView, SessionMenuFacts, SessionRow, SessionTiming, SessionView, SidebarView, SpaceView,
     WorktreeView,
 };

@@ -53,10 +53,14 @@ fn is_progress_state(state: &str) -> bool {
 }
 
 /// States that need the user (approve an install, fix the machine's settings), so no retry.
+///
+/// CDXC:RemoteMachines 2026-10-02 WHY:
+/// `authFailed` is a refused SSH login. Retrying it every minute sent the wrong password over and over, which Windows counts toward locking the account, and it cannot succeed until the user changes the credentials. A manual Reconnect, or saving a new SSH password, connects again.
 fn is_stop_state(state: &str) -> bool {
     matches!(
         state,
-        "installApprovalRequired"
+        "authFailed"
+            | "installApprovalRequired"
             | "installFailed"
             | "invalid"
             | "unsupported"
