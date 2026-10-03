@@ -3,7 +3,7 @@
 //!
 //! CDXC:Coordinators 2026-09-30 WHY:
 //! A coordinator is created like any sidebar agent launch (the same launch settings, the same focus of the created session), with three differences: the `coordinator` object that makes gxserver add the role and the record; no draft, because a draft can switch its agent before the first prompt and the role would not follow; and a title the user chose, saved as the user's so gxserver keeps it when the agent names the conversation. It opens in chat, where the coordinator's reports read best.
-//! SEE-ALSO: apps/desktop/src/app/window/new_coordinator_modal.rs, apps/desktop/src/app/new_coordinator_modal_lifecycle.rs, server/src/server/route_http.rs (`/api/createAgentSession` with `coordinator`).
+//! SEE-ALSO: apps/desktop/src/app/window/new_coordinator_modal.rs, apps/desktop/src/app/new_coordinator_modal_lifecycle.rs, server/src/server/route_http/sessions.rs (`/api/createAgentSession` with `coordinator`).
 
 use ghostex_gx_core::{
     ProjectKey, SessionKey, created_session, default_agent_id_for_icon, local_agent_launch_params,
