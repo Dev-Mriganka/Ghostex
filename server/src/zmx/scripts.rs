@@ -320,12 +320,9 @@ pub(crate) fn build_zmx_run_command(input: ZmxRunCommandInput) -> String {
         .unwrap_or_default();
     let provider_shell_command = match login_shell_name {
         "zsh" => super::zsh_startup::agent_shell_command(&login_shell, &startup),
-        "fish" => super::fish_startup::agent_shell_command(
-            &login_shell,
-            &command_shell(),
-            &zmx_provider_prompt_editor_setup_shell_command(input.prompt_editor.as_deref()),
-            &startup_command,
-        ),
+        "fish" => {
+            super::fish_startup::agent_shell_command(&login_shell, &command_shell(), &startup)
+        }
         _ => format!("{}\n{}", startup, user_login_shell_exec_command()),
     };
     format_zmx_provider_run_script(
