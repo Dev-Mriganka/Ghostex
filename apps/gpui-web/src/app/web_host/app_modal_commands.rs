@@ -1,4 +1,4 @@
-//! The `sidebarCommand` messages the app's own windows send (the desktop's `handle_gpui_app_modal_sidebar_command`, a switch of about 130 arms in `delayed_send/app_modal_sidebar_command.rs`). The page answers the ones its windows can send, which is what Quick Access posts: focus a session or a project, create a terminal or a browser tab, and the Projects and Saved Prompts reads, through `gx_rpc`. What needs the operating system, a CEF page or the desktop's panes answers with a toast.
+//! The `sidebarCommand` messages the app's own windows send (the desktop's `handle_gpui_app_modal_sidebar_command`, a switch of about 130 arms in `delayed_send/app_modal_sidebar_command/`, routed by its `dispatch.rs` to one handler per modal family). The page answers the ones its windows can send, which is what Quick Access posts: focus a session or a project, create a terminal or a browser tab, and the Projects and Saved Prompts reads, through `gx_rpc`. What needs the operating system, a CEF page or the desktop's panes answers with a toast.
 use std::collections::HashSet;
 
 use ghostex_gx_core::SessionKey;

@@ -1,5 +1,5 @@
 //! Open, close, and reconnect plumbing for the native Install remote gxserver prompt.
-//! SEE-ALSO: apps/desktop/src/app/window/remote_gxserver_install_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), `open_gpui_remote_gxserver_install_modal` in apps/desktop/src/app/remote_conn/project_browse_and_add.rs (builds the `open` message this opener reads), and the `reconnectRemoteMachine` arm in apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (the React host's route, mirrored here).
+//! SEE-ALSO: apps/desktop/src/app/window/remote_gxserver_install_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), `open_gpui_remote_gxserver_install_modal` in apps/desktop/src/app/remote_conn/project_browse_and_add.rs (builds the `open` message this opener reads), and the `reconnectRemoteMachine` arm in apps/desktop/src/app/delayed_send/app_modal_sidebar_command/dialogs.rs (the React host's route, mirrored here).
 use crate::app::window::*;
 use crate::*;
 

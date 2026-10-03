@@ -13,7 +13,7 @@
 //! is the native project path action, and "Open In" launches the chosen target on the active
 //! project without making it the titlebar's default.
 //!
-//! SEE-ALSO: apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (`handle_gpui_app_modal_sidebar_command`).
+//! SEE-ALSO: apps/desktop/src/app/delayed_send/app_modal_sidebar_command/dispatch.rs (`handle_gpui_app_modal_sidebar_command`).
 
 use gpui::Window;
 use gpui_component::WindowExt;

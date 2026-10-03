@@ -1,0 +1,202 @@
+//! `handle_gpui_app_modal_sidebar_command`: the switch over every `sidebarCommand` message the app's own modal windows send, routing each command type to its per-family handler.
+
+use gpui::Window;
+
+use crate::app::helpers::*;
+use crate::*;
+
+impl GhostexGpuiApp {
+    pub(crate) fn handle_gpui_app_modal_sidebar_command(
+        &mut self,
+        message: serde_json::Value,
+        window: &mut Window,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let Some(command) = message
+            .get("message")
+            .and_then(serde_json::Value::as_object)
+        else {
+            return;
+        };
+        let Some(command_type) = command.get("type").and_then(serde_json::Value::as_str) else {
+            return;
+        };
+
+        match command_type {
+            "updateSettings"
+            | "updateSettingsPatch"
+            | "openExternalUrl"
+            | "listAppIcons"
+            | "setAppIcon"
+            | "pickAppIconFile"
+            | "pickTerminalBackgroundImageFile"
+            | "pickWindowGlassImageFile"
+            | "pickWindowGlassVideoFile"
+            | "pickFirstLaunchProjectFolder"
+            | "firstLaunchCreateProjectSession"
+            | "revealAppIconsFolder"
+            | "openGhosttySettingsDocs"
+            | "openAccessibilityPreferences"
+            | "openScreenRecordingPreferences"
+            | "openMacOSNotificationSettings"
+            | "requestMacOSNotificationPermission"
+            | "playCompletionSoundPreview"
+            | "testAgentTaskCompletion"
+            | "applyRecommendedGhosttySettings"
+            | "resetGhosttySettingsToDefault"
+            | "openGhosttyConfigFile"
+            | "runPortlessSettingsAdminAction"
+            | "runPortlessSetupPromptAdminAction"
+            | "setPortlessEnabled"
+            | "saveSidebarAgent"
+            | "deleteSidebarAgent"
+            | "syncSidebarAgentOrder"
+            | "saveSidebarCommand"
+            | "deleteSidebarCommand"
+            | "syncSidebarCommandOrder"
+            | "saveGlobalSidebarCommand"
+            | "deleteGlobalSidebarCommand"
+            | "syncGlobalSidebarCommandOrder"
+            | "setProjectWorktreeCommand"
+            | "setProjectBeadsDisplayKey"
+            | "setProjectBeadsDirectory"
+            | "setProjectDocsDirectory" => {
+                self.handle_gpui_app_modal_settings_command(command_type, command, cx);
+            }
+            "refreshDaemonSessions"
+            | "killDaemonSession"
+            | "killTerminalDaemon"
+            | "requestGhostexCliStatus"
+            | "installGhostexCli"
+            | "installBrowserControl"
+            | "installBrowserUseSkill"
+            | "installComputerUseSkill"
+            | "installCliSkill"
+            | "installAgentsOrchestrationSkill"
+            | "installManageBeadsSkill"
+            | "installGenerateTitleSkill"
+            | "installMoveCodexSessionSkill"
+            | "installHelpSkill"
+            | "installCuaDriver"
+            | "reinstallCuaDriver"
+            | "uninstallCuaDriver"
+            | "checkCuaDriverUpdate"
+            | "installSpaceoSkill"
+            | "installSpaceo"
+            | "reinstallSpaceo"
+            | "uninstallSpaceo"
+            | "checkSpaceoUpdate"
+            | "runManagedToolTerminalCommand"
+            | "runAgentboxTerminalCommand"
+            | "setUpAgentboxWithAgent"
+            | "uninstallBundledAgentSkills"
+            | "uninstallBundledAgentSkill"
+            | "requestAgentHookStatus"
+            | "installAgentHooks"
+            | "uninstallAgentHooks"
+            | "requestOSIntegrationStatus"
+            | "requestPluginSettingsStatus"
+            | "reinstallPlugin"
+            | "uninstallPlugin"
+            | "setOSIntegrationDefaults"
+            | "requestGhostexFolderStats"
+            | "openGhostexFolder" => {
+                self.handle_gpui_app_modal_settings_tools_command(
+                    command_type,
+                    command,
+                    window,
+                    cx,
+                );
+            }
+            "saveRemoteMachinePassword"
+            | "reconnectRemoteMachine"
+            | "probeRemoteGxserverInstall"
+            | "addProjectDialogRequest"
+            | "pickReplacementProjectFolder"
+            | "setSessionNote"
+            | "sidebarSpaceEditorResult"
+            | "updateCustomSessionTags"
+            | "confirmAgentHookLaunch"
+            | "removeProject"
+            | "requestProjectWorktrees"
+            | "createProjectWorktree"
+            | "confirmDeleteWorktree"
+            | "confirmRenameWorktree"
+            | "commitWorktreeBeforeDelete"
+            | "confirmSidebarGitCommit"
+            | "confirmSidebarGitDirectMerge"
+            | "runSidebarGitMultipleCommits"
+            | "openSidebarGitChangedFileDiff"
+            | "openSidebarGitChangedFile"
+            | "cancelSidebarGitCommit"
+            | "revealExportedTranscript"
+            | "cancelExportSessionTranscript"
+            | "startExportedTranscriptConversation"
+            | "runExportSessionTranscript"
+            | "savePinnedPrompt"
+            | "renameSession"
+            | "scheduleDelayedSend"
+            | "postponeDelayedSend"
+            | "cancelDelayedSend"
+            | "toggleCloseAfterDone" => {
+                self.handle_gpui_app_modal_dialog_command(command_type, command, cx);
+            }
+            "openWorkspaceWelcome" | "runGhostexHotkeyAction" => {
+                self.handle_gpui_app_modal_hotkey_action_command(command_type, command, window, cx);
+            }
+            "requestAgentsHubCatalog"
+            | "requestAgentsHubFileContent"
+            | "saveAgentsHubFile"
+            | "requestAgentSyncReport"
+            | "requestAgentSyncPlan"
+            | "applyAgentSyncPlan"
+            | "openAgentsHubPathInFinder"
+            | "openAgentsHubFileInBuiltInEditor" => {
+                self.handle_gpui_app_modal_agents_hub_command(command_type, command, window, cx);
+            }
+            "requestPreviousSessions"
+            | "requestSessionTranscriptSizes"
+            | "restorePreviousSession"
+            | "deletePreviousSession" => {
+                self.handle_gpui_app_modal_previous_sessions_command(command_type, command, cx);
+            }
+            "requestStashedPrompts"
+            | "saveStashedPrompt"
+            | "saveStashedPromptTag"
+            | "deleteStashedPromptTag"
+            | "setStashedPromptTags"
+            | "deleteStashedPrompt"
+            | "insertStashedPrompt"
+            | "jumpToStashedPromptSession" => {
+                self.handle_gpui_app_modal_saved_prompts_command(command_type, command, cx);
+            }
+            "requestRecentProjects"
+            | "restoreRecentProject"
+            | "closeProjectFromProjects"
+            | "focusRecentProject"
+            | "removeRecentProject"
+            | "copyRecentProjectPath"
+            | "openRecentProjectInFinder"
+            | "openRecentProjectTerminal"
+            | "focusSession"
+            | "runSidebarCommand" => {
+                self.handle_gpui_app_modal_projects_command(command_type, command, cx);
+            }
+            command_type
+                if crate::app::quick_access::commands::QUICK_ACCESS_COMMAND_ROW_TYPES
+                    .contains(&command_type) =>
+            {
+                self.run_quick_access_command_row(command_type, command, window, cx);
+            }
+            "searchPreviousSessionsByText" => {
+                self.handle_gpui_app_modal_previous_sessions_command(command_type, command, cx);
+            }
+            "postponePortlessSetupPrompt" | "cancelPortlessSetupPrompt" => {
+                self.handle_gpui_app_modal_settings_command(command_type, command, cx);
+            }
+            command_type if gpui_app_modal_unsupported_settings_command_noop(command_type) => {}
+            command_type if self.gx_store_run_app_modal_create_command(command_type, cx) => {}
+            _ => {}
+        }
+    }
+}
