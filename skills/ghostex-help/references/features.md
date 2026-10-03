@@ -1660,6 +1660,12 @@ Windows computers accept Android, macOS, and Linux desktop connections over SSH.
 Install Ghostex on Windows, enable SSH, and add the Windows address with your
 Windows username and the Windows account password (a Microsoft account's
 password when you sign in with one; SSH never accepts the Windows Hello PIN).
+Turning SSH on in Windows Ghostex installs and starts Windows' OpenSSH Server
+feature after one administrator prompt; if Windows needs a restart to finish,
+or another SSH server is already installed, the message under the button says
+what to do. The prompt can only appear when Ghostex's background service was
+started from your desktop, so if Ghostex says it cannot show it, quit Ghostex
+together with its background service and open it again from the Start menu.
 Leave Advanced > Windows WSL distribution blank to use the
 Windows Environment selected in Windows Ghostex: native PowerShell with Windows
 folders (the default), or WSL with Linux folders. Enter a distribution name to

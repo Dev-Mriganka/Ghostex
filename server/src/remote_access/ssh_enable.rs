@@ -118,7 +118,26 @@ fn run_privileged_enable() -> SshEnableResult {
 // Both scripts are written to temp files and run with `-File`, which keeps
 // paths and quoting out of the command line entirely. The elevated process
 // cannot share stdout with its parent, so it reports through exit codes and
-// a log file the parent reads afterwards.
+// a log file the parent reads afterwards; the log holds only the reason for
+// a failure, never progress lines, because it is shown to the user verbatim.
+/*
+CDXC:RemotePairing 2026-10-03 WHY:
+`Get-Service sshd` returning nothing does not mean OpenSSH Server is missing:
+the inbox `sshd` service keeps the default service DACL (SYSTEM,
+Administrators, INTERACTIVE, SERVICE), so a token without those (a network
+or SSH logon, an unelevated child) gets access denied and Get-Service reports
+"not found". A script that decides "installed?" from it can run
+Add-WindowsCapability on an installed feature (a silent no-op) and then fail
+with "The sshd service is still missing after the feature was installed".
+Presence is read from the `Services\sshd` registry key (readable by every
+user); Get-Service is only asked once the key exists, and a key Windows has
+not loaded into the service manager yet means a restart is pending. The
+other way to reach that message, the feature listed as Installed while its
+service was deleted (typically by uninstalling a GitHub/MSI OpenSSH build,
+which shares the `sshd` name), is repaired by removing and re-adding the
+feature in the same elevated run; Add-WindowsCapability alone does nothing
+for a feature Windows already counts as installed.
+*/
 #[cfg(windows)]
 mod windows_enable {
     use std::{
@@ -135,42 +154,62 @@ mod windows_enable {
     const EXIT_SERVICE_FAILED: i32 = 3;
     const EXIT_RESTART_NEEDED: i32 = 4;
     const EXIT_FIREWALL_FAILED: i32 = 5;
+    const EXIT_NOT_ELEVATED: i32 = 6;
+    const EXIT_OTHER_SSH_SERVER: i32 = 7;
     const EXIT_LAUNCH_FAILED: i32 = 91;
     const EXIT_NO_PROCESS: i32 = 92;
     const EXIT_NO_EXIT_CODE: i32 = 93;
+    const EXIT_NO_DESKTOP: i32 = 94;
     const EXIT_UAC_CANCELLED: i32 = 1223;
 
     const ELEVATED_SCRIPT: &str = r#"param([string]$LogPath)
 $ErrorActionPreference = 'Stop'
 function Note([string]$Text) { Add-Content -LiteralPath $LogPath -Value $Text }
+$capability = 'OpenSSH.Server~~~~0.0.1.0'
+$servicesKey = 'HKLM:\SYSTEM\CurrentControlSet\Services'
+function Test-SshdRegistered { Test-Path -LiteralPath "$servicesKey\sshd" }
+function Get-CapabilityState { [string](Get-WindowsCapability -Online -Name $capability).State }
+$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { exit 6 }
 try {
-    if ($null -eq (Get-Service -Name sshd -ErrorAction SilentlyContinue)) {
-        Note 'Installing the OpenSSH Server feature.'
-        $result = Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0'
-        if ($null -eq (Get-Service -Name sshd -ErrorAction SilentlyContinue)) {
-            if ($result.RestartNeeded) { exit 4 }
-            Note 'The sshd service is still missing after the feature was installed.'
+    if (-not (Test-SshdRegistered)) {
+        $other = Get-ChildItem -LiteralPath $servicesKey | Where-Object { [string]$_.GetValue('ImagePath') -match 'sshd\.exe' } | Select-Object -First 1
+        if ($null -ne $other) {
+            Note ("the '" + $other.PSChildName + "' service runs " + [string]$other.GetValue('ImagePath'))
+            exit 7
+        }
+        $state = Get-CapabilityState
+        if ($state -eq 'InstallPending' -or $state -eq 'UninstallPending') { exit 4 }
+        if ($state -eq 'Installed') {
+            $removed = Remove-WindowsCapability -Online -Name $capability
+            if ($removed.RestartNeeded) { exit 4 }
+        }
+        $result = Add-WindowsCapability -Online -Name $capability
+        if (-not (Test-SshdRegistered)) {
+            $state = Get-CapabilityState
+            if ($result.RestartNeeded -or $state -eq 'InstallPending') { exit 4 }
+            Note ("Windows lists the feature as $state but did not create its sshd service. Remove OpenSSH Server in Settings > System > Optional features, restart, and try again")
             exit 2
         }
     }
+    if ($null -eq (Get-Service -Name sshd -ErrorAction SilentlyContinue)) { exit 4 }
 } catch {
-    Note ('Add-WindowsCapability failed: ' + $_.Exception.Message)
+    Note $_.Exception.Message
     exit 2
 }
 try {
     Set-Service -Name sshd -StartupType Automatic
     if ((Get-Service -Name sshd).Status -ne 'Running') { Start-Service -Name sshd }
 } catch {
-    Note ('Starting the sshd service failed: ' + $_.Exception.Message)
+    Note $_.Exception.Message
     exit 3
 }
 try {
     if ($null -eq (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue)) {
-        Note 'Creating the OpenSSH-Server-In-TCP firewall rule.'
         New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
     }
 } catch {
-    Note ('Creating the firewall rule failed: ' + $_.Exception.Message)
+    Note $_.Exception.Message
     exit 5
 }
 exit 0
@@ -208,16 +247,25 @@ exit 0
         match output.status.code() {
             Some(0) => enabled(),
             Some(EXIT_UAC_CANCELLED) => cancelled(),
-            Some(EXIT_CAPABILITY_FAILED) => failed(with_log(
-                "Installing the OpenSSH Server feature failed",
-                &log,
-            )),
+            Some(EXIT_CAPABILITY_FAILED) => failed(capability_failed_message(&log)),
             Some(EXIT_SERVICE_FAILED) => failed(with_log(
                 "Starting the OpenSSH Server service failed",
                 &log,
             )),
             Some(EXIT_RESTART_NEEDED) => failed(
-                "The OpenSSH Server feature was installed, but Windows needs a restart before the sshd service is available. Restart your computer, then try again."
+                "Windows needs a restart to finish setting up the OpenSSH Server feature. Restart your computer, then turn SSH access on again."
+                    .to_string(),
+            ),
+            Some(EXIT_NOT_ELEVATED) => failed(
+                "The administrator prompt did not give Windows PowerShell administrator rights, so the OpenSSH Server feature could not be installed. Sign in with an administrator account, then try again."
+                    .to_string(),
+            ),
+            Some(EXIT_OTHER_SSH_SERVER) => failed(with_log(
+                "Another SSH server is installed but is not answering, so Ghostex did not install the Windows OpenSSH Server over it. Start that server or uninstall it, then try again. Details",
+                &log,
+            )),
+            Some(EXIT_NO_DESKTOP) => failed(
+                "Windows cannot show the administrator prompt because Ghostex's background service is not running in your desktop session (it was started from an SSH or remote connection). Quit Ghostex together with its background service, open Ghostex from the Start menu, then try again."
                     .to_string(),
             ),
             Some(EXIT_FIREWALL_FAILED) => failed(with_log(
@@ -236,6 +284,20 @@ exit 0
                 &if log.is_empty() { stderr } else { log },
             )),
             None => failed("The elevated PowerShell was terminated.".to_string()),
+        }
+    }
+
+    // 0x800F0954 is what Add-WindowsCapability raises when Windows Update is
+    // pointed at a WSUS server that does not carry Features on Demand, the
+    // usual cause on managed computers; the error alone does not say so.
+    fn capability_failed_message(log: &str) -> String {
+        let message = with_log("Installing the OpenSSH Server feature failed", log);
+        if log.to_ascii_lowercase().contains("0x800f0954") {
+            format!(
+                "{message} Windows Update on this computer is managed by WSUS, which does not offer optional features. In the Group Policy \"Specify settings for optional component installation and component repair\", turn on \"Download repair content and optional features directly from Windows Update instead of WSUS\" (or ask your administrator), then try again."
+            )
+        } else {
+            message
         }
     }
 
@@ -299,10 +361,16 @@ exit 0
     // code. When the user declines the UAC prompt, `Start-Process` throws with
     // a Win32Exception whose NativeErrorCode is 1223 (ERROR_CANCELLED)
     // somewhere in the exception chain; that number is matched instead of the
-    // message, which is localized.
+    // message, which is localized. A gxserver started from an SSH connection
+    // lives in session 0 with no interactive window station, where
+    // `Start-Process -Verb RunAs` can only throw "This operation requires an
+    // interactive window station"; that case is named up front so the user
+    // gets the fix (restart the background service from the desktop) instead
+    // of the raw exception.
     fn launcher_script(script: &Path, log: &Path) -> String {
         format!(
             r#"$ErrorActionPreference = 'Stop'
+if (-not [Environment]::UserInteractive) {{ exit {EXIT_NO_DESKTOP} }}
 try {{
     $p = Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', '"{script}"', '"{log}"')
 }} catch {{
