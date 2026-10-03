@@ -17,7 +17,7 @@ const USAGE: &str = "Usage: cargo xtask <command> [arguments]
 Desktop app
   start [--optimized] [--verbose] [--profile] [--build-only] [--install-only] [--isolated[=<variant>]] [--prepare-only]
                           build, install and launch the desktop app (a fast dev build; --optimized for performance work;
-                          Linux --install-only installs the already staged build)
+                          --install-only installs the already staged build on Linux and Windows)
   remote-start [--repo <owner/name>] [--build-only]
                           Linux x64: build the desktop app on a Blacksmith machine, then install and launch it here
                           (setup: tooling/remote-build/README.md)

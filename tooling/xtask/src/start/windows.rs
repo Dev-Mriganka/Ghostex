@@ -325,7 +325,163 @@ fn components_repo() -> Res<String> {
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+/// Set (by the hand-off script) for the start that installs in the desktop session on behalf of a session-0 start, which keeps holding the start lock while it waits.
+pub const DESKTOP_HANDOFF_ENV: &str = "GHOSTEX_START_DESKTOP_HANDOFF";
+
+/// Whether this process runs in Windows session 0, the services session, which has no desktop.
+pub fn runs_in_services_session() -> Res<bool> {
+    #[cfg(windows)]
+    {
+        Ok(super::windows_native::current_session_id()? == 0)
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(false)
+    }
+}
+
+/// A run-once task that runs a script in the signed-in user's desktop session; it is deleted when dropped.
+struct DesktopTask {
+    name: String,
+}
+
+impl DesktopTask {
+    fn run(name: String, script: &Path) -> Res<Self> {
+        // /IT runs the task only in the user's interactive session, with their desktop token; /SC ONCE never fires on its own because the task is run once with /Run and deleted after.
+        let created = output(
+            Command::new("schtasks.exe")
+                .args(["/Create", "/F", "/IT", "/SC", "ONCE", "/ST", "00:00", "/TN"])
+                .arg(&name)
+                .arg("/TR")
+                .arg(format!("\"{}\"", script.display())),
+        )?;
+        if !created.status.success() {
+            bail!(
+                "Could not create the scheduled task that installs in your desktop session: {}",
+                String::from_utf8_lossy(&created.stderr).trim()
+            );
+        }
+        let task = Self { name };
+        let ran = output(Command::new("schtasks.exe").args(["/Run", "/TN", &task.name]))?;
+        if !ran.status.success() {
+            bail!(
+                "Could not run the scheduled task that installs in your desktop session: {}",
+                String::from_utf8_lossy(&ran.stderr).trim()
+            );
+        }
+        Ok(task)
+    }
+}
+
+impl Drop for DesktopTask {
+    fn drop(&mut self) {
+        let _ = output(Command::new("schtasks.exe").args(["/Delete", "/F", "/TN", &self.name]));
+    }
+}
+
+/// Prints whatever was appended to `path` since `offset`.
+fn relay_new_output(path: &Path, offset: &mut u64) {
+    use std::io::{Read, Seek, SeekFrom, Write};
+    let Ok(mut file) = fs::File::open(path) else {
+        return;
+    };
+    if file.seek(SeekFrom::Start(*offset)).is_err() {
+        return;
+    }
+    let mut appended = Vec::new();
+    if file.read_to_end(&mut appended).is_ok() && !appended.is_empty() {
+        *offset += appended.len() as u64;
+        let mut stdout = std::io::stdout();
+        let _ = stdout.write_all(&appended);
+        let _ = stdout.flush();
+    }
+}
+
 impl Start {
+    /// CDXC:Build 2026-10-03 WHY:
+    /// A start running in Windows session 0 (an SSH shell, or a Ghostex terminal whose gxserver was started over SSH) has no desktop: it cannot show the administrator prompt the Program Files install needs, taskkill cannot ask the app's window to close, and the app it launches runs with no visible window. Such a start builds as usual and then runs `cargo xtask start --install-only` in the signed-in user's desktop session through a run-once interactive scheduled task, relaying its output and failing with its result. The relaunched app also gets the desktop session's environment instead of the terminal's.
+    pub fn hand_off_install_to_desktop(&self) -> Res {
+        self.log.step(&format!(
+            "Installing {} from your desktop session...",
+            self.app_name
+        ));
+        self.log.detail("This start runs in Windows session 0 (SSH, or a terminal of a gxserver started over SSH), which has no desktop. Approve the administrator prompt on the desktop when it appears.");
+        let handoff_dir = root()
+            .join("build")
+            .join("local-start-handoff")
+            .join(std::process::id().to_string());
+        let _ = fs::remove_dir_all(&handoff_dir);
+        fs::create_dir_all(&handoff_dir)?;
+        let log_path = handoff_dir.join("install.log");
+        let exit_code_path = handoff_dir.join("exit-code");
+        let script_path = handoff_dir.join("install.cmd");
+        let mut arguments = vec!["start".to_string(), "--install-only".to_string()];
+        if self.log.verbose {
+            arguments.push("--verbose".into());
+        }
+        if self.opts.profile {
+            arguments.push("--profile".into());
+        }
+        if let Some(config) = &self.isolated {
+            arguments.push(format!("--isolated={}", config.variant));
+        }
+        let mut script = format!(
+            "@echo off\r\ntitle Installing {} (cargo xtask start)\r\ncd /d \"{}\"\r\nset \"{DESKTOP_HANDOFF_ENV}=1\"\r\n",
+            self.app_name,
+            root().display()
+        );
+        // The task starts from the user's own environment; carry over only what decides where the app installs and keeps its state.
+        for key in ["GHOSTEX_INSTALL_DIR", "GHOSTEX_HOME"] {
+            if let Some(value) = env_trimmed(key) {
+                script += &format!("set \"{key}={value}\"\r\n");
+            }
+        }
+        script += &format!(
+            "\"{}\" {} > \"{}\" 2>&1\r\n> \"{}\" echo %ERRORLEVEL%\r\n",
+            std::env::current_exe()?.display(),
+            arguments.join(" "),
+            log_path.display(),
+            exit_code_path.display()
+        );
+        fs::write(&script_path, script)?;
+        let _task = DesktopTask::run(
+            format!("Ghostex local start {}", std::process::id()),
+            &script_path,
+        )?;
+        let started = std::time::Instant::now();
+        let mut offset = 0u64;
+        loop {
+            relay_new_output(&log_path, &mut offset);
+            if let Some(code) = fs::read_to_string(&exit_code_path)
+                .ok()
+                .and_then(|text| text.trim().parse::<i32>().ok())
+            {
+                relay_new_output(&log_path, &mut offset);
+                if code != 0 {
+                    bail!(
+                        "The install in your desktop session failed with exit code {code}. Full log: {}",
+                        log_path.display()
+                    );
+                }
+                let _ = fs::remove_dir_all(&handoff_dir);
+                return Ok(());
+            }
+            if !log_path.exists() && started.elapsed() > std::time::Duration::from_secs(30) {
+                bail!(
+                    "Windows did not start the install in a desktop session within 30 seconds. Sign in to this PC's desktop as {}, then rerun this start or run `cargo xtask start --install-only` in a terminal there.",
+                    env_trimmed("USERNAME").unwrap_or_else(|| "this user".into())
+                );
+            }
+            if started.elapsed() > std::time::Duration::from_secs(30 * 60) {
+                bail!(
+                    "The install in your desktop session did not finish within 30 minutes (was the administrator prompt answered?). It keeps running there and writes its result to {}",
+                    log_path.display()
+                );
+            }
+            util::sleep_ms(250);
+        }
+    }
+
     /// CDXC:PlatformSupport 2026-09-18:
     /// Local Windows development can be driven entirely by the WSL bash launcher. Query the product-specific image names with tasklist instead of using a PowerShell CIM pipeline; no other application ships these executable names, and taskkill closes each matching process before the staged directory is replaced.
     /// Supersedes the 2026-08-02 two-name list, which omitted ghostex-gpui-runtime.exe. An installed release runs Ghostex.exe only as the CEF-free bootstrap; the long-lived app is the runtime it launches. Killing just the bootstrap and the CEF helpers left the runtime alive, and it respawned its helpers faster than the exit wait polled, so every start failed with "Ghostex did not exit". GhostexEditor.exe is bundled under resources/ and holds open handles inside the install directory, which Windows will not let the installer replace.
@@ -354,8 +510,8 @@ impl Start {
                 let (Some(first), Some(pid)) = (fields.next(), fields.next()) else {
                     continue;
                 };
-                if first.starts_with('"')
-                    && first.len() > 1
+                // CDXC:PlatformSupport 2026-10-02 WHY: tasklist's IMAGENAME filter ignores case, so "Ghostex.exe" also matched the `ghostex.exe` CLI, including one a SYSTEM shell (an SSH remote call) ran in session 0 that taskkill cannot end, and the start refused to install. Only the exact image name is the app.
+                if first.strip_prefix('"') == Some(image)
                     && !pid.is_empty()
                     && pid.bytes().all(|b| b.is_ascii_digit())
                 {
@@ -450,24 +606,15 @@ impl Start {
 
     /// CDXC:ServerDaemon 2026-09-23 WHY:
     /// A previous daemon's shutdown could remove its replacement's runtime metadata while the replacement still owned its listening socket. Discover Windows listeners from the exact installed, staged, or managed CLI package executable's process, and retain that endpoint through shutdown polling; metadata disappearance is not proof the server stopped. This supersedes discovery solely from runtime/server.json.
+    ///
+    /// CDXC:ServerDaemon 2026-10-03 WHY:
+    /// The listeners and process paths are read with GetExtendedTcpTable and QueryFullProcessImageNameW. The PowerShell `Get-NetTCPConnection` used before goes through CIM, which refuses an SSH session's network logon token ("Cannot connect to CIM server. Access denied"), so every start run from a Ghostex terminal hosted by an SSH-started gxserver failed here after a full build.
     pub fn windows_gxserver_endpoints(&self) -> Res<Vec<(String, Option<u64>)>> {
         let data_dir = crate::gxserver::explicit_ghostex_home().unwrap_or_else(|| {
             crate::gxserver::local_app_data()
                 .join("Ghostex")
                 .join("Data")
         });
-        let script = r#"
-$ErrorActionPreference = 'Stop'
-$serverPaths = ConvertFrom-Json -InputObject $env:GHOSTEX_START_SERVER_PATHS
-$servers = @(Get-Process gxserver -ErrorAction SilentlyContinue | Where-Object { $_.Path -in $serverPaths })
-$listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)
-@($servers | ForEach-Object {
-  $serverProcess = $_
-  $listeners | Where-Object { $_.OwningProcess -eq $serverProcess.Id -and $_.LocalAddress -eq '127.0.0.1' } | ForEach-Object {
-    @{ pid = $serverProcess.Id; port = $_.LocalPort }
-  }
-}) | ConvertTo-Json -Compress
-"#;
         let server_paths: Vec<String> = [&self.installed_app_path, &self.app_path]
             .iter()
             .map(|dir| {
@@ -486,37 +633,26 @@ $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)
                     .display()
                     .to_string(),
             ))
+            .map(|path| path.to_lowercase())
             .collect();
-        let out = output(
-            Command::new("powershell.exe")
-                .args(["-NoProfile", "-NonInteractive", "-Command", script])
-                .env(
-                    "GHOSTEX_START_SERVER_PATHS",
-                    serde_json::to_string(&server_paths)?,
-                ),
-        )?;
-        if !out.status.success() {
-            bail!(
-                "Could not inspect Windows gxserver listeners: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
+        #[cfg(windows)]
+        {
+            let listeners = super::windows_native::loopback_listeners().map_err(|error| {
+                format!("Could not inspect Windows gxserver listeners: {error}")
+            })?;
+            Ok(listeners
+                .into_iter()
+                .filter(|(pid, _)| {
+                    super::windows_native::process_image_path(*pid)
+                        .is_some_and(|path| server_paths.contains(&path.to_lowercase()))
+                })
+                .map(|(pid, port)| (format!("http://127.0.0.1:{port}"), Some(u64::from(pid))))
+                .collect())
         }
-        let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        let parsed: serde_json::Value =
-            serde_json::from_str(if text.is_empty() { "[]" } else { &text })?;
-        let records = match parsed {
-            serde_json::Value::Array(items) => items,
-            other => vec![other],
-        };
-        Ok(records
-            .iter()
-            .filter_map(|record| {
-                let port = record.get("port")?.as_u64()?;
-                Some((
-                    format!("http://127.0.0.1:{port}"),
-                    record.get("pid").and_then(|p| p.as_u64()),
-                ))
-            })
-            .collect())
+        #[cfg(not(windows))]
+        {
+            let _ = server_paths;
+            bail!("gxserver listeners are inspected only by a native Windows start.")
+        }
     }
 }

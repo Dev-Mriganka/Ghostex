@@ -3,6 +3,8 @@
 mod close;
 mod install;
 mod windows;
+#[cfg(windows)]
+mod windows_native;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -48,7 +50,7 @@ pub struct Start {
     pub code_server_store_root: PathBuf,
 }
 
-const USAGE: &str = "cargo xtask start [--verbose|-v] [--profile] [--optimized] [--build-only] [--install-only (Linux)] [--isolated[=<variant>]] [--prepare-only (Windows)]";
+const USAGE: &str = "cargo xtask start [--verbose|-v] [--profile] [--optimized] [--build-only] [--install-only (Linux, Windows)] [--isolated[=<variant>]] [--prepare-only (Windows)]";
 
 pub fn run(args: &[String]) -> Res<i32> {
     if !(cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(windows)) {
@@ -80,8 +82,17 @@ pub fn run(args: &[String]) -> Res<i32> {
     if let Some(config) = &isolated {
         isolated::prepare(config)?;
     }
-    let _lock = acquire_start_lock("start")?;
-    check_client_storage()?;
+    // The desktop-session install a session-0 start hands off to runs while that start holds the lock and has already checked the sources.
+    let desktop_handoff = is_windows && env_trimmed(windows::DESKTOP_HANDOFF_ENV).is_some();
+    std::env::remove_var(windows::DESKTOP_HANDOFF_ENV);
+    let _lock = if desktop_handoff {
+        None
+    } else {
+        Some(acquire_start_lock("start")?)
+    };
+    if !desktop_handoff {
+        check_client_storage()?;
+    }
     if let Some(config) = &isolated {
         for (key, value) in &config.environment {
             std::env::set_var(key, value);
@@ -354,6 +365,12 @@ impl Start {
         if desktop_rust_build.is_some() {
             build.env("GHOSTEX_GPUI_USE_PREBUILT_RUST", "1");
         }
+        if self.targets_windows {
+            // CDXC:Build 2026-10-02 WHY: the Windows script compiles every Rust binary in release with its output hidden, which reads as a hang for several minutes; say so, and where to watch it.
+            self.log.detail(
+                "Compiling the Windows release binaries; this can take several minutes. Live output: build/local-start-logs/ (or rerun with --verbose).",
+            );
+        }
         self.log.run(
             &mut build,
             &format!("{} build", self.app_name),
@@ -381,12 +398,17 @@ impl Start {
     /// CDXC:Build 2026-10-02 WHY:
     /// `cargo xtask remote-start` builds on a rented Blacksmith machine and writes the result into the staged app here. Installing it must take the same path as a local start (close the running app, hand gxserver over, sync in place so live zmx sessions survive), so it reuses install_and_launch instead of copying files by hand.
     fn install_staged_build(&mut self) -> Res<i32> {
-        if self.is_darwin || self.targets_windows {
-            bail!("--install-only only installs Linux builds for now.");
+        if self.is_darwin || self.is_wsl {
+            bail!("--install-only only installs Linux and native Windows builds for now.");
         }
-        if !self.app_path.join(&self.app_name).exists() {
+        let staged_executable = if self.is_windows {
+            self.app_path.join("Ghostex.exe")
+        } else {
+            self.app_path.join(&self.app_name)
+        };
+        if !staged_executable.exists() {
             bail!(
-                "There is no staged build at {}. Run `cargo xtask remote-start` or `cargo xtask start` first.",
+                "There is no staged build at {}. Run `cargo xtask start --build-only` (or `cargo xtask remote-start` on Linux) first.",
                 self.app_path.display()
             );
         }

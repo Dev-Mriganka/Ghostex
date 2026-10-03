@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use super::Start;
+use super::{windows, Start};
 use crate::bail;
 use crate::gxserver;
 use crate::util::{self, home_dir, root, sleep_ms, Res, Summary};
@@ -13,6 +13,9 @@ use crate::util::{self, home_dir, root, sleep_ms, Res, Summary};
 impl Start {
     pub fn install_and_launch(&self) -> Res {
         let installed = self.installed_app_path.clone();
+        if self.is_windows && windows::runs_in_services_session()? {
+            return self.hand_off_install_to_desktop();
+        }
         if self.targets_windows {
             let target = self.windows_installed_app_path.clone().unwrap_or_default();
             self.close_running_bundle(
