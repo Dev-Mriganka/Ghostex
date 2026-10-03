@@ -158,6 +158,9 @@ fn build_libghostty_vt_with_zig(
     };
     let mut command = Command::new(&zig);
     command.current_dir(&ghostty_dir).arg("build");
+    if cfg!(windows) {
+        command.env("PATH", zig_build_path_without_untrusted_mount_points());
+    }
     if is_windows {
         // Release runners use Zig's stable x64 Windows host binary, including
         // under Windows 11 ARM emulation. Keep the archive architecture tied
@@ -222,6 +225,27 @@ fn build_libghostty_vt_with_zig(
         archive: built_archive,
         themes_dir: build_prefix.join("share/ghostty/themes"),
     }
+}
+
+/// CDXC:PlatformSupport 2026-10-03 WHY: A Windows process running with the RedirectionGuard mitigation (EnforceRedirectionTrust, inherited by every child, including agent sessions started under a gxserver that has it) may not traverse junctions a non-admin created, such as the Codex and cua-driver `bin` folders on PATH. Zig 0.16 opens every PATH folder while looking up `pkg-config`, maps the resulting STATUS_UNTRUSTED_MOUNT_POINT to `error.Unexpected` and aborts the whole libghostty-vt build (`translate-c wuffs_c.h … error: Unexpected`, `NTSTATUS=0xc00004bc`) instead of skipping the folder. Those folders are unusable to this process tree anyway, so zig gets PATH without exactly them and Cargo prints which ones were dropped.
+fn zig_build_path_without_untrusted_mount_points() -> std::ffi::OsString {
+    const ERROR_UNTRUSTED_MOUNT_POINT: i32 = 448;
+    let path = env::var_os("PATH").unwrap_or_default();
+    let entries: Vec<PathBuf> = env::split_paths(&path)
+        .filter(|entry| {
+            let untrusted = std::fs::read_dir(entry).is_err_and(|error| {
+                error.raw_os_error() == Some(ERROR_UNTRUSTED_MOUNT_POINT)
+            });
+            if untrusted {
+                println!(
+                    "cargo:warning=leaving {} out of zig's PATH: it goes through a junction this process may not traverse (Windows RedirectionGuard), which makes zig 0.16 abort",
+                    entry.display()
+                );
+            }
+            !untrusted
+        })
+        .collect();
+    env::join_paths(entries).expect("PATH entries came from PATH")
 }
 
 /// Generate a compact Rust lookup table from Ghostty's audited theme files.
