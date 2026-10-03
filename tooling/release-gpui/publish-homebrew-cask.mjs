@@ -604,15 +604,34 @@ async function main() {
         'fork, with contents and pull-request write access. See tooling/release-gpui/homebrew-cask-setup.md.'
     );
   }
-  await publishOfficialCask({
+  /*
+   * CDXC:Release 2026-10-03 WHY:
+   * The personal tap is pushed even when the official-cask pull request fails, and the
+   * failure is rethrown afterwards. From 10.0.1 on, `POST repos/<fork>/git/refs` answered
+   * HTTP 404 on every release; the throw left the tap push below it unreachable, so the
+   * tap only advanced when someone ran tooling/release-gpui-homebrew.mjs by hand.
+   */
+  const officialRequest = {
     checks: { audited: Boolean(options.audited), styled: Boolean(options.styled) },
     dryRun,
     render: options.render,
     sha256,
     token: caskToken,
     version,
-  });
-  if (options.render) return;
+  };
+  if (options.render) {
+    await publishOfficialCask(officialRequest);
+    return;
+  }
+  let officialFailure = null;
+  try {
+    await publishOfficialCask(officialRequest);
+  } catch (error) {
+    officialFailure = error;
+    process.stderr.write(
+      `The official cask update failed; still updating the personal tap: ${error instanceof Error ? error.message : String(error)}\n`
+    );
+  }
   await publishPersonalTap({
     dryRun,
     sha256,
@@ -620,6 +639,7 @@ async function main() {
     version,
   });
   if (dryRun && !options.publish) process.stdout.write('Pass --publish to open the pull request and push the tap.\n');
+  if (officialFailure) throw officialFailure;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
