@@ -195,12 +195,19 @@ impl GhostexGpuiApp {
         control: GpuiWindowCaptionControl,
         _cx: &mut gpui::Context<Self>,
     ) -> AnyElement {
+        /*
+        CDXC:Titlebar 2026-10-03 DECISION:
+        User: on Windows the maximize, minimize and close buttons reach the very top right corner of the app while their icons stay centered. Each button fills the band's full height instead of a 27px button centered in it, so throwing the pointer into the top-right corner lands on Close. Linux client decorations keep the 27px button inside their rounded frame.
+        */
         let button = div()
             .id(control.element_id())
             .relative()
             .flex()
             .flex_shrink_0()
-            .h(px(TITLEBAR_CONTROL_HEIGHT))
+            .when(cfg!(target_os = "windows"), |this| this.h_full())
+            .when(!cfg!(target_os = "windows"), |this| {
+                this.h(px(TITLEBAR_CONTROL_HEIGHT))
+            })
             .w(px(TITLEBAR_WINDOW_BUTTON_WIDTH))
             .items_center()
             .justify_center()
