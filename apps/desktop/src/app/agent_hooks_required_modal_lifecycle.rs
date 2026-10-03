@@ -1,5 +1,5 @@
 //! Open, close, and sidebar bridge plumbing for the native Install Hooks prompt.
-//! SEE-ALSO: apps/desktop/src/app/window/agent_hooks_required_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), the `confirmAgentHookLaunch` arm in apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (the React host's route, mirrored here).
+//! SEE-ALSO: apps/desktop/src/app/window/agent_hooks_required_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), the `confirmAgentHookLaunch` arm in apps/desktop/src/app/delayed_send/app_modal_sidebar_command/dialogs.rs (the React host's route, mirrored here).
 use crate::app::window::*;
 use crate::*;
 

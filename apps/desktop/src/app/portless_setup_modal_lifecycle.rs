@@ -1,5 +1,5 @@
 //! Open, close, and Portless action plumbing for the native Portless Setup prompt.
-//! SEE-ALSO: apps/desktop/src/app/window/portless_setup_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), `maybe_open_gpui_portless_setup_prompt` and the action handlers in apps/desktop/src/app/os_integration/notifications_and_portless.rs, and the `runPortlessSetupPromptAdminAction` / `setPortlessEnabled` / `postponePortlessSetupPrompt` arms in apps/desktop/src/app/delayed_send/app_modal_sidebar_command.rs (the React host's routes, mirrored here).
+//! SEE-ALSO: apps/desktop/src/app/window/portless_setup_modal.rs (the window entity and its decision record), apps/desktop/src/app/native_app_modal_lifecycle.rs (the shared window path), `maybe_open_gpui_portless_setup_prompt` and the action handlers in apps/desktop/src/app/os_integration/notifications_and_portless.rs, and the `runPortlessSetupPromptAdminAction` / `setPortlessEnabled` / `postponePortlessSetupPrompt` arms in apps/desktop/src/app/delayed_send/app_modal_sidebar_command/settings.rs (the React host's routes, mirrored here).
 use crate::app::window::*;
 use crate::*;
 
