@@ -62,8 +62,9 @@ pub enum SessionChatSendStep {
     AlignQuestionRow(crate::session_chat_question_row_align::QuestionRowTarget),
     /// See CDXC:SessionChat in session_chat_claude_question_prep.rs.
     PrepareClaudeQuestion(crate::session_chat_claude_question_prep::ClaudeQuestionPrep),
-    /// Read Codex's input box after the Return; see session_chat_send_submit.rs.
-    VerifyCodexSubmitted {
+    /// Read Codex's or Claude Code's input box after the Return; see session_chat_send_submit.rs.
+    VerifySubmitted {
+        agent: String,
         text: String,
     },
     /// Close a positively identified Claude Code panel whose Escape is safe (Settings, or
@@ -282,10 +283,12 @@ pub fn build_session_chat_message_steps(
             .unwrap_or(SessionChatSendStep::SleepMs(SESSION_CHAT_SUBMIT_DELAY_MS)),
     );
     steps.push(SessionChatSendStep::Write(SESSION_CHAT_SUBMIT.to_string()));
-    if !text.trim().is_empty()
-        && crate::agents::identity::normalize_agent_id(agent).as_deref() == Some("codex")
+    if let Some(agent) = crate::agents::identity::normalize_agent_id(agent)
+        .filter(|agent| crate::session_chat_send_submit::verifies_submission(agent))
+        .filter(|_| !text.trim().is_empty())
     {
-        steps.push(SessionChatSendStep::VerifyCodexSubmitted {
+        steps.push(SessionChatSendStep::VerifySubmitted {
+            agent,
             text: text.to_string(),
         });
     }

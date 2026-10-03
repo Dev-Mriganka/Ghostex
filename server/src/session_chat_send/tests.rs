@@ -112,6 +112,10 @@ fn message_steps_verify_the_paste_before_the_separate_enter() {
                 timeout_ms: 2_000,
             },
             SessionChatSendStep::Write("\r".to_string()),
+            SessionChatSendStep::VerifySubmitted {
+                agent: "claude".to_string(),
+                text: "hi".to_string(),
+            },
         ]
     );
     let with_images = build_session_chat_message_steps(
@@ -142,6 +146,10 @@ fn message_steps_verify_the_paste_before_the_separate_enter() {
                 timeout_ms: 2_000,
             },
             SessionChatSendStep::Write("\r".to_string()),
+            SessionChatSendStep::VerifySubmitted {
+                agent: "claude".to_string(),
+                text: "what is this".to_string(),
+            },
         ]
     );
     // Images without text: no body write, nothing on screen to verify, so

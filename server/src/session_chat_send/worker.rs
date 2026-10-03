@@ -544,8 +544,9 @@ pub(super) async fn run_session_chat_send_worker(
                         break;
                     }
                 }
-                SessionChatSendStep::VerifyCodexSubmitted { text } => {
-                    if let Err(error) = crate::session_chat_send_submit::confirm_codex_submitted(
+                SessionChatSendStep::VerifySubmitted { agent, text } => {
+                    if let Err(error) = crate::session_chat_send_submit::confirm_submitted(
+                        &agent,
                         &project_id,
                         &session_id,
                         &zmx_name,

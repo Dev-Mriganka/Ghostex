@@ -88,8 +88,23 @@ DELIVERY
   Prefer this agent-aware command over raw Escape, which can do something
   else when idle. An accepted interrupt does not prove the agent has stopped.
 
-  Accepted or queued does not mean read, acknowledged, or completed.
+  RESULT status (a default or --interrupt send waits up to 10 seconds for
+  the recipient's transcript):
+    delivered   The recipient's transcript shows the message.
+    accepted    The agent took the message but has not recorded it yet,
+                usually because it is busy; it gets it at its next boundary.
+    pending     The recipient is still starting; Ghostex types the message
+                as soon as its input box appears.
+    queued      Sent with --queue.
+  A message the agent did not take (Claude Code or Codex left it in its
+  input box, a blocking dialog) fails with the reason instead.
+  None of these means read, acknowledged, or completed.
   Blocking prompts can prevent delivery. Inspect chat and queue before retrying.
+
+  Control characters in the text (other than newline and tab) are sent as
+  visible signs such as ␌, never as keys. In PowerShell a backtick inside
+  double quotes is an escape (`f is a form feed): use --body-file or single
+  quotes for text that contains backticks.
 
 READ AND REPLY
   ghostex read-session-chat <session-ref> --limit 20 --json

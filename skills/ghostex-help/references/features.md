@@ -1348,7 +1348,10 @@ message. Use `--body-file` for multiline messages, `--interrupt` for an urgent
 correction, or `--queue` to leave the message waiting until the current turn
 finishes. A queued message waits as long as that turn does, so send normally
 unless the point is to have the next task ready for an agent whose final
-message you have already read. If Ghostex cannot deliver
+message you have already read. A send reports `delivered` once the recipient's
+transcript shows the message, `accepted` when the agent took it but has not
+recorded it yet (usually because it is busy), `pending` while a waking agent is
+still starting, and fails with the reason when the agent did not take it. If Ghostex cannot deliver
 a queued message, the row stays in the recipient's queue marked Not delivered
 with Retry and Delete, and the sending agent gets a note saying so. `agents close
 <session-ref>` ends that session, including any unfinished work. `ghostex read-session-chat` and `ghostex read-text` read replies.

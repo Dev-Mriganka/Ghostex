@@ -3,24 +3,34 @@
 use std::time::{Duration, Instant};
 
 use crate::session_chat_send::{
-    capture_session_terminal_text_vt, normalize_session_chat_screen_text,
-    session_chat_paste_needles, write_session_chat_payload, SessionChatSendError,
-    SessionChatSendFailure, SESSION_CHAT_SUBMIT,
+    build_agent_tui_clear_input_for_text, capture_session_terminal_text_vt,
+    normalize_session_chat_screen_text, session_chat_paste_needles, write_session_chat_payload,
+    SessionChatSendError, SessionChatSendFailure, SESSION_CHAT_SUBMIT,
 };
 
-/// Codex clears its input box within a frame of taking a submission; the window only has to
-/// outlast a slow repaint.
+/// Codex and Claude Code clear their input box within a frame of taking a submission; the window
+/// only has to outlast a slow repaint.
 const SUBMIT_CHECK_WINDOW: Duration = Duration::from_millis(1_500);
 const SUBMIT_CHECK_POLL: Duration = Duration::from_millis(150);
 /// Screen lines kept in the diagnostics entry.
 const SUBMIT_CHECK_TAIL_LINES: usize = 30;
+/// Claude Code's collapsed large-paste placeholder, normalized and lowercased.
+const CLAUDE_PASTED_PLACEHOLDER: &str = "[pastedtext";
 
 const CODEX_KEPT_MESSAGE: &str = "Codex kept the message in its input box instead of sending it. Press Enter in the terminal to send it.";
+const CLAUDE_KEPT_MESSAGE: &str = "Claude Code kept the message in its input box instead of sending it, so nothing was sent and Ghostex cleared that input box.";
+
+/// The agents whose input box a send reads back after its Return.
+pub(crate) fn verifies_submission(agent: &str) -> bool {
+    matches!(agent, "codex" | "claude" | "openclaude")
+}
 
 /// CDXC:SessionChat 2026-09-26 DECISION:
 /// User: a Codex message must never again show as sent in the chat while it sits unsent in the CLI's input box ("my message was in the input box of the cli just needed to hit enter"). After the Return, the send reads Codex's input box; if the message is still there, it presses Return once more, as the user had to, logs the screen so the cause can be fixed at its source, and reports a failure if Codex still keeps it.
-/// WHY: Codex only: its input box is read from styled cells, so a history row that repeats the message is never mistaken for it. A screen that cannot be read, or an input box that is gone (a working Codex, a dialog), counts as taken, so this never blocks a message it cannot see.
-pub(crate) async fn confirm_codex_submitted(
+/// WHY: the input box is read from its own region (Codex's styled cells, Claude Code's rule-bounded box), so a history row that repeats the message is never mistaken for it. A screen that cannot be read, or an input box that is gone (a working Codex, a dialog), counts as taken, so this never blocks a message it cannot see.
+/// CDXC:SessionChat 2026-10-04 WHY: Claude Code takes the same check. A `ghostex agents send` whose paste Claude would not submit (a form feed in it; see `picture_terminal_control_characters`) answered "accepted" while the message sat in Claude's input box, until the delivery watchdog handed it back to the chat composer as a draft. Claude's input box is cleared when it still holds the message after the second Return, because pressing Enter there would not send it either and the failure already says nothing was sent.
+pub(crate) async fn confirm_submitted(
+    agent: &str,
     project_id: &str,
     session_id: &str,
     zmx_name: &str,
@@ -32,14 +42,17 @@ pub(crate) async fn confirm_codex_submitted(
     if needles.is_empty() {
         return Ok(());
     }
-    let Some(screen) = message_still_held(zmx_name, &needles, cancelled).await else {
+    let Some(screen) = message_still_held(agent, zmx_name, &needles, cancelled).await else {
         return Ok(());
     };
     crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
         "sessionChatSendPressedEnterAgain",
         project_id,
         session_id,
-        "Codex kept the message in its input box after Return.",
+        &format!(
+            "{} kept the message in its input box after Return.",
+            agent_name(agent)
+        ),
         &screen_tail(&screen),
     );
     write_session_chat_payload(
@@ -51,25 +64,49 @@ pub(crate) async fn confirm_codex_submitted(
     )
     .await
     .map_err(|message| SessionChatSendError::new(SessionChatSendFailure::Write, message))?;
-    let Some(screen) = message_still_held(zmx_name, &needles, cancelled).await else {
+    let Some(screen) = message_still_held(agent, zmx_name, &needles, cancelled).await else {
         return Ok(());
+    };
+    let kept = if agent == "codex" {
+        CODEX_KEPT_MESSAGE
+    } else {
+        // The returned-prompt detector would otherwise find this text in the box later and hand it
+        // to the chat composer as a draft the sender never sees.
+        let _ = write_session_chat_payload(
+            project_id,
+            session_id,
+            zmx_name,
+            source,
+            &build_agent_tui_clear_input_for_text(text),
+        )
+        .await;
+        CLAUDE_KEPT_MESSAGE
     };
     crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
         "sessionChatSendNotSubmitted",
         project_id,
         session_id,
-        CODEX_KEPT_MESSAGE,
+        kept,
         &screen_tail(&screen),
     );
     Err(SessionChatSendError::new(
         SessionChatSendFailure::Write,
-        CODEX_KEPT_MESSAGE.to_string(),
+        kept.to_string(),
     ))
 }
 
-/// The screen that still shows the message in Codex's input box once the window has passed, or
-/// `None` as soon as the box no longer holds it (or cannot be read, or the send was cancelled).
+fn agent_name(agent: &str) -> &'static str {
+    if agent == "codex" {
+        "Codex"
+    } else {
+        "Claude Code"
+    }
+}
+
+/// The screen that still shows the message in the agent's input box once the window has passed,
+/// or `None` as soon as the box no longer holds it (or cannot be read, or the send was cancelled).
 async fn message_still_held(
+    agent: &str,
     zmx_name: &str,
     needles: &[String],
     cancelled: &(dyn Fn() -> bool + Send + Sync),
@@ -81,10 +118,11 @@ async fn message_still_held(
             return None;
         }
         let screen = capture_session_terminal_text_vt(zmx_name).await?;
-        let input = crate::session_chat_composer::session_chat_composer_input("codex", &screen)?;
+        let input = crate::session_chat_composer::session_chat_composer_input(agent, &screen)?;
         let held = !input.is_empty() && {
             let typed = normalize_session_chat_screen_text(&input.text);
             needles.iter().any(|needle| typed.contains(needle.as_str()))
+                || (agent != "codex" && typed.to_lowercase().contains(CLAUDE_PASTED_PLACEHOLDER))
         };
         if !held {
             return None;

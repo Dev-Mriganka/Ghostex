@@ -161,6 +161,11 @@ pub(crate) async fn send_session_chat_message_with_draft(
         &agent_text,
     )
     .map_or(agent_text, std::borrow::Cow::Owned);
+    let agent_text = match crate::session_chat_send::picture_terminal_control_characters(&agent_text)
+    {
+        std::borrow::Cow::Owned(pictured) => std::borrow::Cow::Owned(pictured),
+        std::borrow::Cow::Borrowed(_) => agent_text,
+    };
     let text = agent_text.as_ref();
     /*
     CDXC:AgentScreenDetection 2026-08-19:

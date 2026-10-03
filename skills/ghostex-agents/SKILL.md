@@ -87,9 +87,14 @@ the waiting habits below.
    sender sees nothing but "queued". If an older Ghostex refuses a send because
    the session is not running, run `ghostex wake <ref>` and send it again with
    the default once the session is running; do not switch to `--queue`.
-6. **Confirm delivery.** Accepted or queued does not mean read. Read the
-   session chat (or the queue) after sending before you assume the agent is
-   working on it, and before you ever send the same message again.
+6. **Confirm delivery.** Newer CLIs answer `delivered` once the recipient's
+   transcript shows the message; `accepted`, `pending`, and `queued` mean it
+   is not there yet, and older CLIs only ever say `accepted` or `queued`.
+   Unless the result says `delivered`, read the session chat (or the queue)
+   before you assume the agent is working on it, and before you ever send the
+   same message again. None of these means the agent has read it. In
+   PowerShell, send text containing backticks with `--body-file` or single
+   quotes: inside double quotes a backtick is an escape character.
 7. **Wait on a signal, not a guess.** Ask the agent to send its result back to
    you with `ghostex agents send <the Reply to ref from its header>` when it
    finishes, and to end its final message with a unique last line (for example

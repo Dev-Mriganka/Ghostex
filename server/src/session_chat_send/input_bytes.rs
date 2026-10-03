@@ -50,9 +50,32 @@ pub fn build_agent_tui_clear_input_for_text(text: &str) -> String {
 // ---------------------------------------------------------------------------
 
 /// An embedded ESC (e.g. a pasted `\x1b[201~` from scrollback) would close
-/// the paste frame early and run the tail as KEYSTROKES; replace with ␛.
+/// the paste frame early and run the tail as KEYSTROKES; it becomes ␛, and
+/// every other control character its Control Pictures sign the same way.
 pub fn sanitize_bracketed_paste_text(text: &str) -> String {
-    text.replace('\u{1b}', "\u{241b}")
+    picture_terminal_control_characters(text).into_owned()
+}
+
+/// CDXC:SessionChat 2026-10-04 WHY:
+/// A control character in a message reaches the agent CLI as a keystroke, not as text: a form feed that PowerShell made out of a backticked `fsutil` sat in a `ghostex agents send` paste, and Claude Code then ignored every Return, so the message stayed in its input box while the sender was told "accepted". Every C0 control except tab, line feed and carriage return, and DEL, is therefore written as its visible Control Pictures sign (U+2400 block, ␌ for a form feed), the rule ESC already followed: the agent still sees that something was there, and nothing in the text can act as a key. Applied where the send decides what the agent is handed (session_chat_queue_runtime/send.rs), so the paste check and the delivery watchdog compare the same text the terminal shows.
+pub fn picture_terminal_control_characters(text: &str) -> std::borrow::Cow<'_, str> {
+    let is_key = |character: char| {
+        character.is_ascii_control() && !matches!(character, '\t' | '\n' | '\r')
+    };
+    if !text.contains(is_key) {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    std::borrow::Cow::Owned(
+        text.chars()
+            .map(|character| match character {
+                '\u{7f}' => '\u{2421}',
+                character if is_key(character) => {
+                    char::from_u32(0x2400 + character as u32).unwrap_or('\u{fffd}')
+                }
+                character => character,
+            })
+            .collect(),
+    )
 }
 
 /// xterm's native paste converts every clipboard newline to CR; direct frames
