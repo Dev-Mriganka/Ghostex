@@ -3525,9 +3525,14 @@ impl Element for TerminalElement {
             // uses a transparent Glass surface. A Metal compile failure still
             // shows this usable, unshaded capture; the off switch restores the
             // ordinary Glass path below.
-            window.paint_effect(bounds, effect, |window| {
+            let mut paint_content = |window: &mut Window| {
                 self.paint_content(bounds, &prepaint.layout, Some(background_alpha), window, cx);
-            });
+            };
+            if let Some(effect) = effect {
+                window.paint_effect(bounds, effect, paint_content);
+            } else {
+                paint_content(window);
+            }
             return;
         }
         self.paint_content(bounds, &prepaint.layout, None, window, cx);
@@ -3699,21 +3704,36 @@ impl TerminalElement {
         layout: &TerminalLayout,
         window: &mut Window,
         cx: &mut App,
-    ) -> Option<(gpui::ShaderEffect, f32)> {
+    ) -> Option<(Option<gpui::ShaderEffect>, f32)> {
         use crate::terminal_shaders::{ShaderAnimation, ShaderCursor};
 
         // Every terminal paints through here on every frame; with shaders off
         // (the default) leave before touching the window or leasing the view.
-        if self.terminal.read(cx).settings.shaders.is_none() || !window.supports_shader_effects() {
+        let view = self.terminal.read(cx);
+        let background_alpha = view
+            .settings
+            .shaders
+            .as_ref()
+            .filter(|settings| settings.enabled)?
+            .background_alpha;
+        if !window.supports_shader_effects() || view.frame.is_none() {
             return None;
         }
         let canvas = window.shader_effect_size(bounds);
+        // Match GPUI's texture eligibility before advancing uniforms or
+        // scheduling an animation the renderer cannot display.
+        if canvas.width.0 <= 0
+            || canvas.height.0 <= 0
+            || canvas.width.0 > gpui::MAX_SHADER_EFFECT_TEXTURE_SIZE
+            || canvas.height.0 > gpui::MAX_SHADER_EFFECT_TEXTURE_SIZE
+        {
+            // GPUI previously painted this unshaded with the shader alpha.
+            // Keep that background treatment without preparing an effect.
+            return Some((None, background_alpha));
+        }
         let scale = window.scale_factor();
         self.terminal.update(cx, |view, _| {
             let settings = view.settings.shaders.as_ref()?;
-            if !settings.enabled {
-                return None;
-            }
             let snapshot = view.frame.as_ref()?;
             let focused = view.focused && window.is_window_active();
             let cursor = layout.cursor.as_ref().map(|cursor| {
@@ -3748,7 +3768,7 @@ impl TerminalElement {
                 window.request_animation_frame();
             }
             Some((
-                gpui::ShaderEffect {
+                Some(gpui::ShaderEffect {
                     id: view.shader_state.id,
                     shaders: settings.sources.clone(),
                     uniforms: view.shader_state.uniforms(
@@ -3758,8 +3778,8 @@ impl TerminalElement {
                         animate,
                         snapshot,
                     ),
-                },
-                settings.background_alpha,
+                }),
+                background_alpha,
             ))
         })
     }
