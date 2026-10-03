@@ -198,9 +198,14 @@ impl GhostexGpuiApp {
         /*
         CDXC:Titlebar 2026-10-03 DECISION:
         User: on Windows the maximize, minimize and close buttons reach the very top right corner of the app while their icons stay centered. Each button fills the band's full height instead of a 27px button centered in it, so throwing the pointer into the top-right corner lands on Close. Linux client decorations keep the 27px button inside their rounded frame.
+        User: "yes" to making the Close button turn red on hover like standard Windows. On Windows, hovering Close fills it with the Windows close red (#C42B1C, pressed #B22A1B) and turns the glyph white in light and dark themes; minimize and maximize keep the shared titlebar hover. Linux keeps the shared hover for Close too, because GNOME and KDE style it differently.
         */
+        let windows_close =
+            cfg!(target_os = "windows") && matches!(control, GpuiWindowCaptionControl::Close);
+        let group_name = control.element_id();
         let button = div()
             .id(control.element_id())
+            .group(group_name)
             .relative()
             .flex()
             .flex_shrink_0()
@@ -214,15 +219,26 @@ impl GhostexGpuiApp {
             .occlude()
             .text_color(titlebar_icon_color())
             .cursor_default()
-            .hover(|this| {
-                this.bg(titlebar_button_hover_color())
-                    .text_color(titlebar_icon_hover_color())
+            .hover(move |this| {
+                if windows_close {
+                    this.bg(rgb(0xC42B1C)).text_color(gpui::white())
+                } else {
+                    this.bg(titlebar_button_hover_color())
+                        .text_color(titlebar_icon_hover_color())
+                }
             })
-            .child(titlebar_svg_icon(
-                control.icon_path(),
-                control.icon_size(),
-                titlebar_icon_color(),
-            ));
+            .when(windows_close, |this| {
+                this.active(|this| this.bg(rgb(0xB22A1B)))
+            })
+            .child(
+                svg()
+                    .size(px(control.icon_size()))
+                    .path(control.icon_path())
+                    .text_color(titlebar_icon_color())
+                    .when(windows_close, |this| {
+                        this.group_hover(group_name, |this| this.text_color(gpui::white()))
+                    }),
+            );
 
         #[cfg(target_os = "windows")]
         {
