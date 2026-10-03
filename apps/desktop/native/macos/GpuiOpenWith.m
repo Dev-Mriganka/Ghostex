@@ -10,7 +10,8 @@
  browsers for the file's link, and the apps registered for its extension (asked by extension
  because a remote file has no local copy). Launch Services is the only source of that list; Rust
  receives one UTF-8 string of `name\tpath` lines and frees it with `ghostex_open_with_free`.
- SEE-ALSO: apps/desktop/src/app/native_docs/open_externally.rs.
+ SEE-ALSO: apps/desktop/src/app/native_docs/open_externally.rs, and
+ apps/desktop/src/app/browser_site_requests.rs, which asks it for the app a web page's app link opens.
 */
 char *ghostex_open_with_applications(const char *target, bool is_url) {
   @autoreleasepool {

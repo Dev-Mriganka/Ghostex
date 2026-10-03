@@ -274,7 +274,7 @@ wrap_life_span_handler! {
 
         fn on_before_popup(
             &self,
-            _browser: Option<&mut cef::Browser>,
+            browser: Option<&mut cef::Browser>,
             _frame: Option<&mut Frame>,
             _popup_id: c_int,
             target_url: Option<&CefString>,
@@ -297,6 +297,9 @@ wrap_life_span_handler! {
             */
             if let Some(no_javascript_access) = no_javascript_access {
                 *no_javascript_access = 1;
+            }
+            if dispatch_external_app_popup(browser, target_url) {
+                return 1;
             }
 
             if let (Some(popup_open_handler), Some(requested_url)) = (
@@ -450,6 +453,26 @@ wrap_permission_handler! {
             callback: Option<&mut PermissionPromptCallback>,
         ) -> c_int {
             let requesting_origin = requesting_origin.map(CefString::to_string).unwrap_or_default();
+            // Local Network Access (CDXC:Browser 2026-10-03 in site_requests.rs): asked in the app
+            // when the prompt is for nothing else.
+            let loopback_network = PermissionRequestTypes::LOOPBACK_NETWORK.get_raw() as u32;
+            let local_network = PermissionRequestTypes::LOCAL_NETWORK.get_raw() as u32
+                | PermissionRequestTypes::LOCAL_NETWORK_ACCESS_DEPRECATED.get_raw() as u32;
+            if requested_permissions != 0
+                && requested_permissions & !(loopback_network | local_network) == 0
+            {
+                let Some(callback) = callback else {
+                    return 0;
+                };
+                dispatch_browser_site_request(BrowserSiteRequest::LocalNetworkAccess(
+                    BrowserLocalNetworkAccessRequest {
+                        origin: requesting_origin,
+                        local_network: requested_permissions & local_network != 0,
+                        callback: Some(callback.clone()),
+                    },
+                ));
+                return 1;
+            }
             /*
             macOS `GhostexCEFBrowserClient::OnShowPermissionPrompt` parity: only
             clipboard prompts are decided here (anything else keeps CEF's

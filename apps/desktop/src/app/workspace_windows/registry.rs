@@ -513,6 +513,7 @@ impl GhostexGpuiApp {
     /// pointer crossings, notification clicks, Reduce Motion, power events, Sparkle and the
     /// operating system's URL and file opens.
     pub(crate) fn register_app_wide_callback_targets(&self, cx: &mut Context<Self>) {
+        crate::app::browser_site_requests::register_browser_site_request_handler(cx);
         #[cfg(target_os = "macos")]
         {
             register_gpui_menu_bar_status_callback_target(cx.weak_entity(), cx.to_async());
@@ -529,8 +530,6 @@ impl GhostexGpuiApp {
             register_gpui_sparkle_updater_callback_target(cx.weak_entity(), cx.to_async());
             register_gpui_os_integration_callback_target(cx.weak_entity(), cx.to_async());
         }
-        #[cfg(not(target_os = "macos"))]
-        let _ = cx;
     }
 
     /// The lead closed and this is the oldest remaining window: it runs the app-wide work from now

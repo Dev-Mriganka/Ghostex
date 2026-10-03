@@ -421,14 +421,30 @@ wrap_request_handler! {
     }
 
     impl RequestHandler {
-        fn on_open_urlfrom_tab(
+        fn resource_request_handler(
             &self,
             _browser: Option<&mut cef::Browser>,
+            _frame: Option<&mut Frame>,
+            request: Option<&mut Request>,
+            _is_navigation: c_int,
+            _is_download: c_int,
+            _request_initiator: Option<&CefString>,
+            _disable_default_handling: Option<&mut c_int>,
+        ) -> Option<ResourceRequestHandler> {
+            external_app_resource_request_handler(request)
+        }
+
+        fn on_open_urlfrom_tab(
+            &self,
+            browser: Option<&mut cef::Browser>,
             _frame: Option<&mut Frame>,
             target_url: Option<&CefString>,
             target_disposition: WindowOpenDisposition,
             _user_gesture: c_int,
         ) -> c_int {
+            if dispatch_external_app_popup(browser, target_url) {
+                return 1;
+            }
             /*
             CDXC:Browser 2026-08-18:
             Chromium reports middle-click and Cmd/Ctrl-click link opens here,
@@ -518,12 +534,14 @@ wrap_request_handler! {
             _request_initiator: Option<&CefString>,
             _disable_default_handling: Option<&mut c_int>,
         ) -> Option<ResourceRequestHandler> {
-            let request_url = request
-                .map(|request| CefString::from(&request.url()).to_string())
-                .unwrap_or_default();
-            request_url.starts_with(MANAGE_DOCS_RESOURCE_BASE_URL).then(|| {
-                GhostexManageDocsResourceRequestHandler::new(self.source.clone())
-            })
+            let Some(request) = request else {
+                return None;
+            };
+            let request_url = CefString::from(&request.url()).to_string();
+            if request_url.starts_with(MANAGE_DOCS_RESOURCE_BASE_URL) {
+                return Some(GhostexManageDocsResourceRequestHandler::new(self.source.clone()));
+            }
+            external_app_resource_request_handler(Some(request))
         }
     }
 }

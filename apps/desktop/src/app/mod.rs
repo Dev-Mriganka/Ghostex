@@ -32,6 +32,7 @@ pub(crate) mod app_new;
 pub(crate) mod browser_history;
 pub(crate) mod browser_history_modal_lifecycle;
 pub(crate) mod browser_pane;
+pub(crate) mod browser_site_requests;
 pub(crate) mod browser_parked_runtime;
 pub(crate) mod cef_deferred_startup;
 pub(crate) mod chrome_input_focus;

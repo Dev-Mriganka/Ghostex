@@ -183,20 +183,17 @@ impl CefBrowser {
             background_color
         };
         /*
-        CDXC:Browser 2026-07-27:
-        The permission handler now serves independent surfaces: the
-        code-server clipboard grant (trusted origin only) and Browser-pane
-        microphone/camera prompts, plus bundled sidebar/session-chat loopback
-        access. Install it when any is in play, and keep the decisions
-        independent inside the handler.
+        CDXC:Browser 2026-10-03:
+        The permission handler serves independent decisions: the code-server
+        clipboard grant (trusted origin only), Browser-pane microphone/camera
+        prompts, and the Local Network Access prompt every page can raise
+        (CDXC:Browser 2026-10-03 in site_requests.rs), which is why every
+        browser gets one now. Keep the decisions independent inside it.
         */
-        let permission_handler =
-            (trusted_clipboard_origin.is_some() || media_access_handler.is_some()).then(|| {
-                GhostexGpuiPermissionHandler::new(
-                    trusted_clipboard_origin.clone(),
-                    media_access_handler,
-                )
-            });
+        let permission_handler = Some(GhostexGpuiPermissionHandler::new(
+            trusted_clipboard_origin.clone(),
+            media_access_handler,
+        ));
         let context_menu_handler = GhostexGpuiContextMenuHandler::new(popup_open_handler.clone());
         let display_handler = page_metadata_handler.as_ref().map(|handler| {
             GhostexGpuiDisplayHandler::new(handler.clone(), Cell::new(uses_system_page_appearance))
@@ -218,7 +215,9 @@ impl CefBrowser {
                 popup_open_handler
                     .clone()
                     .map(GhostexGpuiBrowserRequestHandler::new)
-            });
+            })
+            // Every other page still hands app links to the OS (site_requests.rs).
+            .or_else(|| Some(GhostexGpuiExternalAppRequestHandler::new()));
         let keyboard_handler =
             surface_keyboard_handler(keyboard_zoom_enabled, page_metadata_handler.clone());
         let browser_lifecycle_handler = page_metadata_handler.clone();

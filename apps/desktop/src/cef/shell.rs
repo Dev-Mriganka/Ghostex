@@ -126,6 +126,7 @@ mod native_view;
 mod page_keep_awake;
 mod remote_browser;
 mod request_handling;
+mod site_requests;
 mod v8_bridges;
 
 pub(crate) use browser::*;
@@ -138,4 +139,5 @@ pub(crate) use native_view::*;
 pub(crate) use page_keep_awake::*;
 pub(crate) use remote_browser::*;
 pub(crate) use request_handling::*;
+pub(crate) use site_requests::*;
 pub(crate) use v8_bridges::*;

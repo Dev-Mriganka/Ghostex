@@ -23,14 +23,14 @@ thread_local! {
 }
 
 /// One app Open With offers.
-struct OpenWithApp {
-    name: String,
+pub(crate) struct OpenWithApp {
+    pub(crate) name: String,
     path: PathBuf,
 }
 
 /// The apps Launch Services offers for a link (`is_url`) or a file extension, the default first.
 #[cfg(target_os = "macos")]
-fn open_with_applications(target: &str, is_url: bool) -> Vec<OpenWithApp> {
+pub(crate) fn open_with_applications(target: &str, is_url: bool) -> Vec<OpenWithApp> {
     use std::ffi::{CStr, CString, c_char};
     unsafe extern "C" {
         fn ghostex_open_with_applications(target: *const c_char, is_url: bool) -> *mut c_char;
@@ -60,7 +60,7 @@ fn open_with_applications(target: &str, is_url: bool) -> Vec<OpenWithApp> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn open_with_applications(_target: &str, _is_url: bool) -> Vec<OpenWithApp> {
+pub(crate) fn open_with_applications(_target: &str, _is_url: bool) -> Vec<OpenWithApp> {
     Vec::new()
 }
 

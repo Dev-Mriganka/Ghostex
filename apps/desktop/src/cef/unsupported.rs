@@ -90,6 +90,38 @@ impl BrowserMediaAccessRequest {
 
 pub type BrowserMediaAccessHandler = Rc<dyn Fn(BrowserMediaAccessRequest)>;
 
+pub enum BrowserSiteRequest {
+    OpenExternalApp(BrowserExternalAppRequest),
+    LocalNetworkAccess(BrowserLocalNetworkAccessRequest),
+}
+
+pub struct BrowserExternalAppRequest {
+    pub url: String,
+    pub scheme: String,
+    pub origin: String,
+}
+
+pub struct BrowserLocalNetworkAccessRequest {
+    origin: String,
+    local_network: bool,
+}
+
+impl BrowserLocalNetworkAccessRequest {
+    pub fn origin(&self) -> &str {
+        &self.origin
+    }
+
+    pub fn includes_local_network(&self) -> bool {
+        self.local_network
+    }
+
+    pub fn allow(self) {}
+}
+
+pub type BrowserSiteRequestHandler = Rc<dyn Fn(BrowserSiteRequest)>;
+
+pub fn set_browser_site_request_handler(_handler: BrowserSiteRequestHandler) {}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ProjectWorkareaBridgeEvent {
     ProjectBeadsRequest(String),
