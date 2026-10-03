@@ -314,13 +314,19 @@ pub(crate) fn build_zmx_run_command(input: ZmxRunCommandInput) -> String {
         startup_command
     );
     let login_shell = user_login_shell_path();
-    let is_zsh = std::path::Path::new(&login_shell)
+    let login_shell_name = std::path::Path::new(&login_shell)
         .file_name()
-        .is_some_and(|name| name == "zsh");
-    let provider_shell_command = if is_zsh {
-        super::zsh_startup::agent_shell_command(&login_shell, &startup)
-    } else {
-        format!("{}\n{}", startup, user_login_shell_exec_command())
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    let provider_shell_command = match login_shell_name {
+        "zsh" => super::zsh_startup::agent_shell_command(&login_shell, &startup),
+        "fish" => super::fish_startup::agent_shell_command(
+            &login_shell,
+            &command_shell(),
+            &zmx_provider_prompt_editor_setup_shell_command(input.prompt_editor.as_deref()),
+            &startup_command,
+        ),
+        _ => format!("{}\n{}", startup, user_login_shell_exec_command()),
     };
     format_zmx_provider_run_script(
         &input.session_name,

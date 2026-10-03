@@ -1,5 +1,6 @@
 pub mod endpoint;
 pub mod env;
+mod fish_startup;
 mod grok_startup;
 pub mod launch;
 #[cfg(test)]
