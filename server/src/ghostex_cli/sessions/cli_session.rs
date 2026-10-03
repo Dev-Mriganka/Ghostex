@@ -180,8 +180,23 @@ pub(super) fn to_cli_session(
      * omits the key.
      */
     insert_js(&mut map, "sessionNote", &[p("sessionNote")]);
-    // CDXC:Coordinators 2026-10-01 SEE-ALSO: mobile_summary.rs forwards it too; the phone's session row draws the coordinator crown from it (apps/mobile/app/src/components/sessions/SessionRow.tsx).
+    // CDXC:Coordinators 2026-10-01 SEE-ALSO: mobile_summary.rs forwards it too; the phone's session row draws the coordinator crown from it (apps/mobile/app/src/components/sessions/SessionRow.tsx) and nests threads under it from the three fields after it (apps/mobile/app/src/contract/coordinatorTree.ts).
     insert_js(&mut map, "coordinatorRole", &[p("coordinatorRole")]);
+    insert_js(
+        &mut map,
+        "coordinatorProjectId",
+        &[p("coordinatorProjectId")],
+    );
+    insert_js(
+        &mut map,
+        "coordinatorSessionId",
+        &[p("coordinatorSessionId")],
+    );
+    insert_js(
+        &mut map,
+        "coordinatorThreadState",
+        &[p("coordinatorThreadState")],
+    );
     insert_js(
         &mut map,
         "sendWhenAllProjectSessionsStopActive",

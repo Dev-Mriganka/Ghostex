@@ -225,12 +225,8 @@ pub fn agent_launcher_items_with_accounts(
         items.push(MenuItem::separator());
     }
     items.extend(super::run_in_box::run_in_box_row(group_id, host));
-    // CDXC:Coordinators 2026-09-30 WHY: a coordinator is started where agents are started, so the launcher that lists them offers it too; the dialog behind it names the coordinator and picks its Claude or Codex agent.
-    items.push(MenuItem::row(
-        "New Coordinator…",
-        "users-group",
-        MenuCommand::project_action(group_id, "coordinator", None),
-    ));
+    items.insert(0, new_coordinator_row(group_id));
+    items.insert(1, MenuItem::separator());
     items.push(MenuItem::row(
         "Configure",
         "settings",
@@ -242,6 +238,19 @@ pub fn agent_launcher_items_with_accounts(
         first.on_open = Some(MenuCommand::agent_accounts(group_id, "load", None));
     }
     items
+}
+
+/// The launcher's "New Coordinator…" row.
+///
+/// CDXC:Coordinators 2026-10-03 DECISION:
+/// User: "Please move this to the top in both apps": "New Coordinator…" is the first row of a project's agent launcher, above the agents, on the desktop, the web build and the phone. A coordinator is started where agents are started, so the launcher offers it; the dialog behind it names the coordinator and picks its Claude or Codex agent. Supersedes the 2026-09-30 placement after Run in a box.
+/// SEE-ALSO: `agentMenuItems` in apps/mobile/app/src/screens/sessions-screen/use-sessions-screen-menus.tsx (the phone's agent menu keeps the same order).
+fn new_coordinator_row(group_id: &str) -> MenuItem {
+    MenuItem::row(
+        "New Coordinator…",
+        "users-group",
+        MenuCommand::project_action(group_id, "coordinator", None),
+    )
 }
 
 /// `providerFor`: only Claude and Codex have an account switcher.

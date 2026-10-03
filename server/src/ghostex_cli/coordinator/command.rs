@@ -28,6 +28,7 @@ pub(crate) fn run(args: &[String]) -> CliResult<()> {
             Ok(())
         }
         "create" => create(&parsed),
+        "options" => options(&parsed),
         "list" => list(&parsed),
         "status" => status(&parsed),
         "start-thread" => threads::start_thread(&parsed),
@@ -221,6 +222,112 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
     } else {
         println!("Created coordinator \"{title}\" ({reference}).");
         println!("Talk to it in Ghostex, or send it work with: ghostex agents send {reference} \"<request>\"");
+    }
+    Ok(())
+}
+
+/// What a New Coordinator form offers: the Claude and Codex launchers (Claude first, in launcher
+/// order), each with its model lineup from the catalog gxserver serves, the model it starts on, and
+/// the efforts each model accepts.
+///
+/// CDXC:Coordinators 2026-10-03 WHY:
+/// The phone's New Coordinator form reads its choices here instead of parsing the model catalog itself, so its lineup is the one gxserver serves and its defaults are the ones `create` applies (Opus 5.5 for Claude, medium effort).
+/// SEE-ALSO: apps/desktop/src/app/gx_store/create/coordinator.rs (the desktop dialog's lineup), apps/mobile/app/src/screens/sessions-screen/NewCoordinatorSheet.tsx (the phone's form).
+fn options(parsed: &ParsedArgs) -> CliResult<()> {
+    let flags = server_flags(&parsed.flags);
+    let hud = call_gxserver_rpc("/api/readSidebarHud", &json!({}), &flags)?;
+    crate::agent_model_catalog::adopt_cached_copy(&crate::paths::get_gxserver_paths(None));
+    let catalog = crate::agent_model_catalog::current();
+    let effort_label = |effort: &str| {
+        catalog
+            .pointer(&format!("/effortLabels/{effort}"))
+            .and_then(Value::as_str)
+            .unwrap_or(effort)
+            .to_string()
+    };
+    let mut agents: Vec<(&str, Value)> = hud["agents"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| {
+            let family = agent_family(row)?;
+            let lineup = catalog.pointer(&format!("/agents/{family}"));
+            let agent_efforts = lineup
+                .and_then(|agent| agent.get("efforts"))
+                .cloned()
+                .unwrap_or_else(|| json!([]));
+            let models: Vec<Value> = lineup
+                .and_then(|agent| agent.get("models"))
+                .and_then(Value::as_array)
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .map(|model| {
+                    let efforts: Vec<Value> = model
+                        .get("efforts")
+                        .unwrap_or(&agent_efforts)
+                        .as_array()
+                        .map(Vec::as_slice)
+                        .unwrap_or_default()
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(|effort| json!({ "value": effort, "label": effort_label(effort) }))
+                        .collect();
+                    json!({
+                        "value": model["value"],
+                        "label": model["label"],
+                        "default": model.get("default").and_then(Value::as_bool) == Some(true),
+                        "efforts": efforts,
+                    })
+                })
+                .collect();
+            let default_model = models
+                .iter()
+                .find(|model| {
+                    family == "claude" && model["value"] == DEFAULT_CLAUDE_COORDINATOR_MODEL
+                })
+                .or_else(|| models.iter().find(|model| model["default"] == true))
+                .or_else(|| models.first())
+                .map(|model| model["value"].clone())
+                .unwrap_or(Value::Null);
+            Some((
+                family,
+                json!({
+                    "agentId": agents::text(row, "agentId"),
+                    "name": row.get("name").and_then(Value::as_str).unwrap_or(family),
+                    "family": family,
+                    "models": models,
+                    "defaultModel": default_model,
+                }),
+            ))
+        })
+        .collect();
+    agents.sort_by_key(|(family, _)| *family != "claude");
+    let agents: Vec<Value> = agents.into_iter().map(|(_, agent)| agent).collect();
+    let result = json!({
+        "agents": agents,
+        // CDXC:Coordinators 2026-09-30 SEE-ALSO: DEFAULT_COORDINATOR_EFFORT in apps/desktop/src/app/window/new_coordinator_modal.rs (the user's medium-effort decision).
+        "defaultEffort": "medium",
+    });
+    if parsed.flags.truthy("json") {
+        print_json(&result);
+    } else {
+        for agent in &agents {
+            let models: Vec<&str> = agent["models"]
+                .as_array()
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|model| model["value"].as_str())
+                .collect();
+            println!(
+                "{} ({}): {}",
+                agents::text(agent, "name"),
+                agents::text(agent, "agentId"),
+                models.join(", ")
+            );
+        }
     }
     Ok(())
 }

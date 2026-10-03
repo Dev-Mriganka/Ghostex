@@ -196,8 +196,9 @@ fn updated_at(catalog: &Value) -> &str {
 }
 
 /// Adopts the copy an earlier run cached, unless this build bundles a newer
-/// one (an app update must not be shadowed by a stale cache).
-fn adopt_cached_copy(paths: &GxserverPaths) {
+/// one (an app update must not be shadowed by a stale cache). A `ghostex`
+/// command calls it too, so it reads the lineup gxserver serves.
+pub fn adopt_cached_copy(paths: &GxserverPaths) {
     let Some(cached) = fs::read_to_string(cache_path(paths))
         .ok()
         .and_then(|text| serde_json::from_str::<Value>(&text).ok())

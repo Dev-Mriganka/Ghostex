@@ -1400,7 +1400,9 @@ stays free to talk to you while the threads work in parallel. It is Ghostex's
 version of the Projects features in Cursor and Claude Code.
 
 - **Start one**: hover a project in the sidebar, open the Select Agent menu (the
-  arrow beside its agent button) and choose **New Coordinator…**. Name it, pick
+  arrow beside its agent button) and choose **New Coordinator…**, the first
+  item of that menu. On the phone, open the same menu from the project's agent
+  button and pick **New Coordinator…** at its top. Name it, pick
   Claude or Codex and its model and effort (Opus 5.5 on Claude, medium effort
   by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
   it opens in chat. The name is what its sidebar row shows, and the
@@ -1409,7 +1411,7 @@ version of the Projects features in Cursor and Claude Code.
   named once from its first conversation). A project can have several
   coordinators, one per stream of work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
-  place of its agent's logo (on the phone's session list too), and a crew icon
+  place of its agent's logo, and a crew icon
   with one number: how many thread sessions it has in the sidebar, whatever
   their state. The icon turns orange while a thread works and light blue when
   one waits on you. Its
@@ -1417,7 +1419,9 @@ version of the Projects features in Cursor and Claude Code.
   beside the crown folds them away and back (remembered across restarts), and a
   folded coordinator keeps its number and colour. Click a thread to watch it or
   talk to it directly; answer its questions and approvals there. Pinning the
-  coordinator takes its threads along.
+  coordinator takes its threads along. The phone's session list shows the same
+  tree: crown, crew count, threads indented under their coordinator, and the
+  chevron to fold them.
 - **Finished threads are closed**: once the coordinator has checked and
   committed a thread's work and expects nothing more from it, it marks the
   thread done and closes its session, so the sidebar keeps only work in flight
@@ -1461,6 +1465,7 @@ version of the Projects features in Cursor and Claude Code.
 Coordinators run on Claude or Codex; threads can be any configured agent. From
 a terminal or another agent: `ghostex coordinator create --title <name>
 [--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator status`,
+`ghostex coordinator options` (the agents, models and efforts a coordinator can use),
 `ghostex coordinator start-thread --title <title> --task <brief> [--worktree]
 [--agent <id>] [--model <m>] [--effort <e>]`, `ghostex coordinator resolve
 <thread> [--keep-open]` (mark done and close its session), `ghostex coordinator

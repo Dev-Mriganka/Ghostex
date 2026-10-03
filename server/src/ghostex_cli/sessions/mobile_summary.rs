@@ -606,8 +606,23 @@ fn to_mobile_session_summary(session: &Value) -> Value {
      */
     insert_js(&mut map, "sessionNote", &[s("sessionNote")]);
     insert_js(&mut map, "agentSessionId", &[s("agentSessionId")]);
-    // CDXC:Coordinators 2026-10-01 WHY: the same second-whitelist trap: the phone draws the coordinator crown in place of the agent logo from this field.
+    // CDXC:Coordinators 2026-10-01 WHY: the same second-whitelist trap: the phone draws the coordinator crown in place of the agent logo from this field, and nests each open thread under its coordinator from the link and thread state below.
     insert_js(&mut map, "coordinatorRole", &[s("coordinatorRole")]);
+    insert_js(
+        &mut map,
+        "coordinatorProjectId",
+        &[s("coordinatorProjectId")],
+    );
+    insert_js(
+        &mut map,
+        "coordinatorSessionId",
+        &[s("coordinatorSessionId")],
+    );
+    insert_js(
+        &mut map,
+        "coordinatorThreadState",
+        &[s("coordinatorThreadState")],
+    );
     /*
      * CDXC:DelayedSend 2026-09-03:
      * Same SECOND-whitelist trap once more: `to_cli_session` forwarded the

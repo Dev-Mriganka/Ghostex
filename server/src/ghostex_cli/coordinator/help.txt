@@ -5,6 +5,7 @@ USAGE
   ghostex coordinator create [--project-id <id>] [--agent <agent-id>] [--title <name>]
                              [--model <m>] [--effort <e>] [--goal <text>]
                              [--task <first message>] [--json]
+  ghostex coordinator options [--json]
   ghostex coordinator list [--project-id <id>] [--json]
   ghostex coordinator status [--coordinator <ref>] [--all] [--json]
   ghostex coordinator start-thread --title <title> (--task <text> | --body-file <path>)
@@ -38,6 +39,8 @@ CREATE
   coordinator defaults to Opus 5.5 (opus[1m]), a Codex one to its configured
   model. --effort defaults to medium, which is plenty for routing work. --goal
   is one line the coordinator works toward. --task sends it a first message.
+  options lists the agents a coordinator can run on, with each one's models,
+  the model it starts on, and the efforts each model accepts.
 
 STATUS
   status prints the goal, the standing instructions, the memory notes, and every
