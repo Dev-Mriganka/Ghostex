@@ -1,3 +1,5 @@
+#[cfg(windows)]
+pub(crate) mod launch_context;
 pub(crate) mod live_path;
 pub(crate) mod process;
 #[cfg(windows)]

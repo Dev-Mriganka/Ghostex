@@ -81,7 +81,7 @@ pub(crate) fn standard_user_token_if_elevated() -> io::Result<Option<OwnedHandle
     Ok(Some(token))
 }
 
-fn current_process_token() -> io::Result<OwnedHandle> {
+pub(super) fn current_process_token() -> io::Result<OwnedHandle> {
     let mut token: HANDLE = ptr::null_mut();
     let access = TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_ADJUST_DEFAULT;
     if unsafe { OpenProcessToken(GetCurrentProcess(), access, &mut token) } == 0 {
@@ -216,7 +216,10 @@ fn standard_user_token(process: &OwnedHandle) -> io::Result<OwnedHandle> {
     Ok(restricted)
 }
 
-fn token_information(token: &OwnedHandle, class: TOKEN_INFORMATION_CLASS) -> io::Result<Vec<u64>> {
+pub(super) fn token_information(
+    token: &OwnedHandle,
+    class: TOKEN_INFORMATION_CLASS,
+) -> io::Result<Vec<u64>> {
     let mut length = 0;
     unsafe {
         GetTokenInformation(
@@ -258,7 +261,7 @@ fn set_token_information(
     Ok(())
 }
 
-fn well_known_sid(kind: WELL_KNOWN_SID_TYPE) -> io::Result<SidBuffer> {
+pub(super) fn well_known_sid(kind: WELL_KNOWN_SID_TYPE) -> io::Result<SidBuffer> {
     let mut sid: SidBuffer = [0; 17];
     let mut length = mem::size_of::<SidBuffer>() as u32;
     let created =

@@ -123,6 +123,19 @@ pub async fn run_gxserver_foreground(
             details: Some(json!({ "removed": removed_retired_skills })),
         });
     }
+    #[cfg(windows)]
+    if let Some(details) = crate::platform::launch_context::launch_context_warning_details() {
+        let _ = logger.log(GxserverLogInput {
+            level: crate::logging::LogLevel::Warn,
+            event: "windowsLaunchContextLimited".to_string(),
+            server_id: None,
+            request_id: None,
+            client: None,
+            duration_ms: None,
+            error: None,
+            details: Some(details),
+        });
+    }
     crate::agent_skills_remote::spawn_startup_skill_refresh(paths.clone(), logger.clone());
     let started_at = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
     // Install age for the analytics heartbeat, taken before `identity` is
