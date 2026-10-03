@@ -21,7 +21,8 @@ tmp/imagegen/
 .fresh/
 .agents/skills/
 .agents/skills/ghostex-release-to-brew/SKILL.md
-.claude/skills/
+.claude/skills/*
+!.claude/skills/ghostex-release/
 storybook-static/
 apps/desktop/runtime/
 apps/editor/macos/.build/
