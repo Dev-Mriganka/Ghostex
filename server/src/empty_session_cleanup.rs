@@ -7,7 +7,7 @@
 //! User: "when i press the button to create a new session and we already have an empty session then please close the previous session if it doesn't have a pending draft and doesn't have anything queued and doesn't have any text in it basically. I don't want doing cmd + shift + o multiple times to keep multiple fully empty sessions in the sidebar for that project. It's easier to just open a new one and close the older unneeded ones automatically." A client sends `replaceEmptySessions: true` on `/api/createAgentSession` only for that user action (the new-session hotkey, a project's agent button or menu, the New Thread picker, the phone's new session); the close is the ordinary `/api/transitionSession` close, quiet, with one log line.
 //!
 //! CDXC:Sessions 2026-10-04 WHY:
-//! Only a session made by that same user action carries the marker, so a session an agent, the CLI, a coordinator, the board or an automation started (it may be waiting for its task) is never a candidate. "Fully empty" means never prompted (still a draft), no chat draft text (parked ones included), nothing queued or armed, no note or stash, not pinned, parked, favorited, tagged, renamed or armed for Close After Done, idle, in the same folder, and an agent input box that reads as empty; a box that cannot be read counts as holding text. This supersedes "a draft is never thrown away on its own" (CDXC:Drafts 2026-08-29 in agents/drafts.rs) for exactly these sessions.
+//! Only a session made by that same user action carries the marker, so a session an agent, the CLI, a coordinator, the board or an automation started (it may be waiting for its task) is never a candidate. "Fully empty" means never prompted (still a draft, or an agent that has never been active), no chat draft text (parked ones included), nothing queued or armed, no note or stash, not pinned, parked, favorited, tagged, renamed or armed for Close After Done, idle, in the same folder, and an agent input box that reads as empty; a box that cannot be read counts as holding text. This supersedes "a draft is never thrown away on its own" (CDXC:Drafts 2026-08-29 in agents/drafts.rs) for exactly these sessions.
 //!
 //! SEE-ALSO: server/src/server/empty_session_cleanup_runtime.rs, apps/desktop/src/app/gx_store/create/agent.rs, apps/desktop/src/app/helpers/agents_hub/workspace_agent_actions.rs, server/src/ghostex_cli/actions/create.rs (`--replace-empty-sessions`, the phone's new session).
 
@@ -104,7 +104,13 @@ fn row_is_empty(session: &Value) -> bool {
     let runtime_settings = session.get("runtimeSettings").and_then(Value::as_object);
     let setting = |key: &str| runtime_settings.and_then(|settings| settings.get(key));
     setting(NEW_SESSION_MARKER_KEY).and_then(Value::as_bool) == Some(true)
-        && session_is_draft(session)
+        // A launch without a draft (the phone's terminal-first new session) is never prompted
+        // while the agent has never been active: any prompt sets `lastActiveAt`.
+        && (session_is_draft(session)
+            || session
+                .get("lastActiveAt")
+                .and_then(Value::as_str)
+                .is_none_or(|at| at.trim().is_empty()))
         && session.get("kind").and_then(Value::as_str) == Some("agent")
         && !crate::presentation::session_tag_is_truthy(session)
         && setting("pendingAgentTitleRequestStatus").is_none()
