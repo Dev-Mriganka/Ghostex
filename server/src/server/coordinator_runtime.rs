@@ -445,8 +445,20 @@ fn tick(state: &AppState, memory: &Mutex<SupervisorMemory>) -> Vec<Delivery> {
 
 async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, delivery: Delivery) {
     let coordinator = delivery.coordinator.clone();
+    // CDXC:Coordinators 2026-10-04 WHY: closing a thread and then its coordinator a second apart let a tick queue the thread's "closed" report while the coordinator was still open, and sending it woke the closed coordinator back up. The coordinator is checked again right before sending; a report for a closed one waits until it is resumed.
+    let open_state = state.clone();
+    let open_key = coordinator.clone();
+    let coordinator_open =
+        tokio::task::spawn_blocking(move || coordinator_is_open(&open_state, &open_key))
+            .await
+            .unwrap_or(false);
     let mut failed = false;
-    for report in delivery.reports {
+    let reports = if coordinator_open {
+        delivery.reports
+    } else {
+        Vec::new()
+    };
+    for report in reports {
         let thread_ref = report.sender.global_ref.clone();
         let (body, finished_text) = match &report.kind {
             ReportKind::Finished => {
@@ -623,10 +635,11 @@ fn pending_delivery(
         memory.undelivered_idle_since.remove(&key);
         return None;
     };
-    // A working thread is either on the message or takes it at its next input boundary.
-    if state_now == ThreadState::Working {
+    // A working thread is either on the message or takes it at its next input boundary, so it is
+    // never reported; its transcript is still read, so a message it took clears while it works.
+    let working = state_now == ThreadState::Working;
+    if working {
         memory.undelivered_idle_since.remove(&key);
-        return None;
     }
     if memory
         .delivery_checked_at
@@ -637,9 +650,9 @@ fn pending_delivery(
     }
     memory.delivery_checked_at.insert(key.clone(), now);
     let sent_ms = parse_iso_ms_opt(sent_at).unwrap_or(now);
-    let needle = coordinators::delivery_needle(excerpt);
+    let needles = coordinators::delivery_needles(excerpt);
     let mut path = memory.transcript_paths.remove(&key);
-    let recorded = coordinators::transcript_records_message(session, &needle, sent_ms, &mut path);
+    let recorded = coordinators::transcript_records_message(session, &needles, sent_ms, &mut path);
     if let Some(path) = path {
         memory.transcript_paths.insert(key.clone(), path);
     }
@@ -662,7 +675,7 @@ fn pending_delivery(
         Some(false) => {}
     }
     // A question or a blocking screen is reported as waiting; the message follows its answer.
-    if state_now == ThreadState::Waiting {
+    if working || state_now == ThreadState::Waiting {
         memory.undelivered_idle_since.remove(&key);
         return None;
     }
@@ -673,11 +686,9 @@ fn pending_delivery(
         &thread.project_id,
         &thread.session_id,
     );
-    if let Some(row) = queue
-        .queue
-        .iter()
-        .find(|row| coordinators::normalize_delivery_text(&row.text).contains(&needle))
-    {
+    if let Some(row) = queue.queue.iter().find(|row| {
+        coordinators::holds_message(&coordinators::normalize_delivery_text(&row.text), &needles)
+    }) {
         memory.undelivered_idle_since.remove(&key);
         if row.state == crate::session_chat_queue::SESSION_CHAT_QUEUE_STATE_FAILED {
             let _ =
@@ -705,6 +716,22 @@ fn pending_delivery(
         excerpt: excerpt.to_string(),
         evidence,
     })
+}
+
+fn coordinator_is_open(state: &AppState, coordinator: &SessionKey) -> bool {
+    let Ok(db) = open_gxserver_database(&state.paths) else {
+        return false;
+    };
+    DomainRepository::new(&db, state.metadata.server_id.as_str())
+        .get_session(&coordinator.0, &coordinator.1)
+        .ok()
+        .flatten()
+        .is_some_and(|session| {
+            matches!(
+                effective_lifecycle_state(&session).as_str(),
+                "running" | "sleeping"
+            )
+        })
 }
 
 fn settle_undelivered(state: &AppState, thread: &ThreadRecord, sent_at: &str) {

@@ -27,14 +27,15 @@ pub(super) fn confirm_brief_started(
     thread: &Value,
     task: &str,
     prompt_id: Option<&str>,
-    sent_at_ms: i64,
     flags: &Flags,
 ) -> CliResult<BriefOutcome> {
     let target = json!({
         "globalRef": thread["globalRef"], "projectId": thread["projectId"], "sessionId": thread["sessionId"],
     });
     let mut read = target.clone();
-    read["limit"] = json!(8);
+    read["limit"] = json!(30);
+    // A thread created for this brief has no transcript rows of its own before it.
+    let before = agents::TranscriptRows::Known(Default::default());
     let started = Instant::now();
     let mut retried = false;
     loop {
@@ -42,7 +43,7 @@ pub(super) fn confirm_brief_started(
         let chat = call_gxserver_rpc("/api/readSessionChat", &read, flags).ok();
         if chat
             .as_ref()
-            .is_some_and(|chat| agents::chat_shows(chat, task, sent_at_ms))
+            .is_some_and(|chat| agents::chat_shows(chat, task, &before))
         {
             return Ok(BriefOutcome::Started);
         }

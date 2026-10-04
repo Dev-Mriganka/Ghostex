@@ -141,7 +141,6 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
             ))
         })?;
     }
-    let sent_at_ms = chrono::Utc::now().timestamp_millis();
     let queued = call_gxserver_rpc(
         "/api/queueSessionChatPrompt",
         &json!({
@@ -161,9 +160,11 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
         &thread,
         &task,
         queued.pointer("/prompt/id").and_then(Value::as_str),
-        sent_at_ms,
         &flags,
     )?;
+    if matches!(outcome, BriefOutcome::Started) {
+        agents::confirm_coordinator_delivery(coordinator, &thread, &flags);
+    }
     let (status, note) = match &outcome {
         BriefOutcome::Started => ("started", "Its transcript shows the brief: it is working on it.".to_string()),
         BriefOutcome::Pending(reason) => ("pending", format!("Its brief has not started yet: {reason}. Ghostex keeps watching and reports to you if it never arrives; do not start another thread or resend the brief.")),

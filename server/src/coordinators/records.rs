@@ -425,6 +425,24 @@ pub fn set_thread_pending_message(
     Ok(())
 }
 
+/// Stops watching whatever message the thread has pending: its sender saw it arrive.
+pub fn drop_thread_pending_message(
+    db: &Connection,
+    project_id: &str,
+    session_id: &str,
+) -> Result<(), DomainStateError> {
+    db.execute(
+        r#"
+        UPDATE coordinator_threads
+        SET pendingMessage = NULL, pendingMessageAt = NULL, updatedAt = ?3
+        WHERE projectId = ?1 AND sessionId = ?2 AND pendingMessageAt IS NOT NULL
+        "#,
+        params![project_id, session_id, now_iso()],
+    )
+    .map_err(sql_error)?;
+    Ok(())
+}
+
 /// Stops watching the message sent at `sent_at`; a newer one sent meanwhile stays watched.
 pub fn clear_thread_pending_message(
     db: &Connection,

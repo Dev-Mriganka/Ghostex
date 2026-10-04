@@ -5,10 +5,10 @@ use rusqlite::Connection;
 use serde_json::{json, Map, Value};
 
 use super::records::{
-    link_thread, list_coordinators, list_threads, list_threads_for, now_iso, read_coordinator,
-    read_thread, set_thread_pending_message, set_thread_resolved, write_coordinator,
-    CoordinatorMemoryNote, CoordinatorRecord, SessionKey, ThreadRecord, COORDINATOR_GOAL_MAX_CHARS,
-    COORDINATOR_INSTRUCTIONS_MAX_CHARS, COORDINATOR_MEMORY_MAX_NOTES,
+    drop_thread_pending_message, link_thread, list_coordinators, list_threads, list_threads_for,
+    now_iso, read_coordinator, read_thread, set_thread_pending_message, set_thread_resolved,
+    write_coordinator, CoordinatorMemoryNote, CoordinatorRecord, SessionKey, ThreadRecord,
+    COORDINATOR_GOAL_MAX_CHARS, COORDINATOR_INSTRUCTIONS_MAX_CHARS, COORDINATOR_MEMORY_MAX_NOTES,
     COORDINATOR_MEMORY_NOTE_MAX_CHARS,
 };
 use super::state::{classify_thread_session, ThreadProgress, ThreadState};
@@ -240,9 +240,14 @@ fn watch_pending_message(
     thread_key: &SessionKey,
     params: &Map<String, Value>,
 ) -> Result<bool, DomainStateError> {
+    // The sender read the message in the thread's transcript itself (`delivered`, `started`).
+    if params.get("messageDelivered").and_then(Value::as_bool) == Some(true) {
+        drop_thread_pending_message(db, &thread_key.0, &thread_key.1)?;
+        return Ok(false);
+    }
     let Some(excerpt) = text(params, "pendingMessage")
         .map(|message| super::delivery::pending_message_excerpt(&message))
-        .filter(|excerpt| !super::delivery::delivery_needle(excerpt).is_empty())
+        .filter(|excerpt| !super::delivery::delivery_needles(excerpt).is_empty())
     else {
         return Ok(false);
     };

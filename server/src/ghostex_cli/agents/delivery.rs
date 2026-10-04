@@ -8,6 +8,7 @@ use crate::ghostex_cli::{
     selector,
 };
 use serde_json::{json, Value};
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 /// CDXC:Cli 2026-09-26 DECISION:
@@ -50,6 +51,11 @@ pub(super) fn send(args: &Arguments) -> CliResult<Value> {
     }
     let read_payload = payload.clone();
     let sent_at_ms = chrono::Utc::now().timestamp_millis();
+    let rows_before = if args.delivery == Delivery::Queue {
+        TranscriptRows::Unknown
+    } else {
+        transcript_rows_before_send(&read_payload, &flags)
+    };
     payload["text"] = json!(message);
     let endpoint = if args.delivery == Delivery::Queue {
         "/api/queueSessionChatPrompt"
@@ -90,13 +96,16 @@ pub(super) fn send(args: &Arguments) -> CliResult<Value> {
             "queued",
             "Held in the recipient's queue until its current turn finishes and its input is ready.",
         )
-    } else if transcript_shows(&read_payload, &body, sent_at_ms, &flags) {
+    } else if transcript_shows(&read_payload, &body, &rows_before, &flags) {
         ("delivered", "The recipient's transcript shows the message.")
     } else if !receipt["queuedPromptId"].is_null() {
         ("pending", "The recipient is still starting; Ghostex types the message as soon as its input box appears. Read its chat before sending it again.")
     } else {
         ("accepted", "Ghostex typed and submitted the message, but the recipient's transcript does not show it yet; a busy agent takes it at its next input boundary. Read its chat before sending it again.")
     };
+    if status == "delivered" {
+        confirm_coordinator_delivery(&sender, &recipient, &flags);
+    }
     Ok(json!({
         "ok": true,
         "status": status,
@@ -110,58 +119,98 @@ pub(super) fn send(args: &Arguments) -> CliResult<Value> {
     }))
 }
 
+/// Tells gxserver a coordinator's message to its thread arrived, so its delivery watch stops
+/// (a no-op for any other sender or recipient, and for a gxserver without the watch).
+pub(crate) fn confirm_coordinator_delivery(sender: &Value, recipient: &Value, flags: &Flags) {
+    let _ = call_gxserver_rpc(
+        "/api/linkCoordinatorThread",
+        &json!({
+            "coordinatorProjectId": sender["projectId"], "coordinatorSessionId": sender["sessionId"],
+            "projectId": recipient["projectId"], "sessionId": recipient["sessionId"],
+            "onlyIfCoordinator": true, "reopenOnly": true, "messageDelivered": true,
+        }),
+        flags,
+    );
+}
+
 /// How long a default send waits for the recipient's transcript to record the message.
 const DELIVERY_CONFIRM_WINDOW: Duration = Duration::from_secs(10);
 const DELIVERY_CONFIRM_POLL: Duration = Duration::from_millis(500);
+/// Newest transcript rows each read covers; the read before the send covers more, so every row
+/// an after-send read can return that is not new was seen before the send.
+const DELIVERY_ROWS_AFTER: usize = 30;
+const DELIVERY_ROWS_BEFORE: usize = 60;
 
 /// CDXC:Cli 2026-10-04 WHY:
-/// "accepted" only ever meant that gxserver took the request: a message Claude Code left in its input box (a form feed in the text) came back "accepted", and the coordinator moved on while the recipient never saw it. A default send now reads the recipient's transcript for up to ten seconds and answers "delivered" only when the message is there; gxserver refuses a send whose Return the agent did not take (session_chat_send_submit.rs), so "accepted" is left for an agent that has not recorded it yet, typically a busy one.
-fn transcript_shows(session: &Value, body: &str, sent_at_ms: i64, flags: &Flags) -> bool {
+/// "accepted" only ever meant that gxserver took the request: a message Claude Code left in its input box (a form feed in the text) came back "accepted", and the coordinator moved on while the recipient never saw it. A default send now reads the recipient's transcript for up to ten seconds and answers "delivered" only when the message is there; gxserver refuses a send whose Return the agent did not take (session_chat_send_submit.rs), so "accepted" is left for an agent that has not recorded it yet, typically a busy one. Only a row that was not in the transcript before the send counts, and it must hold both the start and the end of the body: the first version accepted any matching row up to a minute old, so a message resent to an agent stopped at its usage limit answered "delivered" from the copy it had taken earlier.
+fn transcript_shows(session: &Value, body: &str, before: &TranscriptRows, flags: &Flags) -> bool {
     let started = Instant::now();
     loop {
         std::thread::sleep(DELIVERY_CONFIRM_POLL);
-        let shown = transcript_shows_now(session, body, sent_at_ms, flags);
+        let shown = read_chat(session, DELIVERY_ROWS_AFTER, flags)
+            .is_some_and(|chat| chat_shows(&chat, body, before));
         if shown || started.elapsed() >= DELIVERY_CONFIRM_WINDOW {
             return shown;
         }
     }
 }
 
-/// One read of the recipient's transcript: whether a user turn sent since `sent_at_ms` holds the
-/// start of `body`. gxserver's coordinator supervisor applies the same match.
-fn transcript_shows_now(session: &Value, body: &str, sent_at_ms: i64, flags: &Flags) -> bool {
+/// The ids of the recipient's newest transcript rows before a send. `Known(empty)` for a session
+/// whose transcript is empty; `Unknown` when it could not be read, which never counts as proof.
+pub(crate) enum TranscriptRows {
+    Known(HashSet<String>),
+    Unknown,
+}
+
+pub(crate) fn transcript_rows_before_send(session: &Value, flags: &Flags) -> TranscriptRows {
+    match read_chat(session, DELIVERY_ROWS_BEFORE, flags) {
+        Some(chat) => TranscriptRows::Known(
+            chat["messages"]
+                .as_array()
+                .map(Vec::as_slice)
+                .unwrap_or_default()
+                .iter()
+                .map(|row| text(row, "id").to_string())
+                .filter(|id| !id.is_empty())
+                .collect(),
+        ),
+        None => TranscriptRows::Unknown,
+    }
+}
+
+fn read_chat(session: &Value, limit: usize, flags: &Flags) -> Option<Value> {
     let params = json!({
         "globalRef": session["globalRef"], "projectId": session["projectId"], "sessionId": session["sessionId"],
-        "limit": 8,
+        "limit": limit,
     });
-    call_gxserver_rpc("/api/readSessionChat", &params, flags)
-        .is_ok_and(|chat| chat_shows(&chat, body, sent_at_ms))
+    call_gxserver_rpc("/api/readSessionChat", &params, flags).ok()
 }
 
-/// Whether a `/api/readSessionChat` result holds a user turn sent since `sent_at_ms` that holds the
-/// start of `body`.
-pub(crate) fn chat_shows(chat: &Value, body: &str, sent_at_ms: i64) -> bool {
-    let needle = crate::coordinators::delivery_needle(body);
-    !needle.is_empty()
-        && chat["messages"]
-            .as_array()
-            .is_some_and(|messages| messages.iter().any(|row| records(row, &needle, sent_at_ms)))
-}
-
-fn records(row: &Value, needle: &str, sent_at_ms: i64) -> bool {
-    text(row, "role") == "user"
-        && text(row, "source") == "transcript"
-        && row["timestamp"].as_i64().map_or(true, |timestamp| {
-            timestamp >= sent_at_ms - crate::coordinators::COORDINATOR_DELIVERY_CLOCK_SLACK_MS
+/// Whether a `/api/readSessionChat` result holds a user turn, new since `before`, that carries
+/// `body`. gxserver's coordinator supervisor applies the same text match.
+pub(crate) fn chat_shows(chat: &Value, body: &str, before: &TranscriptRows) -> bool {
+    let TranscriptRows::Known(before) = before else {
+        return false;
+    };
+    let needles = crate::coordinators::delivery_needles(body);
+    chat["messages"].as_array().is_some_and(|messages| {
+        messages.iter().any(|row| {
+            text(row, "role") == "user"
+                && text(row, "source") == "transcript"
+                && !text(row, "id").is_empty()
+                && !before.contains(text(row, "id"))
+                && row["blocks"].as_array().is_some_and(|blocks| {
+                    crate::coordinators::holds_message(
+                        &blocks
+                            .iter()
+                            .filter_map(|block| block["text"].as_str())
+                            .map(crate::coordinators::normalize_delivery_text)
+                            .collect::<String>(),
+                        &needles,
+                    )
+                })
         })
-        && row["blocks"].as_array().is_some_and(|blocks| {
-            blocks
-                .iter()
-                .filter_map(|block| block["text"].as_str())
-                .map(crate::coordinators::normalize_delivery_text)
-                .collect::<String>()
-                .contains(needle)
-        })
+    })
 }
 
 pub(super) fn receipt(result: &Value) -> Value {
