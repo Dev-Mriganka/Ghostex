@@ -41,7 +41,7 @@ pub(crate) static VISUAL: LazyLock<WorkingStripVisual> = LazyLock::new(|| {
     .expect("shared working strip appearance")
 });
 
-/// CDXC:SessionChat 2026-10-04 DECISION: User: "crop the icon that's spinning here so it doesn't show flickering line on its edges while it spins". The spark glyph reached 0.8 units from its 24-unit viewBox edge, so the rotated texture's edge texels (sampled bilinearly against neighbouring atlas sprites) flickered as a square outline; the asset now carries `SPARK_PAD` units of fully transparent padding per side and `spark_svg_size` renders it larger by the same ratio so the glyph keeps its size.
+/// CDXC:SessionChat 2026-10-05 DECISION: User: "the rotating working icon still shows the lines just as before … make sure to fix it" (supersedes the 2026-10-04 padding-only fix). The flickering square was each rotated sprite's quad edge (the 96 px glow quads most visibly) sampling the neighbouring atlas tiles, which padding inside the asset cannot stop; the GPUI monochrome sprite shaders now clamp samples inside the tile (`.dependencies/zed` gpui_windows `shaders.hlsl`, gpui_wgpu `shaders.wgsl`, gpui_apple `shaders.metal`). `SPARK_PAD` still keeps the glyph clear of its own tile edge, and `spark_svg_size` renders the padded svg larger by the same ratio so the glyph keeps its size.
 pub(crate) const SPARK_PAD: f32 = 4.0;
 
 /// The on-screen size of the padded spark svg whose glyph measures `glyph_px`.
