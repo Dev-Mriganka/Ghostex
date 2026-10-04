@@ -347,24 +347,13 @@ pub(crate) fn sync_live_zmx_process_identities(
             && read_runtime_text(&current, "agentSessionId").is_none()
         {
             // See CDXC:SessionIdentity in session_chat_freebuff.rs.
-            if let Some((cwd, created_ms)) =
-                crate::session_chat_freebuff::freebuff_session_context(repository, &current)
+            if let Some((id, path)) =
+                crate::session_chat_freebuff::discover_freebuff_chat_for_session(
+                    repository, &current, sessions,
+                )
             {
-                let claimed = sessions
-                    .iter()
-                    .filter(|other| {
-                        read_session_text(other, "sessionId").as_deref()
-                            != Some(candidate_session_id.as_str())
-                            && crate::agents::is_active_identity_owner(other)
-                    })
-                    .filter_map(|other| read_runtime_text(other, "agentSessionId"))
-                    .collect::<Vec<_>>();
-                if let Some((id, path)) =
-                    crate::session_chat_freebuff::discover_freebuff_chat(&cwd, created_ms, &claimed)
-                {
-                    agent_session_id = Some(id);
-                    agent_session_path = Some(path.to_string_lossy().into_owned());
-                }
+                agent_session_id = Some(id);
+                agent_session_path = Some(path.to_string_lossy().into_owned());
             }
         }
         /*

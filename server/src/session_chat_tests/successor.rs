@@ -345,7 +345,7 @@ async fn follower_adopts_a_successor_and_delivers_its_tail() {
     let hooks = SessionChatSuccessorHooks {
         bound_agent_session_ids: Arc::new(Vec::new),
         pending_fork_child_since_ms: Arc::new(|_| None),
-        unbound_session_context: Arc::new(|| None),
+        unbound_agent_chat: Arc::new(|| None),
         adopt_identity: {
             let registry = registry.clone();
             Arc::new(move |adoption| {
