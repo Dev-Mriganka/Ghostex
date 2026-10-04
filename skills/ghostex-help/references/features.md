@@ -652,9 +652,6 @@ Related settings: `autoSleep*`, `clickToWakeSleepingSessions`,
 
 ## Session Chat
 
-Use Shift+Insert to paste in desktop terminals and text fields, including the
-chat composer and dialogs. Ctrl+V (Cmd+V on macOS) keeps its existing behavior.
-
 Session Chat renders the same agent session as a chat GUI: composer with
 image paste and Ctrl+G rich prompt editor, a prompt queue that sends when the
 agent stops, transcript with thinking, tool, and edit cards, subagent
@@ -1215,8 +1212,9 @@ are written into a managed Ghostty config; the Ghostty settings actions row
 applies the recommended set or opens the raw config. Command-click opens links;
 Cmd+V pastes images as previewable links. On Windows and Linux, Ctrl+V or
 Ctrl+Shift+V pastes from the client computer's clipboard into the focused
-terminal, including a remote terminal. A configured hotkey using the same chord
-takes precedence. In an agent's terminal prompt, use
+terminal, including a remote terminal. Shift+Insert also pastes, in terminals
+and in text fields such as the chat composer and dialogs. A configured hotkey
+using the same chord takes precedence. In an agent's terminal prompt, use
 Prompt Editor in the terminal toolbar, Ctrl+G on macOS, or Ctrl+Shift+G on
 Windows and Linux to open the Ghostex prompt editor or your machine default
 editor for long prompts. Remote sessions open it in that computer's Code view.
