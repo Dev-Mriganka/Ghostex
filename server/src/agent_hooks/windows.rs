@@ -15,6 +15,34 @@ pub(crate) fn command(agent: &str, notify_path: &Path) -> String {
     )
 }
 
+/// `path` as a command word that Git Bash and PowerShell both run as it stands: its 8.3 short
+/// form with forward slashes, when that has no space, quote or other character either shell
+/// would read. `None` when the volume keeps no short names and the long path needs quoting.
+pub(crate) fn bare_command_path(path: &Path) -> Option<String> {
+    use std::os::windows::ffi::{OsStrExt as _, OsStringExt as _};
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let mut buffer = vec![0u16; 1024];
+    // SAFETY: `wide` is NUL-terminated and `buffer` holds `buffer.len()` UTF-16 units.
+    let length = unsafe {
+        windows_sys::Win32::Storage::FileSystem::GetShortPathNameW(
+            wide.as_ptr(),
+            buffer.as_mut_ptr(),
+            buffer.len() as u32,
+        )
+    } as usize;
+    if length == 0 || length >= buffer.len() {
+        return None;
+    }
+    let short = std::ffi::OsString::from_wide(&buffer[..length])
+        .into_string()
+        .ok()?
+        .replace('\\', "/");
+    short
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, ':' | '/' | '.' | '_' | '~' | '-'))
+        .then_some(short)
+}
+
 pub(crate) fn notify(args: Vec<String>) -> anyhow::Result<()> {
     let script = std::fs::read_to_string(
         args.first()

@@ -19,6 +19,12 @@ impl GhostexGpuiApp {
             let result = match created {
                 Ok(key) => {
                     attach_key = Some(key.clone());
+                    // CDXC:AgentLauncher 2026-10-04 WHY:
+                    // The agent CLI's own startup is the longest wait before a new chat's composer can show its model and status line, so the provider start (inside the attach plan) runs beside the read that mounts the chat instead of after it.
+                    let plan_key = key.clone();
+                    let plan = background.spawn(async move {
+                        gpui_prepare_local_workspace_attach_terminal_plan(&plan_key, GpuiLocalWorkspaceAttachIntent::Attach).map(|plan| (plan_key, plan))
+                    });
                     let preview_key = key.clone();
                     let metadata = background.spawn(async move {
                         gpui_gxserver_rpc_result("/api/attachSessionMetadata", &serde_json::json!({
@@ -35,9 +41,7 @@ impl GhostexGpuiApp {
                             this.show_pending_agents_chat_launch(workspace_key, &metadata, this.agents_workspace.focused_pane, true, cx);
                         }
                     });
-                    background.spawn(async move {
-                        gpui_prepare_local_workspace_attach_terminal_plan(&key, GpuiLocalWorkspaceAttachIntent::Attach).map(|plan| (key, plan))
-                    }).await
+                    plan.await
                 }
                 Err(error) => Err(error),
             };
