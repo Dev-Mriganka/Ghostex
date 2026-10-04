@@ -181,7 +181,11 @@ impl GhostexGpuiApp {
                         self.render_workarea_header_agents_toggle(Some(appearance.muted), cx),
                     ),
                 )
-                .when(compact, |row| row.child(div().flex_1()))
+                .when(compact, |row| {
+                    // The negative margin cancels the row gap this zero-width spacer adds, so the
+                    // buttons right of it take exactly the 38px slots `compact_room` counts.
+                    row.child(div().flex_1().mr(px(-4.0 * scale)))
+                })
             })
             .when_some(bots_toggle, |row, bots_mode| {
                 row.child(self.render_native_sidebar_bots_toggle(bots_mode, appearance, cx))
