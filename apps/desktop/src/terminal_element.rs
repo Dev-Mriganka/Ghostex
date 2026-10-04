@@ -1493,6 +1493,19 @@ impl TerminalView {
             return;
         }
 
+        // The web host receives clipboard data through the browser's trusted
+        // paste event. Let Shift+Insert reach that event instead of the PTY.
+        #[cfg(target_arch = "wasm32")]
+        if keystroke.key == "insert"
+            && modifiers.shift
+            && !modifiers.control
+            && !modifiers.platform
+            && !modifiers.alt
+            && !modifiers.function
+        {
+            return;
+        }
+
         if keystroke.key_char.is_some()
             && (event.prefer_character_input || self.pending_character_input)
         {

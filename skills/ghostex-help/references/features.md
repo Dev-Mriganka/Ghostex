@@ -652,6 +652,9 @@ Related settings: `autoSleep*`, `clickToWakeSleepingSessions`,
 
 ## Session Chat
 
+Use Shift+Insert to paste in desktop terminals and text fields, including the
+chat composer and dialogs. Ctrl+V (Cmd+V on macOS) keeps its existing behavior.
+
 Session Chat renders the same agent session as a chat GUI: composer with
 image paste and Ctrl+G rich prompt editor, a prompt queue that sends when the
 agent stops, transcript with thinking, tool, and edit cards, subagent
