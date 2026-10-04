@@ -49,6 +49,10 @@ pub(crate) fn create_authenticated_health(state: &AppState) -> ServerHealthRespo
         server_id: state.metadata.server_id.clone(),
         started_at: state.metadata.started_at.clone(),
         tools: get_gxserver_tool_statuses(),
+        #[cfg(windows)]
+        launch_context: Some(crate::platform::launch_context::current().report()),
+        #[cfg(not(windows))]
+        launch_context: None,
     }
 }
 

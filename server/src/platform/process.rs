@@ -79,6 +79,16 @@ pub(crate) fn running_image_superseded() -> bool {
         .is_ok_and(|path| path.to_string_lossy().ends_with(" (deleted)"))
 }
 
+/// How long a gxserver started by `spawn_server` may live.
+#[cfg(windows)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ServerLifetime {
+    /// Outlives the caller: breaks away from the caller's job when the job allows it.
+    Detached,
+    /// Stays in the caller's job. Windows OpenSSH runs each session in a job it closes when the session ends, so a server started by an SSH call this way ends with that call.
+    ThisCall,
+}
+
 /// CDXC:RemoteMachines 2026-09-14 WHY:
 /// A server started over Windows SSH must outlive the exec channel without keeping
 /// that channel's inheritable handles open. Otherwise the CLI exits but the phone
@@ -86,10 +96,19 @@ pub(crate) fn running_image_superseded() -> bool {
 ///
 /// CDXC:PlatformSupport 2026-09-28 WHY:
 /// The server gets its own windowless console (CREATE_NO_WINDOW), not DETACHED_PROCESS: with no console at all, every console child it started without its own flag opened a Windows Terminal window. The new console is still separate from the launcher's, so it outlives an SSH channel or terminal too.
+///
+/// CDXC:PlatformSupport 2026-10-04 WHY:
+/// Since the user's "Prevent and cure" decision (`server_placement` in platform/desktop_session.rs), a caller outside the desktop only spawns gxserver itself when nobody is signed in, and then with `ServerLifetime::ThisCall`; a detached spawn is for callers already in the desktop session (an administrator terminal, which is still given standard rights).
 /// SEE-ALSO: `gpui_spawn_local_gxserver_daemon` in apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs.
 #[cfg(windows)]
-pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> {
-    use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
+pub(crate) fn spawn_server(
+    executable: &OsStr,
+    lifetime: ServerLifetime,
+) -> std::io::Result<(u32, std::os::windows::io::OwnedHandle)> {
+    use std::os::windows::{
+        ffi::OsStrExt,
+        io::{AsRawHandle, FromRawHandle},
+    };
     use windows_sys::Win32::{
         Foundation::CloseHandle,
         System::Threading::{
@@ -106,7 +125,11 @@ pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> 
     startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
     let mut process: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
     // CREATE_BREAKAWAY_FROM_JOB (dropped when the job denies it) | CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP.
-    for flags in [0x0900_0200, 0x0800_0200] {
+    let attempts: &[u32] = match lifetime {
+        ServerLifetime::Detached => &[0x0900_0200, 0x0800_0200],
+        ServerLifetime::ThisCall => &[0x0800_0200],
+    };
+    for flags in attempts.iter().copied() {
         let mut command_line = arguments.clone();
         let created = unsafe {
             match &standard_user {
@@ -138,11 +161,10 @@ pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> 
             }
         };
         if created != 0 {
-            unsafe {
-                CloseHandle(process.hThread);
-                CloseHandle(process.hProcess);
-            }
-            return Ok(process.dwProcessId);
+            unsafe { CloseHandle(process.hThread) };
+            let handle =
+                unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(process.hProcess) };
+            return Ok((process.dwProcessId, handle));
         }
         let error = std::io::Error::last_os_error();
         if error.raw_os_error() != Some(5) {

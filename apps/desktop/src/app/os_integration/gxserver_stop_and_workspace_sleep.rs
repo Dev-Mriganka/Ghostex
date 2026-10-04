@@ -31,6 +31,16 @@ impl GhostexGpuiApp {
         restart_after_stop: bool,
         cx: &mut gpui::Context<Self>,
     ) {
+        self.stop_gpui_local_gxserver(restart_after_stop.then_some(true), cx);
+    }
+
+    /// Stops the local gxserver; `restart` is `Some(show_loading_toast)` to start the bundled one afterwards.
+    pub(crate) fn stop_gpui_local_gxserver(
+        &mut self,
+        restart: Option<bool>,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let restart_after_stop = restart.is_some();
         cx.spawn(async move |this, cx| {
             let previous_pid = cx
                 .background_executor()
@@ -105,7 +115,7 @@ impl GhostexGpuiApp {
                 }
                 let _ = this.refresh_sidebar_gxserver_bootstrap_if_changed(cx);
                 if should_restart {
-                    this.start_gpui_local_gxserver_bootstrap(true, cx);
+                    this.start_gpui_local_gxserver_bootstrap(restart.unwrap_or(true), cx);
                 }
             });
         })

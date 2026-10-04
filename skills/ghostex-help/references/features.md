@@ -1674,8 +1674,13 @@ password when you sign in with one; SSH never accepts the Windows Hello PIN).
 Turning SSH on in Windows Ghostex installs and starts Windows' OpenSSH Server
 feature after one administrator prompt; if Windows needs a restart to finish,
 or another SSH server is already installed, the message under the button says
-what to do. The prompt can only appear when Ghostex's background service was
-started from your desktop, so if Ghostex says it cannot show it, quit Ghostex
+what to do. When a connection needs Ghostex's background service on Windows
+and you are signed in to that computer's desktop, the service starts in your
+desktop session, so agents there work as if you had opened Ghostex yourself.
+When nobody is signed in, it runs only until that SSH connection ends, and
+opening Ghostex on the desktop later replaces it with one started from the
+desktop. The administrator prompt can only appear when the background service
+runs in your desktop session; if Ghostex says it cannot show it, quit Ghostex
 together with its background service and open it again from the Start menu.
 Leave Advanced > Windows WSL distribution blank to use the
 Windows Environment selected in Windows Ghostex: native PowerShell with Windows
