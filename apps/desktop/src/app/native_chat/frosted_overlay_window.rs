@@ -640,8 +640,9 @@ fn attach_overlay_window(window: &mut Window, parent: *mut std::ffi::c_void) {
 /// A click on the pill must leave the keyboard with the chat's window, as the frosted menu hosts do
 /// (`frosted_host.rs`).
 #[cfg(target_os = "windows")]
-fn attach_overlay_window(window: &mut Window, _: *mut std::ffi::c_void) {
+fn attach_overlay_window(window: &mut Window, parent: *mut std::ffi::c_void) {
     crate::app::window::make_gpui_popup_window_non_activating(window);
+    crate::app::window::own_gpui_popup_window(window, parent);
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
