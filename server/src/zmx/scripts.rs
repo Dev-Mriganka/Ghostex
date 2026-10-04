@@ -308,11 +308,9 @@ exec "$zmx_bin" send "$zmx_session"
 pub(crate) fn build_zmx_run_command(input: ZmxRunCommandInput) -> String {
     let startup_command =
         with_atuin_ignored_shell_history_prefix(input.startup_text.trim_end_matches(['\r', '\n']));
-    let startup = format!(
-        "{}\n{}",
-        zmx_provider_prompt_editor_setup_shell_command(input.prompt_editor.as_deref()),
-        startup_command
-    );
+    let prompt_editor_setup =
+        zmx_provider_prompt_editor_setup_shell_command(input.prompt_editor.as_deref());
+    let startup = format!("{}\n{}", prompt_editor_setup, startup_command);
     let login_shell = user_login_shell_path();
     let login_shell_name = std::path::Path::new(&login_shell)
         .file_name()
@@ -320,9 +318,12 @@ pub(crate) fn build_zmx_run_command(input: ZmxRunCommandInput) -> String {
         .unwrap_or_default();
     let provider_shell_command = match login_shell_name {
         "zsh" => super::zsh_startup::agent_shell_command(&login_shell, &startup),
-        "fish" => {
-            super::fish_startup::agent_shell_command(&login_shell, &command_shell(), &startup)
-        }
+        "fish" => super::fish_startup::agent_shell_command(
+            &login_shell,
+            &command_shell(),
+            &prompt_editor_setup,
+            &startup,
+        ),
         _ => format!("{}\n{}", startup, user_login_shell_exec_command()),
     };
     format_zmx_provider_run_script(
@@ -475,6 +476,9 @@ fn zmx_provider_prompt_editor_setup_shell_command(prompt_editor: Option<&str>) -
     remote shell's own editor instead of gte. Capture VISUAL/EDITOR before
     installing the wrapper, and export Monaco only for attach clients that
     explicitly advertised it.
+    A second run in the same environment (the fish launch runs it before
+    `exec fish` and again in the agent's script shell) sees the wrapper in
+    VISUAL/EDITOR and keeps the machine editor captured by the first run.
     */
     let mut script = r#"
 case "${GHOSTEX_HOME:-}" in
@@ -487,6 +491,8 @@ esac
 ghostex_prompt_editor_wrapper="$ghostex_prompt_editor_state_dir/prompt-editor"
 ghostex_prompt_editor_machine_visual="${VISUAL:-}"
 ghostex_prompt_editor_machine_editor="${EDITOR:-}"
+[ "$ghostex_prompt_editor_machine_visual" != "$ghostex_prompt_editor_wrapper" ] || ghostex_prompt_editor_machine_visual="${GHOSTEX_PROMPT_EDITOR_MACHINE_VISUAL:-}"
+[ "$ghostex_prompt_editor_machine_editor" != "$ghostex_prompt_editor_wrapper" ] || ghostex_prompt_editor_machine_editor="${GHOSTEX_PROMPT_EDITOR_MACHINE_EDITOR:-}"
 mkdir -p "$(dirname "$ghostex_prompt_editor_wrapper")" 2>/dev/null || true
 cat > "$ghostex_prompt_editor_wrapper" <<'__GHOSTEX_PROMPT_EDITOR_WRAPPER__'
 #!/bin/sh
