@@ -74,13 +74,7 @@ impl GhostexGpuiApp {
         // A launch staged an instant composer for this project; the created session takes it over,
         // exactly as the runtime's focus post did on arrival.
         self.adopt_agent_launch_placeholder(&message, cx);
-        self.swap_agents_workspace_to_project_id(Some(project_id.to_string()), cx);
-        // The store's focus takes the new session (held until its row arrives), so no publish
-        // before the attach returns pulls the workspace back to the project it came from.
-        self.gx_store_select_opened_session(
-            &ghostex_gx_core::SessionKey::local(project_id, session_id),
-            cx,
-        );
+        self.gx_store_take_created_session(&key, cx);
         // The store's selection above already gave the session its tab (session_chat_launch.rs).
         // A create that names no view follows its agent's Default Agent View
         // (`CDXC:SessionChat 2026-09-30 DECISION` in session_chat_launch.rs).
@@ -90,6 +84,29 @@ impl GhostexGpuiApp {
             self.arm_created_session_chat_launch_intent(key);
         }
         self.focus_local_workspace_terminal_from_message(&message, cx);
+    }
+
+    /// The created session's project takes the workspace and the store's focus takes the session
+    /// (held until its row arrives), so no publish before the attach returns pulls the workspace
+    /// back to the project the create came from. Every create opens through this, including the
+    /// Windows creates that build their attach plan with the session (workspace_events.rs,
+    /// session_chat_launch.rs).
+    ///
+    /// CDXC:FocusRouting 2026-10-04 WHY:
+    /// The Windows project agent and terminal creates swapped the workspace but never told the
+    /// store, so its focus stayed on project A's session. While the Chat launch waited for its
+    /// attach plan, the next publish of that focus took the workspace back to project A and the new
+    /// session in project B was never shown.
+    pub(crate) fn gx_store_take_created_session(
+        &mut self,
+        key: &GpuiLocalWorkspaceSessionKey,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        self.swap_agents_workspace_to_project_id(Some(key.project_id.clone()), cx);
+        self.gx_store_select_opened_session(
+            &ghostex_gx_core::SessionKey::local(key.project_id.as_str(), key.session_id.as_str()),
+            cx,
+        );
     }
 
     /// Whether this attach belongs to a session a create here just made.

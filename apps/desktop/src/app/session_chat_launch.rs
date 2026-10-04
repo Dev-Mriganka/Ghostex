@@ -26,7 +26,7 @@ impl GhostexGpuiApp {
                         }), std::time::Duration::from_secs(15))
                     }).await;
                     let _ = this.update(cx, |this, cx| {
-                        this.swap_agents_workspace_to_project_id(Some(key.project_id.clone()), cx);
+                        this.gx_store_take_created_session(&key, cx);
                         this.local_workspace_latest_focus_key = Some(key.clone());
                         this.local_workspace_attach_pending.insert(key.clone());
                         let workspace_key = GpuiWorkspaceTerminalSessionKey::Local(key.clone());
