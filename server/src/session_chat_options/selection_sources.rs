@@ -187,6 +187,7 @@ pub(super) fn detect_session_chat_transcript_selection(
                     codex_status: None,
                     cursor_status: None,
                     hermes_status: None,
+                    checkout_status: None,
                     model_catalog: None,
                 }
             }
@@ -313,6 +314,7 @@ fn read_session_chat_statusline_selection(
         codex_status: None,
         cursor_status: None,
         hermes_status: None,
+        checkout_status: None,
         model_catalog: None,
     };
     // CDXC:AgentProviders 2026-09-09 WHY:

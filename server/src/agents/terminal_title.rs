@@ -24,6 +24,7 @@ pub(crate) fn normalize_terminal_title(title: &str) -> Option<String> {
         return None;
     }
     let value = strip_oc_prefixes(value.trim_start_matches(is_leading_title_marker).trim());
+    let value = strip_freebuff_title_prefix(&value).to_string();
     if let Some(cursor) = normalize_cursor_terminal_title(&value) {
         return cursor;
     }
@@ -239,6 +240,17 @@ pub(crate) fn is_leading_title_marker(ch: char) -> bool {
         )
 }
 
+/// CDXC:SessionTitles 2026-10-04 DECISION:
+/// User: hide "Freebuff:" from the start of Freebuff's titles in the sidebar and everywhere else in the app ("Freebuff: what model is this?" shows as "what model is this?").
+/// Freebuff titles its terminal `Freebuff: <first prompt>`; only that exact spelling is stripped, so other titles that mention Freebuff stay as they are.
+/// SEE-ALSO: server/src/presentation/title_normalization.rs and packages/gx-core/src/quick_access/session_titles.rs normalize titles with the same rule.
+pub(crate) fn strip_freebuff_title_prefix(title: &str) -> &str {
+    title
+        .strip_prefix("Freebuff: ")
+        .map(str::trim_start)
+        .unwrap_or(title)
+}
+
 pub(crate) fn strip_oc_prefixes(title: &str) -> String {
     let mut rest = title;
     loop {
@@ -442,12 +454,18 @@ pub(crate) fn is_agent_status_boundary_char(ch: char) -> bool {
 
 /// CDXC:SessionTitles 2026-09-22 WHY:
 /// Elevated ConPTY shells prefix their executable title with Administrator. That shell context must be filtered just like the unelevated path or waking a session overwrites its chosen name.
+///
+/// CDXC:SessionTitles 2026-10-04 DECISION:
+/// User: new Freebuff sessions (and maybe the others) were titled "Windows PowerShell"; "this shouldn't be the case". The console's own default titles (`Windows PowerShell`, `PowerShell`) are shell context like the executable path, so they never name a session.
 pub(crate) fn is_windows_default_powershell_title(title: &str) -> bool {
     let normalized = title.trim().to_ascii_lowercase().replace('/', "\\");
     let path = normalized
         .strip_prefix("administrator:")
         .unwrap_or(&normalized)
         .trim_start();
+    if matches!(path, "windows powershell" | "powershell") {
+        return true;
+    }
     let path = path.strip_suffix(" .").unwrap_or(path).trim_end();
     let bytes = path.as_bytes();
     bytes.len() >= 3

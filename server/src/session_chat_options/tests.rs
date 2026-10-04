@@ -459,6 +459,7 @@ fn terminal_values_override_transcript_values_per_option() {
         codex_status: None,
         cursor_status: None,
         hermes_status: None,
+        checkout_status: None,
         model_catalog: None,
     };
     let terminal = claude("Ctx Used: 1% | Opus 4.8").unwrap();
@@ -515,6 +516,7 @@ fn detected_options_serialize_to_the_shared_contract_shape() {
             codex_status: None,
             cursor_status: None,
             hermes_status: None,
+            checkout_status: None,
             model_catalog: None,
         },
         detected_at: "2026-08-01T12:00:00.000Z".to_string(),

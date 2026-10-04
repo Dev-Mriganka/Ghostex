@@ -735,8 +735,11 @@ Freebuff supports chat messages, its replies and thinking, tool results, and its
 questions: when Freebuff asks a question, it appears as a card in the chat, one
 question at a time, and the answer goes to Freebuff as if you had picked it in
 its terminal. Freebuff has no hooks, so a new session's chat appears after its
-first message. Switch to Terminal for sign-in, `/model`, and Freebuff's other
-commands and settings.
+first message; the sidebar still shows it working and done. Its sessions are
+named after your first message. Switch to Terminal for sign-in, `/model`, and
+Freebuff's other commands and settings. For agents whose models the chat cannot
+list, such as Freebuff, the model menu offers Switch model in CLI, which opens
+the session's terminal.
 Scrolling up collapses the composer; returning to the bottom expands it.
 Settings > Chat > Keep chat box expanded while scrolling leaves the desktop
 chat box at full size instead (`sessionChatKeepComposerExpanded`, off by default).
@@ -774,9 +777,10 @@ Context details. Claude
 Code starts with Account, Model limit, 5h limit, 7d limit, and Repository
 starred; Codex starts with Account email, 7d limit, 7d reset, and Account
 resets; Cursor starts with Context used, Branch, and Lines changed; Hermes
-starts with Context used, Cost, Tokens, and Session time. Reset to recommended
-returns to these. The status line and More details are available for Claude
-Code, Codex, Cursor, and Hermes chats.
+starts with Context used, Cost, Tokens, and Session time; every other chat
+agent (Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode) starts with
+Repository and Branch, and can also show Folder, Model, and Session title. Reset
+to recommended returns to these.
 Items without a value are hidden until their data is available again;
 your starred selections stay saved. Wrapped rows are centered and balanced where
 space allows, with separators only between items on the same row.

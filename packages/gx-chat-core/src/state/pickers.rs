@@ -149,6 +149,7 @@ pub struct ContextPreferencesByAgent {
     pub codex: ContextDetailsPreferences,
     pub cursor: ContextDetailsPreferences,
     pub hermes: ContextDetailsPreferences,
+    pub basic: ContextDetailsPreferences,
 }
 
 /// Each agent's recommended record until storage answers, like the TypeScript's
@@ -160,6 +161,7 @@ impl Default for ContextPreferencesByAgent {
             codex: default_preferences(ContextDetailsAgent::Codex),
             cursor: default_preferences(ContextDetailsAgent::Cursor),
             hermes: default_preferences(ContextDetailsAgent::Hermes),
+            basic: default_preferences(ContextDetailsAgent::Basic),
         }
     }
 }
@@ -172,6 +174,7 @@ impl ContextPreferencesByAgent {
             ContextDetailsAgent::Codex => &self.codex,
             ContextDetailsAgent::Cursor => &self.cursor,
             ContextDetailsAgent::Hermes => &self.hermes,
+            ContextDetailsAgent::Basic => &self.basic,
         }
     }
 
@@ -182,6 +185,7 @@ impl ContextPreferencesByAgent {
             ContextDetailsAgent::Codex => &mut self.codex,
             ContextDetailsAgent::Cursor => &mut self.cursor,
             ContextDetailsAgent::Hermes => &mut self.hermes,
+            ContextDetailsAgent::Basic => &mut self.basic,
         }
     }
 }

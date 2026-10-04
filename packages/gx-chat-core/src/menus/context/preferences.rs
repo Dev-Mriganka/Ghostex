@@ -29,6 +29,7 @@ pub const CONTEXT_PREFERENCES_STORE_CLAUDE: &str = "claudeContext";
 pub const CONTEXT_PREFERENCES_STORE_CODEX: &str = "codexContext";
 pub const CONTEXT_PREFERENCES_STORE_CURSOR: &str = "cursorContext";
 pub const CONTEXT_PREFERENCES_STORE_HERMES: &str = "hermesContext";
+pub const CONTEXT_PREFERENCES_STORE_BASIC: &str = "basicContext";
 
 /// The record for one agent.
 pub fn context_preferences_key(agent: ContextDetailsAgent) -> StorageKey {
@@ -38,6 +39,7 @@ pub fn context_preferences_key(agent: ContextDetailsAgent) -> StorageKey {
             ContextDetailsAgent::Codex => CONTEXT_PREFERENCES_STORE_CODEX,
             ContextDetailsAgent::Cursor => CONTEXT_PREFERENCES_STORE_CURSOR,
             ContextDetailsAgent::Hermes => CONTEXT_PREFERENCES_STORE_HERMES,
+            ContextDetailsAgent::Basic => CONTEXT_PREFERENCES_STORE_BASIC,
         }
         .to_string(),
         suffix: String::new(),
@@ -220,6 +222,7 @@ pub fn default_preferences(agent: ContextDetailsAgent) -> ContextDetailsPreferen
             &["contextUsed", "branch", "lines"],
         ),
         ContextDetailsAgent::Hermes => (&[], &["contextUsed", "costUsd", "tokens", "sessionTime"]),
+        ContextDetailsAgent::Basic => (&[], &["repo", "branch"]),
     };
     ContextDetailsPreferences {
         shown: shown

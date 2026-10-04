@@ -202,6 +202,11 @@ fn normalize_terminal_title(title: &str) -> Option<String> {
     }
     let without_markers = trimmed.trim_start_matches(is_status_marker);
     let sanitized = js_trim(strip_oc_prefixes(without_markers));
+    // Freebuff's `Freebuff: <prompt>` title (CDXC:SessionTitles in server/src/agents/terminal_title.rs).
+    let sanitized = sanitized
+        .strip_prefix("Freebuff: ")
+        .map(js_trim)
+        .unwrap_or(sanitized);
     if let Some(cursor) = normalize_cursor_title(sanitized) {
         return cursor;
     }

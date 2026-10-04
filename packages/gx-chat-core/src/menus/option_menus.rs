@@ -247,6 +247,17 @@ pub fn native_option_menus(
         model.push(separator);
     }
     let Some(catalog) = catalog else {
+        /*
+        CDXC:SessionChat 2026-10-04 DECISION:
+        User: Freebuff's model dropdown listed no models; "least we can do is to say switch model in cli button for freebuff in the models dropdown, and when we click on that then we just switch to terminal view from chat view". Every agent whose models chat cannot list gets the row.
+        */
+        let mut terminal = NativeChatMenuItem::new("switchModelInCli");
+        terminal.label = Some("Switch model in CLI".to_string());
+        terminal.command = Some(Map::from_iter([(
+            "type".to_string(),
+            json!("switchToTerminal"),
+        )]));
+        model.push(terminal);
         return NativeOptionMenus {
             model,
             options: Vec::new(),
