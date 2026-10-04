@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+## 10.10.0 - 2026-10-04
+
+**Ghostex 10.10.0 is out.** Coordinators check that the work they hand to a thread actually arrives, Freebuff joins the agents with chat, the phone can start a coordinator and nests its threads, embedded pages can open apps like Okta Verify, and Windows gets a working account sign-in, a red Close button and more reliable remote setup.
+
+### 🧭 Coordinators
+- **Coordinators check that a thread received its work.** A new thread reports started only once its brief has arrived, and the coordinator hears about any message that never reached a thread.
+- **`ghostex agents send` says whether a message was delivered,** pending, accepted or queued, and control characters in a message no longer act as keys.
+- **New Coordinator… is first in a project's agent menu,** and a coordinator keeps the name you gave it.
+- **The crew badge counts working threads, else waiting ones, else all of them,** with a tint that matches.
+
+### 🤖 Agents
+- **Freebuff joins the agents with simple chat support:** messages, replies, tool results and its questions as chat cards. Its chat appears after the first message, and sign-in and `/model` stay in its terminal.
+- **macOS: agents start for fish users whose agent command is only on fish's PATH,** and they keep Ghostex's prompt editor, thanks to @escottalexander.
+- **A chat message sent while the computer is busy is no longer lost** when its paste arrives late.
+
+### 📱 On the phone
+- **Start a coordinator from the phone's agent menu,** and its threads nest under it as they do on the computer.
+- **A Handoff's new conversation opens with the handover link in its chat box.**
+
+### 🪟 Windows
+- **Signing in to an account from Settings > Accounts works on Windows.**
+- **The window buttons reach the top-right corner, and Close turns red on hover.**
+- **Remote setup over SSH finds the SSH server reliably** and says clearly what blocks it, such as missing admin rights, a pending restart or a policy block.
+- **The Ghostex server never runs your sessions from an SSH or background session,** and a server started over SSH keeps running when nobody is signed in.
+- **A new agent created in another project gets focus.**
+
+### 🌐 Browser and extensions
+- **Embedded pages can open other apps and reach local apps after asking,** so sign-ins that use Okta Verify work. Ghostex asks before opening an app or letting a site connect to apps on this computer.
+- **Prerender Buddy is in the extension store:** open your Prerender Buddy workspace beside your agent to review AI visibility, crawler access, website health and articles.
+
+### 🩹 Fixes and polish
+- **Full Reload keeps focus on the session it reloads.**
+- **The chat keeps following new output** at the bottom, and the scroll-down button shows exactly when it doesn't.
+- **The chat history rail is shorter and starts below the fork button.**
+- **A modal's close X sits on its top-right corner** and shows whenever the pointer is in the modal's top 80px.
+- **Dragging a session no longer reveals hidden sidebar sections.**
+- **Experimental terminal shaders skip terminals they can't draw on,** thanks to @vespillo-tech.
+
 ## 10.9.1 - 2026-10-02
 
 **Ghostex 10.9.1 is out, and it brings 10.9.0 to macOS:** Cloud Boxes, more windows for other monitors and Spaces, menus and dialogs that open on the monitor you are using, and everything else in the 10.9.0 notes below. Every platform also gets files that open in the browser, highlighted chat search and a clear message when a remote computer can't connect.

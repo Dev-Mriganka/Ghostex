@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   changelogNotesFormat,
   changelogNotesItems,
@@ -46,7 +46,7 @@ import { caskVersion, findOpenPullRequest, officialCask, personalTap } from './r
  downloads the live DMG only when no verified local copy exists.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const githubRepo = 'maddada/Ghostex';
 export const MAX_RELEASE_DMG_BYTES = 300 * 1024 * 1024;
 const subrepoCandidates = ['apps/mobile/app', '.dependencies/zmx'];

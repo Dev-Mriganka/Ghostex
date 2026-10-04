@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   changelogNotesFormat,
   changelogNotesItems,
@@ -32,7 +32,7 @@ import {
  gates once in its remote prepare job.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const githubRepo = 'maddada/Ghostex';
 const signingIdentity = 'Developer ID Application: Mohamad Youssef (KTKP595G3B)';
 const subrepoCandidates = ['apps/mobile/app', '.dependencies/zmx'];

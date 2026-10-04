@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateMajorMinorReleaseNotes } from './release-shared.mjs';
 
 /*
@@ -34,7 +34,7 @@ import { validateMajorMinorReleaseNotes } from './release-shared.mjs';
  instead of the `- Major` / `- Minor` bullets it emitted before.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 /* ASCII record/field separators: git subjects and bodies never contain them. */
 const RECORD_SEPARATOR = '\u001e';

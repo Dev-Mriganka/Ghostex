@@ -12,7 +12,8 @@ import {
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDirectory, '../..');
-const prepareScript = join(scriptDirectory, 'prepare-references.sh');
+// Repo-relative with cwd: repoRoot, so bash on Windows never sees a backslashed native path.
+const prepareScript = 'tooling/release-gpui/prepare-references.sh';
 const cleanOnly = process.argv.slice(2).includes('--clean');
 
 function git(cwd, args) {
