@@ -41,12 +41,21 @@ pub(crate) static VISUAL: LazyLock<WorkingStripVisual> = LazyLock::new(|| {
     .expect("shared working strip appearance")
 });
 
+/// CDXC:SessionChat 2026-10-04 DECISION: User: "crop the icon that's spinning here so it doesn't show flickering line on its edges while it spins". The spark glyph reached 0.8 units from its 24-unit viewBox edge, so the rotated texture's edge texels (sampled bilinearly against neighbouring atlas sprites) flickered as a square outline; the asset now carries `SPARK_PAD` units of fully transparent padding per side and `spark_svg_size` renders it larger by the same ratio so the glyph keeps its size.
+pub(crate) const SPARK_PAD: f32 = 4.0;
+
+/// The on-screen size of the padded spark svg whose glyph measures `glyph_px`.
+pub(crate) fn spark_svg_size(glyph_px: f32) -> f32 {
+    glyph_px * (24.0 + 2.0 * SPARK_PAD) / 24.0
+}
+
 /// Cache a bounded set of SVG blur masks; GPUI tints their alpha masks like CSS drop-shadow.
 pub(crate) fn asset(key: &str) -> Option<String> {
     let path = &VISUAL.spark_path;
     if key == "spark" {
+        let box_units = 24.0 + 2.0 * SPARK_PAD;
         return Some(format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="{path}"/></svg>"#
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="-{SPARK_PAD} -{SPARK_PAD} {box_units} {box_units}"><path d="{path}"/></svg>"#
         ));
     }
     let (color, step) = key.split_once('-')?;
