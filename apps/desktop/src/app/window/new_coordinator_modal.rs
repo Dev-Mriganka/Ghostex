@@ -40,7 +40,7 @@ const REQUEST_PLACEHOLDER: &str =
 const CANCEL: &str = "Cancel";
 const CREATE: &str = "Create";
 
-/// An agent a coordinator can run on (a Claude or Codex launcher), with its model lineup.
+/// An agent a coordinator can run on (a Claude, Codex or ZCode launcher), with its model lineup.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct NewCoordinatorAgent {
     pub(crate) agent_id: String,
@@ -378,7 +378,7 @@ impl GpuiNewCoordinatorModalWindow {
         if self.agents.is_empty() {
             body = body.child(modal_error(
                 &p,
-                "A coordinator runs on Claude or Codex. Add one of them in Settings > Agents first.",
+                "A coordinator runs on Claude, Codex or ZCode. Add one of them in Settings > Agents first.",
             ));
         } else if self.agents.len() > 1 {
             let items = self

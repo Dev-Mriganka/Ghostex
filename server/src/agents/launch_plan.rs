@@ -344,12 +344,30 @@ fn apply_requested_agent_model(
         return Ok(command);
     }
     let family = resume_agent_family_id(Some(agent_id.to_string()), agent_config, launch_settings)
-        .filter(|family| matches!(family.as_str(), "claude" | "codex"))
+        .filter(|family| matches!(family.as_str(), "claude" | "codex" | "zcode"))
         .ok_or_else(|| {
             DomainStateError::bad_request(
-                "A launch model or effort can only be set for Claude and Codex agents.",
+                "A launch model or effort can only be set for Claude, Codex and ZCode agents.",
             )
         })?;
+    if family == "zcode" {
+        // CDXC:Coordinators 2026-10-04 WHY:
+        // ZCode has no launch model flag, so a coordinator create's chosen model reaches the
+        // session as a `/model` line the create flow queues before the first request. There is
+        // no such delivery for a spawned thread yet, so a thread's model request stays refused
+        // rather than silently dropped, and ZCode takes no effort choice at all.
+        if effort.is_some() {
+            return Err(DomainStateError::bad_request(
+                "ZCode agents take no effort choice.",
+            ));
+        }
+        if crate::coordinators::coordinator_create_request(params)?.is_none() {
+            return Err(DomainStateError::bad_request(
+                "A ZCode thread keeps its configured model; only a coordinator's own model can be set.",
+            ));
+        }
+        return Ok(command);
+    }
     let base = command
         .or_else(|| default_agent_command(&family).map(str::to_string))
         .unwrap_or_else(|| family.clone());
@@ -357,7 +375,7 @@ fn apply_requested_agent_model(
 }
 
 /// CDXC:Coordinators 2026-09-30 WHY:
-/// A coordinator's role is a system prompt flag in the saved base command (see coordinators/role.rs), added here beside the per-session model flags so resume, fork and account wrapping keep it. Only Claude and Codex have such a flag, so a coordinator on any other agent is refused rather than started without its role.
+/// A coordinator's role is a system prompt flag in the saved base command (see coordinators/role.rs), added here beside the per-session model flags so resume, fork and account wrapping keep it. Claude carries the whole role file this way; Codex and ZCode carry only the guide pointer (ZCode has no such flag, so its role arrives through the SessionStart hook instead), and an agent outside the supported families is refused rather than started without its role.
 fn apply_coordinator_role(
     agent_id: &str,
     agent_config: &Map<String, Value>,
@@ -375,7 +393,7 @@ fn apply_coordinator_role(
         .filter(|family| crate::coordinators::coordinator_agent_family_supported(family))
         .ok_or_else(|| {
             DomainStateError::bad_request(
-                "A coordinator runs on Claude or Codex. Pick one of those agents.",
+                "A coordinator runs on Claude, Codex or ZCode. Pick one of those agents.",
             )
         })?;
     let base = command
