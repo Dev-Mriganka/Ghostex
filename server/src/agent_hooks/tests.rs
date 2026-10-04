@@ -374,19 +374,23 @@ fn notify_hook_helper_records_working_status_and_first_prompt() {
     let temp = tempfile::tempdir().expect("tempdir");
     let state_path = temp.path().join("session.state");
     let hook_store = temp.path().join("hook-store");
-    run_notify_hook(vec![
-        path_string(&state_path),
-        json!({
-            "agent": "codex",
-            "event": "UserPromptSubmit",
-            "hook_event_name": "UserPromptSubmit",
-            "prompt": "Please fix flaky tests",
-            "session_id": "codex-session-1"
-        })
-        .to_string(),
-        path_string(&hook_store),
-    ])
-    .expect("notify helper");
+    assert!(
+        run_notify_hook(vec![
+            path_string(&state_path),
+            json!({
+                "agent": "codex",
+                "event": "UserPromptSubmit",
+                "hook_event_name": "UserPromptSubmit",
+                "prompt": "Please fix flaky tests",
+                "session_id": "codex-session-1"
+            })
+            .to_string(),
+            path_string(&hook_store),
+        ])
+        .expect("notify helper")
+        .is_none(),
+        "a codex event never answers with coordinator context"
+    );
     let state = read_hook_state(&state_path);
     assert_eq!(
         read_state_string(&state, "status").as_deref(),

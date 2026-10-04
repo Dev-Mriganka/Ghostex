@@ -23,7 +23,7 @@ USAGE
   ghostex coordinator guide
 
 WHAT A COORDINATOR IS
-  A coordinator is an agent session (Claude or Codex) with a standing role: it
+  A coordinator is an agent session (Claude, Codex or ZCode) with a standing role: it
   answers quick questions itself and starts a thread for every piece of real
   work. Threads are ordinary agent sessions; they sit under their coordinator in
   the sidebar. When a thread finishes a turn, Ghostex forwards its final message
@@ -34,19 +34,22 @@ WHAT A COORDINATOR IS
 
 CREATE
   create starts a coordinator in your project (--project-id picks another).
-  --agent takes an id from `ghostex agents types`; it must be a Claude or Codex
-  agent, and defaults to the first Claude agent listed. --model picks its model
-  (a value from the agent's model list, such as sonnet or opus[1m]); a Claude
-  coordinator defaults to Opus 5.5 (opus[1m]), a Codex one to its configured
-  model. --effort defaults to medium, which is plenty for routing work. --goal
-  is one line the coordinator works toward. --task sends it a first message.
+  --agent takes an id from `ghostex agents types`; it must be a Claude, Codex
+  or ZCode agent, and defaults to the first configured one, preferring Claude.
+  --model picks
+  its model (a value from the agent's model list, such as sonnet or opus[1m]);
+  a Claude coordinator defaults to Opus 5.5 (opus[1m]), a Codex or ZCode one to
+  its configured model. --effort defaults to medium, which is plenty for
+  routing work; a ZCode coordinator takes no effort. --goal is one line the
+  coordinator works toward. --task sends
+  it a first message.
   options lists the agents a coordinator can run on, with each one's models,
   the model it starts on, and the efforts each model accepts.
 
 PROMOTE
-  promote makes a session that already exists (Claude or Codex) a coordinator,
-  keeping its conversation: the sidebar's Advanced > Make Coordinator does the
-  same. Without <session-ref> it promotes the session it runs in. It never
+  promote makes a session that already exists (Claude, Codex or ZCode) a
+  coordinator, keeping its conversation: the sidebar's Advanced > Make
+  Coordinator does the same. Without <session-ref> it promotes the session it runs in. It never
   restarts or interrupts the agent: the coordinator playbook is queued in the
   session's chat and reaches it once its current turn is over, and the next
   time the session starts or resumes on its own (waking from sleep, a Full

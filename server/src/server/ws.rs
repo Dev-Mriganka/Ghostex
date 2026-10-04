@@ -115,8 +115,8 @@ pub(crate) async fn handle_event_socket(socket: WebSocket, state: Arc<AppState>,
     {
         return;
     }
-    // A client that connects after the last poll still gets the published
-    // lineup this server holds (agent_model_catalog.rs).
+    // The connecting client gets the effective lineup from boot, not only
+    // after the first poll succeeds (agent_model_catalog.rs).
     if let Some(event) = crate::agent_model_catalog::connect_event(&state.metadata.server_id) {
         if outbound_tx.try_send(event).is_err() {
             return;
