@@ -574,34 +574,47 @@ impl Start {
         Ok(())
     }
 
+    /// CDXC:Build 2026-10-04 WHY:
+    /// A native Windows start hands the launch to the Explorer shell instead of spawning the app as its own child. `bun run start` puts its children in a kill-on-close job (libuv's), and `cargo run` puts xtask in a job that refuses CREATE_BREAKAWAY_FROM_JOB, so a Ghostex spawned here, even DETACHED_PROCESS, was killed the moment bun exited. The spawned app also inherited the caller's pipe handles (keeping a `| Select-Object` pipeline open while it lived) and the terminal's GHOSTEX_* environment. A run-once scheduled task is not used here because Task Scheduler ends a task's process after its 72-hour limit.
     pub fn launch_windows_app(&self) -> Res {
         let executable = self.installed_app_path.join("Ghostex.exe");
-        let mut launch = Command::new(&executable);
-        launch.current_dir(&self.installed_app_path);
-        if self.opts.profile {
-            launch.arg("--profile");
-        }
-        launch
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null());
         #[cfg(windows)]
         {
-            use std::os::windows::process::CommandExt;
-            const DETACHED_PROCESS: u32 = 0x0000_0008;
-            const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-            launch.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+            let arguments = if self.opts.profile { "--profile" } else { "" };
+            super::windows_native::shell_execute_from_desktop(
+                &executable,
+                arguments,
+                &self.installed_app_path,
+            )
+            .map_err(|error| {
+                format!(
+                    "Could not launch {} through Explorer: {error}",
+                    executable.display()
+                )
+            })?;
+            println!("Launched {} through Explorer.", executable.display());
+            Ok(())
         }
+        // A start driven from WSL launches the Windows app through WSL interop.
         #[cfg(unix)]
         {
             use std::os::unix::process::CommandExt;
-            launch.process_group(0);
+            let mut launch = Command::new(&executable);
+            launch.current_dir(&self.installed_app_path);
+            if self.opts.profile {
+                launch.arg("--profile");
+            }
+            launch
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .process_group(0);
+            let child = launch
+                .spawn()
+                .map_err(|error| util::spawn_error(&launch, error))?;
+            println!("Launched {} (pid {}).", executable.display(), child.id());
+            Ok(())
         }
-        let child = launch
-            .spawn()
-            .map_err(|error| util::spawn_error(&launch, error))?;
-        println!("Launched {} (pid {}).", executable.display(), child.id());
-        Ok(())
     }
 
     /// CDXC:ServerDaemon 2026-09-23 WHY:
