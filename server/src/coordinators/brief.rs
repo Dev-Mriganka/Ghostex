@@ -57,6 +57,39 @@ pub fn agent_message(sender: &MessageSender, body: &str) -> String {
     )
 }
 
+/// The labels of the lines `agent_message` writes between its opener and the blank line, in order.
+const AGENT_MESSAGE_HEADER_LABELS: [&str; 6] = [
+    "Agent: ",
+    "Session: ",
+    "Session ID: ",
+    "Agent ID: ",
+    "Agent Session ID: ",
+    "Reply to: ",
+];
+
+/// The body of an agent message, without the header `agent_message` (and `ghostex agents send`) prepends; any other text comes back unchanged.
+/// CDXC:SessionTitles 2026-10-05 WHY:
+/// The first-message auto-title read the whole prompt, so a session started by another agent was named after the SENDER's `Session:` title ("Coordinator promote operation"). Titles come from the body only. The match is the exact header (opener, the six labelled lines in order, a blank line), not a heuristic, so a user's own message that merely starts with similar words is never cut.
+/// SEE-ALSO: server/src/ghostex_cli/agents/identity.rs `message` writes the same header; the three title paths read it through here: server/src/server/title_generation/first_prompt_decision.rs, server/src/agents/activity.rs and `build_session_history_title_source`.
+pub fn strip_agent_message_header(text: &str) -> &str {
+    let Some(mut rest) = text.strip_prefix("Message from another agent\n") else {
+        return text;
+    };
+    for label in AGENT_MESSAGE_HEADER_LABELS {
+        let Some((line, after)) = rest.split_once('\n') else {
+            return text;
+        };
+        if !line.starts_with(label) {
+            return text;
+        }
+        rest = after;
+    }
+    match rest.strip_prefix('\n') {
+        Some(body) => body,
+        None => text,
+    }
+}
+
 /// CDXC:Coordinators 2026-09-30 WHY:
 /// Claude's projects send "the project's instructions" to every new thread so a rule stated once reaches all of them. Here the goal, the standing instructions and the memory notes ride under the coordinator's task, followed by the reporting rules the supervisor depends on: the thread's final message is its report, so it must not message the coordinator itself.
 pub fn thread_brief(coordinator: &BriefContext<'_>, task: &str) -> String {

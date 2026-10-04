@@ -808,7 +808,10 @@ pub(crate) fn is_first_prompt_claim_generic_title(
 }
 
 pub(crate) fn normalize_first_prompt_title_claim_prompt(prompt: Option<&str>) -> Option<String> {
-    let normalized = prompt?.split_whitespace().collect::<Vec<_>>().join(" ");
+    let normalized = crate::coordinators::strip_agent_message_header(prompt?)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     let normalized = normalized.trim();
     if normalized.is_empty() {
         return None;
