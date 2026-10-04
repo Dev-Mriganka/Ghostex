@@ -40,6 +40,16 @@ pub(crate) async fn send_session_chat_message_internal(
     .await
 }
 
+/// How long a send whose paste the terminal did not show waits before typing it again.
+const PASTE_RETRY_PAUSE: std::time::Duration = std::time::Duration::from_millis(1_500);
+
+/// CDXC:SessionChat 2026-10-04 WHY:
+/// Under heavy load (a release build compiling) a coordinator's `ghostex agents send` failed with "The terminal did not accept the pasted message" to an idle thread and went through unchanged two minutes later. That failure is decided before Return is written, so nothing was submitted: the send runs its steps once more after a short pause, and they begin with the verified clear of the input box, so a paste that landed late is wiped instead of typed twice. One retry only, and not for image or slash-command sends, whose steps do more than type text.
+fn paste_not_accepted(error: &crate::session_chat_send::SessionChatSendError) -> bool {
+    error.failure == crate::session_chat_send::SessionChatSendFailure::Write
+        && error.message == crate::session_chat_send::SESSION_CHAT_PASTE_NOT_ACCEPTED
+}
+
 pub(crate) async fn send_session_chat_message_with_draft(
     state: &AppState,
     project_id: &str,
@@ -161,11 +171,11 @@ pub(crate) async fn send_session_chat_message_with_draft(
         &agent_text,
     )
     .map_or(agent_text, std::borrow::Cow::Owned);
-    let agent_text = match crate::session_chat_send::picture_terminal_control_characters(&agent_text)
-    {
-        std::borrow::Cow::Owned(pictured) => std::borrow::Cow::Owned(pictured),
-        std::borrow::Cow::Borrowed(_) => agent_text,
-    };
+    let agent_text =
+        match crate::session_chat_send::picture_terminal_control_characters(&agent_text) {
+            std::borrow::Cow::Owned(pictured) => std::borrow::Cow::Owned(pictured),
+            std::borrow::Cow::Borrowed(_) => agent_text,
+        };
     let text = agent_text.as_ref();
     /*
     CDXC:AgentScreenDetection 2026-08-19:
@@ -425,15 +435,36 @@ pub(crate) async fn send_session_chat_message_with_draft(
         text,
         image_paths,
     );
-    if let Err(error) = crate::session_chat_send::execute_session_chat_send(
+    let retry_steps = (image_paths.is_empty() && !capture_local_output).then(|| steps.clone());
+    let mut sent = crate::session_chat_send::execute_session_chat_send(
         &target.project_id,
         &target.session_id,
         &target.zmx_name,
         "session-chat-message",
         steps,
     )
-    .await
-    {
+    .await;
+    if let (Err(error), Some(retry_steps)) = (&sent, retry_steps) {
+        if paste_not_accepted(error) {
+            crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
+                "sessionChatSendRetriedPaste",
+                &target.project_id,
+                &target.session_id,
+                "The terminal did not show the pasted message; cleared the input box and typed it once more.",
+                &[],
+            );
+            tokio::time::sleep(PASTE_RETRY_PAUSE).await;
+            sent = crate::session_chat_send::execute_session_chat_send(
+                &target.project_id,
+                &target.session_id,
+                &target.zmx_name,
+                "session-chat-message",
+                retry_steps,
+            )
+            .await;
+        }
+    }
+    if let Err(error) = sent {
         if let Some(id) = durable_id.as_deref() {
             crate::session_chat_app_command::discard_local_command(
                 &target.project_id,

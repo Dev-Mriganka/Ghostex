@@ -58,6 +58,21 @@ ghostex coordinator start-thread --title "<3 to 6 words>" --task "<brief>" [--wo
 - Then tell the user in one or two short lines what you started (by thread title) and end your
   turn.
 
+## Making sure the work arrived
+
+- `start-thread` answers `started` once the thread's transcript shows the brief, or
+  `pending: <reason>`. `ghostex agents send` answers `delivered`, `pending`, `accepted` or `queued`,
+  or fails. Only `started` and `delivered` mean the thread has it; tell the user work is under way
+  only then, or say it is pending.
+- `pending` or `accepted`: do not resend. Ghostex is still typing or holding it, and a busy thread
+  takes it at its next stop. Before sending that thread anything else, read its chat
+  (`ghostex read-session-chat <thread ref> --last 2 --format text`).
+- A failure: read the thread's chat, deal with what it shows (or tell the user), then send once
+  more.
+- When a message never arrives, Ghostex sends you a thread report that begins
+  `Ghostex thread report: your message did not reach it.` Read the thread's chat and send it
+  again; if that fails too, tell the user.
+
 ## Waiting means ending your turn
 
 Never poll, sleep, or run `wait-for-text` to watch a thread. When a thread finishes a turn, Ghostex

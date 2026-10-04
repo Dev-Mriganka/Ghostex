@@ -62,6 +62,10 @@ pub struct ThreadRecord {
     pub reported_at: Option<String>,
     pub reported_prompt_key: Option<String>,
     pub last_report: Option<String>,
+    /// The start of a message its coordinator handed it that its transcript does not show yet.
+    pub pending_message: Option<String>,
+    /// When that message was sent.
+    pub pending_message_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -139,6 +143,8 @@ fn thread_from_row(row: &Row<'_>) -> rusqlite::Result<ThreadRecord> {
         reported_at: row.get("reportedAt")?,
         reported_prompt_key: row.get("reportedPromptKey")?,
         last_report: row.get("lastReport")?,
+        pending_message: row.get("pendingMessage")?,
+        pending_message_at: row.get("pendingMessageAt")?,
         created_at: row.get("createdAt")?,
         updated_at: row.get("updatedAt")?,
     })
@@ -146,7 +152,7 @@ fn thread_from_row(row: &Row<'_>) -> rusqlite::Result<ThreadRecord> {
 
 const COORDINATOR_COLUMNS: &str =
     "projectId, sessionId, goal, instructions, memoryJson, createdAt, updatedAt";
-const THREAD_COLUMNS: &str = "projectId, sessionId, coordinatorProjectId, coordinatorSessionId, task, resolvedAt, observedWorking, reportedAt, reportedPromptKey, lastReport, createdAt, updatedAt";
+const THREAD_COLUMNS: &str = "projectId, sessionId, coordinatorProjectId, coordinatorSessionId, task, resolvedAt, observedWorking, reportedAt, reportedPromptKey, lastReport, pendingMessage, pendingMessageAt, createdAt, updatedAt";
 
 pub fn read_coordinator(
     db: &Connection,
@@ -395,5 +401,45 @@ pub fn record_thread_report(
             .map_err(sql_error)?;
         }
     }
+    Ok(())
+}
+
+/// Watches a message handed to the thread until its transcript records it; a newer message
+/// replaces the one being watched.
+pub fn set_thread_pending_message(
+    db: &Connection,
+    project_id: &str,
+    session_id: &str,
+    excerpt: &str,
+    sent_at: &str,
+) -> Result<(), DomainStateError> {
+    db.execute(
+        r#"
+        UPDATE coordinator_threads
+        SET pendingMessage = ?3, pendingMessageAt = ?4, updatedAt = ?5
+        WHERE projectId = ?1 AND sessionId = ?2
+        "#,
+        params![project_id, session_id, excerpt, sent_at, now_iso()],
+    )
+    .map_err(sql_error)?;
+    Ok(())
+}
+
+/// Stops watching the message sent at `sent_at`; a newer one sent meanwhile stays watched.
+pub fn clear_thread_pending_message(
+    db: &Connection,
+    project_id: &str,
+    session_id: &str,
+    sent_at: &str,
+) -> Result<(), DomainStateError> {
+    db.execute(
+        r#"
+        UPDATE coordinator_threads
+        SET pendingMessage = NULL, pendingMessageAt = NULL, updatedAt = ?4
+        WHERE projectId = ?1 AND sessionId = ?2 AND pendingMessageAt = ?3
+        "#,
+        params![project_id, session_id, sent_at, now_iso()],
+    )
+    .map_err(sql_error)?;
     Ok(())
 }

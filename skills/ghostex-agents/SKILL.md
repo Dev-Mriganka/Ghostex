@@ -92,7 +92,10 @@ the waiting habits below.
    is not there yet, and older CLIs only ever say `accepted` or `queued`.
    Unless the result says `delivered`, read the session chat (or the queue)
    before you assume the agent is working on it, and before you ever send the
-   same message again. None of these means the agent has read it. In
+   same message again. `ghostex coordinator start-thread` likewise answers
+   `started` only once the thread's transcript shows the brief, else
+   `pending` with the reason; older CLIs print "Started thread" without
+   checking, so read the thread's chat. None of these means the agent has read it. In
    PowerShell, send text containing backticks with `--body-file` or single
    quotes: inside double quotes a backtick is an escape character.
 7. **Wait on a signal, not a guess.** Ask the agent to send its result back to

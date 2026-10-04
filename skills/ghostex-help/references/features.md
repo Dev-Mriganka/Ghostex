@@ -1454,6 +1454,12 @@ version of the Projects features in Cursor and Claude Code.
   The coordinator then checks the work, commits it (only that thread's files,
   and it never pushes unless you ask), starts the next step, and tells you
   what needs you. Nobody has to poll.
+- **Work that never arrives is caught**: when the coordinator starts a thread,
+  it waits until the thread has actually taken its brief before saying it is
+  under way, and says "pending" with the reason when it has not yet. Ghostex
+  keeps watching every brief and follow-up the coordinator sends: if a thread
+  sits idle without it, the coordinator is told the message did not reach it
+  and sends it again, so work handed out is never silently dropped.
 - **Thread models**: the coordinator picks each Claude thread's model when it
   starts it: Opus 5.5 at high effort for substantial work, Opus 5.5 at medium
   for hard but small changes, Sonnet 5.5 at high for small contained fixes. It
