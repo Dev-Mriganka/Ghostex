@@ -27,9 +27,12 @@ marked **(unverified)** were inferred and not confirmed from that evidence.
    Windows x64/arm64 Velopack + portable zip, Android APK, gxserver Linux and
    WSL runtimes).
 3. Each platform has its own publish stage. The first stage to finish creates
-   tag `vX.Y.Z` (at the dispatched commit) and the GitHub release with the
-   CHANGELOG section as its body; later stages amend it. A failed platform does
-   not hold back the others.
+   tag `vX.Y.Z` (at the dispatched commit) and the GitHub release. Its body
+   opens with a download block of at most 3 lines (macOS + Windows, Linux,
+   Android + iOS TestFlight) between `<!-- ghostex-downloads:start/end -->`
+   markers, then the CHANGELOG section. Later stages amend the release and
+   regenerate that block from the live assets. A failed platform does not hold
+   back the others.
 4. The macOS stage pushes `chore: release X.Y.Z` (author `github-actions[bot]`,
    changes `appcast.xml` only) to `main`, and pushes the `maddada/homebrew-tap`
    cask bump. Homebrew's autobump bot (BrewTestBot) opens the official
@@ -326,6 +329,11 @@ Expect about 24 assets: `ghostex-X.Y.Z-arm64.dmg`, `ghostex_X.Y.Z_amd64.deb`,
 `ghostex-X.Y.Z-windows-{x64,arm64}.exe` and `-portable.zip`, the Velopack
 files, `ghostex-android.apk`, `gxserver-linux-{x64,arm64}.tar.gz`,
 `gxserver-wsl-windows-{x64,arm64}.zip` and `release-provenance-X.Y.Z.json`.
+
+The body must start with the download block, and every customer asset
+(DMG, both Windows installers and portable zips, deb, rpm, tarball, APK) must
+be linked there; `release:verify` checks both. Checksums, Velopack files,
+gxserver runtimes and provenance stay as unlisted assets.
 
 From Windows (the normal case), skip the macOS-only DMG and Homebrew checks.
 Also skip the repo check, because `main` has moved past the tag by now:

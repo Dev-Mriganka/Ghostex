@@ -20,7 +20,11 @@ import { componentDownloadRepo } from './release-gpui/on-demand-manifest.mjs';
 import { LEGACY_COMPONENTS_GITHUB_REPO, componentsGithubRepo } from './release-gpui/components-repo.mjs';
 import { validateWindowsUpdateFeed, windowsUpdateArtifactNames } from './release-gpui/windows-update-feed.mjs';
 import { releaseProvenanceAssetName, validateReleaseProvenance } from './release-gpui/provenance.mjs';
-import { customerDownloadEntries, renderIosAvailabilityNotes } from './release-gpui/customer-downloads.mjs';
+import {
+  customerDownloadEntries,
+  DOWNLOADS_START,
+  renderIosAvailabilityNotes,
+} from './release-gpui/customer-downloads.mjs';
 import {
   RELEASE_PLAN_ARTIFACT_DIRECTORY,
   RELEASE_PLAN_ARTIFACT_FILE,
@@ -339,6 +343,9 @@ async function verify(cleanupPaths) {
       throw new Error(
         `Release notes are missing customer download links: ${missing.map((item) => item.label).join(', ')}`
       );
+    }
+    if (!releaseBody.trimStart().startsWith(DOWNLOADS_START)) {
+      throw new Error('Release notes do not open with the download block.');
     }
     const hasAndroidDownload = groups.some((group) => group.title === 'Android');
     if (hasAndroidDownload && !releaseBody.includes(renderIosAvailabilityNotes())) {
