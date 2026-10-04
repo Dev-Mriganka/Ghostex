@@ -65,11 +65,16 @@ pub fn pending_async_questions(messages: &[ChatMessage]) -> Vec<PendingAsyncQues
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-            if let Some(at) = pending
+            let mut matching = pending
                 .iter()
-                .position(|question| text.starts_with(&async_answer_prefix(&question.title)))
-            {
-                pending.remove(at);
+                .enumerate()
+                .filter(|(_, question)| text.starts_with(&async_answer_prefix(&question.title)));
+            // CDXC:SessionChat 2026-10-04 WHY:
+            // Match before filtering retired IDs. Equal prefixes are ambiguous; the confirmed card submission retires its exact key separately, including after a transcript refresh.
+            if let Some((at, _)) = matching.next() {
+                if matching.next().is_none() {
+                    pending.remove(at);
+                }
             }
         }
     }

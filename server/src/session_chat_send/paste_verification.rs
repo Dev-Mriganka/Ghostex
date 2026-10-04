@@ -86,7 +86,7 @@ Claude, Codex and Grok verify only the live composer after its old draft was cle
 They require evidence before Enter, including when capture fails. Other agents
 retain their existing whole-screen watch and unreadable-capture behavior.
 */
-pub(super) async fn verify_session_chat_paste_landed(
+pub(crate) async fn verify_session_chat_paste_landed(
     zmx_name: &str,
     agent: Option<&str>,
     text: &str,

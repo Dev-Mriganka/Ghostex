@@ -360,7 +360,7 @@ pub(super) fn session_chat_verify_step(text: &str) -> Option<SessionChatSendStep
 
 /// What a capture said about the pasted body.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum SessionChatPasteVerification {
+pub(crate) enum SessionChatPasteVerification {
     /// The body (or its collapsed placeholder) is on screen.
     Landed,
     /// The screen was readable for the whole window and never showed it.

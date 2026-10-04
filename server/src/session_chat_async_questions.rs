@@ -70,11 +70,16 @@ fn observe_messages(
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-            if let Some(index) = pending
+            let mut matching = pending
                 .iter()
-                .position(|(_, prefix)| text.starts_with(prefix))
-            {
-                pending.remove(index);
+                .enumerate()
+                .filter(|(_, (_, prefix))| text.starts_with(prefix));
+            // CDXC:SessionChat 2026-10-04 WHY:
+            // A framed reply loses its canonical question ID in the decoder. Equal prefixes cannot identify a card; the verified answer endpoint retires its exact ID separately. Keep dismissed entries in this ambiguity check so replay cannot retire a sibling.
+            if let Some((index, _)) = matching.next() {
+                if matching.next().is_none() {
+                    pending.remove(index);
+                }
             }
         }
     }
