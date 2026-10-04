@@ -678,7 +678,7 @@ async function verify(cleanupPaths) {
       if (!pendingBump) {
         throw new Error(
           `${officialCask.label} ships ghostex ${officialVersion}, not ${version}, and no open "ghostex ${version}" bump pull request exists; ` +
-            `the macOS publish stage opens one from maddada/homebrew-cask:ghostex-${version}.`
+            "Homebrew's autobump bot (BrewTestBot) opens it after a release; rerun this check in a while."
         );
       }
       officialState =

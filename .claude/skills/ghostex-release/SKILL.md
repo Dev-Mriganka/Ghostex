@@ -31,8 +31,9 @@ marked **(unverified)** were inferred and not confirmed from that evidence.
    CHANGELOG section as its body; later stages amend it. A failed platform does
    not hold back the others.
 4. The macOS stage pushes `chore: release X.Y.Z` (author `github-actions[bot]`,
-   changes `appcast.xml` only) to `main`, and opens the Homebrew/homebrew-cask
-   PR `ghostex X.Y.Z` from the `maddada/homebrew-cask` fork.
+   changes `appcast.xml` only) to `main`, and pushes the `maddada/homebrew-tap`
+   cask bump. Homebrew's autobump bot (BrewTestBot) opens the official
+   Homebrew/homebrew-cask PR `ghostex X.Y.Z` itself; our own PR is opt-in.
 
 ### Who runs it, and where
 
@@ -297,15 +298,15 @@ while any other exit `0` means only that a job changed state.
   and `*.nupkg` assets on the GitHub release (`windows-update-feed.mjs`).
 - **Android**: `ghostex-android.apk` on the GitHub release, built from the
   `apps/mobile/app` submodule at the dispatched commit.
-- **Homebrew**: the macOS stage's `homebrew` job opens the `ghostex X.Y.Z` PR
-  on Homebrew/homebrew-cask and bumps `maddada/homebrew-tap`. In 10.9.1 that job
-  **failed** (`gh api POST repos/maddada/homebrew-cask/git/refs failed: HTTP 404`,
-  probably a token/fork permission problem, unverified). BrewTestBot's autobump
-  opened PR #291473 within a minute and it merged, so a red `homebrew` job is
-  not a release failure. Check with
-  `gh pr list --repo Homebrew/homebrew-cask --search ghostex --state all --limit 3`,
-  and mention the failure to the user. Manual fallback:
-  `HOMEBREW_GITHUB_API_TOKEN=... node tooling/release-gpui/publish-homebrew-cask.mjs --version X.Y.Z --publish`
+- **Homebrew**: the official cask is updated by Homebrew's autobump bot, which
+  opens the `ghostex X.Y.Z` PR on Homebrew/homebrew-cask (e.g. #291473 for 10.9.1)
+  within about half an hour of the release; our workflow no longer opens one (user
+  decision 2026-10-04; its token had no write access to the fork and every run since
+  10.0.1 failed with HTTP 404). The macOS stage's `homebrew` job only pushes the
+  `maddada/homebrew-tap` bump. Check the official cask with
+  `gh pr list --repo Homebrew/homebrew-cask --search ghostex --state all --limit 3`;
+  a red `homebrew` job is not a release failure, but mention it. To open the PR
+  ourselves anyway: `HOMEBREW_GITHUB_API_TOKEN=... node tooling/release-gpui/publish-homebrew-cask.mjs --version X.Y.Z --publish --official`
   (`tooling/release-gpui/homebrew-cask-setup.md`).
 - **AUR (`ghostex-bin`)**: never touch it. Another person updates it
   automatically, and the Linux stage's AUR step skips itself because
