@@ -1,4 +1,4 @@
-//! Making an existing Claude or Codex session a coordinator (`/api/promoteCoordinator`, the
+//! Making an existing Claude, Codex or ZCode session a coordinator (`/api/promoteCoordinator`, the
 //! sidebar's Advanced > Make Coordinator, `ghostex coordinator promote`).
 
 use std::path::Path;
@@ -80,7 +80,7 @@ pub fn promote_session_to_coordinator(
         .filter(|family| coordinator_agent_family_supported(family))
         .ok_or_else(|| {
             DomainStateError::bad_request(
-                "A coordinator runs on Claude or Codex, and this session runs another agent. Start a New Coordinator instead.",
+                "A coordinator runs on Claude, Codex or ZCode, and this session runs another agent. Start a New Coordinator instead.",
             )
         })?;
 

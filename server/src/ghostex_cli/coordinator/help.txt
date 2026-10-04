@@ -47,9 +47,9 @@ CREATE
   the model it starts on, and the efforts each model accepts.
 
 PROMOTE
-  promote makes a session that already exists (Claude or Codex) a coordinator,
-  keeping its conversation: the sidebar's Advanced > Make Coordinator does the
-  same. Without <session-ref> it promotes the session it runs in. It never
+  promote makes a session that already exists (Claude, Codex or ZCode) a
+  coordinator, keeping its conversation: the sidebar's Advanced > Make
+  Coordinator does the same. Without <session-ref> it promotes the session it runs in. It never
   restarts or interrupts the agent: the coordinator playbook is queued in the
   session's chat and reaches it once its current turn is over, and the next
   time the session starts or resumes on its own (waking from sleep, a Full

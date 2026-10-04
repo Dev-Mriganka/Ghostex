@@ -1440,9 +1440,10 @@ version of the Projects features in Cursor and Claude Code.
   first message (Rename in the sidebar still changes it; left blank, it is
   named once from its first conversation). A project can have several
   coordinators, one per stream of work.
-- **Turn a session into a coordinator**: right-click a Claude or Codex
+- **Turn a session into a coordinator**: right-click a Claude, Codex or ZCode
   session in the sidebar, open **Advanced** and choose **Make Coordinator**
-  (optionally with a goal); on the phone it is in the session's menu too.
+  (optionally with a goal); on the phone it is in a Claude or Codex session's
+  menu too.
   The session keeps its conversation and is never restarted or interrupted:
   it gets the crown right away, and the coordinator playbook waits in its
   chat queue until its current turn is over. The next time the session

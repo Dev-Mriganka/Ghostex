@@ -6,19 +6,19 @@
 //! SEE-ALSO: apps/desktop/src/app/window/new_coordinator_modal.rs, apps/desktop/src/app/new_coordinator_modal_lifecycle.rs, server/src/server/route_http/sessions.rs (`/api/createAgentSession` with `coordinator`).
 
 use ghostex_gx_core::{
-    created_session, default_agent_id_for_icon, local_agent_launch_params,
+    ProjectKey, SessionKey, created_session, default_agent_id_for_icon, local_agent_launch_params,
     open_remote_session_terminal, queue_startup_prompt_params, remote_agent_launch_params,
-    remote_launch_agent_id, resolve_sidebar_agent, start_provider_params, ProjectKey, SessionKey,
+    remote_launch_agent_id, resolve_sidebar_agent, start_provider_params,
 };
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use super::super::gx_rpc;
 use super::terminal::REMOTE_TIMEOUT;
+use crate::GhostexGpuiApp;
 use crate::app::remote_conn::sidebar_rpc::{
-    gpui_remote_sidebar_rpc_failure_reason, GpuiRemoteSidebarRpcMode,
+    GpuiRemoteSidebarRpcMode, gpui_remote_sidebar_rpc_failure_reason,
 };
 use crate::app::window::{NewCoordinatorAgent, NewCoordinatorModel};
-use crate::GhostexGpuiApp;
 
 /// The agent families a coordinator can run on (gxserver `coordinator_agent_family_supported`).
 fn coordinator_family(agent: &Value) -> Option<&'static str> {
@@ -230,7 +230,8 @@ impl GhostexGpuiApp {
                     return;
                 };
                 // Queued one at a time, each awaited before the next starts, so the `/model`
-                // line lands before the first request.
+                // line lands before the first request; when one fails the rest are not queued,
+                // so a first request never runs on a model the user did not pick.
                 for prompt in &startup_prompts {
                     let task = this.update(cx, |this, cx| {
                         this.start_gpui_remote_sidebar_rpc(
@@ -246,11 +247,21 @@ impl GhostexGpuiApp {
                             cx,
                         )
                     });
-                    match task {
-                        Ok(task) => {
-                            let _ = task.await;
-                        }
-                        Err(_) => return,
+                    let Ok(task) = task else { return };
+                    if let Err(error) = task.await {
+                        let reason = gpui_remote_sidebar_rpc_failure_reason(
+                            &error,
+                            "The remote computer did not take it.",
+                        );
+                        let _ = this.update(cx, |this, cx| {
+                            this.gx_store_create_toast(
+                                "warning",
+                                "Coordinator's first request not sent",
+                                Some(&reason),
+                                cx,
+                            );
+                        });
+                        break;
                     }
                 }
                 let _ = this.update(cx, |this, cx| {
@@ -319,13 +330,27 @@ impl GhostexGpuiApp {
                 start_provider_params(&created_project, &session_id),
             )
             .await;
+            // In order, stopping at the first failure so a first request never runs on a model
+            // the user did not pick.
             for prompt in &startup_prompts {
-                let _ = gx_rpc(
+                if let Err(error) = gx_rpc(
                     None,
                     "/api/queueSessionChatPrompt",
                     queue_startup_prompt_params(&created_project, &session_id, prompt),
                 )
-                .await;
+                .await
+                {
+                    let message = error.message.clone();
+                    let _ = this.update(cx, |this, cx| {
+                        this.gx_store_create_toast(
+                            "warning",
+                            "Coordinator's first request not sent",
+                            Some(&message),
+                            cx,
+                        );
+                    });
+                    break;
+                }
             }
             let _ = this.update(cx, |this, cx| {
                 this.gx_store_focus_created_session(

@@ -2,7 +2,7 @@
 //! a goal and a first request.
 //!
 //! CDXC:Coordinators 2026-09-30 WHY:
-//! Claude's New project dialog asks for a name and an optional goal and then opens the conversation; Ghostex does the same inside a project, plus the agent (a coordinator needs a system-prompt flag, which only Claude and Codex have) and an optional first request, so the coordinator can start planning the moment it opens instead of waiting for a second step.
+//! Claude's New project dialog asks for a name and an optional goal and then opens the conversation; Ghostex does the same inside a project, plus the agent (a coordinator runs on Claude, Codex or ZCode, the agents Ghostex can hand its role) and an optional first request, so the coordinator can start planning the moment it opens instead of waiting for a second step.
 //! SEE-ALSO: apps/desktop/src/app/new_coordinator_modal_lifecycle.rs (open, create), apps/desktop/src/app/gx_store/create/coordinator.rs (the gxserver calls), server/src/coordinators/ (what a coordinator is).
 use super::native_modal_kit::*;
 use gpui::{

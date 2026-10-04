@@ -254,7 +254,7 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
     Ok(())
 }
 
-/// `promote [<session-ref>]`: makes an existing Claude or Codex session (the calling session when
+/// `promote [<session-ref>]`: makes an existing Claude, Codex or ZCode session (the calling session when
 /// no ref is given) a coordinator without restarting or interrupting it; see
 /// `promote_session_to_coordinator` in server/src/coordinators/promote.rs.
 fn promote(parsed: &ParsedArgs) -> CliResult<()> {
@@ -300,7 +300,7 @@ fn promote(parsed: &ParsedArgs) -> CliResult<()> {
     Ok(())
 }
 
-/// What a New Coordinator form offers: the Claude and Codex launchers (Claude first, in launcher
+/// What a New Coordinator form offers: the Claude, Codex and ZCode launchers (Claude first, in launcher
 /// order), each with its model lineup from the catalog gxserver serves, the model it starts on, and
 /// the efforts each model accepts.
 ///
