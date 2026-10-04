@@ -69,7 +69,9 @@ impl GhostexGpuiApp {
             move |bounds, window, cx| {
                 painted.set(true);
                 let control = (!covered
-                    && window.content_mask().bounds.intersect(&bounds) == bounds)
+                    && crate::app::native_chat::child_window::bounds_inside_content_mask(
+                        window, bounds,
+                    ))
                     .then_some(bounds);
                 if measured.replace(control) != control {
                     cx.defer(move |cx| {
