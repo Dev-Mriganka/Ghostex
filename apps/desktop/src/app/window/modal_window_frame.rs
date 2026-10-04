@@ -55,10 +55,11 @@ impl ModalWindowFrame {
      * loses input.
      *
      * CDXC:AppModal 2026-10-04 WHY:
-     * The X is shown from this state alone. Until 2026-10-04 it also needed the frame's group
-     * hover (to hide it once the pointer left the window from the corner), which depends on the
-     * frame's hitbox surviving GPUI's hit test under whatever the modal draws there, and on
-     * Windows the X never appeared. The window's mouse-exit event now hides it instead.
+     * The tracker must be pinned to the frame's top-left (`inset_0`). An absolute element with no
+     * insets sits at its static position, after the modal's content, so `bounds` started at the
+     * window's bottom edge, no move inside the window ever counted as near the top, and the X
+     * never appeared on any platform. The X is shown from this state alone, and the window's
+     * mouse-exit event hides it once the pointer leaves through the top edge.
      */
     fn top_band_tracker(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let view = cx.weak_entity();
@@ -86,7 +87,7 @@ impl ModalWindowFrame {
             },
         )
         .absolute()
-        .size_full()
+        .inset_0()
     }
 
     /// Always in the tree (and the accessibility tree), drawn only while the pointer is in the
