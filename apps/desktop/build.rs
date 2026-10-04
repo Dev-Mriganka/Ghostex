@@ -161,6 +161,17 @@ fn build_libghostty_vt_with_zig(
     if cfg!(windows) {
         command.env("PATH", zig_build_path_without_untrusted_mount_points());
     }
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
+        let zig_target = match cargo_target.as_str() {
+            "x86_64-unknown-linux-gnu" => "x86_64-linux-gnu",
+            "aarch64-unknown-linux-gnu" => "aarch64-linux-gnu",
+            target => panic!("unsupported Linux libghostty-vt target: {target}"),
+        };
+        // CDXC:Build 2026-10-04 WHY: #190: Zig's native CPU default can put
+        // unconditional AVX-512 in compiler_rt memcpy on release builders.
+        command.arg(format!("-Dtarget={zig_target}"));
+        command.arg("-Dcpu=baseline");
+    }
     if is_windows {
         // Release runners use Zig's stable x64 Windows host binary, including
         // under Windows 11 ARM emulation. Keep the archive architecture tied
