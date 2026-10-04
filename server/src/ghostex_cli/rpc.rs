@@ -402,6 +402,19 @@ fn js_value_to_string(value: &Value) -> String {
     }
 }
 
+/// CDXC:Cli 2026-10-04 WHY:
+/// A global ref is this machine's when its server id is the one in the local gxserver's `identity.json`, beside the auth token the local target already reads. Deciding it only by a 1-second `/api/health/server` probe failed whenever gxserver answered slowly (just after a restart): `ghostex agents send` then resolved its own sender ref `S8g:…` as a remote server with no connection profile and refused the send. The probe stays for a state folder without the file.
+fn local_gxserver_server_id() -> Option<String> {
+    let text = std::fs::read_to_string(gxserver_root().join("identity.json")).ok()?;
+    let identity = parse_json_value(&text)?;
+    identity
+        .get("serverId")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_string)
+}
+
 pub fn resolve_gxserver_server_target(flags: &Flags, params: &Value) -> CliResult<Target> {
     let server = flags
         .text("server")
@@ -418,6 +431,9 @@ pub fn resolve_gxserver_server_target(flags: &Flags, params: &Value) -> CliResul
     if let Some(global_ref) = find_global_ref_candidate(params) {
         let server_id = global_ref.split(':').next().unwrap_or_default().to_string();
         let local = resolve_local_gxserver_target()?;
+        if local_gxserver_server_id().as_deref() == Some(server_id.as_str()) {
+            return Ok(local);
+        }
         if let Ok(Some(health)) = fetch_gxserver_health(&local, 1_000) {
             if health.get("serverId").and_then(Value::as_str) == Some(server_id.as_str()) {
                 return Ok(local);
