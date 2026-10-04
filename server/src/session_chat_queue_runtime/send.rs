@@ -40,14 +40,53 @@ pub(crate) async fn send_session_chat_message_internal(
     .await
 }
 
-/// How long a send whose paste the terminal did not show waits before typing it again.
-const PASTE_RETRY_PAUSE: std::time::Duration = std::time::Duration::from_millis(1_500);
+/// How much longer a send keeps watching the input box for a paste the first check missed.
+const LATE_PASTE_WATCH_MS: u64 = 6_000;
+/// The paste check of the one clear-and-retype attempt.
+const PASTE_RETRY_WATCH_MS: u64 = 6_000;
 
 /// CDXC:SessionChat 2026-10-04 WHY:
-/// Under heavy load (a release build compiling) a coordinator's `ghostex agents send` failed with "The terminal did not accept the pasted message" to an idle thread and went through unchanged two minutes later. That failure is decided before Return is written, so nothing was submitted: the send runs its steps once more after a short pause, and they begin with the verified clear of the input box, so a paste that landed late is wiped instead of typed twice. One retry only, and not for image or slash-command sends, whose steps do more than type text.
+/// "The terminal did not accept the pasted message" is decided before Return is written, so nothing was submitted, and under load it is usually a paste that lands late, not one that was lost: on Windows a 561-byte message gets a 2-second check, and a coordinator's sends failed right after a gxserver restart and while a release build ran, then went through unchanged a minute later. The diagnostics of the 07:03 failure show the first retry here (a fixed 1.5 s pause, then the whole send again) pressing Ctrl+C on the first paste, which had arrived by then, and its second paste missing the same 2-second window. So the send first keeps watching the input box and submits the first paste when it shows up; only when it never does is the box cleared (the send's own verified clear) and the message typed once more, with a longer check. Not for image or slash-command sends, whose steps do more than type text.
 fn paste_not_accepted(error: &crate::session_chat_send::SessionChatSendError) -> bool {
     error.failure == crate::session_chat_send::SessionChatSendFailure::Write
         && error.message == crate::session_chat_send::SESSION_CHAT_PASTE_NOT_ACCEPTED
+}
+
+/// The send's steps from its paste check on (the check, Return, the submit check), with the
+/// check watching longer and without the settle the paste no longer needs.
+fn late_paste_steps(
+    steps: &[crate::session_chat_send::SessionChatSendStep],
+) -> Option<Vec<crate::session_chat_send::SessionChatSendStep>> {
+    use crate::session_chat_send::SessionChatSendStep;
+    let start = steps
+        .iter()
+        .position(|step| matches!(step, SessionChatSendStep::VerifyPasteLanded { .. }))?;
+    let mut late = steps[start..].to_vec();
+    if let SessionChatSendStep::VerifyPasteLanded {
+        settle_ms,
+        timeout_ms,
+        ..
+    } = &mut late[0]
+    {
+        *settle_ms = 0;
+        *timeout_ms = LATE_PASTE_WATCH_MS;
+    }
+    Some(late)
+}
+
+fn with_paste_watch_of_at_least(
+    mut steps: Vec<crate::session_chat_send::SessionChatSendStep>,
+    watch_ms: u64,
+) -> Vec<crate::session_chat_send::SessionChatSendStep> {
+    for step in &mut steps {
+        if let crate::session_chat_send::SessionChatSendStep::VerifyPasteLanded {
+            timeout_ms, ..
+        } = step
+        {
+            *timeout_ms = (*timeout_ms).max(watch_ms);
+        }
+    }
+    steps
 }
 
 pub(crate) async fn send_session_chat_message_with_draft(
@@ -446,22 +485,42 @@ pub(crate) async fn send_session_chat_message_with_draft(
     .await;
     if let (Err(error), Some(retry_steps)) = (&sent, retry_steps) {
         if paste_not_accepted(error) {
-            crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
-                "sessionChatSendRetriedPaste",
-                &target.project_id,
-                &target.session_id,
-                "The terminal did not show the pasted message; cleared the input box and typed it once more.",
-                &[],
-            );
-            tokio::time::sleep(PASTE_RETRY_PAUSE).await;
-            sent = crate::session_chat_send::execute_session_chat_send(
-                &target.project_id,
-                &target.session_id,
-                &target.zmx_name,
-                "session-chat-message",
-                retry_steps,
-            )
-            .await;
+            if let Some(late_steps) = late_paste_steps(&retry_steps) {
+                sent = crate::session_chat_send::execute_session_chat_send(
+                    &target.project_id,
+                    &target.session_id,
+                    &target.zmx_name,
+                    "session-chat-message",
+                    late_steps,
+                )
+                .await;
+                if sent.is_ok() {
+                    crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
+                        "sessionChatSendLatePasteSubmitted",
+                        &target.project_id,
+                        &target.session_id,
+                        "The pasted message showed up after the paste check gave up; it was submitted as it was.",
+                        &[],
+                    );
+                }
+            }
+            if sent.as_ref().err().is_some_and(paste_not_accepted) {
+                crate::session_chat_send_diagnostics::record_send_recovery_from_worker(
+                    "sessionChatSendRetriedPaste",
+                    &target.project_id,
+                    &target.session_id,
+                    "The terminal still did not show the pasted message; cleared the input box and typed it once more.",
+                    &[],
+                );
+                sent = crate::session_chat_send::execute_session_chat_send(
+                    &target.project_id,
+                    &target.session_id,
+                    &target.zmx_name,
+                    "session-chat-message",
+                    with_paste_watch_of_at_least(retry_steps, PASTE_RETRY_WATCH_MS),
+                )
+                .await;
+            }
         }
     }
     if let Err(error) = sent {

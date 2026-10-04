@@ -98,7 +98,8 @@ DELIVERY
     queued      Sent with --queue.
   A message the agent did not take (Claude Code or Codex left it in its
   input box, a blocking dialog) fails with the reason instead. A paste the
-  terminal did not show is cleared and typed once more before it fails.
+  terminal is slow to show is watched longer and then submitted; one that
+  never shows is cleared and typed once more before the send fails.
   None of these means read, acknowledged, or completed.
   Blocking prompts can prevent delivery. Inspect chat and queue before retrying.
   A coordinator's message to its own thread is also watched by Ghostex: if
