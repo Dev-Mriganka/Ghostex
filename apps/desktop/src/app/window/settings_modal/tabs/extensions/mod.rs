@@ -283,6 +283,15 @@ impl ExtensionsTab {
         required.is_none_or(|cli| self.installed_clis.contains(&cli))
     }
 
+    /// The entry's agent CLI (if it needs one) was found; the Settings search is not asked.
+    pub(crate) fn official_cli_found(&self, key: &str) -> bool {
+        data::official_extensions()
+            .iter()
+            .find(|extension| extension.id == key)
+            .and_then(|extension| extension.requires_agent_cli.as_ref())
+            .is_none_or(|cli| self.installed_clis.contains(cli))
+    }
+
     /// The page became (in)active: the browser state resets and reloads as the React effect on
     /// `active` did; the account list is read again.
     fn sync_active(&mut self, cx: &mut Context<Self>) {
