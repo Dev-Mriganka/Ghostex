@@ -387,6 +387,24 @@ pub(crate) fn modal_text_area(
     window: &Window,
     cx: &App,
 ) -> AnyElement {
+    modal_text_area_with_paste(p, state, min_height, disabled, None, window, cx)
+}
+
+/// The field's paste hook (`Textarea::on_paste`): `true` takes the paste, `false` lets the field
+/// insert the clipboard's text.
+pub(crate) type ModalPasteHandler =
+    Rc<dyn Fn(&gpui::ClipboardItem, &mut Window, &mut App) -> bool + 'static>;
+
+/// [`modal_text_area`] whose pastes are offered to `paste` first (pasted images).
+pub(crate) fn modal_text_area_with_paste(
+    p: &ModalPalette,
+    state: &gpui::Entity<TextareaState>,
+    min_height: Option<f32>,
+    disabled: bool,
+    paste: Option<ModalPasteHandler>,
+    window: &Window,
+    cx: &App,
+) -> AnyElement {
     let focused = state.read(cx).focus_handle(cx).is_focused(window);
     div()
         .w_full()
@@ -414,6 +432,9 @@ pub(crate) fn modal_text_area(
                         .bordered(false)
                         .focus_bordered(false)
                         .disabled(disabled)
+                        .when_some(paste, |this, paste| {
+                            this.on_paste(move |clipboard, window, cx| paste(clipboard, window, cx))
+                        })
                         .w_full()
                         .when(min_height.is_none(), |this| this.h_full())
                         .px(px(0.0))

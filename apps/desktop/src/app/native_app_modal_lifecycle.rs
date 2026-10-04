@@ -229,6 +229,9 @@ impl GhostexGpuiApp {
             | GpuiAppModalKind::OpenTargets => {
                 self.open_gpui_settings_modal(kind, open_message, cx);
             }
+            GpuiAppModalKind::Feedback => {
+                self.open_gpui_feedback_modal(cx);
+            }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.
             _ => return false,
         }

@@ -20,6 +20,12 @@ Chat attachments cap at 32 MiB on disk (saveSessionChatAttachment); the same
 4/3 base64 inflation plus envelope headroom lands at 44 MiB.
 */
 pub const GXSERVER_ATTACHMENT_BODY_LIMIT_BYTES: usize = 44 * 1024 * 1024;
+/*
+CDXC:Feedback 2026-10-04 WHY:
+sendFeedback carries up to five 5 MiB images as base64 (about 35 MB), the same
+36 MiB request cap the feedback relay itself enforces.
+*/
+pub const GXSERVER_FEEDBACK_BODY_LIMIT_BYTES: usize = 36 * 1024 * 1024;
 pub const GXSERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const GXSERVER_CAPABILITIES: &[&str] = &[

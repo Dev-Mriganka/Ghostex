@@ -2123,6 +2123,21 @@ Related settings: `sidebarTheme`, `darkThemePreset`, `lightThemePreset`,
 `windowGlassSidebarOpacityLight`, `windowGlassWorkAreaTintLight`, `themeSidebarContrast`, `themeWorkAreaContrast`, `showActivePaneOutline`, the `keepAwake*` rows,
 `showBetaFeatures`, `debuggingMode`.
 
+## Sending feedback
+
+The chat-bubble button at the top of the sidebar, after Search, opens Send
+Feedback (when the sidebar is too narrow it moves into the sidebar menu with
+Search and Notifications). Write what is broken, confusing or missing and paste
+screenshots into the text box with Cmd+V (Ctrl+V on Windows and Linux): up to
+five PNG, JPEG or WebP images of 5 MB each; a larger PNG screenshot is scaled
+down to fit. Review then shows the exact GitHub issue, title and description,
+and you can edit both before Send; Ghostex adds your screenshots and a line with
+the app, its version and your operating system. The issue is public on the
+Ghostex GitHub, and after it is sent Open Issue takes you to it. Cmd+Enter
+(Ctrl+Enter) moves to the next step and Escape closes the pop-up. It works in the
+desktop app and in the web app. The "Collect more data with an agent" switch is
+not available yet.
+
 ## Answering the common questions
 
 - "Make Claude control Codex": see Agents, actions, and orchestration.

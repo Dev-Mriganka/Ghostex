@@ -823,6 +823,13 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         | "/api/queryLogs"
         | "/api/resolveGitRootForPath" => full_local(path),
         /*
+        CDXC:Feedback 2026-10-04 WHY:
+        Sending feedback files a public GitHub issue through the Ghostex
+        relay, so only this computer's own app may ask for it; a remote
+        listener caller must never post issues in this user's name.
+        */
+        "/api/draftFeedback" | "/api/sendFeedback" => full_local(path),
+        /*
         CDXC:RemotePairing 2026-09-03:
         The only unauthenticated write endpoint. A phone registers its SSH key
         through the Easy Connect tunnel before it holds any gxserver credential,
