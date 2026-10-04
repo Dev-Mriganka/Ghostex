@@ -111,6 +111,8 @@ pub async fn run_session_chat_follower(
     // session stopped, the daemon went away) must not put the composer back
     // under a loading skeleton.
     let mut published_screen_probed = false;
+    // The statusline watch fired during the resolve-poll sleep; the next pass probes for it.
+    let mut statusline_landed = false;
     let mut reconcile_ticks: u64 = 0;
     let mut startup_option_reconcile_ticks: u64 = 0;
     // CDXC:AgentScreenDetection 2026-09-02: reconciles left in the
@@ -222,10 +224,11 @@ pub async fn run_session_chat_follower(
                 let live = read_live_state();
                 // CDXC:AgentScreenDetection 2026-09-15 WHY:
                 // A new Claude chat can stay transcriptless indefinitely. Watch its statusline here too, so first paint and idle option changes do not wait for the 30-second history-resolution cadence.
-                let statusline_changed = config
-                    .options_change_watch
-                    .as_ref()
-                    .is_some_and(|watch| watch(identity.agent_session_id.as_deref()));
+                let statusline_changed = std::mem::take(&mut statusline_landed)
+                    || config
+                        .options_change_watch
+                        .as_ref()
+                        .is_some_and(|watch| watch(identity.agent_session_id.as_deref()));
                 let probe_due = config.options_reader.is_some()
                     && emitted_starting
                     && (!published_screen_probed
@@ -337,6 +340,12 @@ pub async fn run_session_chat_follower(
                         epoch = stream.begin_generation();
                         emitted_starting = false;
                         want_snapshot = true;
+                    }
+                    _ = statusline_payload_written(
+                        config.options_change_watch.as_ref(),
+                        identity.agent_session_id.as_deref(),
+                    ) => {
+                        statusline_landed = true;
                     }
                 }
                 heartbeat.unpark();
@@ -688,7 +697,11 @@ pub async fn run_session_chat_follower(
                     .into_iter()
                     .any(|choice| {
                         choice.as_ref().map_or(true, |choice| {
-                            choice.source == SessionChatOptionEvidence::Transcript
+                            matches!(
+                                choice.source,
+                                SessionChatOptionEvidence::Transcript
+                                    | SessionChatOptionEvidence::Launch
+                            )
                         })
                     })
             });
@@ -1021,6 +1034,24 @@ impl SessionChatFollowerIdentity {
         }
         if session_changed || live.agent_session_path.is_some() {
             self.agent_session_path = live.agent_session_path;
+        }
+    }
+}
+
+/// Resolves once the agent's statusline payload changes, so the resolve-poll sleep ends as soon as
+/// the payload that names a new chat's model and effort lands instead of at the next poll. Never
+/// resolves for an agent without a statusline watch.
+async fn statusline_payload_written(
+    watch: Option<&crate::session_chat_options::SessionChatOptionsChangeWatch>,
+    agent_session_id: Option<&str>,
+) {
+    let Some(watch) = watch else {
+        return std::future::pending().await;
+    };
+    loop {
+        tokio::time::sleep(crate::session_chat::STATUSLINE_WATCH_POLL).await;
+        if watch(agent_session_id) {
+            return;
         }
     }
 }

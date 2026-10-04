@@ -190,6 +190,8 @@ export interface SessionChatDetectedChoice {
    * Evidence source; absent only when talking to an older daemon.
    * `statusline` is the JSON Claude Code pipes to its statusLine command,
    * stored by the Ghostex-installed script (CDXC:AgentScreenDetection 2026-09-03).
+   * `launch` is the flags the agent command was started with, sent only until
+   * the agent reports through its transcript or statusline.
    */
-  source?: "terminal" | "transcript" | "statusline";
+  source?: "terminal" | "transcript" | "statusline" | "launch";
 }

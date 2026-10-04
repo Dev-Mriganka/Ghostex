@@ -70,6 +70,9 @@ const BOUNDARY_FINGERPRINT_BYTES: u64 = 64;
 pub(crate) const RECONCILIATION_INTERVAL: Duration = Duration::from_millis(1_000);
 pub(crate) const INITIAL_RESOLVE_POLL: Duration = Duration::from_millis(500);
 pub(crate) const MAX_RESOLVE_POLL: Duration = Duration::from_millis(5_000);
+/// How often a follower waiting for its transcript looks at the agent's statusline payload, one
+/// file stat each: the payload is the first thing that names a new Claude chat's model and effort.
+pub(crate) const STATUSLINE_WATCH_POLL: Duration = Duration::from_millis(100);
 /// How long a subscribe waits for its one model/effort probe before emitting
 /// the snapshot anyway, and how long a read waits for the same probe before
 /// answering without the screen-derived fields. See

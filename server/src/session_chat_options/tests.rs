@@ -463,7 +463,7 @@ fn terminal_values_override_transcript_values_per_option() {
         model_catalog: None,
     };
     let terminal = claude("Ctx Used: 1% | Opus 4.8").unwrap();
-    let merged = merge_session_chat_option_selections(Some(transcript), None, Some(terminal))
+    let merged = merge_session_chat_option_selections(None, Some(transcript), None, Some(terminal))
         .expect("merged options");
     assert_eq!(pair(&merged), (Some("opus"), Some("high")));
     assert_eq!(

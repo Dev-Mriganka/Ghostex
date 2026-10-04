@@ -132,7 +132,7 @@ gives the mode pill a value before the first screen capture and without any
 screen at all (a sleeping session, a capped capture). The footer scrape still
 wins when present because it is the live value.
 */
-fn claude_transcript_mode_choice(mode: &str) -> Option<SessionChatDetectedChoice> {
+pub(super) fn claude_transcript_mode_choice(mode: &str) -> Option<SessionChatDetectedChoice> {
     let (value, label) = match mode.trim() {
         "auto" => ("auto", "Auto"),
         "bypassPermissions" => ("bypass", "Bypass permissions"),
@@ -632,20 +632,25 @@ pub(crate) fn claude_long_context_twin(model: &str, statusline: Option<&str>) ->
         .then(|| statusline.to_string())
 }
 
-/// Precedence, lowest first: transcript (a turn behind), statusline payload
-/// (live, but only what Claude puts in it), terminal screen (live, and the
-/// only source for the permission mode footer).
+/// Precedence, lowest first: the launch command's flags (only until the agent
+/// has reported through its transcript or statusline), transcript (a turn
+/// behind), statusline payload (live, but only what Claude puts in it),
+/// terminal screen (live, and the only source for the permission mode footer).
 ///
 /// CDXC:AgentScreenDetection 2026-09-08 DECISION:
 /// User: terminal evidence always has the highest priority, including for Claude.
 /// This supersedes preserving an older Claude model variant over the model visible in the terminal; a visible (1M) suffix is parsed from the terminal itself.
 /// SEE-ALSO: `merge_options` in packages/gx-chat-core/src/session/fold.rs preserves source priority when reads arrive separately.
 pub(super) fn merge_session_chat_option_selections(
+    launch: Option<SessionChatDetectedSelection>,
     transcript: Option<SessionChatDetectedSelection>,
     statusline: Option<SessionChatDetectedSelection>,
     terminal: Option<SessionChatDetectedSelection>,
 ) -> Option<SessionChatDetectedSelection> {
-    let mut merged = transcript.unwrap_or_default();
+    let mut merged = match transcript {
+        Some(transcript) => transcript,
+        None => launch.filter(|_| statusline.is_none()).unwrap_or_default(),
+    };
     let statusline_model = statusline
         .as_ref()
         .and_then(|statusline| statusline.model.as_ref())
@@ -780,7 +785,9 @@ pub(crate) fn detect_session_chat_stored_options(
         session_id,
         Some(agent),
     );
-    merge_session_chat_option_selections(transcript, statusline, None)
+    let launch =
+        read_session_chat_launch_selection(repository, project_id, session_id, Some(agent));
+    merge_session_chat_option_selections(launch, transcript, statusline, None)
         .map(|mut selection| {
             crate::session_chat_hermes_status::restore_hermes_model_id(&mut selection);
             selection

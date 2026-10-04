@@ -123,7 +123,7 @@ pub(crate) fn reusable_account_command(
     Ok(result.trim().to_string())
 }
 
-fn option_takes_value(agent: &str, word: &str) -> bool {
+pub(crate) fn option_takes_value(agent: &str, word: &str) -> bool {
     match agent {
         "claude" => matches!(
             word,

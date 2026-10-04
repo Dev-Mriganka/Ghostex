@@ -82,6 +82,9 @@ pub enum SessionChatOptionEvidence {
     /// CDXC:AgentScreenDetection 2026-09-03 WHY: the JSON Claude Code pipes to its
     /// statusLine command, stored by the Ghostex-installed script.
     Statusline,
+    /// The flags the session's agent command was started with (`launch_selection.rs`), the
+    /// weakest evidence: it holds only until the agent reports for itself.
+    Launch,
 }
 
 impl SessionChatOptionEvidence {
@@ -90,6 +93,7 @@ impl SessionChatOptionEvidence {
             Self::Terminal => "terminal",
             Self::Transcript => "transcript",
             Self::Statusline => "statusline",
+            Self::Launch => "launch",
         }
     }
 }

@@ -337,7 +337,8 @@ pub fn detect_session_chat_terminal_state(
             notice, remembered, answerable, project_id, session_id,
         );
     }
-    let options = merge_session_chat_option_selections(transcript, statusline, terminal)
+    let launch = read_session_chat_launch_selection(repository, project_id, session_id, agent);
+    let options = merge_session_chat_option_selections(launch, transcript, statusline, terminal)
         .map(|mut selection| {
             crate::session_chat_hermes_status::restore_hermes_model_id(&mut selection);
             selection
