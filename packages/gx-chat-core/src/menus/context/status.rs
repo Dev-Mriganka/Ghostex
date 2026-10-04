@@ -20,11 +20,20 @@ pub enum ContextDetailsAgent {
     Codex,
     Cursor,
     Hermes,
+    /// Every other chat agent: the checkout's repository and branch, which gxserver reads for any
+    /// session, plus the folder, model and session title.
+    Basic,
 }
 
 impl ContextDetailsAgent {
     /// Every agent with its own catalog and saved record.
-    pub const ALL: [Self; 4] = [Self::Claude, Self::Codex, Self::Cursor, Self::Hermes];
+    pub const ALL: [Self; 5] = [
+        Self::Claude,
+        Self::Codex,
+        Self::Cursor,
+        Self::Hermes,
+        Self::Basic,
+    ];
 
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -32,6 +41,7 @@ impl ContextDetailsAgent {
             Self::Codex => "codex",
             Self::Cursor => "cursor",
             Self::Hermes => "hermes",
+            Self::Basic => "basic",
         }
     }
 
@@ -42,13 +52,20 @@ impl ContextDetailsAgent {
     /// User: Cursor and Hermes chats get their own status line and More details, saved separately
     /// from Claude and Codex, built from what each reports: Cursor its model, reasoning effort and
     /// context use, Hermes its status line and session store. This adds Hermes to the 2026-09-23
-    /// Cursor decision; other agents still have neither.
+    /// Cursor decision.
+    ///
+    /// CDXC:AgentProviders 2026-10-04 DECISION:
+    /// User: "for freebuff just show the repo and branch in the status line (do the same for ALL agents that we have chat support for but we don't actually show anything useful for their status line". Every other chat agent gets the Basic catalog, with repository and branch in its status line.
     pub fn for_icon(icon: Option<&str>) -> Option<Self> {
         match icon.map(|icon| icon.trim().to_lowercase()).as_deref() {
             Some("claude") => Some(Self::Claude),
             Some("codex") => Some(Self::Codex),
             Some("cursor" | "cursor-cli" | "cursor cli" | "cursor-agent") => Some(Self::Cursor),
             Some("hermes" | "hermes-agent") => Some(Self::Hermes),
+            Some(
+                "antigravity" | "antigravity-cli" | "agy" | "freebuff" | "grok" | "grok-build"
+                | "omp" | "opencode" | "openclaude" | "pi" | "zcode" | "zcode-cli",
+            ) => Some(Self::Basic),
             _ => None,
         }
     }
@@ -68,7 +85,7 @@ impl ContextDetailsAgent {
     pub fn other(&self) -> Self {
         match self {
             Self::Claude => Self::Codex,
-            Self::Codex | Self::Cursor | Self::Hermes => Self::Claude,
+            Self::Codex | Self::Cursor | Self::Hermes | Self::Basic => Self::Claude,
         }
     }
 
@@ -79,6 +96,7 @@ impl ContextDetailsAgent {
             Self::Codex => "Codex",
             Self::Cursor => "Cursor",
             Self::Hermes => "Hermes",
+            Self::Basic => "This agent",
         }
     }
 }
@@ -308,6 +326,8 @@ pub struct ContextDetailStatus {
     pub context_tokens: Option<String>,
     pub model_name: Option<String>,
     pub effort_name: Option<String>,
+    /// The checked-out branch, for the Basic catalog (Cursor's lives in `cursor`).
+    pub branch: Option<String>,
 }
 
 /// One detected choice: the value the agent reported and its label.
@@ -316,6 +336,16 @@ pub struct ContextDetailStatus {
 pub struct DetectedChoice {
     pub value: Option<String>,
     pub label: Option<String>,
+}
+
+/// `checkoutStatus`: the session checkout's git state, which gxserver sends for the agents that
+/// report no status of their own (`server/src/session_chat_cursor_status.rs`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckoutStatus {
+    pub repo: Option<String>,
+    pub branch: Option<String>,
+    pub current_dir: Option<String>,
 }
 
 /// The slice of `selectedOptions` the context surfaces read.
@@ -332,6 +362,7 @@ pub struct DetectedOptions {
     pub codex_status: Option<CodexStatus>,
     pub cursor_status: Option<CursorStatus>,
     pub hermes_status: Option<HermesStatus>,
+    pub checkout_status: Option<CheckoutStatus>,
 }
 
 /// Claude's own statusline payload, the part the rows read.
@@ -422,6 +453,18 @@ pub fn resolve_context_detail_status(
         ContextDetailsAgent::Cursor => options
             .and_then(|options| options.cursor_status.as_ref())
             .map(cursor_common_status)
+            .unwrap_or_default(),
+        ContextDetailsAgent::Basic => options
+            .and_then(|options| options.checkout_status.as_ref())
+            .map(|checkout| ContextDetailStatus {
+                repo: checkout.repo.clone().map(|name| RepoInfo {
+                    name: Some(name),
+                    ..RepoInfo::default()
+                }),
+                current_dir: checkout.current_dir.clone(),
+                branch: checkout.branch.clone(),
+                ..ContextDetailStatus::default()
+            })
             .unwrap_or_default(),
         ContextDetailsAgent::Hermes => ContextDetailStatus {
             cost: hermes

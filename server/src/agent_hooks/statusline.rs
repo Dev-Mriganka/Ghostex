@@ -202,27 +202,37 @@ fn agent_statusline_command(script: &Path, wrapped: Option<&str>) -> String {
     }
 }
 
-/// CDXC:AgentHooks 2026-09-30 WHY:
-/// On Windows the statusLine command was the quoted path of the bash script. Claude Code runs that through Git Bash when it is installed and through PowerShell when it is not, and PowerShell evaluates a quoted path as a string: on a computer without Git for Windows the status line printed the script's path and no payload ever reached gxserver, so the chat's model pill and status line stayed empty.
-/// The command now starts gxserver through powershell.exe, the form the Windows hook commands already use because both shells parse it. The script path stays in the command: it carries the hook state directory and is what marks the command as Ghostex's. A wrapped user command travels as base64 so its quotes survive both shells.
-/// SEE-ALSO: `windows::command` (the hook form), `run_native_statusline_hook` (the runtime), `windows_wrapped_statusline_command` (the parser).
+/// CDXC:AgentHooks 2026-10-04 WHY:
+/// Claude Code runs the statusLine command through Git Bash when Git for Windows is installed and through PowerShell when it is not, so the command must parse in both: a quoted path is a string to PowerShell, which on 2026-09-30 left computers without Git printing the script path and sending no payload. That fix started gxserver through powershell.exe, but PowerShell's own startup cost about 0.5 s on every statusline update, and the first one is what fills a new chat's model pill and status line. The command now names gxserver by its 8.3 short path with forward slashes, a bare word both shells run, with every argument single-quoted (literal in both); the powershell.exe form remains for Cursor's statusline and wherever no space-free short path exists or an argument holds a quote. The script path stays in the command: it carries the hook state directory and marks the command as Ghostex's. A wrapped user command travels as base64 so its quotes survive both shells.
+/// SEE-ALSO: `windows::bare_command_path`, `windows::command` (the hook form), `run_native_statusline_hook` (the runtime), `windows_wrapped_statusline_command` (the parser).
 #[cfg(windows)]
 fn agent_statusline_command(script: &Path, wrapped: Option<&str>) -> String {
     use base64::Engine as _;
     let executable = std::env::current_exe().unwrap_or_default();
+    // Cursor's CLI may not run its statusLine through either shell, so its command keeps the form
+    // that has worked for it.
+    let claude = !script
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("cursor-"));
+    let script = path_string(script);
+    let wrapped = wrapped.map(|wrapped| base64::engine::general_purpose::STANDARD.encode(wrapped));
+    if let Some(executable) =
+        super::windows::bare_command_path(&executable).filter(|_| claude && !script.contains('\''))
+    {
+        let wrapped = wrapped
+            .map(|wrapped| format!(" '{wrapped}'"))
+            .unwrap_or_default();
+        return format!("{executable} {WINDOWS_STATUSLINE_VERB} '{script}'{wrapped}");
+    }
     let quote = |text: &str| format!("'{}'", text.replace('\'', "''"));
     let wrapped = wrapped
-        .map(|wrapped| {
-            format!(
-                " {}",
-                quote(&base64::engine::general_purpose::STANDARD.encode(wrapped))
-            )
-        })
+        .map(|wrapped| format!(" {}", quote(&wrapped)))
         .unwrap_or_default();
     format!(
         "powershell.exe -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& {} {WINDOWS_STATUSLINE_VERB} {}{wrapped}\"",
         quote(&executable.to_string_lossy()),
-        quote(&path_string(script)),
+        quote(&script),
     )
 }
 

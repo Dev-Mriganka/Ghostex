@@ -49,6 +49,10 @@ pub(crate) fn create_authenticated_health(state: &AppState) -> ServerHealthRespo
         server_id: state.metadata.server_id.clone(),
         started_at: state.metadata.started_at.clone(),
         tools: get_gxserver_tool_statuses(),
+        #[cfg(windows)]
+        launch_context: Some(crate::platform::launch_context::current().report()),
+        #[cfg(not(windows))]
+        launch_context: None,
     }
 }
 
@@ -73,6 +77,8 @@ pub(crate) fn json_body_limit_bytes(endpoint_path: &str) -> usize {
         crate::constants::GXSERVER_IMAGE_BODY_LIMIT_BYTES
     } else if endpoint_path == "/api/saveSessionChatAttachment" {
         crate::constants::GXSERVER_ATTACHMENT_BODY_LIMIT_BYTES
+    } else if endpoint_path == "/api/sendFeedback" {
+        crate::constants::GXSERVER_FEEDBACK_BODY_LIMIT_BYTES
     } else if endpoint_path == "/api/runProjectDocsAction" {
         3 * 1024 * 1024
     } else {

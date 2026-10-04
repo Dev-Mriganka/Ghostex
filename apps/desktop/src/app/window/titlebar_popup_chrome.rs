@@ -42,6 +42,22 @@ pub(crate) fn make_gpui_popup_window_non_activating(window: &mut Window) {
     windows_chrome::make_popup_window_non_activating(handle.hwnd.get() as windows_chrome::Hwnd);
 }
 
+/// CDXC:PlatformSupport 2026-10-04 WHY:
+/// GPUI owns a Windows pop-up by whichever window is active when it opens, and keeps an unowned pop-up topmost. The chat's scroll-to-bottom pill (with its Escape and "Agent was interrupted" toasts) and the frosted tooltips can open while Ghostex is in the background (streaming text, a wheel or hover over the inactive window); they then had no owner and floated over the app the user had switched to. These overlays belong to the window they are drawn over, so they are owned by it and leave the topmost band, sitting just above it.
+#[cfg(target_os = "windows")]
+pub(crate) fn own_gpui_popup_window(window: &mut Window, owner: *mut std::ffi::c_void) {
+    let Ok(handle) = window.window_handle() else {
+        return;
+    };
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return;
+    };
+    windows_chrome::own_popup_window(
+        handle.hwnd.get() as windows_chrome::Hwnd,
+        owner as windows_chrome::Hwnd,
+    );
+}
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn prepare_gpui_titlebar_popup_window_chrome(_window: &mut Window) {}
 
@@ -62,6 +78,37 @@ mod windows_chrome {
     /// main thread at window creation and dropped on WM_NCDESTROY; only a few
     /// popups exist at a time, so this stays tiny.
     static CHAINED_WINDOW_PROCS: Mutex<Vec<(isize, isize)>> = Mutex::new(Vec::new());
+
+    pub(super) fn own_popup_window(popup: Hwnd, owner: Hwnd) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            GW_HWNDPREV, GW_OWNER, GWL_EXSTYLE, GWLP_HWNDPARENT, GetWindow, HWND_NOTOPMOST,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SetWindowPos,
+            WS_EX_TOPMOST,
+        };
+        if owner.is_null() || popup == owner {
+            return;
+        }
+        let topmost = |hwnd: Hwnd| {
+            (unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST) != 0
+        };
+        let owned = unsafe { GetWindow(popup, GW_OWNER) } == owner;
+        if owned && !topmost(popup) {
+            return;
+        }
+        // The window just above the owner, read before the pop-up moves, so the pop-up can be
+        // stacked right over the owner instead of over whatever app is in front. When that window
+        // is topmost (or there is none), the owner leads the normal band and the top of that band,
+        // where `HWND_NOTOPMOST` puts the pop-up, is already right over it.
+        let above_owner = unsafe { GetWindow(owner, GW_HWNDPREV) };
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+        unsafe {
+            SetWindowLongPtrW(popup, GWLP_HWNDPARENT, owner as isize);
+            SetWindowPos(popup, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+            if !above_owner.is_null() && above_owner != popup && !topmost(above_owner) {
+                SetWindowPos(popup, above_owner, 0, 0, 0, 0, flags);
+            }
+        }
+    }
 
     pub(super) fn make_popup_window_non_activating(hwnd: Hwnd) {
         let ours: unsafe extern "system" fn(HWND, u32, WPARAM, LPARAM) -> LRESULT =

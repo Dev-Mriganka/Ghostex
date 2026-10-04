@@ -5,10 +5,11 @@ use rusqlite::Connection;
 use serde_json::{json, Map, Value};
 
 use super::records::{
-    link_thread, list_coordinators, list_threads, list_threads_for, now_iso, read_coordinator,
-    read_thread, set_thread_resolved, write_coordinator, CoordinatorMemoryNote, CoordinatorRecord,
-    SessionKey, ThreadRecord, COORDINATOR_GOAL_MAX_CHARS, COORDINATOR_INSTRUCTIONS_MAX_CHARS,
-    COORDINATOR_MEMORY_MAX_NOTES, COORDINATOR_MEMORY_NOTE_MAX_CHARS,
+    drop_thread_pending_message, link_thread, list_coordinators, list_threads, list_threads_for,
+    now_iso, read_coordinator, read_thread, set_thread_pending_message, set_thread_resolved,
+    write_coordinator, CoordinatorMemoryNote, CoordinatorRecord, SessionKey, ThreadRecord,
+    COORDINATOR_GOAL_MAX_CHARS, COORDINATOR_INSTRUCTIONS_MAX_CHARS, COORDINATOR_MEMORY_MAX_NOTES,
+    COORDINATOR_MEMORY_NOTE_MAX_CHARS,
 };
 use super::state::{classify_thread_session, ThreadProgress, ThreadState};
 use crate::domain::{DomainRepository, DomainStateError};
@@ -134,18 +135,19 @@ pub fn handle_coordinator_endpoint(
             // A message from a coordinator to its own done thread reopens it, so the reply is
             // supervised and reported again; any other recipient is left alone.
             if params.get("reopenOnly").and_then(Value::as_bool) == Some(true) {
-                let reopened = match read_thread(db, &thread_key.0, &thread_key.1)? {
-                    Some(thread)
-                        if thread.coordinator_key() == coordinator_key && thread.is_resolved() =>
-                    {
+                let thread = read_thread(db, &thread_key.0, &thread_key.1)?
+                    .filter(|thread| thread.coordinator_key() == coordinator_key);
+                let reopened = match thread.as_ref() {
+                    Some(thread) if thread.is_resolved() => {
                         set_thread_resolved(db, &thread_key.0, &thread_key.1, false)?;
                         set_parked(repository, &thread_key, false)?;
                         true
                     }
                     _ => false,
                 };
+                let watching = thread.is_some() && watch_pending_message(db, &thread_key, params)?;
                 return Ok(CoordinatorEndpointOutput {
-                    result: json!({ "linked": false, "reopened": reopened }),
+                    result: json!({ "linked": false, "reopened": reopened, "watchingDelivery": watching }),
                     changed_sessions: if reopened {
                         vec![thread_key]
                     } else {
@@ -186,9 +188,11 @@ pub fn handle_coordinator_endpoint(
                 &coordinator_key.1,
                 &task,
             )?;
+            let watching = watch_pending_message(db, &thread_key, params)?;
             Ok(CoordinatorEndpointOutput {
                 result: json!({
                     "linked": true,
+                    "watchingDelivery": watching,
                     "globalRef": create_global_session_ref(repository.server_id.as_str(), &thread_key.0, &thread_key.1),
                 }),
                 changed_sessions: vec![thread_key],
@@ -226,6 +230,37 @@ pub fn handle_coordinator_endpoint(
             "{endpoint_path} is not a coordinator endpoint."
         ))),
     }
+}
+
+/// CDXC:Coordinators 2026-10-04 WHY:
+/// A coordinator moved on from a follow-up the CLI reported as accepted while it sat unsent in the thread's input box, and the thread waited idle with nobody told. Every message a coordinator hands its thread (`pendingMessage` on the link call that `start-thread`, `agents create` and `agents send` already make) is watched by the supervisor until the thread's transcript records it; if the thread goes idle without it, the coordinator gets an "undelivered" thread report, so a coordinator that ignored the CLI's answer still learns. Ghostex reports instead of resending: a transcript it cannot see yet is not proof the message was lost, and a resent brief makes a thread do the work twice.
+/// SEE-ALSO: server/src/server/coordinator_runtime.rs (the supervisor's check), server/src/coordinators/delivery.rs (the shared transcript match).
+fn watch_pending_message(
+    db: &Connection,
+    thread_key: &SessionKey,
+    params: &Map<String, Value>,
+) -> Result<bool, DomainStateError> {
+    // The sender read the message in the thread's transcript itself (`delivered`, `started`).
+    if params.get("messageDelivered").and_then(Value::as_bool) == Some(true) {
+        drop_thread_pending_message(db, &thread_key.0, &thread_key.1)?;
+        return Ok(false);
+    }
+    let Some(excerpt) = text(params, "pendingMessage")
+        .map(|message| super::delivery::pending_message_excerpt(&message))
+        .filter(|excerpt| !super::delivery::delivery_needles(excerpt).is_empty())
+    else {
+        return Ok(false);
+    };
+    let now = Utc::now();
+    let sent_at = params
+        .get("sentAtMs")
+        .and_then(Value::as_i64)
+        .and_then(chrono::DateTime::from_timestamp_millis)
+        .filter(|sent_at| *sent_at <= now)
+        .unwrap_or(now)
+        .to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+    set_thread_pending_message(db, &thread_key.0, &thread_key.1, &excerpt, &sent_at)?;
+    Ok(true)
 }
 
 /// A thread whose session the resolve is about to close must have nothing left running: closing

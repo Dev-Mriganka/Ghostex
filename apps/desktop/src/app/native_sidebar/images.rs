@@ -33,6 +33,7 @@ pub(crate) fn agent_image(value: &str, agent: Option<&str>, light: bool) -> Opti
                         | "grok-build"
                         | "mastra"
                         | "zcode"
+                        | "freebuff"
                 )
             ),
     )

@@ -318,7 +318,10 @@ pub(crate) async fn handle_answer_session_chat_prompt_http(
         }
         "question" => {
             let agent = session_chat_agent_for_session(&target.session);
-            let screen_prompt = if matches!(agent.as_deref(), Some("cursor" | "cursor-agent")) {
+            let screen_prompt = if matches!(
+                agent.as_deref(),
+                Some("cursor" | "cursor-agent" | "freebuff")
+            ) {
                 crate::session_chat_options::SessionChatOptionDetector::new(state)
                     .detect(
                         &target.project_id,
@@ -483,6 +486,40 @@ pub(crate) async fn handle_answer_session_chat_prompt_http(
                     }
                     crate::session_chat_send::build_ask_answer_steps(
                         &crate::session_chat_send::build_antigravity_ask_answer_keys(
+                            &questions,
+                            &selections,
+                        ),
+                    )
+                }
+                Some("freebuff") => {
+                    let form = crate::session_chat_send::capture_session_terminal_text(
+                        &target.zmx_name,
+                    )
+                    .await
+                    .and_then(|screen_text| {
+                        crate::session_chat_freebuff_question::detect_freebuff_question_form(
+                            &screen_text,
+                        )
+                    })
+                    .filter(|form| {
+                        questions
+                            .iter()
+                            .any(|question| question.question == form.question.question)
+                    });
+                    let Some(form) = form else {
+                        return domain_error_response(
+                            endpoint_path,
+                            request_id,
+                            DomainStateError {
+                                code: "invalidState",
+                                message: "Freebuff's question is not on screen, so the answer was not sent. Answer it in the terminal."
+                                    .to_string(),
+                            },
+                        );
+                    };
+                    crate::session_chat_send::build_ask_answer_steps(
+                        &crate::session_chat_freebuff_question::build_freebuff_ask_answer_keys(
+                            &form,
                             &questions,
                             &selections,
                         ),

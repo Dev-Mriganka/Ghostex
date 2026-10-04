@@ -415,6 +415,18 @@ pub(crate) fn ingest_agent_hook_event(
         "sessionChatActivityChanged".to_string(),
         Value::Bool(session_chat_activity_changed),
     );
+    let agent_session_id = |session: &Value| {
+        session
+            .pointer("/runtimeSettings/agentSessionId")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    };
+    let agent_session_id_changed = agent_session_id(&session).is_some()
+        && agent_session_id(&session) != agent_session_id(&current);
+    result.insert(
+        "agentSessionIdChanged".to_string(),
+        Value::Bool(agent_session_id_changed),
+    );
     result.insert("session".to_string(), session);
     Ok(Value::Object(result))
 }
@@ -1051,7 +1063,9 @@ pub(crate) fn normalize_agent_hook_activity(
     the event mapping here aligned with the hook helper prevents a later
     sidecar sync from erasing the attention transition.
     */
-    if normalized_agent.as_deref() == Some("codex") {
+    // Freebuff's events come from its saved chat (server/src/freebuff_activity.rs) and finish turns
+    // the way Codex's Stop does.
+    if matches!(normalized_agent.as_deref(), Some("codex" | "freebuff")) {
         if lower == "stop" {
             return Some("attention".to_string());
         }

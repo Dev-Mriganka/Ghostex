@@ -156,7 +156,7 @@ pub fn normalize_session_chat_tool_name(tool_name: &str) -> String {
 /// Upstream `isAskUserQuestionTool`: match AskUserQuestion (Claude) /
 /// request_user_input (Codex 0.145) / AskQuestion (Cursor Agent) /
 /// cursor_ask_question (Pi's pi-cursor-sdk bridge) / clarify (Hermes Agent) /
-/// ask (oh-my-pi) spellings.
+/// ask (oh-my-pi) / ask_user (Freebuff) spellings.
 pub fn is_ask_user_question_tool(tool_name: &str) -> bool {
     matches!(
         normalize_session_chat_tool_name(tool_name).as_str(),
@@ -166,6 +166,7 @@ pub fn is_ask_user_question_tool(tool_name: &str) -> bool {
             | "cursoraskquestion"
             | "clarify"
             | "ask"
+            | "askuser"
     )
 }
 

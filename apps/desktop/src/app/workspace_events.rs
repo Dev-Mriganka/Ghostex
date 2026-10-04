@@ -816,7 +816,7 @@ impl GhostexGpuiApp {
                     .await;
                 let _ = this.update(cx, |this, cx| match result {
                     Ok((key, plan)) => {
-                        this.swap_agents_workspace_to_project_id(Some(key.project_id.clone()), cx);
+                        this.gx_store_take_created_session(&key, cx);
                         let requested_pane_id = this.agents_workspace.focused_pane;
                         this.local_workspace_latest_focus_key = Some(key.clone());
                         let cleanup_key = key.clone();
@@ -909,7 +909,7 @@ impl GhostexGpuiApp {
                     .await;
                 let _ = this.update(cx, |this, cx| match result {
                     Ok((key, plan)) => {
-                        this.swap_agents_workspace_to_project_id(Some(key.project_id.clone()), cx);
+                        this.gx_store_take_created_session(&key, cx);
                         let requested_pane_id = this.agents_workspace.focused_pane;
                         this.local_workspace_latest_focus_key = Some(key.clone());
                         let cleanup_key = key.clone();

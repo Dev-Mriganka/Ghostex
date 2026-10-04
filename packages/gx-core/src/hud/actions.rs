@@ -11,7 +11,7 @@ use crate::keys::ProjectKey;
 /// `createSidebarAgentButtons([], [])`: the default agents, which the launcher shows until this
 /// computer's HUD has been read once. The hidden-by-default ones (Rovo Dev, CodeBuddy, Qoder) are
 /// left out, as there. Order and ids are packages/shared/sidebar-agents.ts (deleted 2026-10-01)'s.
-const DEFAULT_AGENTS: [(&str, &str, &str, &str); 14] = [
+const DEFAULT_AGENTS: [(&str, &str, &str, &str); 15] = [
     ("codex", "codex", "codex", "Codex"),
     ("claude", "claude", "claude", "Claude"),
     ("cursor", "cursor-agent", "cursor-cli", "Cursor CLI"),
@@ -26,6 +26,7 @@ const DEFAULT_AGENTS: [(&str, &str, &str, &str); 14] = [
     ("hermes-agent", "hermes", "hermes-agent", "Hermes Agent"),
     ("mastra", "mastracode", "mastra", "Mastra Code"),
     ("zcode", "zcode", "zcode", "ZCode"),
+    ("freebuff", "freebuff", "freebuff", "Freebuff"),
 ];
 
 pub(crate) fn agents(sidebar_hud: Option<&Value>) -> Value {

@@ -366,7 +366,11 @@ impl Driver<'_> {
         let Some(current) = self.open(&answer.title).await? else {
             return match answer.text {
                 None => Ok(()),
-                Some(_) => self.send_retained_answer(answer).await,
+                // open() may have expanded Codex's editor for other live questions; the reply goes through the main composer.
+                Some(_) => {
+                    self.return_to_main_prompt().await?;
+                    self.send_retained_answer(answer).await
+                }
             };
         };
         // The live editor exposes titles rather than IDs; the retained-reply envelope does not have this ambiguity.

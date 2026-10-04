@@ -44,6 +44,9 @@ impl AutomateTab {
 pub(crate) struct AutomateHostInfo {
     #[cfg(target_os = "linux")]
     pub(crate) window: gpui::AnyWindowHandle,
+    /// The main window's root view, which the dialog attaches to as an AppKit child window.
+    #[cfg(target_os = "macos")]
+    pub(crate) main_window_native_view: *mut std::ffi::c_void,
     pub(crate) main_window_bounds: Bounds<Pixels>,
     pub(crate) display_id: Option<gpui::DisplayId>,
     pub(crate) palette: ModalPalette,

@@ -475,6 +475,7 @@ pub fn evidence_priority(source: Option<&str>) -> i32 {
         Some("terminal") => 3,
         Some("statusline") => 2,
         Some("transcript") => 1,
+        // `launch` (the agent command's own flags, until the agent reports) ranks with no source.
         _ => 0,
     }
 }
@@ -508,6 +509,12 @@ fn apply_detected_choice(
         }
     }
     if current.is_some_and(|entry| entry.source == OptionSource::Dispatched) {
+        // CDXC:AgentScreenDetection 2026-10-04 WHY:
+        // Launch evidence is the agent command's flags, read again on every detection, so it always carries a fresh `detectedAt` although it describes the moment the agent started. A pick made in the chat before the agent reported is newer than that by construction, and must not be replaced by the value it is changing.
+        // SEE-ALSO: server/src/session_chat_options/launch_selection.rs.
+        if detected.source.as_deref() == Some("launch") {
+            return None;
+        }
         if let (Some(dispatched), Some(detected_ms)) = (dispatched_at_ms, detected_at_ms) {
             // A read taken BEFORE the dispatch is stale by construction; a read taken just after
             // it may have caught the pre-repaint screen.
@@ -723,7 +730,10 @@ pub fn option_state_from_value(value: &Value) -> OptionState {
                 label: text("label").filter(|label| !label.is_empty()),
                 dispatched_at: text("dispatchedAt"),
                 detected_source: text("detectedSource").filter(|source| {
-                    matches!(source.as_str(), "terminal" | "transcript" | "statusline")
+                    matches!(
+                        source.as_str(),
+                        "terminal" | "transcript" | "statusline" | "launch"
+                    )
                 }),
                 detected_at: text("detectedAt"),
             },

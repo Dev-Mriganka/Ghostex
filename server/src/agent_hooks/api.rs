@@ -32,20 +32,31 @@ pub fn read_agent_hook_status(
     let hook_paths = HookPaths::from_paths(paths);
     let agent_ids = normalize_agent_ids(params.get("agentIds"));
     let auto_upgrade = params.get("autoUpgradeInstalled").and_then(Value::as_bool) != Some(false);
-    let auto_upgraded_paths = if auto_upgrade {
-        repair_installed_agent_hook_paths(paths)?
-    } else {
-        Vec::new()
-    };
-    let mut rows = Vec::new();
-    for agent_id in agent_ids {
-        if let Some(definition) = HOOK_DEFINITIONS
-            .iter()
-            .find(|definition| definition.agent_id == agent_id)
-        {
-            rows.push(read_hook_status(definition, &hook_paths)?);
+    let read_rows = || -> Result<Vec<Value>, DomainStateError> {
+        let mut rows = Vec::new();
+        for agent_id in &agent_ids {
+            if let Some(definition) = HOOK_DEFINITIONS
+                .iter()
+                .find(|definition| definition.agent_id == agent_id.as_str())
+            {
+                rows.push(read_hook_status(definition, &hook_paths)?);
+            }
         }
-    }
+        Ok(rows)
+    };
+    let mut rows = read_rows()?;
+    /*
+    CDXC:AgentHooks 2026-10-04 WHY:
+    The desktop awaits this read before every agent launch, and the full repair scan (every agent's config files) took 170–600 ms on Windows while the status read takes about 3 ms, all of it in front of the agent starting. A repair can only turn a present-but-stale Ghostex hook (`updateRequired`) into a current one, so it runs, and the rows are read again, only when a requested agent reports that; daemon startup still repairs every installed hook.
+    */
+    let auto_upgraded_paths =
+        if auto_upgrade && rows.iter().any(|row| row["status"] == "updateRequired") {
+            let upgraded = repair_installed_agent_hook_paths(paths)?;
+            rows = read_rows()?;
+            upgraded
+        } else {
+            Vec::new()
+        };
     let mut result = Map::new();
     result.insert("agents".to_string(), Value::Array(rows));
     if !auto_upgraded_paths.is_empty() {

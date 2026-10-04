@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   changelogNotesFormat,
   changelogNotesItems,
@@ -20,7 +20,11 @@ import { componentDownloadRepo } from './release-gpui/on-demand-manifest.mjs';
 import { LEGACY_COMPONENTS_GITHUB_REPO, componentsGithubRepo } from './release-gpui/components-repo.mjs';
 import { validateWindowsUpdateFeed, windowsUpdateArtifactNames } from './release-gpui/windows-update-feed.mjs';
 import { releaseProvenanceAssetName, validateReleaseProvenance } from './release-gpui/provenance.mjs';
-import { customerDownloadEntries, renderIosAvailabilityNotes } from './release-gpui/customer-downloads.mjs';
+import {
+  customerDownloadEntries,
+  DOWNLOADS_START,
+  renderIosAvailabilityNotes,
+} from './release-gpui/customer-downloads.mjs';
 import {
   RELEASE_PLAN_ARTIFACT_DIRECTORY,
   RELEASE_PLAN_ARTIFACT_FILE,
@@ -42,7 +46,7 @@ import { caskVersion, findOpenPullRequest, officialCask, personalTap } from './r
  downloads the live DMG only when no verified local copy exists.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const githubRepo = 'maddada/Ghostex';
 export const MAX_RELEASE_DMG_BYTES = 300 * 1024 * 1024;
 const subrepoCandidates = ['apps/mobile/app', '.dependencies/zmx'];
@@ -339,6 +343,9 @@ async function verify(cleanupPaths) {
       throw new Error(
         `Release notes are missing customer download links: ${missing.map((item) => item.label).join(', ')}`
       );
+    }
+    if (!releaseBody.trimStart().startsWith(DOWNLOADS_START)) {
+      throw new Error('Release notes do not open with the download block.');
     }
     const hasAndroidDownload = groups.some((group) => group.title === 'Android');
     if (hasAndroidDownload && !releaseBody.includes(renderIosAvailabilityNotes())) {
@@ -678,7 +685,7 @@ async function verify(cleanupPaths) {
       if (!pendingBump) {
         throw new Error(
           `${officialCask.label} ships ghostex ${officialVersion}, not ${version}, and no open "ghostex ${version}" bump pull request exists; ` +
-            `the macOS publish stage opens one from maddada/homebrew-cask:ghostex-${version}.`
+            "Homebrew's autobump bot (BrewTestBot) opens it after a release; rerun this check in a while."
         );
       }
       officialState =

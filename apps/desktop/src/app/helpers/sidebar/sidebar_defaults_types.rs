@@ -343,6 +343,13 @@ pub(crate) const GPUI_DEFAULT_SIDEBAR_AGENTS: &[GpuiDefaultSidebarAgent] = &[
         icon: "zcode",
         name: "ZCode",
     },
+    GpuiDefaultSidebarAgent {
+        agent_id: "freebuff",
+        command: "freebuff",
+        hidden_by_default: false,
+        icon: "freebuff",
+        name: "Freebuff",
+    },
 ];
 
 pub(crate) const GPUI_DEFAULT_SIDEBAR_COMMANDS: &[GpuiDefaultSidebarCommand] = &[

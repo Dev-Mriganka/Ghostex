@@ -337,7 +337,8 @@ pub fn detect_session_chat_terminal_state(
             notice, remembered, answerable, project_id, session_id,
         );
     }
-    let options = merge_session_chat_option_selections(transcript, statusline, terminal)
+    let launch = read_session_chat_launch_selection(repository, project_id, session_id, agent);
+    let options = merge_session_chat_option_selections(launch, transcript, statusline, terminal)
         .map(|mut selection| {
             crate::session_chat_hermes_status::restore_hermes_model_id(&mut selection);
             selection
@@ -402,7 +403,12 @@ pub fn detect_session_chat_terminal_state(
         (None, true)
     };
     let prompt = screen.and_then(|capture| {
-        crate::session_chat::detect_cursor_question_prompt(agent_id, &capture.text)
+        crate::session_chat::detect_cursor_question_prompt(agent_id, &capture.text).or_else(|| {
+            crate::session_chat_freebuff_question::detect_freebuff_question_prompt(
+                agent_id,
+                &capture.text,
+            )
+        })
     });
     /*
     CDXC:AgentScreenDetection (settled 2026-08-30): probed only counts once
@@ -420,6 +426,8 @@ pub fn detect_session_chat_terminal_state(
         || fleet.is_some()
         || prompt.is_some()
         || composer.state == crate::session_chat_composer::SessionChatComposerState::Ready;
+    // Added after `attempted`: the checkout is known before the agent draws anything.
+    let options = with_checkout_status(repository, project_id, session_id, agent_id, options);
     SessionChatTerminalDetection {
         options,
         prompt,
@@ -432,4 +440,31 @@ pub fn detect_session_chat_terminal_state(
         captured: screen.is_some(),
         attempted,
     }
+}
+
+/// Adds the checkout's repository and branch for the chat agents whose status line has nothing
+/// of their own to show (see CDXC:AgentProviders in session_chat_cursor_status.rs).
+fn with_checkout_status(
+    repository: &DomainRepository<'_>,
+    project_id: &str,
+    session_id: &str,
+    agent_id: Option<&str>,
+    options: Option<SessionChatDetectedOptions>,
+) -> Option<SessionChatDetectedOptions> {
+    if matches!(
+        agent_id.map(str::trim),
+        Some("claude" | "codex" | "cursor" | "cursor-agent" | "hermes" | "hermes-agent") | None
+    ) {
+        return options;
+    }
+    let Some(status) =
+        crate::session_chat_cursor_status::read_checkout_status(repository, project_id, session_id)
+    else {
+        return options;
+    };
+    let mut options = options.unwrap_or_else(|| {
+        SessionChatDetectedOptions::new(SessionChatDetectedSelection::default())
+    });
+    options.selection.checkout_status = Some(status);
+    Some(options)
 }

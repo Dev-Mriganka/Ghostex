@@ -173,17 +173,53 @@ impl NativeChatView {
         })
     }
 
-    fn scroll_bottom_shown(&self, scale: f32) -> bool {
-        let remaining =
-            self.list.max_offset_for_scrollbar().y + self.list.scroll_px_offset_for_scrollbar().y;
-        !self.list.is_following_tail() && remaining > px(SPEC.edge_threshold * scale)
+    /// A downward wheel that lands within the pill's edge threshold of the end has reached the
+    /// bottom: the transcript follows its tail again. Called from the transcript's capture-phase
+    /// wheel listener, before the list applies the same event, which keeps following on a downward
+    /// scroll.
+    pub(super) fn follow_tail_if_wheel_reaches_end(
+        &self,
+        event: &gpui::ScrollWheelEvent,
+        scale: f32,
+    ) {
+        if self.list.is_following_tail() || self.disclosure_motion.borrow().follow_paused {
+            return;
+        }
+        // gpui's list turns wheel lines into 20px each (`ListElement::paint`).
+        let delta = event.delta.pixel_delta(px(20.0)).y;
+        if delta < px(0.0)
+            && transcript_distance_to_end(&self.list) + delta <= px(SPEC.edge_threshold * scale)
+        {
+            self.list.set_follow_mode(gpui::FollowMode::Tail);
+        }
+    }
+
+    /// Paints nothing; placed after the list so its prepaint reads the layout this frame just made,
+    /// and redraws the chat when the pill drawn before that layout no longer matches it.
+    pub(super) fn scroll_bottom_sync(&self, cx: &Context<Self>) -> AnyElement {
+        let list = self.list.clone();
+        let drawn = self.scroll_bottom_drawn.clone();
+        let chat = cx.entity_id();
+        gpui::canvas(
+            move |_, _, cx| {
+                if transcript_left_bottom(&list) != drawn.get() {
+                    cx.notify(chat);
+                }
+            },
+            |_, _, _, _| {},
+        )
+        .absolute()
+        .size_0()
+        .into_any_element()
     }
 
     pub(super) fn scroll_bottom_button(&self, cx: &Context<Self>) -> AnyElement {
         let glass = crate::app::helpers::window_glass_active_for(self.main_window);
         let p = ChatAppearance::current(&self.snapshot).on_window_glass(glass);
         let toast = self.pill_toast();
-        let shown = toast.is_some() || self.scroll_bottom_shown(p.scale);
+        let left_bottom = transcript_left_bottom(&self.list);
+        self.scroll_bottom_drawn.set(left_bottom);
+        let shown = toast.is_some() || left_bottom;
         if glass {
             let label = toast.map_or_else(|| SPEC.label.clone(), |toast| toast.text);
             return self.scroll_bottom_window_placeholder(shown, label, &p, cx);
@@ -249,6 +285,24 @@ impl NativeChatView {
         .into_any_element()
     }
 }
+
+/// How far the viewport's bottom is above the transcript's end, as of the list's last layout.
+pub(super) fn transcript_distance_to_end(list: &gpui::ListState) -> gpui::Pixels {
+    list.max_offset_for_scrollbar().y + list.scroll_px_offset_for_scrollbar().y
+}
+
+/// The reader has left the bottom of the transcript: the "Scroll to bottom" pill shows, and new
+/// rows arrive below the fold.
+///
+/// CDXC:SessionChat 2026-10-04 WHY:
+/// User (Windows): "we're not auto scrolling down to the bottom automatically even when i don't see the scroll to bottom [button]". The pill used to hide within the 10px edge threshold while gpui's list resumes following only within 1px of the end, so a reader a few pixels short of it saw neither the pill nor following. This is now the one definition: the pill hides exactly while the list follows or will at its next layout, `scroll_bottom_sync` redraws it from the layout just made (the render decides it from the previous one), and the edge threshold only widens what counts as reaching the end on a downward wheel (`follow_tail_if_wheel_reaches_end`). Only a scroll up stops following.
+pub(super) fn transcript_left_bottom(list: &gpui::ListState) -> bool {
+    !list.is_following_tail() && transcript_distance_to_end(list) > px(LIST_RESUME_TOLERANCE)
+}
+
+/// gpui's list follows its tail again once a layout leaves the viewport within this many pixels
+/// of the end (`StateInner::layout_items`).
+const LIST_RESUME_TOLERANCE: f32 = 1.0;
 
 /// What the pill's slot shows instead of "Scroll to bottom".
 pub(super) struct PillToast {

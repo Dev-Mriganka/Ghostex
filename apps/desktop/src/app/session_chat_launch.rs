@@ -19,6 +19,12 @@ impl GhostexGpuiApp {
             let result = match created {
                 Ok(key) => {
                     attach_key = Some(key.clone());
+                    // CDXC:AgentLauncher 2026-10-04 WHY:
+                    // The agent CLI's own startup is the longest wait before a new chat's composer can show its model and status line, so the provider start (inside the attach plan) runs beside the read that mounts the chat instead of after it.
+                    let plan_key = key.clone();
+                    let plan = background.spawn(async move {
+                        gpui_prepare_local_workspace_attach_terminal_plan(&plan_key, GpuiLocalWorkspaceAttachIntent::Attach).map(|plan| (plan_key, plan))
+                    });
                     let preview_key = key.clone();
                     let metadata = background.spawn(async move {
                         gpui_gxserver_rpc_result("/api/attachSessionMetadata", &serde_json::json!({
@@ -26,7 +32,7 @@ impl GhostexGpuiApp {
                         }), std::time::Duration::from_secs(15))
                     }).await;
                     let _ = this.update(cx, |this, cx| {
-                        this.swap_agents_workspace_to_project_id(Some(key.project_id.clone()), cx);
+                        this.gx_store_take_created_session(&key, cx);
                         this.local_workspace_latest_focus_key = Some(key.clone());
                         this.local_workspace_attach_pending.insert(key.clone());
                         let workspace_key = GpuiWorkspaceTerminalSessionKey::Local(key.clone());
@@ -35,9 +41,7 @@ impl GhostexGpuiApp {
                             this.show_pending_agents_chat_launch(workspace_key, &metadata, this.agents_workspace.focused_pane, true, cx);
                         }
                     });
-                    background.spawn(async move {
-                        gpui_prepare_local_workspace_attach_terminal_plan(&key, GpuiLocalWorkspaceAttachIntent::Attach).map(|plan| (key, plan))
-                    }).await
+                    plan.await
                 }
                 Err(error) => Err(error),
             };
@@ -180,6 +184,7 @@ impl GhostexGpuiApp {
                     | "pi"
                     | "omp"
                     | "zcode"
+                    | "freebuff"
             )
         ) {
             return;

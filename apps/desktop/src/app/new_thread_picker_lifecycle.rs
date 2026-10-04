@@ -11,6 +11,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
+/// How long the main window's frame must stay still before a move or resize recycles the
+/// preloaded picker.
+const NEW_THREAD_PICKER_RECYCLE_SETTLE: Duration = Duration::from_millis(250);
+
 /// The picker's window root inside the app: it answers the New Thread hotkey
 /// (a second press closes the picker) around the kit-only picker view,
 /// which cannot name the app's action types itself.
@@ -234,6 +238,23 @@ impl GhostexGpuiApp {
         self.create_gpui_new_thread_picker_window(false, cx);
     }
 
+    /// The recycle a main-window move or resize asks for, run once the frame has been still for
+    /// `NEW_THREAD_PICKER_RECYCLE_SETTLE`.
+    ///
+    /// CDXC:AgentLauncher 2026-10-04 WHY:
+    /// A window drag reports a new frame on every step, and building a whole picker window on each of them (13 windows in one half-second drag on Windows) kept the UI thread busy enough that the dragged window trailed the pointer. Opening the picker while a recycle is still pending rebuilds it at the new position instead.
+    pub(crate) fn schedule_gpui_new_thread_picker_recycle(&mut self, cx: &mut gpui::Context<Self>) {
+        self.new_thread_picker_recycle_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(NEW_THREAD_PICKER_RECYCLE_SETTLE)
+                .await;
+            let _ = this.update(cx, |app, cx| {
+                app.new_thread_picker_recycle_task = None;
+                app.recycle_gpui_new_thread_picker_preload(cx);
+            });
+        }));
+    }
+
     /// Drops a hidden preloaded window and creates a fresh one; a visible
     /// picker is left alone.
     pub(crate) fn recycle_gpui_new_thread_picker_preload(&mut self, cx: &mut gpui::Context<Self>) {
@@ -396,7 +417,9 @@ impl GhostexGpuiApp {
             return;
         }
         let config = self.new_thread_picker_config();
-        let stale = self.new_thread_picker_window.is_none()
+        let recycle_pending = self.new_thread_picker_recycle_task.take().is_some();
+        let stale = recycle_pending
+            || self.new_thread_picker_window.is_none()
             || self.new_thread_picker_preloaded_agent_count != config.agents.len();
         if stale {
             self.remove_gpui_new_thread_picker_window(cx);

@@ -282,5 +282,12 @@
     "npmPackage": "zcode-app-cli",
     "packageManagers": ["npm"],
     "miseTool": "npm:zcode-app-cli[prerelease=true]"
+  },
+  {
+    "agentId": "freebuff",
+    "binary": "freebuff",
+    "docsUrl": "https://github.com/CodebuffAI/codebuff/tree/main/freebuff",
+    "npmPackage": "freebuff",
+    "packageManagers": ["npm"]
   }
 ]

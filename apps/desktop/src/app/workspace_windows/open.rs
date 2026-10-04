@@ -274,9 +274,11 @@ pub(crate) fn open_workspace_window(
         });
         view.update(cx, |_, cx| {
             record_opened_workspace_window_frame(slot, window, cx);
+            super::owned_windows::follow_owner_window_frame(window, cx);
             cx.observe_window_bounds(window, |app, window, cx| {
                 app.main_window_bounds = window.bounds();
                 app.main_window_display_id = window.display(cx).map(|display| display.id());
+                super::owned_windows::follow_owner_window_frame(window, cx);
                 /*
                 macOS delivers bounds observer callbacks for window events
                 that do not actually change the frame (e.g. key/order
@@ -287,7 +289,7 @@ pub(crate) fn open_workspace_window(
                 */
                 if note_workspace_window_frame(window, cx) {
                     app.close_gpui_titlebar_popup(None, window, cx);
-                    app.recycle_gpui_new_thread_picker_preload(cx);
+                    app.schedule_gpui_new_thread_picker_recycle(cx);
                 }
             })
             .detach();

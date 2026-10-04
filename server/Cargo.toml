@@ -44,7 +44,9 @@ jsonc-parser = { version = "0.33.2", features = ["cst", "serde"] }
 [target.'cfg(windows)'.dependencies]
 ghostex-editor-client = { path = "../packages/editor-client" }
 windows-sys = { version = "0.59", features = [
+    "Wdk_System_Threading",
     "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
     "Win32_Storage_FileSystem",
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_Diagnostics_ProcessSnapshotting",

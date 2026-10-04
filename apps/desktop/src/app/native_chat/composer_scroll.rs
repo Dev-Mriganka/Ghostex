@@ -104,6 +104,7 @@ impl NativeChatView {
             )
             .child(self.transcript_scrollbar(&p))
             .child(self.scroll_bottom_button(cx))
+            .child(self.scroll_bottom_sync(cx))
             .child(
                 gpui::canvas(
                     |bounds, _, _| bounds,
@@ -118,6 +119,7 @@ impl NativeChatView {
                                     return;
                                 }
                                 let _ = chat.update(cx, |chat, cx| {
+                                    chat.follow_tail_if_wheel_reaches_end(event, scale);
                                     let delta = event.delta.pixel_delta(px(16.0)).y.as_f32();
                                     if delta == 0.0 {
                                         return;

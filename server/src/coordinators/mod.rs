@@ -3,6 +3,7 @@
 
 mod brief;
 mod create;
+mod delivery;
 mod endpoint;
 mod panel;
 mod presentation;
@@ -13,6 +14,7 @@ mod title;
 
 pub use brief::*;
 pub use create::*;
+pub use delivery::*;
 pub use endpoint::*;
 pub use panel::*;
 pub use presentation::*;

@@ -97,9 +97,14 @@ DELIVERY
                 as soon as its input box appears.
     queued      Sent with --queue.
   A message the agent did not take (Claude Code or Codex left it in its
-  input box, a blocking dialog) fails with the reason instead.
+  input box, a blocking dialog) fails with the reason instead. A paste the
+  terminal is slow to show is watched longer and then submitted; one that
+  never shows is cleared and typed once more before the send fails.
   None of these means read, acknowledged, or completed.
   Blocking prompts can prevent delivery. Inspect chat and queue before retrying.
+  A coordinator's message to its own thread is also watched by Ghostex: if
+  the thread goes idle without it, the coordinator gets a thread report
+  saying the message did not reach it.
 
   Control characters in the text (other than newline and tab) are sent as
   visible signs such as ␌, never as keys. In PowerShell a backtick inside

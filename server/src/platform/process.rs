@@ -86,9 +86,12 @@ pub(crate) fn running_image_superseded() -> bool {
 ///
 /// CDXC:PlatformSupport 2026-09-28 WHY:
 /// The server gets its own windowless console (CREATE_NO_WINDOW), not DETACHED_PROCESS: with no console at all, every console child it started without its own flag opened a Windows Terminal window. The new console is still separate from the launcher's, so it outlives an SSH channel or terminal too.
+///
+/// CDXC:PlatformSupport 2026-10-04 WHY:
+/// Since the user's "Prevent and cure" decision (`server_placement` in platform/desktop_session.rs), a caller outside the desktop spawns gxserver itself only when nobody is signed in to the desktop; a caller in the desktop session (an administrator terminal, still given standard rights) spawns it here too.
 /// SEE-ALSO: `gpui_spawn_local_gxserver_daemon` in apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs.
 #[cfg(windows)]
-pub(crate) fn spawn_detached_server(executable: &OsStr) -> std::io::Result<u32> {
+pub(crate) fn spawn_server(executable: &OsStr) -> std::io::Result<u32> {
     use std::os::windows::{ffi::OsStrExt, io::AsRawHandle};
     use windows_sys::Win32::{
         Foundation::CloseHandle,

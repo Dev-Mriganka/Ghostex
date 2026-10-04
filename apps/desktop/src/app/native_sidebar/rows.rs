@@ -45,11 +45,9 @@ impl GhostexGpuiApp {
         let key = format!("group:{}", group.group_id);
         let scale = appearance.scale;
         // CDXC:Sidebar 2026-09-24 DECISION:
-        // User: don't show the Sessions label under a project or worktree when it's the only label there (no pinned, drafts or parked sessions). It comes back while a session is dragged, next to the Pinned and Parked drop headings.
-        let hide_lone_sessions_heading = matches!(group.sections.as_slice(), [only] if only.id == "sessions")
-            && self
-                .native_sidebar_missing_drop_sections(group, None, None)
-                .is_empty();
+        // User: don't show the Sessions label under a project or worktree when it's the only label there (no pinned, drafts or parked sessions). Superseded 2026-10-04: it no longer comes back while a session is dragged, because a drag must never change the sidebar's layout.
+        let hide_lone_sessions_heading =
+            matches!(group.sections.as_slice(), [only] if only.id == "sessions");
         let body = self
             .native_sidebar
             .disclosures
@@ -90,24 +88,7 @@ impl GhostexGpuiApp {
                             .sections
                             .iter()
                             .enumerate()
-                            .flat_map(|(index, section)| {
-                                // A session drag shows the sections it can land in that are empty
-                                // (section_move.rs), each in its own place among the drawn ones.
-                                let placeholders = self
-                                    .native_sidebar_missing_drop_sections(
-                                        group,
-                                        index
-                                            .checked_sub(1)
-                                            .map(|previous| group.sections[previous].id.as_str()),
-                                        Some(section.id.as_str()),
-                                    )
-                                    .into_iter()
-                                    .map(|id| {
-                                        self.render_native_section_drop_placeholder(
-                                            group, id, appearance, cx,
-                                        )
-                                    })
-                                    .collect::<Vec<_>>();
+                            .map(|(index, section)| {
                                 let key = format!("section:{}:{}", group.group_id, section.id);
                                 let ids = self.native_sidebar.disclosures.section_ids(
                                     &key,
@@ -138,7 +119,7 @@ impl GhostexGpuiApp {
                                         );
                                         self.render_native_disclosure(key, rows, cx)
                                     });
-                                let section_column = v_flex()
+                                v_flex()
                                     .w_full()
                                     .flex_shrink_0()
                                     .when(
@@ -151,22 +132,8 @@ impl GhostexGpuiApp {
                                         ))
                                     })
                                     .children(body)
-                                    .into_any_element();
-                                placeholders
-                                    .into_iter()
-                                    .chain(std::iter::once(section_column))
+                                    .into_any_element()
                             }),
-                    )
-                    .children(
-                        self.native_sidebar_missing_drop_sections(
-                            group,
-                            group.sections.last().map(|section| section.id.as_str()),
-                            None,
-                        )
-                        .into_iter()
-                        .map(|id| {
-                            self.render_native_section_drop_placeholder(group, id, appearance, cx)
-                        }),
                     )
                     .when(
                         group.hidden_session_count > 0 && !group.expanded,

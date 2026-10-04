@@ -276,7 +276,17 @@ pub(crate) fn remove_gpui_app_toast_popup_window_chrome(
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+/// A toast can open while Ghostex is in the background (an agent finished), when GPUI would leave
+/// its pop-up unowned and topmost over the app in front; it belongs to the main window instead.
+#[cfg(target_os = "windows")]
+pub(crate) fn remove_gpui_app_toast_popup_window_chrome(
+    window: &mut Window,
+    main_window_native_view: *mut std::ffi::c_void,
+) {
+    super::own_gpui_popup_window(window, main_window_native_view);
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn remove_gpui_app_toast_popup_window_chrome(
     _window: &mut Window,
     _main_window_native_view: *mut std::ffi::c_void,

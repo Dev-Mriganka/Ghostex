@@ -312,8 +312,8 @@ impl OnboardingSettings {
                 .map(|value| value.clamp(0.0, 100.0).round())
                 .unwrap_or(fallback)
         };
-        let glass_sidebar_dark = sidebar("windowGlassSidebarOpacityDark", 88.0);
-        let glass_sidebar_light = sidebar("windowGlassSidebarOpacityLight", 93.0);
+        let glass_sidebar_dark = sidebar("windowGlassSidebarOpacityDark", 94.0);
+        let glass_sidebar_light = sidebar("windowGlassSidebarOpacityLight", 97.0);
         let work_area = |key: &str, legacy: &str, sidebar_percent: f64, fallback: f64| {
             read_number(object, key)
                 .or_else(|| {
@@ -345,7 +345,13 @@ impl OnboardingSettings {
             light_theme_preset: preset("lightThemePreset", &LIGHT_PRESETS),
             sidebar_contrast: theme_contrast_points(object, "themeSidebarContrast"),
             work_area_contrast: theme_contrast_points(object, "themeWorkAreaContrast"),
-            window_glass: match text("windowGlass") {
+            window_glass: match text("windowGlass").or_else(|| {
+                ghostex_settings_catalog::availability::default_value_on(
+                    ghostex_settings_catalog::Platform::current(),
+                    "windowGlass",
+                )
+                .and_then(ghostex_settings_catalog::J::as_str)
+            }) {
                 Some(value @ ("frosted" | "opaque")) => value.to_string(),
                 _ => "auto".to_string(),
             },
@@ -354,14 +360,14 @@ impl OnboardingSettings {
                 "windowGlassWorkAreaTintDark",
                 "windowGlassMainOpacityDark",
                 glass_sidebar_dark,
-                81.0,
+                91.0,
             ),
             glass_sidebar_light,
             glass_work_area_light: work_area(
                 "windowGlassWorkAreaTintLight",
                 "windowGlassMainOpacityLight",
                 glass_sidebar_light,
-                86.0,
+                93.0,
             ),
         }
     }

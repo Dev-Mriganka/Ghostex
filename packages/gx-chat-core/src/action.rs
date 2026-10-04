@@ -170,6 +170,7 @@ action_kinds! {
     Accounts => "accounts",
     SwitchDraftAgent => "switchDraftAgent",
     SwitchDraftRunLocation => "switchDraftRunLocation",
+    SwitchToTerminal => "switchToTerminal",
     SelectForkBranch => "selectForkBranch",
 
     // Context.

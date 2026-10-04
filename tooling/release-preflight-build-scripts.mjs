@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /*
  CDXC:Release 2026-09-02-12:40:
@@ -34,7 +34,7 @@ import { pathToFileURL } from 'node:url';
  output no longer matches its sources - not a side effect to hide.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 export const RELEASE_BUILD_SCRIPTS = Object.freeze([
   {

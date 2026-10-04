@@ -953,7 +953,33 @@ pub fn cursor_rows() -> Vec<RowDefinition> {
 }
 
 fn value_branch(input: &RowInput) -> Option<String> {
-    input.status.cursor.as_ref()?.branch.clone()
+    match input.status.cursor.as_ref() {
+        Some(cursor) => cursor.branch.clone(),
+        None => input.status.branch.clone(),
+    }
+}
+
+/// The Basic catalog: the shared rows any session can fill from its checkout and the chat, plus
+/// the branch.
+pub fn basic_rows() -> Vec<RowDefinition> {
+    let mut rows: Vec<RowDefinition> = claude_rows()
+        .into_iter()
+        .filter(|row| matches!(row.id, "repo" | "folder" | "model" | "sessionName"))
+        .map(|row| match row.id {
+            "repo" => RowDefinition {
+                description: "The name of the project folder",
+                recommended: true,
+                ..row
+            },
+            "folder" => RowDefinition {
+                description: "The session's working folder",
+                ..row
+            },
+            _ => row,
+        })
+        .collect();
+    rows.extend(CURSOR_ROWS.iter().filter(|row| row.id == "branch").cloned());
+    rows
 }
 
 fn value_worktree(input: &RowInput) -> Option<String> {
@@ -1090,6 +1116,7 @@ pub fn context_detail_rows(agent: ContextDetailsAgent) -> Vec<RowDefinition> {
         ContextDetailsAgent::Claude => claude_rows(),
         ContextDetailsAgent::Cursor => cursor_rows(),
         ContextDetailsAgent::Hermes => hermes_rows(),
+        ContextDetailsAgent::Basic => basic_rows(),
     }
 }
 

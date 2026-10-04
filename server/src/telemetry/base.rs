@@ -72,7 +72,7 @@ fn read_os_major_version() -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-fn read_raw_os_version() -> Option<String> {
+pub(crate) fn read_raw_os_version() -> Option<String> {
     let output = std::process::Command::new("/usr/bin/sw_vers")
         .arg("-productVersion")
         .output()
@@ -84,7 +84,7 @@ fn read_raw_os_version() -> Option<String> {
 }
 
 #[cfg(target_os = "linux")]
-fn read_raw_os_version() -> Option<String> {
+pub(crate) fn read_raw_os_version() -> Option<String> {
     let output = std::process::Command::new("uname")
         .arg("-r")
         .output()
@@ -96,7 +96,7 @@ fn read_raw_os_version() -> Option<String> {
 }
 
 #[cfg(target_os = "windows")]
-fn read_raw_os_version() -> Option<String> {
+pub(crate) fn read_raw_os_version() -> Option<String> {
     let output = crate::platform::process::background_command("cmd")
         .args(["/C", "ver"])
         .output()
@@ -111,6 +111,6 @@ fn read_raw_os_version() -> Option<String> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-fn read_raw_os_version() -> Option<String> {
+pub(crate) fn read_raw_os_version() -> Option<String> {
     None
 }

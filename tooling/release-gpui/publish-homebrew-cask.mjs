@@ -2,9 +2,10 @@
 /*
  * Homebrew distribution of a published macOS release.
  *
- * Bumps `version` and `sha256` in two casks, touching nothing else:
- *   1. the official cask `Casks/g/ghostex.rb` in Homebrew/homebrew-cask, through a
- *      version-bump pull request opened from a fork under the token's account;
+ * Bumps `version` and `sha256` in up to two casks, touching nothing else:
+ *   1. only with `--official`: the official cask `Casks/g/ghostex.rb` in
+ *      Homebrew/homebrew-cask, through a version-bump pull request opened from a fork
+ *      under the token's account (off by default, see the 2026-10-04 DECISION);
  *   2. the legacy personal tap `Casks/ghostex.rb` in maddada/homebrew-tap, pushed
  *      directly to `main` so existing `maddada/tap/ghostex` installs keep updating.
  *
@@ -13,22 +14,24 @@
  * publish runner. The local, brew-driven equivalent for the tap alone is
  * tooling/release-gpui-homebrew.mjs.
  *
- * CDXC:Release 2026-09-15 DECISION:
- * User: now that the `ghostex` cask is accepted into Homebrew/homebrew-cask, every
- * release must update the official cask automatically from CI, in the macOS publish
- * stage, and `brew install ghostex` is the advertised macOS Homebrew install path.
- * The personal tap is kept in sync as a courtesy for installs that predate the
- * official cask; it is no longer the primary path.
+ * CDXC:Release 2026-10-04 DECISION:
+ * User: Homebrew's autobump bot (BrewTestBot) updates the official `ghostex` cask on
+ * every release, so our own pull request is opt-in (`--official`) and the release
+ * workflow no longer runs it. Supersedes the 2026-09-15 decision that CI must open the
+ * official-cask PR on every release. `brew install ghostex` stays the advertised macOS
+ * path; the personal tap is still pushed on every release for installs that predate
+ * the official cask.
  *
  * CDXC:Release 2026-09-15 WHY:
  * `brew bump-cask-pr` was considered and rejected for CI: it needs the whole
  * homebrew-cask tap as a git clone (~620 MB), runs `brew audit`/`brew style` for a
  * cask on Linux, and decides fork and branch handling itself. The bump is two lines
  * of Ruby with a checksum the release already recorded, so the PR is opened with the
- * contents API instead and the maintainers' own CI performs the audit. Since
- * 2026-09-16 the official cask carries `no_autobump! because: :bumped_by_upstream`,
- * so BrewTestBot no longer opens bump PRs and this one is the only update path; an
- * existing open PR for the version (a manual rerun) is still a success here.
+ * contents API instead and the maintainers' own CI performs the audit. An existing
+ * open PR for the version (the bot's, or a manual rerun) is a success here.
+ * From 10.0.1 on this path failed with HTTP 404 on `POST <fork>/git/refs` (the
+ * token has no write access to the fork) while BrewTestBot opened every bump PR
+ * itself, which is why it is now opt-in.
  */
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -576,7 +579,7 @@ export function parseArguments(argv) {
       options.dryRun = true;
       continue;
     }
-    if (argument === '--audited' || argument === '--styled') {
+    if (argument === '--audited' || argument === '--styled' || argument === '--official') {
       options[argument.slice(2)] = true;
       continue;
     }
@@ -598,7 +601,7 @@ async function main() {
   verifyProvenance({ repo: options.repo, sha256, version });
 
   const caskToken = process.env.HOMEBREW_GITHUB_API_TOKEN || '';
-  if (!dryRun && !options.render && !caskToken) {
+  if (!dryRun && !options.render && options.official && !caskToken) {
     throw new Error(
       'HOMEBREW_GITHUB_API_TOKEN is not set. It must be a GitHub token for the account that owns the homebrew-cask ' +
         'fork, with contents and pull-request write access. See tooling/release-gpui/homebrew-cask-setup.md.'
@@ -606,10 +609,10 @@ async function main() {
   }
   /*
    * CDXC:Release 2026-10-03 WHY:
-   * The personal tap is pushed even when the official-cask pull request fails, and the
-   * failure is rethrown afterwards. From 10.0.1 on, `POST repos/<fork>/git/refs` answered
-   * HTTP 404 on every release; the throw left the tap push below it unreachable, so the
-   * tap only advanced when someone ran tooling/release-gpui-homebrew.mjs by hand.
+   * With `--official`, the personal tap is still pushed when the official-cask pull
+   * request fails, and the failure is rethrown afterwards. The failure used to throw
+   * before the tap push, so CI never advanced the tap and it only moved when someone ran
+   * tooling/release-gpui-homebrew.mjs by hand.
    */
   const officialRequest = {
     checks: { audited: Boolean(options.audited), styled: Boolean(options.styled) },
@@ -624,12 +627,18 @@ async function main() {
     return;
   }
   let officialFailure = null;
-  try {
-    await publishOfficialCask(officialRequest);
-  } catch (error) {
-    officialFailure = error;
-    process.stderr.write(
-      `The official cask update failed; still updating the personal tap: ${error instanceof Error ? error.message : String(error)}\n`
+  if (options.official) {
+    try {
+      await publishOfficialCask(officialRequest);
+    } catch (error) {
+      officialFailure = error;
+      process.stderr.write(
+        `The official cask update failed; still updating the personal tap: ${error instanceof Error ? error.message : String(error)}\n`
+      );
+    }
+  } else {
+    process.stdout.write(
+      'Skipping the Homebrew/homebrew-cask pull request: its autobump bot updates the official cask (pass --official to open one).\n'
     );
   }
   await publishPersonalTap({
@@ -638,7 +647,7 @@ async function main() {
     token: process.env.HOMEBREW_TAP_TOKEN || caskToken,
     version,
   });
-  if (dryRun && !options.publish) process.stdout.write('Pass --publish to open the pull request and push the tap.\n');
+  if (dryRun && !options.publish) process.stdout.write('Pass --publish to push the tap (and, with --official, open the pull request).\n');
   if (officialFailure) throw officialFailure;
 }
 

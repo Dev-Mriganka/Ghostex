@@ -209,7 +209,24 @@ pub(crate) fn sync_session_chat_follower_for_session(
         let child_server_id = state.metadata.server_id.clone();
         let child_project_id = project_id.clone();
         let child_session_id = session_id.clone();
+        let context_paths = state.paths.clone();
+        let context_server_id = state.metadata.server_id.clone();
+        let context_project_id = project_id.clone();
+        let context_session_id = session_id.clone();
         crate::session_chat::SessionChatSuccessorHooks {
+            unbound_agent_chat: Arc::new(move || {
+                let db = open_gxserver_database(&context_paths).ok()?;
+                let repository = DomainRepository::new(&db, context_server_id.as_str());
+                let session = repository
+                    .get_session(&context_project_id, &context_session_id)
+                    .ok()??;
+                let sessions = repository.list_presentation_sessions().ok()?;
+                crate::session_chat_freebuff::discover_freebuff_chat_for_session(
+                    &repository,
+                    &session,
+                    &sessions,
+                )
+            }),
             pending_fork_child_since_ms: Arc::new(move |scanned_agent_session_id| {
                 let read = || -> Option<i64> {
                     let db = open_gxserver_database(&child_paths).ok()?;

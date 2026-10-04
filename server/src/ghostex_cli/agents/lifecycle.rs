@@ -100,6 +100,7 @@ pub(super) fn create(args: &Arguments) -> CliResult<Value> {
                 "coordinatorProjectId": caller["projectId"], "coordinatorSessionId": caller["sessionId"],
                 "projectId": session["projectId"], "sessionId": session["sessionId"],
                 "task": body.as_deref().unwrap_or_default(), "onlyIfCoordinator": true,
+                "pendingMessage": body.as_deref().unwrap_or_default(),
             }),
             &flags,
         );

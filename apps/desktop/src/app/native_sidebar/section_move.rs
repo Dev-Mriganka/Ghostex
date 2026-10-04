@@ -31,7 +31,7 @@ pub(super) fn session_parking_enabled() -> bool {
 
 impl GhostexGpuiApp {
     /// CDXC:Sidebar 2026-10-01 DECISION:
-    /// User: dragging a session in the sidebar moves it between the Pinned, Sessions and Parked sections. A session dropped on another section's heading, or on any row of that section, of its own project gets that section's flags: Pinned pins it (and unparks it), Sessions unpins and unparks it, Parked parks it, which keeps a pinned session's pin so Unpark brings it back to Pinned. While a session is dragged, a section its project does not show yet (nothing pinned, nothing parked) draws its heading so there is somewhere to drop. Supersedes the 2026-09-24 rule that the row then sits where the section's own order puts it, for Pinned: User: "When I drag a session between sessions into Pinned, it's not added to Pinned at the position I dropped it, and we don't show the drop line for it", so a drop on a pinned row pins it right there and a drop on the heading pins it last (gx-core `sidebar_drag/session_drop.rs`). Sessions and Parked keep their own order (Last Activity), and the drop line shows where that order puts the row.
+    /// User: dragging a session in the sidebar moves it between the Pinned, Sessions and Parked sections. A session dropped on another section's heading, or on any row of that section, of its own project gets that section's flags: Pinned pins it (and unparks it), Sessions unpins and unparks it, Parked parks it, which keeps a pinned session's pin so Unpark brings it back to Pinned. Supersedes the earlier rule that a session drag drew the headings of empty Pinned, Sessions and Parked sections so there was somewhere to drop: 2026-10-04 User: "when i start a drag on a session in the sidebar we're showing the other sections that aren't visible so i can drag to them which shifts things in the sidebar. i dont like this let's not do this please." Starting a drag never changes the sidebar's layout; only sections already drawn are drop targets. Supersedes the 2026-09-24 rule that the row then sits where the section's own order puts it, for Pinned: User: "When I drag a session between sessions into Pinned, it's not added to Pinned at the position I dropped it, and we don't show the drop line for it", so a drop on a pinned row pins it right there and a drop on the heading pins it last (gx-core `sidebar_drag/session_drop.rs`). Sessions and Parked keep their own order (Last Activity), and the drop line shows where that order puts the row.
     pub(super) fn native_sidebar_section_move_command(
         &self,
         session_id: &str,
@@ -107,52 +107,4 @@ impl GhostexGpuiApp {
             self.dispatch_native_sidebar_command(message, cx);
         }
     }
-
-    /// The sections a session drag may land in that this group does not draw yet, between the
-    /// drawn sections ranked `after` and `before` (`None` for either end).
-    pub(super) fn native_sidebar_missing_drop_sections(
-        &self,
-        group: &NativeSidebarGroup,
-        after: Option<&str>,
-        before: Option<&str>,
-    ) -> Vec<&'static str> {
-        let Some(("session", dragged)) = self
-            .native_sidebar
-            .dragging
-            .as_ref()
-            .map(|(kind, id)| (*kind, id.as_str()))
-        else {
-            return Vec::new();
-        };
-        if group.is_stale
-            || group.remote_machine_context.is_some()
-            || !group
-                .sessions
-                .iter()
-                .any(|session| session.session_id == dragged)
-        {
-            return Vec::new();
-        }
-        let low = after.map_or(-1, section_rank);
-        let high = before.map_or(i32::MAX, section_rank);
-        DROP_SECTIONS
-            .into_iter()
-            .filter(|id| *id != "parked" || session_parking_enabled())
-            .filter(|id| !group.sections.iter().any(|section| section.id == *id))
-            .filter(|id| {
-                let rank = section_rank(id);
-                rank > low && rank < high
-            })
-            .collect()
-    }
-}
-
-/// Where a section's heading is drawn among the others (`SectionId::ORDER` in gx-core).
-fn section_rank(id: &str) -> i32 {
-    [
-        "browser", "pinned", "drafts", "sessions", "parked", "snoozed",
-    ]
-    .iter()
-    .position(|candidate| *candidate == id)
-    .map_or(i32::MAX - 1, |rank| rank as i32)
 }

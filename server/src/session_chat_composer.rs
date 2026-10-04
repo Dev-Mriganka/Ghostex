@@ -244,6 +244,8 @@ enum ComposerSignature {
     /// gemini draws dialogs and the composer with the same rounded chrome, so
     /// only the composer's exact height admits a match.
     ShortRoundedBoxMarker { marker: char },
+    /// The last rounded box above a fixed footer, holding no nested box (Freebuff).
+    FooteredRoundedBox,
 }
 
 /// Tallest rounded box `TrailingRoundedFoot` will accept as a composer. Two
@@ -303,6 +305,9 @@ fn composer_signature(agent: &str) -> Option<ComposerSignature> {
         "omp" => ComposerSignature::TrailingRoundedFoot,
         // Three-line rounded box with a `>` input marker.
         "gemini" => ComposerSignature::ShortRoundedBoxMarker { marker: '>' },
+        // Rounded box over `<model> · <folder> · /model to change` and `← for history · ? for
+        // help`. Measured 2026-10-04, Freebuff 0.2.12.
+        "freebuff" => ComposerSignature::FooteredRoundedBox,
         _ => return None,
     })
 }
@@ -711,6 +716,7 @@ fn signature_matches(signature: ComposerSignature, lines: &[String]) -> bool {
                     && lines[index + 2].trim_start().starts_with('\u{2570}')
             })
         }
+        ComposerSignature::FooteredRoundedBox => input::freebuff_input_region(lines).is_some(),
     }
 }
 

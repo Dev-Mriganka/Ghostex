@@ -139,8 +139,9 @@ impl NativeChatView {
         let chat = cx.weak_entity();
         gpui::canvas(
             move |bounds, window, cx| {
-                let control = (shown && window.content_mask().bounds.intersect(&bounds) == bounds)
-                    .then_some(bounds);
+                let control = (shown
+                    && super::child_window::bounds_inside_content_mask(window, bounds))
+                .then_some(bounds);
                 if measured.replace(control) != control {
                     cx.defer(move |cx| {
                         let _ = chat.update(cx, |chat, cx| {
@@ -636,7 +637,15 @@ fn attach_overlay_window(window: &mut Window, parent: *mut std::ffi::c_void) {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+/// A click on the pill must leave the keyboard with the chat's window, as the frosted menu hosts do
+/// (`frosted_host.rs`).
+#[cfg(target_os = "windows")]
+fn attach_overlay_window(window: &mut Window, parent: *mut std::ffi::c_void) {
+    crate::app::window::make_gpui_popup_window_non_activating(window);
+    crate::app::window::own_gpui_popup_window(window, parent);
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn attach_overlay_window(_: &mut Window, _: *mut std::ffi::c_void) {}
 
 /// Whether `set_overlay_window_alpha` can fade a control's window; elsewhere the fork switcher dims

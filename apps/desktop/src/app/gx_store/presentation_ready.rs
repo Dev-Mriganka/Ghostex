@@ -24,5 +24,7 @@ impl GhostexGpuiApp {
         if loading_toast_visible {
             self.remove_gpui_app_toast(GPUI_GXSERVER_DAEMON_TOAST_ID, cx);
         }
+        #[cfg(target_os = "windows")]
+        self.check_gpui_local_gxserver_launch_context(cx);
     }
 }

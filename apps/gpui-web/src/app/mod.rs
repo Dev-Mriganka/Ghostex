@@ -4,6 +4,7 @@ pub(crate) mod chat_host;
 mod create_worktree_modal_lifecycle;
 mod delayed_send_modal_lifecycle;
 mod delete_worktree_modal_lifecycle;
+mod feedback_modal_lifecycle;
 /// The desktop's constants, of which the page reads a subset.
 #[allow(dead_code)]
 pub(crate) mod consts;

@@ -45,6 +45,8 @@ pub(crate) enum GpuiAppModalKind {
     UpdateAvailable,
     /// Name, agent, goal and first request of a new coordinator (new_coordinator_modal_lifecycle.rs).
     NewCoordinator,
+    /// Send Feedback, from the sidebar's chat-bubble button (feedback_modal_lifecycle.rs).
+    Feedback,
 }
 
 impl GpuiAppModalKind {
@@ -86,6 +88,7 @@ impl GpuiAppModalKind {
             }
             "updateAvailable" => Some(Self::UpdateAvailable),
             "newCoordinator" => Some(Self::NewCoordinator),
+            "feedback" => Some(Self::Feedback),
             _ => None,
         }
     }
@@ -126,6 +129,7 @@ impl GpuiAppModalKind {
             Self::Extension(id) => extension_modal_id(id),
             Self::UpdateAvailable => "updateAvailable",
             Self::NewCoordinator => "newCoordinator",
+            Self::Feedback => "feedback",
         }
     }
 
@@ -164,6 +168,7 @@ impl GpuiAppModalKind {
             Self::Extension(_) => "Ghostex Extension",
             Self::UpdateAvailable => "Ghostex Update",
             Self::NewCoordinator => "Ghostex New Coordinator",
+            Self::Feedback => "Ghostex Send Feedback",
         }
     }
 
@@ -307,6 +312,10 @@ impl GpuiAppModalKind {
                 px(crate::app::window::NEW_COORDINATOR_MODAL_WIDTH),
                 px(crate::app::window::NEW_COORDINATOR_MODAL_INITIAL_HEIGHT),
             ),
+            Self::Feedback => size(
+                px(crate::app::window::FEEDBACK_MODAL_WIDTH),
+                px(crate::app::window::FEEDBACK_MODAL_INITIAL_HEIGHT),
+            ),
             Self::Extension(id) => extension_modal_window_size(id),
             Self::RemoteGxserverInstall => size(
                 px(APP_MODAL_HOST_REMOTE_GXSERVER_INSTALL_WINDOW_WIDTH),
@@ -419,6 +428,7 @@ impl GpuiAppModalKind {
             | Self::RenameSession
             | Self::SessionNote
             | Self::RemoteSetup
+            | Self::Feedback
             | Self::Onboarding => serde_json::json!({
                 "modal": self.modal_id(),
                 "type": "open",

@@ -84,6 +84,8 @@ impl GhostexGpuiApp {
         let host = AutomateHostInfo {
             #[cfg(target_os = "linux")]
             window: window.window_handle(),
+            #[cfg(target_os = "macos")]
+            main_window_native_view: self.parent_ns_view,
             main_window_bounds: self.main_window_bounds,
             display_id: self.main_window_display_id,
             palette: self.gpui_native_modal_palette(),

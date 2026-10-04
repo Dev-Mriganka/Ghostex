@@ -2,6 +2,85 @@
 
 ## Unreleased
 
+## 10.11.1 - 2026-10-04
+
+**Ghostex 10.11.1 is out.** On Windows, Ghostex's small pop-ups now stay with Ghostex instead of floating over other apps, and the agent menu keeps all its rows.
+
+### 🪟 Windows
+- **The chat's scroll-down and Esc pills, tooltips, toasts and menus no longer stay on top of other apps** after you switch away from Ghostex, including when one opens while Ghostex is in the background.
+- **The agent menu keeps its last rows,** New Coordinator… and Configure, when it opens right after a smaller menu.
+
+## 10.11.0 - 2026-10-04
+
+**Ghostex 10.11.0 is out.** Send feedback straight from the sidebar, new threads fill in and agents start sooner, Freebuff and seven more agents get a status line, and on Windows the window drags smoothly with its dialogs, menus and toasts following along.
+
+### 📣 Feedback
+- **New: Send Feedback from the sidebar.** The chat-bubble button in the sidebar's top row opens a pop-up where you describe what's broken, confusing or missing and paste screenshots, review the exact GitHub issue before it goes out, and get a link to the issue once it's filed. If you hit the sending limit, it tells you when you can send again.
+
+### ⚡ Faster starts
+- **A new thread's composer fills in much sooner:** its mode and the model chosen at launch show right away, and a model or mode you pick in the composer is never replaced.
+- **New agents start sooner,** without a full hook check before every launch and without waiting for the chat to load first.
+- **Windows: Claude's status line updates no longer start PowerShell,** so each one arrives in a fraction of the time.
+
+### 🤖 Agents
+- **Freebuff sessions drop the "Freebuff:" prefix from their titles,** and the sidebar shows when Freebuff is working.
+- **Agents without a status line of their own get one showing the repo and branch:** Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode and OpenClaude.
+- **Chat offers "Switch model in CLI" for agents whose models it can't list,** on the computer and the phone.
+- **Windows: sessions are no longer named "Windows PowerShell".**
+
+### 🪟 Windows
+- **Dragging the window is smoother,** because Ghostex no longer rebuilds a hidden window on every step of the move.
+- **Drag the window from the empty top of the sidebar,** and double-click there to maximize it.
+- **Overlay windows follow the window when it moves:** the maximized composer, dialogs and their close X, dropdowns, toasts and the Docs drawer.
+- **Clicking a dialog's close X no longer flashes the main window.**
+- **Tooltips and toasts no longer show a square box behind their rounded corners.**
+- **The chat's scroll-down and Esc pills show with transparency on,** including at 125% and 150% display scaling.
+- **Transparency is off by default on Windows,** so the window is fast and solid. Turn it on in Settings > Theme > Enable transparency.
+
+### 🩹 Fixes and polish
+- **Transparency Strength defaults to 10,** and Blur shows only where it changes something: on Windows once What shows behind the glass is no longer Desktop and windows, and Menu blur only on macOS.
+- **macOS: app dialogs move with the main window,** and the Automate dialog behaves like the other dialogs.
+- **A Codex question card can still be answered after Codex closed its question box,** thanks to @rgruenewald.
+- **The Extensions page has a flatter filter row,** and its count includes only the extensions it offers.
+
+## 10.10.0 - 2026-10-04
+
+**Ghostex 10.10.0 is out.** Coordinators check that the work they hand to a thread actually arrives, Freebuff joins the agents with chat, the phone can start a coordinator and nests its threads, embedded pages can open apps like Okta Verify, and Windows gets a working account sign-in, a red Close button and more reliable remote setup.
+
+### 🧭 Coordinators
+- **Coordinators check that a thread received its work.** A new thread reports started only once its brief has arrived, and the coordinator hears about any message that never reached a thread.
+- **`ghostex agents send` says whether a message was delivered,** pending, accepted or queued, and control characters in a message no longer act as keys.
+- **New Coordinator… is first in a project's agent menu,** and a coordinator keeps the name you gave it.
+- **The crew badge counts working threads, else waiting ones, else all of them,** with a tint that matches.
+
+### 🤖 Agents
+- **Freebuff joins the agents with simple chat support:** messages, replies, tool results and its questions as chat cards. Its chat appears after the first message, and sign-in and `/model` stay in its terminal.
+- **macOS: agents start for fish users whose agent command is only on fish's PATH,** and they keep Ghostex's prompt editor, thanks to @escottalexander.
+- **A chat message sent while the computer is busy is no longer lost** when its paste arrives late.
+
+### 📱 On the phone
+- **Start a coordinator from the phone's agent menu,** and its threads nest under it as they do on the computer.
+- **A Handoff's new conversation opens with the handover link in its chat box.**
+
+### 🪟 Windows
+- **Signing in to an account from Settings > Accounts works on Windows.**
+- **The window buttons reach the top-right corner, and Close turns red on hover.**
+- **Remote setup over SSH finds the SSH server reliably** and says clearly what blocks it, such as missing admin rights, a pending restart or a policy block.
+- **The Ghostex server never runs your sessions from an SSH or background session,** and a server started over SSH keeps running when nobody is signed in.
+- **A new agent created in another project gets focus.**
+
+### 🌐 Browser and extensions
+- **Embedded pages can open other apps and reach local apps after asking,** so sign-ins that use Okta Verify work. Ghostex asks before opening an app or letting a site connect to apps on this computer.
+- **Prerender Buddy is in the extension store:** open your Prerender Buddy workspace beside your agent to review AI visibility, crawler access, website health and articles.
+
+### 🩹 Fixes and polish
+- **Full Reload keeps focus on the session it reloads.**
+- **The chat keeps following new output** at the bottom, and the scroll-down button shows exactly when it doesn't.
+- **The chat history rail is shorter and starts below the fork button.**
+- **A modal's close X sits on its top-right corner** and shows whenever the pointer is in the modal's top 80px.
+- **Dragging a session no longer reveals hidden sidebar sections.**
+- **Experimental terminal shaders skip terminals they can't draw on,** thanks to @vespillo-tech.
+
 ## 10.9.1 - 2026-10-02
 
 **Ghostex 10.9.1 is out, and it brings 10.9.0 to macOS:** Cloud Boxes, more windows for other monitors and Spaces, menus and dialogs that open on the monitor you are using, and everything else in the 10.9.0 notes below. Every platform also gets files that open in the browser, highlighted chat search and a clear message when a remote computer can't connect.

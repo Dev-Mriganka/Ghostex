@@ -2,7 +2,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /*
  CDXC:Release 2026-09-02-12:40:
@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
  package.json by hand, the same as esbuild.
 */
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
+const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const toolingRoot = path.join(repoRoot, 'tooling');
 const scannedExtensions = new Set(['.mjs', '.js', '.ts']);
 const skippedDirectories = new Set(['node_modules', 'patches']);

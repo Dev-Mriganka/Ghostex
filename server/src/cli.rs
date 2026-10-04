@@ -50,17 +50,19 @@ pub async fn run(args: Vec<String>) -> Result<()> {
         crate::setup::run_setup(args.iter().skip(1).cloned().collect())?;
         return Ok(());
     }
+    #[cfg(windows)]
+    if command == Some(crate::platform::desktop_session::DESKTOP_LAUNCH_COMMAND) {
+        crate::platform::desktop_session::run_desktop_launch(&args[1..])
+            .context("start gxserver from your desktop session")?;
+        return Ok(());
+    }
     // Hands off before touching storage, so nothing is created with administrator ownership.
     #[cfg(windows)]
-    if matches!(command, None | Some("--foreground"))
-        && crate::platform::standard_user::current_process_is_elevated()
-            .context("check gxserver's administrator rights")?
-    {
-        let executable = env::current_exe().context("resolve current gxserver binary")?;
-        let pid = crate::platform::process::spawn_detached_server(executable.as_os_str())
-            .context("restart gxserver without administrator rights")?;
-        println!("gxserver restarted without administrator rights as pid {pid}.");
-        return Ok(());
+    if matches!(command, None | Some("--foreground")) {
+        if let Some(message) = hand_off_windows_foreground_start().await? {
+            println!("{message}");
+            return Ok(());
+        }
     }
     migrate_legacy_storage().context("migrate legacy Ghostex storage")?;
     if matches!(command, None | Some("--foreground")) {
@@ -189,15 +191,29 @@ pub async fn get_gxserver_status(_build_identity: &str, _version: &str) -> Resul
 }
 
 async fn start_gxserver_background(build_identity: &str, version: &str) -> Result<StatusResponse> {
-    let before = get_gxserver_status(build_identity, version).await?;
-    if before.state == "running" {
-        if is_build_identity_reusable(
-            before
+    #[cfg(windows)]
+    let placement = crate::platform::desktop_session::server_placement()
+        .context("find the Windows session gxserver may run in")?;
+    let reusable = |status: &StatusResponse| {
+        let same_build = is_build_identity_reusable(
+            status
                 .health
                 .as_ref()
                 .map(|health| health.build_identity.as_str()),
             Some(build_identity),
-        ) {
+        );
+        // A server SSH started in the background session is replaced once the user can have one on the desktop.
+        #[cfg(windows)]
+        let same_build = same_build
+            && !(matches!(
+                placement,
+                crate::platform::desktop_session::ServerPlacement::UserDesktop { .. }
+            ) && runs_in_background_session(status));
+        same_build
+    };
+    let before = get_gxserver_status(build_identity, version).await?;
+    if before.state == "running" {
+        if reusable(&before) {
             return Ok(before);
         }
         let paths = get_gxserver_paths(None);
@@ -211,18 +227,12 @@ async fn start_gxserver_background(build_identity: &str, version: &str) -> Resul
         )
         .await?;
         if stopped.state == "running" {
-            if is_build_identity_reusable(
-                stopped
-                    .health
-                    .as_ref()
-                    .map(|health| health.build_identity.as_str()),
-                Some(build_identity),
-            ) {
+            if reusable(&stopped) {
                 return Ok(stopped);
             }
             return Ok(StatusResponse {
                 message:
-                    "gxserver build identity changed, but the old control plane did not stop. Stop gxserver and start it again so the current migration code can run."
+                    "The running gxserver must be replaced, but its control plane did not stop. Stop gxserver and start it again."
                         .to_string(),
                 ok: false,
                 state: "stopping".to_string(),
@@ -231,6 +241,11 @@ async fn start_gxserver_background(build_identity: &str, version: &str) -> Resul
         }
     }
 
+    #[cfg(windows)]
+    if let crate::platform::desktop_session::ServerPlacement::UserDesktop { session_id } = placement
+    {
+        return start_gxserver_in_user_desktop(build_identity, version, session_id).await;
+    }
     let current_exe = env::current_exe().with_context(|| "resolve current gxserver binary")?;
     let mut command = Command::new(current_exe);
     command
@@ -261,6 +276,98 @@ async fn start_gxserver_background(build_identity: &str, version: &str) -> Resul
         });
     }
     Ok(status)
+}
+
+/// How long a gxserver handed to the desktop session may take to answer: Task Scheduler, Explorer, and on a cold start the antivirus scan of the executable.
+#[cfg(windows)]
+const DESKTOP_START_PATIENCE: Duration = Duration::from_secs(90);
+
+#[cfg(windows)]
+fn runs_in_background_session(status: &StatusResponse) -> bool {
+    status
+        .health
+        .as_ref()
+        .and_then(|health| health.launch_context.as_ref())
+        .is_some_and(|context| context.background)
+}
+
+/// Starts gxserver in the signed-in user's desktop session (`start_server_in_desktop_session`) and waits until a desktop gxserver answers.
+#[cfg(windows)]
+async fn start_gxserver_in_user_desktop(
+    build_identity: &str,
+    version: &str,
+    session_id: u32,
+) -> Result<StatusResponse> {
+    // Explorer starts gxserver with the desktop's environment, so a different home would leave this call waiting on a server that never comes.
+    if env::var_os("GHOSTEX_HOME").is_some_and(|home| !home.is_empty()) {
+        return Err(anyhow!(
+            "GHOSTEX_HOME is set for this call, but gxserver must start in your desktop session (Windows session {session_id}), which cannot inherit it. Start gxserver from a terminal on the desktop instead."
+        ));
+    }
+    let executable = env::current_exe().with_context(|| "resolve current gxserver binary")?;
+    let result_file = get_gxserver_paths(None)
+        .runtime_dir
+        .join(format!("desktop-launch-{}.txt", std::process::id()));
+    tokio::task::spawn_blocking(move || {
+        crate::platform::desktop_session::start_server_in_desktop_session(&executable, &result_file)
+    })
+    .await
+    .context("wait for the desktop session hand-off")??;
+    let status = wait_for_status(build_identity, version, DESKTOP_START_PATIENCE, |status| {
+        status.state == "running" && !runs_in_background_session(status)
+    })
+    .await?;
+    if status.state != "running" || runs_in_background_session(&status) {
+        return Ok(StatusResponse {
+            message: format!(
+                "gxserver was started in your desktop session (Windows session {session_id}), but it did not answer on {GXSERVER_LOCAL_API_HOST}:{} within {} seconds.",
+                read_selected_local_api_port()?,
+                DESKTOP_START_PATIENCE.as_secs()
+            ),
+            ok: false,
+            state: "starting".to_string(),
+            ..status
+        });
+    }
+    Ok(StatusResponse {
+        message: format!(
+            "gxserver started in your desktop session (Windows session {session_id}) instead of this background session."
+        ),
+        ..status
+    })
+}
+
+/// `gxserver` / `gxserver --foreground` on Windows: `Some(message)` when the server was started elsewhere and this call is done.
+#[cfg(windows)]
+async fn hand_off_windows_foreground_start() -> Result<Option<String>> {
+    use crate::platform::{
+        desktop_session::{server_placement, ServerPlacement},
+        process::spawn_server,
+        standard_user::current_process_is_elevated,
+    };
+    let placement = server_placement().context("find the Windows session gxserver may run in")?;
+    let elevated =
+        current_process_is_elevated().context("check gxserver's administrator rights")?;
+    let executable = env::current_exe().context("resolve current gxserver binary")?;
+    match placement {
+        ServerPlacement::UserDesktop { .. } => {
+            let version = GXSERVER_VERSION.to_string();
+            let build_identity = read_current_build_identity(&version)?;
+            let status = start_gxserver_background(&build_identity, &version).await?;
+            if !status.ok {
+                return Err(anyhow!(status.message));
+            }
+            Ok(Some(status.message))
+        }
+        ServerPlacement::Here | ServerPlacement::NobodySignedIn if elevated => {
+            let pid = spawn_server(executable.as_os_str())
+                .context("restart gxserver without administrator rights")?;
+            Ok(Some(format!(
+                "gxserver restarted without administrator rights as pid {pid}."
+            )))
+        }
+        ServerPlacement::Here | ServerPlacement::NobodySignedIn => Ok(None),
+    }
 }
 
 async fn stop_gxserver_control_plane(
@@ -652,7 +759,7 @@ fn json_array(values: Vec<String>) -> Value {
 fn spawn_detached(command: &mut Command) -> Result<u32> {
     #[cfg(windows)]
     {
-        return crate::platform::process::spawn_detached_server(command.get_program())
+        return crate::platform::process::spawn_server(command.get_program())
             .with_context(|| "spawn gxserver background");
     }
     #[cfg(not(windows))]

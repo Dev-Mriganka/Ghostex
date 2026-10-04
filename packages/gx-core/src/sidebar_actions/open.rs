@@ -133,6 +133,8 @@ fn plan_sidebar_action(view: &SidebarView, action: &str) -> Option<SidebarAction
         "agentsHub" | "remoteSetup" | "hotkeys" | "settings" => {
             json!({ "type": "open", "modal": action })
         }
+        // The sidebar's Send Feedback button (CDXC:Feedback, apps/desktop/src/app/window/feedback_modal.rs).
+        "feedback" => json!({ "type": "open", "modal": "feedback" }),
         _ => return None,
     };
     Some(close_then_open(open))

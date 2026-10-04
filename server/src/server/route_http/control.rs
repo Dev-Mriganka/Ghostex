@@ -1,10 +1,10 @@
-//! Server routes: the authenticated health read, client events, logs, Portless, Tailcat, remote access, extensions, and the stop / stop-all control plane.
+//! Server routes: the authenticated health read, client events, logs, Portless, Tailcat, remote access, extensions, feedback, and the stop / stop-all control plane.
 
 use axum::http::StatusCode;
 use serde_json::json;
 
 use crate::{
-    extensions::handle_extensions_http, protocol::rpc_success,
+    extensions::handle_extensions_http, feedback::handle_feedback_http, protocol::rpc_success,
     remote_access::handle_remote_access_http, tailcat::handle_tailcat_http,
 };
 
@@ -30,6 +30,9 @@ pub(super) async fn route_control_http(
             handle_record_client_event_http(endpoint.path, request_id, &body_json)
         }
         "/api/queryLogs" => handle_query_logs_http(&state, endpoint.path, request_id, &body_json),
+        "/api/draftFeedback" | "/api/sendFeedback" => {
+            handle_feedback_http(endpoint.path, request_id, &body_json).await
+        }
         "/api/updatePortlessState" => {
             handle_portless_state_http(&state, endpoint.path, request_id, &body_json)
         }

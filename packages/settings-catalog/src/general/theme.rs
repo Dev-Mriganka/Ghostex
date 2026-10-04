@@ -39,7 +39,7 @@ pub(crate) fn theming() -> Section {
             row("windowGlassLiveSpeed", "Live background speed", "How fast the Live animation moves, from a quarter of its pace to twice as fast."),
             row("windowGlassLiveBrightness", "Live background brightness", "How bright the Live animation glows behind the glass. Lower keeps it a subtle glow."),
             row("windowGlassBlurRadius", "Blur", "How soft what shows behind the window looks, in points. 0 shows it sharp. On Windows and Linux, Desktop and windows uses the system blur, so this sets the wallpaper, picture and video blur."),
-            row("windowGlassMenuBlurRadius", "Menu blur", "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only."),
+            row("windowGlassMenuBlurRadius", "Menu blur", "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp."),
             row("windowGlassSidebarOpacityDark", "Sidebar tint in dark mode", "How much of the desktop the sidebar hides in dark mode. Lower shows more of your desktop through it."),
             row("windowGlassWorkAreaTintDark", "Work area tint in dark mode", "How much of the desktop the work area hides in dark mode, set on its own so either area can be the darker one. Lower shows more of your desktop through it."),
             row("windowGlassSidebarOpacityLight", "Sidebar tint in light mode", "How much of the desktop the sidebar hides in light mode. Lower shows more of your desktop through it."),

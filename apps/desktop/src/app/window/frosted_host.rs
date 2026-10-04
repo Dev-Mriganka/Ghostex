@@ -414,6 +414,9 @@ fn move_host(
 
 /// Moves an open host onto `frame` in `parent`'s content coordinates, without activating it or
 /// changing its stacking (a non-activating pop-up keeps the parent's keyboard).
+///
+/// CDXC:ContextMenus 2026-10-02 WHY:
+/// `SetWindowPos` delivers `WM_SIZE` synchronously, and GPUI's resize callback updates the window's layout size through the app. Called straight from `apply` (a deferred callback that holds the app) that update failed, so a reused menu host grew to the new menu's frame but kept laying out at the previous menu's size: the agent launcher drew inside the compact session menu's 178px box and lost its last rows (New Coordinator…, Configure). The move runs from a task, as the macOS host's does, so the app is free when `WM_SIZE` arrives.
 #[cfg(target_os = "windows")]
 fn move_host(
     handle: AnyWindowHandle,
@@ -424,36 +427,39 @@ fn move_host(
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER, SetWindowPos,
     };
-    let Some(origin) = parent
-        .update(cx, |_, window, _| {
-            crate::app::native_chat::child_window::content_bounds(window).origin
-        })
-        .ok()
-    else {
-        return;
-    };
-    let Some((hwnd, scale)) = handle
-        .update(cx, |_, window, _| {
-            native_view(window).map(|hwnd| (hwnd, window.scale_factor()))
-        })
-        .ok()
-        .flatten()
-    else {
-        return;
-    };
-    let screen = Bounds::new(origin + frame.origin, frame.size);
-    let device = |value: Pixels| (f32::from(value) * scale).round() as i32;
-    unsafe {
-        SetWindowPos(
-            hwnd,
-            std::ptr::null_mut(),
-            device(screen.origin.x),
-            device(screen.origin.y),
-            device(screen.size.width),
-            device(screen.size.height),
-            SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER,
-        );
-    }
+    cx.spawn(async move |cx| {
+        let Some(origin) = parent
+            .update(cx, |_, window, _| {
+                crate::app::native_chat::child_window::content_bounds(window).origin
+            })
+            .ok()
+        else {
+            return;
+        };
+        let Some((hwnd, scale)) = handle
+            .update(cx, |_, window, _| {
+                native_view(window).map(|hwnd| (hwnd, window.scale_factor()))
+            })
+            .ok()
+            .flatten()
+        else {
+            return;
+        };
+        let screen = Bounds::new(origin + frame.origin, frame.size);
+        let device = |value: Pixels| (f32::from(value) * scale).round() as i32;
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                std::ptr::null_mut(),
+                device(screen.origin.x),
+                device(screen.origin.y),
+                device(screen.size.width),
+                device(screen.size.height),
+                SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER,
+            );
+        }
+    })
+    .detach();
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -490,15 +496,16 @@ fn attach_host_window(window: &mut Window, parent: *mut std::ffi::c_void, kind: 
     }
 }
 
-/// On Windows a host is a pop-up owned by the window that was active when it opened
+/// On Windows a host is a pop-up owned by its parent window (`own_gpui_popup_window`)
 /// (`WindowKind::PopUp` with `focus: false`). A tooltip's window is clipped to its bubble
 /// (`set_frosted_surface`), so it covers nothing it could catch.
 ///
 /// CDXC:ContextMenus 2026-09-28 WHY:
 /// GPUI activates even a `focus: false` pop-up when it is clicked, so a click on a frosted menu row deactivated the owner window first, and the owner's deactivation observer (which closes the sidebar menu when Ghostex loses focus) took the menu down before the click reached the row. The host keeps activation on its owner, as the macOS host and the titlebar dropdowns do, and as every frosted surface expects: the owner keeps the keyboard.
 #[cfg(target_os = "windows")]
-fn attach_host_window(window: &mut Window, _: *mut std::ffi::c_void, _: FrostedHostKind) {
+fn attach_host_window(window: &mut Window, parent: *mut std::ffi::c_void, _: FrostedHostKind) {
     super::make_gpui_popup_window_non_activating(window);
+    super::own_gpui_popup_window(window, parent);
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

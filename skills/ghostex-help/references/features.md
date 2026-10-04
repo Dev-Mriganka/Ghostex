@@ -445,8 +445,8 @@ where they are while you open, change and close views.
   Parked parks it. Dropped between two pinned sessions, it is pinned right
   there; dropped on the Pinned heading, it goes to the end of Pinned. Sessions
   and Parked keep their own order, so the drop line shows where the session
-  will sit in them. While you drag, an empty Pinned, Sessions or Parked section
-  shows its heading so you can drop onto it.
+  will sit in them. Only sections already shown can be dropped onto;
+  dragging never adds a heading or moves the list.
 - Sidebar section headings (Pinned, Sessions, Drafts, Parked, and
   Snoozed) show an orange dot when a session is working, a blue dot when
   a session is done, and a pink dot when an agent is waiting for an answer,
@@ -734,6 +734,15 @@ ZCode supports chat messages, thinking, tool results, attachments, and imported
 conversation history. Install its hooks in Settings > Agents to connect new
 conversations and keep activity in sync. ZCode runs in the same terminal, so
 you can switch to Terminal for its setup, model menus, and permission prompts.
+Freebuff supports chat messages, its replies and thinking, tool results, and its
+questions: when Freebuff asks a question, it appears as a card in the chat, one
+question at a time, and the answer goes to Freebuff as if you had picked it in
+its terminal. Freebuff has no hooks, so a new session's chat appears after its
+first message; the sidebar still shows it working and done. Its sessions are
+named after your first message. Switch to Terminal for sign-in, `/model`, and
+Freebuff's other commands and settings. For agents whose models the chat cannot
+list, such as Freebuff, the model menu offers Switch model in CLI, which opens
+the session's terminal.
 Scrolling up collapses the composer; returning to the bottom expands it.
 Settings > Chat > Keep chat box expanded while scrolling leaves the desktop
 chat box at full size instead (`sessionChatKeepComposerExpanded`, off by default).
@@ -771,9 +780,10 @@ Context details. Claude
 Code starts with Account, Model limit, 5h limit, 7d limit, and Repository
 starred; Codex starts with Account email, 7d limit, 7d reset, and Account
 resets; Cursor starts with Context used, Branch, and Lines changed; Hermes
-starts with Context used, Cost, Tokens, and Session time. Reset to recommended
-returns to these. The status line and More details are available for Claude
-Code, Codex, Cursor, and Hermes chats.
+starts with Context used, Cost, Tokens, and Session time; every other chat
+agent (Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode) starts with
+Repository and Branch, and can also show Folder, Model, and Session title. Reset
+to recommended returns to these.
 Items without a value are hidden until their data is available again;
 your starred selections stay saved. Wrapped rows are centered and balanced where
 space allows, with separators only between items on the same row.
@@ -1120,7 +1130,8 @@ saved history on the selected account. A card in the middle of Session Chat,
 over a dimmed conversation, shows the current and selected accounts, their usage
 percentages (including Claude's Fable limit), and the switch progress. It stays
 until the new account is confirmed and the conversation is ready on it, then
-briefly confirms success, or shows a failure with Retry switch. On phones and
+briefly confirms success, or shows a failure with Retry switch and a close (X)
+button in its top-right corner that dismisses it everywhere. On phones and
 narrow chat panes the card uses a compact layout with one row of usage pills per
 account and a short vertical step list.
 A manual switch waits for your next
@@ -1285,6 +1296,8 @@ selected computer and keep running if Settings closes. From a terminal,
 do the same. Start a new session to use the installed version. ZCode launches with `zcode`; install
 and update it with `npm install -g zcode-app-cli@latest`, as documented at
 [the ZCode installation docs](https://github.com/kingsword09/zcode-cli).
+Freebuff launches with `freebuff` and installs with `npm install -g freebuff`;
+sign in once in its terminal the first time it starts.
 Agent Hooks let gxserver watch agent status, questions, and
 completions for chat and notifications. Installing the Claude Code hooks also
 sets Claude Code's transcript retention (`cleanupPeriodDays`) so past
@@ -1425,9 +1438,11 @@ version of the Projects features in Cursor and Claude Code.
   coordinators, one per stream of work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo, and a crew icon
-  with one number: how many thread sessions it has in the sidebar, whatever
-  their state. The icon turns orange while a thread works and light blue when
-  one waits on you. Its
+  with one number: how many of its threads are working; when none are
+  working, how many are waiting on you; when neither, how many thread sessions
+  it has in the sidebar. The icon and number are orange when the number counts
+  working threads, light blue when it counts threads waiting on you, and grey
+  when it counts them all. Its
   threads sit indented right under it with their own status dots; the chevron
   beside the crown folds them away and back (remembered across restarts), and a
   folded coordinator keeps its number and colour. Click a thread to watch it or
@@ -1455,6 +1470,12 @@ version of the Projects features in Cursor and Claude Code.
   The coordinator then checks the work, commits it (only that thread's files,
   and it never pushes unless you ask), starts the next step, and tells you
   what needs you. Nobody has to poll.
+- **Work that never arrives is caught**: when the coordinator starts a thread,
+  it waits until the thread has actually taken its brief before saying it is
+  under way, and says "pending" with the reason when it has not yet. Ghostex
+  keeps watching every brief and follow-up the coordinator sends: if a thread
+  sits idle without it, the coordinator is told the message did not reach it
+  and sends it again, so work handed out is never silently dropped.
 - **Thread models**: the coordinator picks each Claude thread's model when it
   starts it: Opus 5.5 at high effort for substantial work, Opus 5.5 at medium
   for hard but small changes, Sonnet 5.5 at high for small contained fixes. It
@@ -1669,8 +1690,12 @@ password when you sign in with one; SSH never accepts the Windows Hello PIN).
 Turning SSH on in Windows Ghostex installs and starts Windows' OpenSSH Server
 feature after one administrator prompt; if Windows needs a restart to finish,
 or another SSH server is already installed, the message under the button says
-what to do. The prompt can only appear when Ghostex's background service was
-started from your desktop, so if Ghostex says it cannot show it, quit Ghostex
+what to do. When a connection needs Ghostex's background service on Windows
+and you are signed in to that computer's desktop, the service starts in your
+desktop session, so agents there work as if you had opened Ghostex yourself.
+When nobody is signed in, it starts in the background as before, and opening
+Ghostex on the desktop later replaces it with one started from the desktop. The administrator prompt can only appear when the background service
+runs in your desktop session; if Ghostex says it cannot show it, quit Ghostex
 together with its background service and open it again from the Start menu.
 Leave Advanced > Windows WSL distribution blank to use the
 Windows Environment selected in Windows Ghostex: native PowerShell with Windows
@@ -2065,13 +2090,15 @@ dark theme's tint hue, and a neutral tint keeps the sky-blue accent.
 Window glass lets the blurred desktop show through the sidebar, the work area,
 terminals, and chat on macOS, Windows and Linux. On macOS and Windows, menus and most dialogs (Rename
 Session, Quick Access and the like) turn frosted to match. The Transparency group's Enable
-transparency switch turns it on (Dark only, the default) or off, and
+transparency switch turns it on (Dark only, the default on macOS and Linux; Never, so
+the window is fast and solid, on Windows) or off, and
 Strength sets how see-through it is, from 0 (fully solid) to 100 (fully clear); the default
-is 20. Blur sets how soft what shows behind the window looks, from 0 (sharp) to 100 points;
-the default is 60. On Windows and Linux, Desktop and windows uses the system's own blur, so
-there Blur softens the wallpaper, picture and video (`windowGlassBlurRadius`). On macOS,
-Menu blur under More transparency options does the same for menus and tooltips (default 20;
-menus opened after the change use it) (`windowGlassMenuBlurRadius`). More transparency options goes
+is 10. Blur sets how soft what shows behind the window looks, from 0 (sharp) to 100 points;
+the default is 60. On Windows, Desktop and windows uses the system's own blur, which has no
+setting, so Blur only shows there once What shows behind the glass is Wallpaper only, Custom
+image or Live, where it softens the wallpaper, picture and video (`windowGlassBlurRadius`).
+On macOS, Menu blur under More transparency options does the same for menus and tooltips
+(default 20; menus opened after the change use it; macOS only) (`windowGlassMenuBlurRadius`). More transparency options goes
 in the order you decide: 1 what shows behind the glass, 2 the pictures or videos,
 3 their position, then Fine-tune the tints and Use transparency (Dark only,
 Always, or Never). With Dark only, light mode stays opaque, so the light-mode
@@ -2105,6 +2132,21 @@ Related settings: `sidebarTheme`, `darkThemePreset`, `lightThemePreset`,
 `windowGlass`, `windowGlassSidebarOpacityDark`, `windowGlassWorkAreaTintDark`,
 `windowGlassSidebarOpacityLight`, `windowGlassWorkAreaTintLight`, `themeSidebarContrast`, `themeWorkAreaContrast`, `showActivePaneOutline`, the `keepAwake*` rows,
 `showBetaFeatures`, `debuggingMode`.
+
+## Sending feedback
+
+The chat-bubble button at the top of the sidebar, after Search, opens Send
+Feedback (when the sidebar is too narrow it moves into the sidebar menu with
+Search and Notifications). Write what is broken, confusing or missing and paste
+screenshots into the text box with Cmd+V (Ctrl+V on Windows and Linux): up to
+five PNG, JPEG or WebP images of 5 MB each; a larger PNG screenshot is scaled
+down to fit. Review then shows the exact GitHub issue, title and description,
+and you can edit both before Send; Ghostex adds your screenshots and a line with
+the app, its version and your operating system. The issue is public on the
+Ghostex GitHub, and after it is sent Open Issue takes you to it. Cmd+Enter
+(Ctrl+Enter) moves to the next step and Escape closes the pop-up. It works in the
+desktop app and in the web app. The "Collect more data with an agent" switch is
+not available yet.
 
 ## Answering the common questions
 

@@ -89,6 +89,7 @@ pub fn default_agent_id_for_icon(icon: Option<&str>) -> Option<&'static str> {
         "devin" => "devin",
         "mastra" => "mastra",
         "zcode" => "zcode",
+        "freebuff" => "freebuff",
         _ => return None,
     })
 }
@@ -120,6 +121,7 @@ fn default_session_agent_title_name(lowercased: &str) -> Option<&'static str> {
         "mastra" | "mastracode" => "Mastra Code",
         "devin" => "Devin",
         "droid" | "factory-droid" => "Factory Droid",
+        "freebuff" => "Freebuff",
         "gemini" => "Gemini",
         "grok" | "grok-build" => "Grok Build",
         "hermes" | "hermes-agent" => "Hermes Agent",

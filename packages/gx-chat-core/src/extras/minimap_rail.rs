@@ -26,6 +26,12 @@ pub struct MinimapGeometry {
     pub line_offset: i64,
     pub column_width: i64,
     pub padding_block: i64,
+    /// The column's top padding, which keeps the rail below the fork button in the chat's top right.
+    pub top_clearance: i64,
+    /// The tallest the rail grows, before the scale; past it the dashes move closer together.
+    pub max_height: i64,
+    /// The closest two dashes sit, before the scale; past it neighbouring turns share one dash.
+    pub min_step: i64,
     pub dash_widths: Vec<i64>,
     /// The most UTF-16 units one preview (the prompt or the reply) keeps.
     pub preview_limit: usize,

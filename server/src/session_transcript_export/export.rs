@@ -158,6 +158,7 @@ pub(super) fn agent_display_name(agent: SessionChatTranscriptAgent) -> &'static 
         SessionChatTranscriptAgent::OpenCode => "OpenCode",
         SessionChatTranscriptAgent::Pi => "Pi",
         SessionChatTranscriptAgent::Zcode => "ZCode",
+        SessionChatTranscriptAgent::Freebuff => "Freebuff",
     }
 }
 

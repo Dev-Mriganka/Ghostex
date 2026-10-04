@@ -118,6 +118,11 @@ const LOGOS: &[(&str, &str, &str)] = &[
         include_str!("../../../core-ui/assets/zcode.svg"),
     ),
     (
+        "freebuff",
+        "#ffffff",
+        include_str!("../../../core-ui/assets/freebuff.svg"),
+    ),
+    (
         "pi",
         "#c8ff62",
         include_str!("../../../core-ui/assets/pi.svg"),

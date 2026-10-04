@@ -108,9 +108,10 @@ impl GhostexGpuiApp {
             - bots_toggle.map_or(0.0, |_| (super::bots::BOTS_TOGGLE_WIDTH + 4.0) * scale)
             - 5.0 * scale;
         let bell_visible = !footer && self.titlebar_notification_bell_visible();
+        // Search, Send Feedback and the menu button, plus the bell when it shows.
         let overflowed = !footer
             && compact
-            && compact_room < (if bell_visible { 3.0 } else { 2.0 }) * compact_button_slot;
+            && compact_room < (if bell_visible { 4.0 } else { 3.0 }) * compact_button_slot;
         if overflowed && let Some(items) = more_menu.as_array_mut() {
             let search_label = match shortcut.as_deref() {
                 Some(shortcut) if !shortcut.is_empty() => format!("{label} ({shortcut})"),
@@ -133,6 +134,11 @@ impl GhostexGpuiApp {
                     "command": {"type": "openNotifications"},
                 }));
             }
+            leading.push(json!({
+                "label": "Send Feedback",
+                "icon": "messageCircle",
+                "command": {"type": "sidebarAction", "action": "feedback"},
+            }));
             leading.push(json!({"separator": true}));
             items.splice(0..0, leading);
         }
@@ -284,6 +290,43 @@ impl GhostexGpuiApp {
                         }))
                         .into_any_element()
                 })
+            })
+            // CDXC:Feedback 2026-10-04 DECISION:
+            // User: "add a button at the top of the sidebar. It should be a chat bubble icon" that opens the Send Feedback pop-up (window/feedback_modal/). It sits after Search, and moves into the sidebar menu with Search and Notifications when the row has no room.
+            .when(!footer && !overflowed, |row| {
+                row.child(
+                    div()
+                        .id("native-sidebar-feedback")
+                        .role(gpui::Role::Button)
+                        .aria_label("Send Feedback")
+                        .when(cfg!(target_os = "windows"), |button| button.occlude())
+                        .h(px(28.0 * scale))
+                        .w(px(34.0 * scale))
+                        .rounded(px(5.0 * scale))
+                        .flex()
+                        .flex_shrink_0()
+                        .items_center()
+                        .justify_center()
+                        .cursor_default()
+                        .hover(|row| row.bg(appearance.hover))
+                        .child(titlebar_svg_icon(
+                            "titlebar/message-circle.svg",
+                            15.0 * scale,
+                            appearance.muted,
+                        ))
+                        .on_click(cx.listener(move |app, _, _, cx| {
+                            cx.stop_propagation();
+                            app.dispatch_native_sidebar_ui(
+                                json!({"type": "sidebarAction", "action": "feedback"}),
+                                cx,
+                            );
+                        }))
+                        .managed_discrete_tooltip_with_placement(
+                            ManagedTooltipPlacement::Right,
+                            tooltip_delay,
+                            |window, cx| titlebar_tooltip("Send Feedback", window, cx),
+                        ),
+                )
             })
             // CDXC:Notifications 2026-09-20 DECISION:
             // User: the notification bell sits in the sidebar's top row, before the sidebar menu button.

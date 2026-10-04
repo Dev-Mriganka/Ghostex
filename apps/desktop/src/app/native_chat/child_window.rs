@@ -199,6 +199,20 @@ impl NativeChatView {
     }
 }
 
+/// Whether `bounds` lies wholly inside the current content mask, so a floating control's own window
+/// can stand in for it without poking out of its pane.
+///
+/// CDXC:SessionChat 2026-10-04 WHY:
+/// This used to be `mask.intersect(&bounds) == bounds`. At a fractional display scale (Windows at 125% or 150%), layout lands on thirds and fifths of a pixel, and `intersect` rebuilds the size as `(origin + size) - origin`, which in f32 often differs from `size` in the last bit. The test then failed on most frames, so under window glass the "Scroll to bottom" pill and the Escape and "Agent was interrupted" toasts never opened their window and did not show at all. At 2x (macOS) the values are exact. The edges are now compared with a hundredth-of-a-pixel tolerance.
+pub(crate) fn bounds_inside_content_mask(window: &gpui::Window, bounds: Bounds<Pixels>) -> bool {
+    let mask = window.content_mask().bounds;
+    let slack = gpui::px(0.01);
+    bounds.left() >= mask.left() - slack
+        && bounds.top() >= mask.top() - slack
+        && bounds.right() <= mask.right() + slack
+        && bounds.bottom() <= mask.bottom() + slack
+}
+
 /// The chat window's content area in screen coordinates, which is what element bounds and child
 /// window frames are measured from. Chat Lab's regular macOS titlebar sits outside it; the app's
 /// own windows draw under their titlebar, so there the two are the same.

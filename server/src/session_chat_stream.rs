@@ -235,6 +235,9 @@ pub struct SessionChatSuccessorHooks {
     carries THAT id (seeded from its launch) has not reported its own yet either.
     */
     pub pending_fork_child_since_ms: Arc<dyn Fn(&str) -> Option<i64> + Send + Sync>,
+    /// The conversation (id, file) an agent that names its chat itself (Freebuff) started for this
+    /// session, read only while no id is bound yet.
+    pub unbound_agent_chat: Arc<dyn Fn() -> Option<(String, std::path::PathBuf)> + Send + Sync>,
     /// Persists the corrected identity; returns true when the registry changed.
     pub adopt_identity: Arc<dyn Fn(SessionChatIdentityAdoption) -> bool + Send + Sync>,
     pub log: Arc<dyn Fn(SessionChatSuccessorNotice) + Send + Sync>,

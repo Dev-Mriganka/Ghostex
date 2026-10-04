@@ -12,6 +12,12 @@ pub(super) fn parse_zcode_record(builder: &mut TranscriptBuilder, line: &str) {
     parse_normalized_record(builder, message);
 }
 
+pub(super) fn parse_freebuff_record(builder: &mut TranscriptBuilder, line: &str) {
+    if let Some(message) = crate::session_chat::decode_freebuff_transcript_line(line, "freebuff") {
+        parse_normalized_record(builder, message);
+    }
+}
+
 pub(super) fn parse_opencode_record(builder: &mut TranscriptBuilder, line: &str) {
     if let Some(message) = crate::session_chat_opencode::decode_line(line, "opencode") {
         parse_normalized_record(builder, message);

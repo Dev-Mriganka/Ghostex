@@ -296,6 +296,8 @@ export type GxserverEndpointPath =
   | "/api/lookupRepository"
   | "/api/resolveGitRootForPath"
   | "/api/queryLogs"
+  | "/api/draftFeedback"
+  | "/api/sendFeedback"
   | "/api/updateAuth"
   | "/api/updateListenerConfig"
   | "/api/updatePortlessState"

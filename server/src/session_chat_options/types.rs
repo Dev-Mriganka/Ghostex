@@ -82,6 +82,9 @@ pub enum SessionChatOptionEvidence {
     /// CDXC:AgentScreenDetection 2026-09-03 WHY: the JSON Claude Code pipes to its
     /// statusLine command, stored by the Ghostex-installed script.
     Statusline,
+    /// The flags the session's agent command was started with (`launch_selection.rs`), the
+    /// weakest evidence: it holds only until the agent reports for itself.
+    Launch,
 }
 
 impl SessionChatOptionEvidence {
@@ -90,6 +93,7 @@ impl SessionChatOptionEvidence {
             Self::Terminal => "terminal",
             Self::Transcript => "transcript",
             Self::Statusline => "statusline",
+            Self::Launch => "launch",
         }
     }
 }
@@ -161,6 +165,9 @@ pub struct SessionChatDetectedSelection {
     /// What the Hermes session's own row in its session store reports
     /// (`session_chat_hermes_status.rs`), camelCase and absent-when-absent.
     pub hermes_status: Option<Value>,
+    /// The session checkout's repository, branch and folder, sent for the agents that report no
+    /// status of their own (`session_chat_cursor_status.rs`).
+    pub checkout_status: Option<Value>,
     /// Session-local provider inventory supplied by agents with a model API.
     pub model_catalog: Option<Value>,
 }
@@ -244,6 +251,9 @@ impl SessionChatDetectedOptions {
         }
         if let Some(status) = self.selection.hermes_status.as_ref() {
             map.insert("hermesStatus".to_string(), status.clone());
+        }
+        if let Some(status) = self.selection.checkout_status.as_ref() {
+            map.insert("checkoutStatus".to_string(), status.clone());
         }
         if let Some(catalog) = &self.selection.model_catalog {
             map.insert("modelCatalog".into(), catalog.clone());

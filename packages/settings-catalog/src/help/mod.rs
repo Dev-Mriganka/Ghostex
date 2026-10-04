@@ -26,6 +26,7 @@ use crate::data::{
     SIDEBAR_COLLAPSE_ANIMATION_DURATION_STEP_MS, SIDEBAR_TOOLTIP_DELAY_STEP_MS,
     TERMINAL_VIEW_WIDTH_PERCENT_STEP,
 };
+use crate::availability::{availability_note, platform_defaults};
 use crate::json::{Json, ToJson, J};
 use crate::layout::{general_group, general_navigation, GENERAL_GROUPS};
 use crate::rows::{SettingOption, SettingRow};
@@ -81,6 +82,10 @@ pub struct CatalogEntry {
     pub range: Option<NumberRange>,
     pub advanced: bool,
     pub agent_writable: bool,
+    /// Defaults that differ from `default` on one platform (`availability::platform_default`).
+    pub platform_defaults: Vec<(Platform, &'static J)>,
+    /// A sentence when the row is not shown everywhere (`availability::availability_note`).
+    pub availability: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -236,6 +241,8 @@ fn catalog_entry(row: &SettingRow, location: &Location) -> CatalogEntry {
         },
         advanced: row.advanced || ADVANCED_MAIN_SETTING_KEYS.contains(&row.key),
         agent_writable,
+        platform_defaults: platform_defaults(row.key),
+        availability: availability_note(row.key),
     }
 }
 
@@ -420,6 +427,15 @@ fn sort_by_page(entries: &mut [CatalogEntry]) {
     });
 }
 
+/// The platform's name in the catalog JSON.
+pub fn platform_id(platform: Platform) -> &'static str {
+    match platform {
+        Platform::MacOs => "macos",
+        Platform::Windows => "windows",
+        Platform::Linux => "linux",
+    }
+}
+
 impl CatalogEntry {
     fn to_json(&self) -> Json {
         let mut fields = vec![
@@ -466,6 +482,19 @@ impl CatalogEntry {
             fields.push(("advanced", Json::Bool(true)));
         }
         fields.push(("agentWritable", Json::Bool(self.agent_writable)));
+        if !self.platform_defaults.is_empty() {
+            fields.push((
+                "platformDefaults",
+                Json::obj(
+                    self.platform_defaults
+                        .iter()
+                        .map(|(platform, value)| (platform_id(*platform), value.to_json())),
+                ),
+            ));
+        }
+        if let Some(note) = &self.availability {
+            fields.push(("availability", Json::str(note)));
+        }
         Json::obj(fields)
     }
 }

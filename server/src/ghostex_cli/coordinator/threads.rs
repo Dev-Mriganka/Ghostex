@@ -4,6 +4,7 @@ use super::command::{
     flag_text, launch_settings_for, read_view, resolve_session, resolve_thread_session,
     server_flags, target_coordinator, text_or_file,
 };
+use super::delivery::{confirm_brief_started, BriefOutcome};
 use crate::coordinators::{agent_message, thread_brief, BriefContext, MessageSender};
 use crate::ghostex_cli::{
     agents,
@@ -123,6 +124,7 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
             "projectId": project_id,
             "sessionId": session_id,
             "task": task.trim(),
+            "pendingMessage": task.trim(),
         }),
         &flags,
     )?;
@@ -139,7 +141,7 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
             ))
         })?;
     }
-    call_gxserver_rpc(
+    let queued = call_gxserver_rpc(
         "/api/queueSessionChatPrompt",
         &json!({
             "globalRef": reference, "projectId": project_id, "sessionId": session_id,
@@ -152,9 +154,25 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
             "Started thread {reference}, but its task was not delivered: {error}. Send it with ghostex agents send {reference} --body-file <file>; do not start another."
         ))
     })?;
+    let thread =
+        json!({ "globalRef": reference, "projectId": project_id, "sessionId": session_id });
+    let outcome = confirm_brief_started(
+        &thread,
+        &task,
+        queued.pointer("/prompt/id").and_then(Value::as_str),
+        &flags,
+    )?;
+    if matches!(outcome, BriefOutcome::Started) {
+        agents::confirm_coordinator_delivery(coordinator, &thread, &flags);
+    }
+    let (status, note) = match &outcome {
+        BriefOutcome::Started => ("started", "Its transcript shows the brief: it is working on it.".to_string()),
+        BriefOutcome::Pending(reason) => ("pending", format!("Its brief has not started yet: {reason}. Ghostex keeps watching and reports to you if it never arrives; do not start another thread or resend the brief.")),
+    };
     let mut result = json!({
         "ok": true,
-        "status": "started",
+        "status": status,
+        "note": note,
         "thread": { "globalRef": reference, "projectId": project_id, "sessionId": session_id, "title": title },
     });
     if let Some(branch) = branch.filter(|branch| !branch.is_empty()) {
@@ -170,7 +188,10 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
             .as_str()
             .map(|branch| format!(" on branch {branch}"))
             .unwrap_or_default();
-        println!("Started thread \"{title}\" ({reference}){where_}.");
+        match status {
+            "started" => println!("Started thread \"{title}\" ({reference}){where_}. {note}"),
+            _ => println!("Created thread \"{title}\" ({reference}){where_}, pending: {note}"),
+        }
         println!("Its report comes back to you when it finishes a turn; end your turn now instead of waiting.");
     }
     Ok(())

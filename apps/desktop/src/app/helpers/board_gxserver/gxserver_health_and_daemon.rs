@@ -850,7 +850,7 @@ pub(crate) fn gpui_spawn_local_gxserver_daemon(binary: &Path) -> Result<Vec<Stri
 
 /// CDXC:PlatformSupport 2026-09-28 WHY:
 /// gxserver gets its own windowless console (CREATE_NO_WINDOW), never DETACHED_PROCESS. Windows ignores CREATE_NO_WINDOW next to DETACHED_PROCESS, so gxserver ran with no console at all and every console program it started without its own flag (tailcat, gh, git probes) got a fresh console that Windows 11 opens in a Windows Terminal window. Children now inherit the hidden console.
-/// SEE-ALSO: `spawn_detached_server` in server/src/platform/process.rs, gxserver's own relaunch, must use the same flags.
+/// SEE-ALSO: `spawn_server` in server/src/platform/process.rs, gxserver's own relaunch, must use the same flags.
 #[cfg(target_os = "windows")]
 pub(crate) fn gpui_spawn_local_gxserver_daemon(binary: &Path) -> Result<Vec<String>, String> {
     use std::os::windows::process::CommandExt;

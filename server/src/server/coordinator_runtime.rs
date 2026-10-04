@@ -9,9 +9,10 @@
 use super::*;
 
 use crate::coordinators::{
-    self, agent_message, classify_thread_session, list_threads, record_thread_report, report_body,
-    set_thread_observed_working, set_thread_resolved, thread_prompt, MessageSender, SessionKey,
-    ThreadProgress, ThreadRecord, ThreadReport, ThreadState,
+    self, agent_message, classify_thread_session, clear_thread_pending_message, list_threads,
+    record_thread_report, report_body, set_thread_observed_working, set_thread_resolved,
+    thread_prompt, MessageSender, SessionKey, ThreadProgress, ThreadRecord, ThreadReport,
+    ThreadState,
 };
 use crate::presentation::effective_lifecycle_state;
 use crate::session_chat_queue_runtime::SessionChatTranscriptGate;
@@ -22,6 +23,13 @@ const TICK: Duration = Duration::from_secs(2);
 const FINISH_STABILITY_MS: i64 = 4_000;
 /// Waits after a failed delivery, doubled per failure up to the last value.
 const RETRY_DELAYS_MS: [i64; 4] = [10_000, 20_000, 40_000, 60_000];
+/// A message handed to a thread is reported undelivered only once it is this old...
+const UNDELIVERED_MIN_AGE_MS: i64 = 60_000;
+/// ...and the thread has sat idle without it this long: a busy thread takes a message typed during
+/// its turn at its next input boundary, and a starting one once its input box appears.
+const UNDELIVERED_IDLE_MS: i64 = 20_000;
+/// How often one thread's transcript is read for a pending message.
+const DELIVERY_CHECK_EVERY_MS: i64 = 6_000;
 
 #[derive(Default)]
 struct SupervisorMemory {
@@ -32,12 +40,26 @@ struct SupervisorMemory {
     /// Coordinator → (consecutive failures, earliest retry in ms).
     retry: HashMap<SessionKey, (usize, i64)>,
     transcript_gates: HashMap<SessionKey, SessionChatTranscriptGate>,
+    /// Each thread's transcript file, resolved once for the pending-message check.
+    transcript_paths: HashMap<SessionKey, std::path::PathBuf>,
+    /// When each thread's pending message was last looked for in its transcript.
+    delivery_checked_at: HashMap<SessionKey, i64>,
+    /// Since when a thread has been idle without its pending message (sent at, since).
+    undelivered_idle_since: HashMap<SessionKey, (String, i64)>,
 }
 
 enum ReportKind {
     Finished,
-    Waiting { key: String, summary: String },
+    Waiting {
+        key: String,
+        summary: String,
+    },
     Closed,
+    Undelivered {
+        sent_at: String,
+        excerpt: String,
+        evidence: Option<String>,
+    },
 }
 
 struct PendingReport {
@@ -202,6 +224,15 @@ fn tick(state: &AppState, memory: &Mutex<SupervisorMemory>) -> Vec<Delivery> {
     memory
         .transcript_gates
         .retain(|key, _| open_keys.contains(key));
+    memory
+        .transcript_paths
+        .retain(|key, _| open_keys.contains(key));
+    memory
+        .delivery_checked_at
+        .retain(|key, _| open_keys.contains(key));
+    memory
+        .undelivered_idle_since
+        .retain(|key, _| open_keys.contains(key));
     if open.is_empty() {
         return Vec::new();
     }
@@ -365,6 +396,10 @@ fn tick(state: &AppState, memory: &Mutex<SupervisorMemory>) -> Vec<Delivery> {
             }
             _ => None,
         };
+        let report = match report {
+            Some(report) => Some(report),
+            None => pending_delivery(&db, &mut memory, &thread, &session, state_now, now),
+        };
         if let Some(kind) = report {
             let project = projects
                 .entry(thread.project_id.clone())
@@ -410,8 +445,20 @@ fn tick(state: &AppState, memory: &Mutex<SupervisorMemory>) -> Vec<Delivery> {
 
 async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, delivery: Delivery) {
     let coordinator = delivery.coordinator.clone();
+    // CDXC:Coordinators 2026-10-04 WHY: closing a thread and then its coordinator a second apart let a tick queue the thread's "closed" report while the coordinator was still open, and sending it woke the closed coordinator back up. The coordinator is checked again right before sending; a report for a closed one waits until it is resumed.
+    let open_state = state.clone();
+    let open_key = coordinator.clone();
+    let coordinator_open =
+        tokio::task::spawn_blocking(move || coordinator_is_open(&open_state, &open_key))
+            .await
+            .unwrap_or(false);
     let mut failed = false;
-    for report in delivery.reports {
+    let reports = if coordinator_open {
+        delivery.reports
+    } else {
+        Vec::new()
+    };
+    for report in reports {
         let thread_ref = report.sender.global_ref.clone();
         let (body, finished_text) = match &report.kind {
             ReportKind::Finished => {
@@ -446,6 +493,18 @@ async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, del
                 None,
             ),
             ReportKind::Closed => (report_body(&ThreadReport::Closed, &thread_ref), None),
+            ReportKind::Undelivered {
+                excerpt, evidence, ..
+            } => (
+                report_body(
+                    &ThreadReport::Undelivered {
+                        excerpt,
+                        evidence: evidence.as_deref(),
+                    },
+                    &thread_ref,
+                ),
+                None,
+            ),
         };
         let message = agent_message(&report.sender, &body);
         match send_to_coordinator(&state, &coordinator, &message).await {
@@ -457,14 +516,19 @@ async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, del
                     _ => None,
                 };
                 let closed = matches!(report.kind, ReportKind::Closed);
-                let _ = tokio::task::spawn_blocking(move || {
-                    settle_report(
+                let undelivered_sent_at = match &report.kind {
+                    ReportKind::Undelivered { sent_at, .. } => Some(sent_at.clone()),
+                    _ => None,
+                };
+                let _ = tokio::task::spawn_blocking(move || match undelivered_sent_at {
+                    Some(sent_at) => settle_undelivered(&settle_state, &thread, &sent_at),
+                    None => settle_report(
                         &settle_state,
                         &thread,
                         finished_text.as_deref(),
                         kind_key.as_deref(),
                         closed,
-                    )
+                    ),
                 })
                 .await;
             }
@@ -550,6 +614,130 @@ fn settle_report(
         &thread.project_id,
         &thread.session_id,
     );
+}
+
+/// The thread's pending message, checked against its transcript: cleared once it shows up, and
+/// reported to the coordinator when the thread sits idle without it. See the CDXC:Coordinators
+/// 2026-10-04 note on `watch_pending_message` in server/src/coordinators/endpoint.rs.
+fn pending_delivery(
+    db: &rusqlite::Connection,
+    memory: &mut SupervisorMemory,
+    thread: &ThreadRecord,
+    session: &Value,
+    state_now: ThreadState,
+    now: i64,
+) -> Option<ReportKind> {
+    let key = thread.key();
+    let (Some(excerpt), Some(sent_at)) = (
+        thread.pending_message.as_deref(),
+        thread.pending_message_at.as_deref(),
+    ) else {
+        memory.undelivered_idle_since.remove(&key);
+        return None;
+    };
+    // A working thread is either on the message or takes it at its next input boundary, so it is
+    // never reported; its transcript is still read, so a message it took clears while it works.
+    let working = state_now == ThreadState::Working;
+    if working {
+        memory.undelivered_idle_since.remove(&key);
+    }
+    if memory
+        .delivery_checked_at
+        .get(&key)
+        .is_some_and(|checked| now - checked < DELIVERY_CHECK_EVERY_MS)
+    {
+        return None;
+    }
+    memory.delivery_checked_at.insert(key.clone(), now);
+    let sent_ms = parse_iso_ms_opt(sent_at).unwrap_or(now);
+    let needles = coordinators::delivery_needles(excerpt);
+    let mut path = memory.transcript_paths.remove(&key);
+    let recorded = coordinators::transcript_records_message(session, &needles, sent_ms, &mut path);
+    if let Some(path) = path {
+        memory.transcript_paths.insert(key.clone(), path);
+    }
+    match recorded {
+        Some(true) => {
+            memory.undelivered_idle_since.remove(&key);
+            let _ =
+                clear_thread_pending_message(db, &thread.project_id, &thread.session_id, sent_at);
+            // A turn too short for a tick to see it working still gets its report.
+            if !thread.observed_working {
+                let _ = set_thread_observed_working(db, &thread.project_id, &thread.session_id);
+            }
+            return None;
+        }
+        // No transcript to judge by yet: a missing message cannot be told from a slow agent.
+        None => {
+            memory.undelivered_idle_since.remove(&key);
+            return None;
+        }
+        Some(false) => {}
+    }
+    // A question or a blocking screen is reported as waiting; the message follows its answer.
+    if working || state_now == ThreadState::Waiting {
+        memory.undelivered_idle_since.remove(&key);
+        return None;
+    }
+    // Held in the thread's own queue: it goes out once the input box is ready, and a queued
+    // message from another agent that fails already tells its sender.
+    let queue = crate::session_chat_queue::read_session_chat_queue_snapshot_with(
+        db,
+        &thread.project_id,
+        &thread.session_id,
+    );
+    if let Some(row) = queue.queue.iter().find(|row| {
+        coordinators::holds_message(&coordinators::normalize_delivery_text(&row.text), &needles)
+    }) {
+        memory.undelivered_idle_since.remove(&key);
+        if row.state == crate::session_chat_queue::SESSION_CHAT_QUEUE_STATE_FAILED {
+            let _ =
+                clear_thread_pending_message(db, &thread.project_id, &thread.session_id, sent_at);
+        }
+        return None;
+    }
+    let idle = memory
+        .undelivered_idle_since
+        .entry(key)
+        .or_insert_with(|| (sent_at.to_string(), now));
+    if idle.0 != sent_at {
+        *idle = (sent_at.to_string(), now);
+    }
+    if now - sent_ms < UNDELIVERED_MIN_AGE_MS || now - idle.1 < UNDELIVERED_IDLE_MS {
+        return None;
+    }
+    let evidence = crate::session_chat_notice::session_chat_watchdog_notice(
+        &thread.project_id,
+        &thread.session_id,
+    )
+    .map(|notice| notice.title);
+    Some(ReportKind::Undelivered {
+        sent_at: sent_at.to_string(),
+        excerpt: excerpt.to_string(),
+        evidence,
+    })
+}
+
+fn coordinator_is_open(state: &AppState, coordinator: &SessionKey) -> bool {
+    let Ok(db) = open_gxserver_database(&state.paths) else {
+        return false;
+    };
+    DomainRepository::new(&db, state.metadata.server_id.as_str())
+        .get_session(&coordinator.0, &coordinator.1)
+        .ok()
+        .flatten()
+        .is_some_and(|session| {
+            matches!(
+                effective_lifecycle_state(&session).as_str(),
+                "running" | "sleeping"
+            )
+        })
+}
+
+fn settle_undelivered(state: &AppState, thread: &ThreadRecord, sent_at: &str) {
+    if let Ok(db) = open_gxserver_database(&state.paths) {
+        let _ = clear_thread_pending_message(&db, &thread.project_id, &thread.session_id, sent_at);
+    }
 }
 
 /// The same default delivery `ghostex agents send` uses: typed now, picked up by a busy agent at

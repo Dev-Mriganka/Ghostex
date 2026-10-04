@@ -94,9 +94,19 @@ pub fn thread_brief(coordinator: &BriefContext<'_>, task: &str) -> String {
 }
 
 pub enum ThreadReport<'a> {
-    Finished { message: Option<&'a str> },
-    Waiting { prompt: &'a str },
+    Finished {
+        message: Option<&'a str>,
+    },
+    Waiting {
+        prompt: &'a str,
+    },
     Closed,
+    /// A message its coordinator sent it never showed up in its transcript, and it went idle.
+    Undelivered {
+        excerpt: &'a str,
+        /// What its chat or screen shows about the send, when anything does.
+        evidence: Option<&'a str>,
+    },
 }
 
 /// The body of one report; the sender header names the thread.
@@ -125,6 +135,25 @@ pub fn report_body(report: &ThreadReport<'_>, thread_ref: &str) -> String {
         ThreadReport::Closed => format!(
             "Ghostex thread report: its session was closed, so it is marked done. `ghostex coordinator reopen {thread_ref}` or a message to it resumes the same conversation."
         ),
+        ThreadReport::Undelivered { excerpt, evidence } => {
+            let mut body = format!(
+                "Ghostex thread report: your message did not reach it. Its transcript does not show the message you sent, and it is idle, so nothing is working on it.
+
+Your message began: {}",
+                excerpt.trim()
+            );
+            if let Some(evidence) = evidence.map(str::trim).filter(|evidence| !evidence.is_empty()) {
+                body.push_str(&format!("
+
+Its chat shows: {evidence}"));
+            }
+            body.push_str(&format!(
+                "
+
+Read its chat (ghostex read-session-chat {thread_ref} --last 2 --format text), then send the message again with ghostex agents send {thread_ref}. If it fails again, tell the user."
+            ));
+            body
+        }
     }
 }
 

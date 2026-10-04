@@ -544,6 +544,7 @@ fn infer_agent_id_from_process_executable(
             "mastracode" => "mastra",
             "devin" => "devin",
             "droid" => "droid",
+            "freebuff" => "freebuff",
             "gemini" => "gemini",
             "grok" => "grok",
             "hermes" => "hermes-agent",
@@ -614,6 +615,9 @@ fn extract_agent_process_session_id(
     }
     if agent_id == "zcode" {
         return read_agent_process_flag_value(agent_id, args, "--resume");
+    }
+    if agent_id == "freebuff" {
+        return read_agent_process_flag_value(agent_id, args, "--continue");
     }
     if agent_id == "opencode" {
         return read_agent_process_flag_value(agent_id, args, "--session")

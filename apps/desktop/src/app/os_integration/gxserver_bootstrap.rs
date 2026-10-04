@@ -157,6 +157,20 @@ impl GhostexGpuiApp {
                 GpuiLocalGxserverHealthState::Healthy {
                     tools_available: true,
                 } => {
+                    // A gxserver Windows started outside the desktop is replaced before anything loads from it.
+                    #[cfg(target_os = "windows")]
+                    if let Some(limited) = cx
+                        .background_executor()
+                        .spawn(async {
+                            crate::app::os_integration::gxserver_launch_context::gpui_local_gxserver_limited_launch()
+                        })
+                        .await
+                        && this
+                            .update(cx, |this, cx| this.replace_gpui_limited_gxserver(limited, cx))
+                            .unwrap_or(false)
+                    {
+                        return;
+                    }
                     let _ = this.update(cx, |this, cx| {
                         #[cfg(target_os = "windows")]
                         if windows_first_run_setup_active {

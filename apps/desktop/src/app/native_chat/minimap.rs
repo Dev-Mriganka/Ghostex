@@ -34,6 +34,9 @@ struct MinimapSpec {
     line_offset: f32,
     column_width: f32,
     padding_block: f32,
+    top_clearance: f32,
+    max_height: f32,
+    min_step: f32,
     dash_widths: Vec<f32>,
     preview_lines: usize,
     preview_max_width: f32,
@@ -153,17 +156,14 @@ impl NativeChatView {
         let in_view = self.minimap_in_view(&markers);
         let hovered = self.minimap.hovered;
         let padding = px(SPEC.padding_block * p.scale);
-        let available = (self.minimap.bounds.get().size.height - padding * 2.0)
+        let top_padding = px(SPEC.top_clearance * p.scale);
+        let available = (self.minimap.bounds.get().size.height - padding - top_padding)
             .max(px(0.0))
             .as_f32();
-        // The rail keeps one `spacing` step per turn until it runs out of room,
-        // then it compresses, the way React's `max-height: 100%` rail did.
-        let natural = SPEC.spacing * s;
-        let step = px(if available > 0.0 {
-            natural.min((available / markers.len() as f32).max(1.0))
-        } else {
-            natural
-        });
+        let cap = SPEC.max_height * s;
+        let height = if available > 0.0 { available.min(cap) } else { cap };
+        let slots = minimap_slots(markers.len(), height, SPEC.min_step * s);
+        let step = px((SPEC.spacing * s).min(height / slots.len().max(1) as f32));
         let dash_height = px(SPEC.dash_height * s).min(step);
         let bounds = self.minimap.bounds.clone();
         let mut rail = div()
@@ -182,10 +182,14 @@ impl NativeChatView {
                     .w(px(1.0))
                     .bg(p.border.opacity(0.15)),
             );
-        for (index, marker) in markers.iter().enumerate() {
+        for (index, turns) in slots.into_iter().enumerate() {
             let distance = hovered.map_or(usize::MAX, |active| active.abs_diff(index));
             let dash_width = SPEC.dash_widths[distance.min(SPEC.dash_widths.len() - 1)];
-            let color = self.minimap_dash_color(distance, in_view.contains(&index), p);
+            let shown = turns.start < in_view.end && in_view.start < turns.end;
+            let color = self.minimap_dash_color(distance, shown, p);
+            // A dash that stands for several turns jumps to, and previews, the first of them.
+            let first = turns.start;
+            let marker = &markers[first];
             let item = marker.item;
             let prompt = marker.prompt.clone();
             let reply = marker.reply.clone();
@@ -213,7 +217,7 @@ impl NativeChatView {
                         let (prompt, reply) = (prompt.clone(), reply.clone());
                         let appearance = appearance.clone();
                         gpui_component::tooltip::Tooltip::element(move |_, cx| {
-                            minimap_preview_card(index, &prompt, &reply, &appearance, cx)
+                            minimap_preview_card(first, &prompt, &reply, &appearance, cx)
                         })
                         .build(window, cx)
                     })
@@ -241,7 +245,8 @@ impl NativeChatView {
             .w(width)
             .h_full()
             .overflow_hidden()
-            .py(padding)
+            .pt(top_padding)
+            .pb(padding)
             .pr(px(SPEC.line_offset * s))
             .child(rail)
             .child(
@@ -297,6 +302,20 @@ impl NativeChatView {
             .child(self.render_minimap_column(&p, width, cx))
             .into_any_element()
     }
+}
+
+/// The turns each dash stands for, top to bottom. Every turn keeps its own dash while they fit
+/// `height` at least `min_step` apart; past that, neighbouring turns share a dash in equal runs, so
+/// the rail never grows and every dash still maps to the turns at its height.
+///
+/// CDXC:SessionChat 2026-10-04 DECISION:
+/// User: "for very long convo let's please limit the height of the side history thing … it's overlapping with the fork indicator too on the top right". The rail stops at `maxHeight` in minimap.json and starts `topClearance` below the column's top, under the fork button, instead of running the pane's full height.
+fn minimap_slots(turns: usize, height: f32, min_step: f32) -> Vec<Range<usize>> {
+    let fit = ((height / min_step.max(1.0)).floor() as usize).max(1);
+    let slots = turns.min(fit);
+    (0..slots)
+        .map(|slot| slot * turns / slots..(slot + 1) * turns / slots)
+        .collect()
 }
 
 /// A dash's hover card: the prompt, then the reply in the muted tone, as Markdown.

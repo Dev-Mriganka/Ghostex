@@ -56,6 +56,13 @@ THREADS
   itself. The agent defaults to the coordinator's own agent. --worktree gives the
   thread its own git worktree and branch (from --base-branch, or the default
   branch). --model and --effort apply to this thread only (Claude and Codex).
+  start-thread then waits up to a minute for the thread's transcript to show
+  the brief and answers `started`, or `pending: <reason>` (still starting, or
+  its screen shows a question only a person can answer). A brief whose send
+  failed is retried once; a second failure is an error. Only `started` means
+  the thread has the work. Do not resend a pending brief: if it never
+  arrives, Ghostex sends the coordinator "Ghostex thread report: your message
+  did not reach it.", and does the same for a follow-up that never arrives.
   link adopts a session that already exists as a thread.
   `ghostex agents send <thread-ref> "<text>"` sends a thread a follow-up;
   `ghostex read-session-chat <thread-ref> --last 2 --format text` reads it.

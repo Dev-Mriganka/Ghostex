@@ -1,12 +1,12 @@
 //! `ExtensionsFilterBar` (extensions-modal/extension-filter-bar.tsx (deleted 2026-10-01)) and the page's counts: the
 //! search field, the source select (only when more than one source is on the page), the type and
-//! category selects (searchable: eight or more items), "N shown", and the refresh button. The bar
-//! stays pinned to the top of the page while it scrolls under it (`position: sticky`).
+//! category selects (searchable: eight or more items) and "N shown". The bar stays pinned to the
+//! top of the page while it scrolls under it (`position: sticky`).
 use super::super::super::super::native_modal_kit::*;
 use super::super::super::catalog::SettingOption;
 use super::super::super::fields::{
-    DropdownAlign, DropdownRow, DropdownState, SizedButtonVariant, icon, searchable_dropdown,
-    settings_icon, settings_select, settings_square_button, toggle_dropdown,
+    DropdownAlign, DropdownRow, DropdownState, icon, searchable_dropdown,
+    settings_icon, settings_select, toggle_dropdown,
 };
 use super::super::super::model::SettingsTabId;
 use super::super::super::palette::SettingsPalette;
@@ -17,6 +17,7 @@ use super::data::{
     built_in_filter_subject, cef_filter_subject, custom_views, extension_type_label, filter_store,
     official_extensions, store_categories, view_order_items,
 };
+use gpui::prelude::FluentBuilder as _;
 use gpui::{
     AnyElement, AppContext as _, ClickEvent, Context, Focusable as _, InteractiveElement as _,
     IntoElement, ParentElement as _, SharedString, StatefulInteractiveElement as _, Styled as _,
@@ -72,7 +73,13 @@ impl ExtensionsTab {
                 .count();
             let cef =
                 usize::from(self.show_official("cef", cx) && filter.matches(&cef_filter_subject()));
-            (matching + cef, official_extensions().len() + 1)
+            // CDXC:Extensions 2026-10-04 DECISION:
+            // User: the count must be honest. Entries that need an agent CLI this computer does not have (Bots and Bot automations need the Hermes CLI) are not offered, so they are left out of the total as well as the list, and "N of M shown" no longer reads 37 of 39 with every filter on All.
+            let offered = official_extensions()
+                .iter()
+                .filter(|extension| self.official_cli_found(&extension.id))
+                .count();
+            (matching + cef, offered + 1)
         } else {
             (0, 0)
         };
@@ -346,21 +353,6 @@ impl ExtensionsTab {
         } else {
             format!("{} of {} shown", counts.shown, counts.total)
         };
-        let refresh = self.has_transport(cx).then(|| {
-            settings_square_button(
-                p,
-                "extensions-refresh",
-                "modals/settings/refresh.svg",
-                None,
-                SizedButtonVariant::Ghost,
-                28.0,
-                None,
-                self.browser.loading,
-                None,
-                |page: &mut Self, _window, cx| page.load_browser(cx),
-                cx,
-            )
-        });
         let type_menu = self.render_type_dropdown(p, window, cx);
         let category_menu = self.render_category_dropdown(p, &counts.categories, window, cx);
         h_flex()
@@ -381,7 +373,6 @@ impl ExtensionsTab {
                     .text_color(hsla(p.muted))
                     .child(count_text),
             )
-            .children(refresh)
             .children(type_menu)
             .children(category_menu)
             .into_any_element()
@@ -543,7 +534,7 @@ impl ExtensionsTab {
                 .unwrap_or(px(51.0));
             div().w_full().h(height).into_any_element()
         } else {
-            self.filter_bar_frame(p, counts, window, cx)
+            self.filter_bar_frame(p, counts, false, window, cx)
         };
         div()
             .w_full()
@@ -554,11 +545,14 @@ impl ExtensionsTab {
             .into_any_element()
     }
 
-    /// `.extensions-filter-bar`: 8px above, 10px below, a hairline under it, on the page tone.
+    /// `.extensions-filter-bar`: 8px above, 10px below, a hairline under it. In the page flow it
+    /// sits directly on the page background; only the pinned copy is filled, so the page does not
+    /// show through it while it scrolls underneath.
     fn filter_bar_frame(
         &mut self,
         p: &SettingsPalette,
         counts: &ExtensionCounts,
+        pinned: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -570,11 +564,13 @@ impl ExtensionsTab {
             .pb(px(10.0))
             .border_b_1()
             .border_color(hsla(p.hairline))
-            .bg(hsla(if p.glass {
-                p.modal.solid_surface
-            } else {
-                p.surface
-            }))
+            .when(pinned, |this| {
+                this.bg(hsla(if p.glass {
+                    p.modal.solid_surface
+                } else {
+                    p.surface
+                }))
+            })
             .child(content)
             .into_any_element()
     }
@@ -612,7 +608,7 @@ impl ExtensionsTab {
             })
             .bounds();
         let left = slot.origin.x - viewport.origin.x;
-        let bar = self.filter_bar_frame(p, counts, window, cx);
+        let bar = self.filter_bar_frame(p, counts, true, window, cx);
         Some(
             div()
                 .absolute()

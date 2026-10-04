@@ -44,6 +44,7 @@ export const SESSION_CHAT_SUPPORTED_AGENTS = new Set([
   "pi",
   "omp",
   "zcode",
+  "freebuff",
 ]);
 
 export type SessionChatTranscriptAgent =
@@ -54,7 +55,8 @@ export type SessionChatTranscriptAgent =
   | "grok"
   | "hermes"
   | "pi"
-  | "zcode";
+  | "zcode"
+  | "freebuff";
 
 export function resolveSessionChatTranscriptAgent(
   agentId: string | null | undefined,
@@ -88,6 +90,7 @@ export function resolveSessionChatTranscriptAgent(
       return "hermes";
     if (normalized === "pi" || normalized === "omp") return "pi";
     if (normalized === "zcode" || normalized === "zcode-cli") return "zcode";
+    if (normalized === "freebuff") return "freebuff";
   }
   return null;
 }

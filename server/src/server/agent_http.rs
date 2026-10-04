@@ -106,7 +106,27 @@ pub(crate) fn dispatch_agent_http_blocking(
                         .get("sessionChatActivityChanged")
                         .and_then(Value::as_bool)
                         == Some(true));
+            /*
+            CDXC:AgentScreenDetection 2026-10-04 WHY:
+            A new chat's follower can only watch Claude's statusline once it knows the Claude session id, and that id arrives with the agent's first hook. The follower otherwise adopts it on its next resolve poll, up to a second later, which held the model pill back when the first statusline beat the hook. A new id wakes the follower now; the fresh generation it starts adopts the id at once.
+            */
+            let agent_session_id_changed = endpoint_path == "/api/ingestAgentHookEvent"
+                && result.get("agentSessionIdChanged").and_then(Value::as_bool) == Some(true);
             strip_agent_hook_internal_result_fields(&endpoint_path, &mut result);
+            if agent_session_id_changed {
+                if let Some(session) = result.get("session") {
+                    if let (Some(project_id), Some(session_id)) = (
+                        read_session_text(session, "projectId"),
+                        read_session_text(session, "sessionId"),
+                    ) {
+                        crate::session_chat_follower::request_session_chat_resnapshot(
+                            state,
+                            &project_id,
+                            &session_id,
+                        );
+                    }
+                }
+            }
             let should_queue_agent_title_metadata_check =
                 should_schedule_agent_title_metadata_check(&endpoint_path, &result);
             let should_schedule_first_prompt_auto_title =
@@ -586,6 +606,7 @@ pub(crate) fn strip_agent_hook_internal_result_fields(endpoint_path: &str, resul
         object.remove("identityConflict");
         object.remove("sessionChatPromptChanged");
         object.remove("sessionChatActivityChanged");
+        object.remove("agentSessionIdChanged");
     }
 }
 

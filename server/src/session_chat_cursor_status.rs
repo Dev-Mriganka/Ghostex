@@ -72,6 +72,30 @@ pub fn read_cursor_statusline_selection(
     })
 }
 
+/// CDXC:AgentProviders 2026-10-04 WHY:
+/// The chat's Basic status line (every chat agent without a status line of its own) shows the
+/// checkout's repository and branch, so gxserver reads them for those sessions the same way it
+/// reads Cursor's git rows.
+pub fn read_checkout_status(
+    repository: &DomainRepository<'_>,
+    project_id: &str,
+    session_id: &str,
+) -> Option<Value> {
+    let session = repository.get_session(project_id, session_id).ok()??;
+    let project = repository.get_project(project_id).ok().flatten();
+    let cwd = effective_session_git_cwd(&session, project.as_ref())?;
+    let git = session_git_status(&cwd)?;
+    let mut status = Map::new();
+    if let Some(name) = Path::new(&cwd).file_name().and_then(|name| name.to_str()) {
+        status.insert("repo".to_string(), json!(name));
+    }
+    if let Some(branch) = git.branch {
+        status.insert("branch".to_string(), json!(branch));
+    }
+    status.insert("currentDir".to_string(), json!(cwd));
+    Some(Value::Object(status))
+}
+
 /// The payload's values the chat can show, camelCase, each dropped when absent.
 fn cursor_status_value(
     payload: &Map<String, Value>,

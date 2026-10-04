@@ -186,6 +186,24 @@ pub struct ServerHealthResponse {
     pub server_id: String,
     pub started_at: String,
     pub tools: Vec<ToolCapabilityStatus>,
+    /// Windows only: how this daemon was started (`platform/launch_context.rs`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub launch_context: Option<LaunchContextReport>,
+}
+
+/// CDXC:PlatformSupport 2026-10-04 SEE-ALSO:
+/// The desktop app reads `limited` and `background` to replace a Windows gxserver started from SSH or session 0 (`gpui_local_gxserver_limited_launch` in apps/desktop/src/app/helpers/board_gxserver/gxserver_health_and_daemon.rs), and `gxserver start` reads them to replace it from a desktop hand-off.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchContextReport {
+    /// Started in session 0 or with a network logon (SSH).
+    pub background: bool,
+    /// `background`, or RedirectionGuard is enforced: agents under it cannot use junction-based tools.
+    pub limited: bool,
+    pub network_logon: Option<bool>,
+    pub redirection_trust_enforced: Option<bool>,
+    pub restricted_token: bool,
+    pub windows_session_id: Option<u32>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -804,6 +822,13 @@ pub fn endpoint_for(path: &str) -> Option<EndpointDescriptor> {
         | "/api/pairedDeviceSeen"
         | "/api/queryLogs"
         | "/api/resolveGitRootForPath" => full_local(path),
+        /*
+        CDXC:Feedback 2026-10-04 WHY:
+        Sending feedback files a public GitHub issue through the Ghostex
+        relay, so only this computer's own app may ask for it; a remote
+        listener caller must never post issues in this user's name.
+        */
+        "/api/draftFeedback" | "/api/sendFeedback" => full_local(path),
         /*
         CDXC:RemotePairing 2026-09-03:
         The only unauthenticated write endpoint. A phone registers its SSH key

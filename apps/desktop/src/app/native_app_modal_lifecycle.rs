@@ -86,6 +86,7 @@ impl GhostexGpuiApp {
         let view_out = view_slot.clone();
         let palette = self.gpui_native_modal_palette();
         let window_border = palette.window_border();
+        let main_window_native_view = self.parent_ns_view;
         let window = cx
             .open_window(options, move |window, cx| {
                 crate::app::window::popup_frame::frame_app_modal_window(window, window_border);
@@ -96,6 +97,9 @@ impl GhostexGpuiApp {
                     ""
                 });
                 window.activate_window();
+                // An AppKit child of the main window moves with it (CDXC:AppModal 2026-10-04 in
+                // workspace_windows/owned_windows.rs); a no-op elsewhere.
+                attach_gpui_app_modal_window_to_main_window(window, main_window_native_view);
                 let view = build(window, cx);
                 *view_out.borrow_mut() = Some(view.clone().into_any());
                 let frame = cx.new(|_| ModalWindowFrame::new(view, palette));
@@ -228,6 +232,9 @@ impl GhostexGpuiApp {
             | GpuiAppModalKind::ConfigureActions
             | GpuiAppModalKind::OpenTargets => {
                 self.open_gpui_settings_modal(kind, open_message, cx);
+            }
+            GpuiAppModalKind::Feedback => {
+                self.open_gpui_feedback_modal(cx);
             }
             // NATIVE-MODAL-OPEN-ARMS: one arm per converted modal kind.
             _ => return false,

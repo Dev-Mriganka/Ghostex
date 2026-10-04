@@ -267,6 +267,13 @@ pub(super) const DEFAULT_SIDEBAR_AGENTS: &[DefaultSidebarAgent] = &[
         icon: "zcode",
         name: "ZCode",
     },
+    DefaultSidebarAgent {
+        agent_id: "freebuff",
+        command: "freebuff",
+        hidden_by_default: false,
+        icon: "freebuff",
+        name: "Freebuff",
+    },
 ];
 
 pub(super) const DEFAULT_SIDEBAR_COMMANDS: &[DefaultSidebarCommand] = &[

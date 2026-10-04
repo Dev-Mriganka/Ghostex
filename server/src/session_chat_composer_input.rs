@@ -47,6 +47,93 @@ pub(super) fn zcode_input_region(lines: &[String]) -> Option<Range<usize>> {
     .then_some(region)
 }
 
+/// CDXC:AgentScreenDetection 2026-10-04 WHY:
+/// Freebuff 0.2.12 draws its input as the last rounded box above its footer (`<model> · <folder> · /model to change · Chat: …`, then `← for history · ? for help`), but its ads and its `ask_user` form use the same rounded box. The form puts a nested Submit box and an `↑↓ navigate` hint inside, so a box holding either is not the input.
+pub(super) fn freebuff_input_region(lines: &[String]) -> Option<Range<usize>> {
+    let help = lines
+        .iter()
+        .rposition(|line| line.contains("for history") && line.contains("for help"))?;
+    let foot = lines[..help].iter().rposition(|line| {
+        let line = line.trim();
+        line.starts_with('╰') && line.ends_with('╯')
+    })?;
+    if lines[foot + 1..help]
+        .iter()
+        .any(|line| line.trim_start().starts_with(['│', '╭', '╰']))
+    {
+        return None;
+    }
+    let head = lines[..foot].iter().rposition(|line| {
+        let line = line.trim();
+        line.starts_with('╭') && line.ends_with('╮')
+    })?;
+    lines[head + 1..foot]
+        .iter()
+        .all(|line| {
+            let line = line.trim();
+            line.starts_with('│')
+                && line.ends_with('│')
+                && !line[3..].contains(['╭', '╰'])
+                && !line.contains("↑↓ navigate")
+        })
+        .then_some(head + 1..foot)
+}
+
+const FREEBUFF_PLACEHOLDERS: &[&str] = &[
+    "enter a coding task or / for commands",
+    "enter a coding task",
+    "add to the current task (/ for commands)",
+    "add to the current task",
+    "ctrl-c to cancel queued messages",
+    "enter bash command...",
+    "describe a feature/bug or other request to be fleshed out...",
+    "add instructions for this skill, or press enter to run it as-is...",
+    "describe what you want to plan...",
+    "describe what to review...",
+    "enter image path or ctrl+v to paste",
+];
+
+/// The typed text of Freebuff's input box. An empty input shows the cursor `▍` followed by a
+/// dim placeholder; typed text shows the cursor where it was left.
+fn freebuff_composer_input(lines: &[String]) -> Option<SessionChatComposerInput> {
+    let region = freebuff_input_region(lines)?;
+    let rows: Vec<String> = lines[region.clone()]
+        .iter()
+        .map(|line| {
+            let line = line.trim();
+            let line = line.strip_prefix('│').unwrap_or(line);
+            line.strip_suffix('│').unwrap_or(line).trim().to_string()
+        })
+        .collect();
+    let first = rows.iter().position(|row| !row.is_empty());
+    let last = rows.iter().rposition(|row| !row.is_empty());
+    let rows = match (first, last) {
+        (Some(first), Some(last)) => &rows[first..=last],
+        _ => &rows[..0],
+    };
+    let placeholder = rows.len() == 1
+        && rows[0].starts_with('▍')
+        && FREEBUFF_PLACEHOLDERS
+            .contains(&rows[0]['▍'.len_utf8()..].trim().to_lowercase().as_str());
+    let text = if placeholder {
+        String::new()
+    } else {
+        rows.iter()
+            .map(|row| row.replace('▍', ""))
+            .collect::<Vec<_>>()
+            .join(
+                "
+",
+            )
+    };
+    Some(SessionChatComposerInput {
+        text,
+        rows: region.len(),
+        shell_mode: false,
+        placeholder,
+    })
+}
+
 pub(super) fn hermes_input_region(lines: &[String]) -> Option<Range<usize>> {
     let region = unmarked_rule_input_region(lines)?;
     let start = region.clone().find(|&i| !lines[i].trim().is_empty())?;
@@ -489,6 +576,10 @@ pub fn session_chat_composer_input(agent: &str, screen: &str) -> Option<SessionC
                 placeholder,
             }
         });
+    }
+    if agent == "freebuff" {
+        let lines: Vec<String> = screen.lines().map(strip_ansi_sgr).collect();
+        return freebuff_composer_input(&lines);
     }
     let mut lines = styled_lines(screen);
     if agent == "codex" {

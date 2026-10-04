@@ -452,7 +452,7 @@ const customerDownloads = renderCustomerDownloadNotes(
   version,
   manifests.flatMap((manifest) => manifest.artifacts.map((artifact) => artifact.name))
 );
-if (customerDownloads) releaseNotes.push(customerDownloads, '');
+if (customerDownloads) releaseNotes.unshift(customerDownloads, '');
 const notesPath = path.join(artifactsRoot, `release-notes-${version}.md`);
 writeFileSync(notesPath, `${releaseNotes.join('\n').trim()}\n`);
 const expectedAssets = new Map(

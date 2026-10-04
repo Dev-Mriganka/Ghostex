@@ -25,6 +25,7 @@ pub(crate) fn transcript_agent(
             "hermes" | "hermes-agent" | "hermes agent" => Some("hermes"),
             "pi" | "omp" => Some("pi"),
             "zcode" | "zcode-cli" => Some("zcode"),
+            "freebuff" => Some("freebuff"),
             _ => None,
         };
         if resolved.is_some() {

@@ -146,7 +146,11 @@ pub(crate) fn account_switch_resume_command(
         "claude" => {
             let reference = get_claude_session_reference(&input)?;
             let id = get_claude_session_id(Some(&reference))?;
-            build_claude_resume_invocation(command, &quote_shell_arg(&id))
+            if claude_transcript_written(&input, &id) {
+                build_claude_resume_invocation(command, &quote_shell_arg(&id))
+            } else {
+                build_claude_fresh_invocation(command, &quote_shell_arg(&id))
+            }
         }
         "codex" => {
             let id = get_codex_session_reference(&input)?;
@@ -159,6 +163,21 @@ pub(crate) fn account_switch_resume_command(
     };
     // A raw shell write must be one input line, including custom command arguments.
     (!resume.chars().any(char::is_control)).then_some(resume)
+}
+
+/// CDXC:AgentProviders 2026-10-04 WHY:
+/// Claude writes no transcript until the first prompt, so switching the account of a session nobody has typed into resumed a conversation that does not exist: Claude printed "No conversation found with session ID" and exited, and the switch failed. Such a session starts fresh under the same id, which keeps the session's conversation identity, title and draft, and lets its hooks report the id Ghostex already stores.
+fn claude_transcript_written(input: &AgentResumeInput, id: &str) -> bool {
+    input
+        .agent_session_path
+        .as_deref()
+        .map(crate::resume_lookup::expand_home)
+        .is_some_and(|path| path.is_file())
+        || crate::agent_transcripts::find_claude_transcript(id).is_some()
+}
+
+fn build_claude_fresh_invocation(agent_command: &str, shell_reference: &str) -> String {
+    format!("{agent_command} --session-id {shell_reference}")
 }
 
 #[derive(Clone)]
@@ -417,6 +436,12 @@ pub(crate) fn build_agent_resume_command(
         }
         "grok" => exact_reference
             .map(|reference| format!("{agent_command} -r {}", quote_shell_double_arg(&reference))),
+        "freebuff" => exact_reference.map(|reference| {
+            format!(
+                "{agent_command} --continue {}",
+                quote_shell_double_arg(&reference)
+            )
+        }),
         "kiro" => exact_reference.map(|reference| {
             format!(
                 "{agent_command} --resume-id {}",
@@ -564,6 +589,12 @@ pub(crate) fn build_agent_resume_copy_command(input: &AgentResumeInput) -> Optio
         }
         "grok" => exact_reference
             .map(|reference| format!("{agent_command} -r {}", quote_shell_double_arg(&reference))),
+        "freebuff" => exact_reference.map(|reference| {
+            format!(
+                "{agent_command} --continue {}",
+                quote_shell_double_arg(&reference)
+            )
+        }),
         "kiro" => exact_reference.map(|reference| {
             format!(
                 "{agent_command} --resume-id {}",
@@ -680,8 +711,9 @@ pub(crate) fn restorable_agent_id(value: Option<&str>) -> Option<&str> {
     let value = value?.trim();
     match value {
         "amp" | "antigravity" | "claude" | "codebuddy" | "codex" | "command-code" | "copilot"
-        | "cursor" | "devin" | "droid" | "gemini" | "grok" | "hermes-agent" | "kimi" | "kiro"
-        | "omp" | "openclaude" | "opencode" | "pi" | "qoder" | "rovodev" | "zcode" => Some(value),
+        | "cursor" | "devin" | "droid" | "freebuff" | "gemini" | "grok" | "hermes-agent"
+        | "kimi" | "kiro" | "omp" | "openclaude" | "opencode" | "pi" | "qoder" | "rovodev"
+        | "zcode" => Some(value),
         _ => None,
     }
 }

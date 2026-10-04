@@ -61,6 +61,9 @@ pub(crate) fn infer_agent_id_from_path(path: Option<&str>) -> Option<String> {
     if lower.ends_with("/.zcode/cli/db/db.sqlite") {
         return Some("zcode".to_string());
     }
+    if lower.ends_with("/chat-messages.json") && lower.contains("/manicode/projects/") {
+        return Some("freebuff".to_string());
+    }
     if lower.contains("/.cursor/") && (lower.ends_with(".json") || lower.ends_with(".jsonl")) {
         return Some("cursor".to_string());
     }
@@ -210,6 +213,7 @@ pub(crate) fn infer_agent_id_from_command(command: &str) -> Option<String> {
             "codex" | "xswap" => "codex",
             "zcode" | "zcode-cli" => "zcode",
             "droid" => "droid",
+            "freebuff" => "freebuff",
             "grok" => "grok",
             "amp" => "amp",
             "pi" => "pi",
