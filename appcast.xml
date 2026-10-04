@@ -8,6 +8,51 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <link>https://github.com/maddada/Ghostex/releases</link>
         <description>Sparkle appcast for Ghostex macOS releases.</description>
         <item>
+            <title>10.11.0</title>
+            <pubDate>Sun, 04 Oct 2026 14:36:29 +0000</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.11.0</sparkle:fullReleaseNotesLink>
+            <sparkle:version>101100</sparkle:version>
+            <sparkle:shortVersionString>10.11.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.11.0
+
+## 10.11.0 - 2026-10-04
+
+**Ghostex 10.11.0 is out.** Send feedback straight from the sidebar, new threads fill in and agents start sooner, Freebuff and seven more agents get a status line, and on Windows the window drags smoothly with its dialogs, menus and toasts following along.
+
+### 📣 Feedback
+- **New: Send Feedback from the sidebar.** The chat-bubble button in the sidebar's top row opens a pop-up where you describe what's broken, confusing or missing and paste screenshots, review the exact GitHub issue before it goes out, and get a link to the issue once it's filed. If you hit the sending limit, it tells you when you can send again.
+
+### ⚡ Faster starts
+- **A new thread's composer fills in much sooner:** its mode and the model chosen at launch show right away, and a model or mode you pick in the composer is never replaced.
+- **New agents start sooner,** without a full hook check before every launch and without waiting for the chat to load first.
+- **Windows: Claude's status line updates no longer start PowerShell,** so each one arrives in a fraction of the time.
+
+### 🤖 Agents
+- **Freebuff sessions drop the "Freebuff:" prefix from their titles,** and the sidebar shows when Freebuff is working.
+- **Agents without a status line of their own get one showing the repo and branch:** Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode and OpenClaude.
+- **Chat offers "Switch model in CLI" for agents whose models it can't list,** on the computer and the phone.
+- **Windows: sessions are no longer named "Windows PowerShell".**
+
+### 🪟 Windows
+- **Dragging the window is smoother,** because Ghostex no longer rebuilds a hidden window on every step of the move.
+- **Drag the window from the empty top of the sidebar,** and double-click there to maximize it.
+- **Overlay windows follow the window when it moves:** the maximized composer, dialogs and their close X, dropdowns, toasts and the Docs drawer.
+- **Clicking a dialog's close X no longer flashes the main window.**
+- **Tooltips and toasts no longer show a square box behind their rounded corners.**
+- **The chat's scroll-down and Esc pills show with transparency on,** including at 125% and 150% display scaling.
+- **Transparency is off by default on Windows,** so the window is fast and solid. Turn it on in Settings > Theme > Enable transparency.
+
+### 🩹 Fixes and polish
+- **Transparency Strength defaults to 10,** and Blur shows only where it changes something: on Windows once What shows behind the glass is no longer Desktop and windows, and Menu blur only on macOS.
+- **macOS: app dialogs move with the main window,** and the Automate dialog behaves like the other dialogs.
+- **A Codex question card can still be answered after Codex closed its question box,** thanks to @rgruenewald.
+- **The Extensions page has a flatter filter row,** and its count includes only the extensions it offers.
+]]></description>
+            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.11.0/ghostex-10.11.0-arm64.dmg" length="111299670" type="application/octet-stream" sparkle:edSignature="CQib0B1TqRwk52qbOuvXa0CcE04EoztnWR7naIQrGsUAHHNIorPm6Fmzs4w9eHh9ApC8dWU9RuRsq/rZ8GAeAw=="/>
+        </item>
+        <item>
             <title>10.10.0</title>
             <pubDate>Sun, 04 Oct 2026 08:42:26 +0000</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.10.0</sparkle:fullReleaseNotesLink>
@@ -240,46 +285,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.6.0/ghostex-10.6.0-arm64.dmg" length="128255030" type="application/octet-stream" sparkle:edSignature="qYSfmoMuTx7l+lwAu5qzouyNFsp9vmkQ97hG2HKu5/nNkPiURU7+t+oRhMCzLY2/NlFf9cKcPFzL9UBu8DEfCQ=="/>
         </item>
         <item>
-            <title>10.5.5</title>
-            <pubDate>Mon, 28 Sep 2026 17:28:32 +0000</pubDate>
-            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.5.5</sparkle:fullReleaseNotesLink>
-            <sparkle:version>100505</sparkle:version>
-            <sparkle:shortVersionString>10.5.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.5.5
-
-## 10.5.5 - 2026-09-28
-
-**Ghostex 10.5.5 is out.** A big round of Windows fixes, from agent startup and accented typing to mouse Back and Forward, Hermes bot sessions that keep their status and chat, large files that open at any size, an optional highlight for unanswered questions, and keyboard and terminal fixes.
-
-### 🪟 Windows
-- **Agent sessions start reliably on Windows,** using each CLI's own launcher and PowerShell for Grok, and a session that fails to start says why instead of hanging, thanks to @gvastethecreator.
-- **Accented characters compose correctly in the terminal.** A dead key waits for the next letter instead of typing the accent on its own, thanks to @gvastethecreator.
-- **Mouse Back and Forward buttons follow your visited sessions and projects,** and inside Settings they move between the pages you visited and restore each page's scroll position, thanks to @gvastethecreator.
-- **Model controls appear as soon as their data arrives,** instead of waiting on a skeleton until you hover them, thanks to @gvastethecreator.
-- **Menus behave like native ones:** sidebar menus close when you switch to another app, frosted menus no longer close before your click lands, and the pointer updates correctly over pop-ups, thanks to @gvastethecreator.
-- **Terminal block and border characters draw without gaps,** thanks to @gvastethecreator.
-
-### 🤖 Bots and Hermes sessions
-- **A Hermes session keeps its own status, chat and name** when its subagents or nested runs report in, and its subagents show in the Subagents card, thanks to @banozz0.
-- **Hermes chats show every step message,** and `/rename` in a Hermes chat renames the conversation in Hermes too.
-- **The default Hermes bot always opens as itself,** even after `hermes profile use` switched Hermes to another profile.
-- **Sessions no longer blink idle mid-turn,** including while Claude compacts automatically.
-
-### ⌨️ Keyboard and terminals
-- **Typing keeps working after you click beside the terminal.** Backspace and Pinyin input no longer stop after a click on the terminal's margin or the agent bar.
-- **Clicking empty space in a chat sends your typing to the chat box.**
-- **The terminal find bar works on Windows and Linux:** typing, Enter, the arrows, Escape and the close button all act on the search.
-- **The terminal's padding always matches its background,** in dark and light mode, and waking a session in light mode no longer flashes white.
-
-### 🗂 Files and the sidebar
-- **Files opens large files at any size.** Only Markdown keeps its 2 MB editing limit, and a larger Markdown file offers Open in Code view.
-- **Highlight unanswered questions** gives sessions with a waiting question a soft pink background, thanks to @alp82. Turn it on in Settings > Sidebar with Show Advanced on; it currently covers Codex's questions.
-]]></description>
-            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.5.5/ghostex-10.5.5-arm64.dmg" length="121356347" type="application/octet-stream" sparkle:edSignature="/QgQKdhs0q45EJeDpf0bQ8bppI7UD3swqsh48b8G16+EqBkuLL7KNFv+DyZiu9G3IeupQ6WIgdI4RQB9qsRlAQ=="/>
-        </item>
-        <item>
             <title>3.26.1</title>
             <pubDate>Mon, 01 Jun 2026 18:43:20 +0400</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v3.26.1</sparkle:fullReleaseNotesLink>
@@ -291,6 +296,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: lG/zTuzC+qynKzq/wpDUDykpr1YE44qsOQ9Ia3A2K72Xas+bhNJP0RHDaZp5TvMWgXVTsbBjSpGtVImM5n5zBA==
-length: 28986
+edSignature: 1b29lgiPP58nitW7F5p1brjAr6bRdnIiOZrOTGcd0gNUlWKYGu7Lea0w6FRywmWy/fVuZib0HZqV5BPjEN0bDQ==
+length: 29054
 -->
