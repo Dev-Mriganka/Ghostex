@@ -348,8 +348,15 @@ fn attach_corner_close_window(window: &mut Window, modal: NativeWindowRef) {
 /// Makes the modal's window the button window's owner, so Windows keeps it above the modal and
 /// minimizes and closes it with it, and drops the rounded corners and border DWM would draw
 /// around its square frame.
+///
+/// CDXC:AppModal 2026-10-04 WHY:
+/// The button window must never take activation: GPUI answers WM_MOUSEACTIVATE with MA_ACTIVATE
+/// despite `focus: false`, so a click activated it, and closing the modal then destroyed the
+/// active window, which flashed the main window hidden for a moment (Escape did not). It is made
+/// non-activating like the titlebar dropdowns, so the modal stays active and closes as on Escape.
 #[cfg(target_os = "windows")]
 fn attach_corner_close_window(window: &mut Window, modal: NativeWindowRef) {
+    super::make_gpui_popup_window_non_activating(window);
     use windows_sys::Win32::Graphics::Dwm::{
         DWMWA_BORDER_COLOR, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND,
         DwmSetWindowAttribute,
