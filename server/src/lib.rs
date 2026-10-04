@@ -15,6 +15,7 @@ pub(crate) mod bot_feed;
 pub(crate) mod bot_projects;
 pub mod cli;
 pub mod close_after_done;
+pub(crate) mod empty_session_cleanup;
 pub mod config;
 pub mod constants;
 pub mod coordinators;
