@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## 10.11.0 - 2026-10-04
+
+**Ghostex 10.11.0 is out.** Send feedback straight from the sidebar, new threads fill in and agents start sooner, Freebuff and seven more agents get a status line, and on Windows the window drags smoothly with its dialogs, menus and toasts following along.
+
+### 📣 Feedback
+- **New: Send Feedback from the sidebar.** The chat-bubble button in the sidebar's top row opens a pop-up where you describe what's broken, confusing or missing and paste screenshots, review the exact GitHub issue before it goes out, and get a link to the issue once it's filed. If you hit the sending limit, it tells you when you can send again.
+
+### ⚡ Faster starts
+- **A new thread's composer fills in much sooner:** its mode and the model chosen at launch show right away, and a model or mode you pick in the composer is never replaced.
+- **New agents start sooner,** without a full hook check before every launch and without waiting for the chat to load first.
+- **Windows: Claude's status line updates no longer start PowerShell,** so each one arrives in a fraction of the time.
+
+### 🤖 Agents
+- **Freebuff sessions drop the "Freebuff:" prefix from their titles,** and the sidebar shows when Freebuff is working.
+- **Agents without a status line of their own get one showing the repo and branch:** Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode and OpenClaude.
+- **Chat offers "Switch model in CLI" for agents whose models it can't list,** on the computer and the phone.
+- **Windows: sessions are no longer named "Windows PowerShell".**
+
+### 🪟 Windows
+- **Dragging the window is smoother,** because Ghostex no longer rebuilds a hidden window on every step of the move.
+- **Drag the window from the empty top of the sidebar,** and double-click there to maximize it.
+- **Overlay windows follow the window when it moves:** the maximized composer, dialogs and their close X, dropdowns, toasts and the Docs drawer.
+- **Clicking a dialog's close X no longer flashes the main window.**
+- **Tooltips and toasts no longer show a square box behind their rounded corners.**
+- **The chat's scroll-down and Esc pills show with transparency on,** including at 125% and 150% display scaling.
+- **Transparency is off by default on Windows,** so the window is fast and solid. Turn it on in Settings > Theme > Enable transparency.
+
+### 🩹 Fixes and polish
+- **Transparency Strength defaults to 10,** and Blur shows only where it changes something: on Windows once What shows behind the glass is no longer Desktop and windows, and Menu blur only on macOS.
+- **macOS: app dialogs move with the main window,** and the Automate dialog behaves like the other dialogs.
+- **A Codex question card can still be answered after Codex closed its question box,** thanks to @rgruenewald.
+- **The Extensions page has a flatter filter row,** and its count includes only the extensions it offers.
+
 ## 10.10.0 - 2026-10-04
 
 **Ghostex 10.10.0 is out.** Coordinators check that the work they hand to a thread actually arrives, Freebuff joins the agents with chat, the phone can start a coordinator and nests its threads, embedded pages can open apps like Okta Verify, and Windows gets a working account sign-in, a red Close button and more reliable remote setup.
