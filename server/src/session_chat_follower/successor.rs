@@ -56,7 +56,8 @@ pub(super) async fn detect_and_adopt_successor_transcript(
         | SessionChatTranscriptAgent::Hermes
         | SessionChatTranscriptAgent::OpenCode
         | SessionChatTranscriptAgent::Pi
-        | SessionChatTranscriptAgent::Zcode => return None,
+        | SessionChatTranscriptAgent::Zcode
+        | SessionChatTranscriptAgent::Freebuff => return None,
     };
     // The agent is now narrowed to Claude or Codex; a bool keeps the blocking
     // scan below free of arms that could silently absorb a future agent.
@@ -186,4 +187,31 @@ pub(super) async fn detect_and_adopt_successor_transcript(
             Some(adoption)
         }
     }
+}
+
+/// Binds a Freebuff session that has no conversation id yet to the chat its CLI started
+/// (`CDXC:SessionIdentity` in session_chat_freebuff.rs), persisting it through the registry first.
+pub(super) async fn adopt_unbound_freebuff_chat(
+    config: &SessionChatFollowerConfig,
+) -> Option<(String, String)> {
+    let hooks = config.successor_hooks.clone()?;
+    tokio::task::spawn_blocking(move || {
+        let (cwd, created_ms) = (hooks.unbound_session_context)()?;
+        let claimed = (hooks.bound_agent_session_ids)();
+        let (id, path) =
+            crate::session_chat_freebuff::discover_freebuff_chat(&cwd, created_ms, &claimed)?;
+        let path = path.to_string_lossy().into_owned();
+        (hooks.adopt_identity)(SessionChatIdentityAdoption {
+            previous_agent_session_id: None,
+            predecessor_transcript_session_id: String::new(),
+            agent_session_id: id.clone(),
+            agent_session_path: path.clone(),
+            lineage: "freebuff-chat-folder",
+            hops: 0,
+        })
+        .then_some((id, path))
+    })
+    .await
+    .ok()
+    .flatten()
 }

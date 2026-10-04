@@ -171,6 +171,7 @@ pub(super) fn supports_chat_view(agent_id: &str, icon: Option<&str>) -> bool {
                     | "omp"
                     | "zcode"
                     | "zcode-cli"
+                    | "freebuff"
             )
         })
 }

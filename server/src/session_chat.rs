@@ -269,6 +269,7 @@ pub enum SessionChatTranscriptAgent {
     Claude,
     Codex,
     Cursor,
+    Freebuff,
     Grok,
     Hermes,
     OpenCode,
@@ -292,6 +293,7 @@ pub fn resolve_session_chat_transcript_agent(
         "opencode" => Some(SessionChatTranscriptAgent::OpenCode),
         "pi" | "omp" => Some(SessionChatTranscriptAgent::Pi),
         "zcode" | "zcode-cli" => Some(SessionChatTranscriptAgent::Zcode),
+        "freebuff" => Some(SessionChatTranscriptAgent::Freebuff),
         _ => None,
     }
 }
@@ -307,6 +309,7 @@ pub fn session_chat_transcript_agent_id(agent: Option<&str>) -> Option<&'static 
         SessionChatTranscriptAgent::OpenCode => Some("opencode"),
         SessionChatTranscriptAgent::Pi => Some("pi"),
         SessionChatTranscriptAgent::Zcode => Some("zcode"),
+        SessionChatTranscriptAgent::Freebuff => Some("freebuff"),
     }
 }
 
@@ -324,6 +327,7 @@ pub fn session_chat_line_decoder(agent: SessionChatTranscriptAgent) -> SessionCh
         SessionChatTranscriptAgent::OpenCode => crate::session_chat_opencode::decode_line,
         SessionChatTranscriptAgent::Pi => decode_pi_transcript_line,
         SessionChatTranscriptAgent::Zcode => decode_zcode_transcript_line,
+        SessionChatTranscriptAgent::Freebuff => decode_freebuff_transcript_line,
     }
 }
 
@@ -342,6 +346,7 @@ pub fn session_chat_lifecycle_decoder(
         }
         SessionChatTranscriptAgent::Pi => None,
         SessionChatTranscriptAgent::Zcode => Some(decode_zcode_turn_lifecycle),
+        SessionChatTranscriptAgent::Freebuff => Some(decode_freebuff_turn_lifecycle),
     }
 }
 
@@ -422,7 +427,8 @@ pub fn session_chat_lineage_extractor(
         | SessionChatTranscriptAgent::Hermes
         | SessionChatTranscriptAgent::OpenCode
         | SessionChatTranscriptAgent::Pi
-        | SessionChatTranscriptAgent::Zcode => None,
+        | SessionChatTranscriptAgent::Zcode
+        | SessionChatTranscriptAgent::Freebuff => None,
     }
 }
 
@@ -1095,6 +1101,7 @@ pub use crate::session_chat_decode_antigravity::*;
 pub use crate::session_chat_decode_claude::*;
 pub use crate::session_chat_decode_codex::*;
 pub use crate::session_chat_decode_cursor::*;
+pub use crate::session_chat_decode_freebuff::*;
 pub use crate::session_chat_decode_grok::*;
 pub use crate::session_chat_decode_hermes::*;
 pub use crate::session_chat_decode_pi::*;

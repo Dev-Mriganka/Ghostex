@@ -342,6 +342,31 @@ pub(crate) fn sync_live_zmx_process_identities(
         if launch_argv_identity.is_some() && !launch_argv_identity_is_new {
             agent_session_id = None;
         }
+        if identity.agent_id.as_deref() == Some("freebuff")
+            && agent_session_id.is_none()
+            && read_runtime_text(&current, "agentSessionId").is_none()
+        {
+            // See CDXC:SessionIdentity in session_chat_freebuff.rs.
+            if let Some((cwd, created_ms)) =
+                crate::session_chat_freebuff::freebuff_session_context(repository, &current)
+            {
+                let claimed = sessions
+                    .iter()
+                    .filter(|other| {
+                        read_session_text(other, "sessionId").as_deref()
+                            != Some(candidate_session_id.as_str())
+                            && crate::agents::is_active_identity_owner(other)
+                    })
+                    .filter_map(|other| read_runtime_text(other, "agentSessionId"))
+                    .collect::<Vec<_>>();
+                if let Some((id, path)) =
+                    crate::session_chat_freebuff::discover_freebuff_chat(&cwd, created_ms, &claimed)
+                {
+                    agent_session_id = Some(id);
+                    agent_session_path = Some(path.to_string_lossy().into_owned());
+                }
+            }
+        }
         /*
         CDXC:SessionIdentity 2026-06-21-18:25:
         Rust must copy TypeScript gxserver's live zmx process repair before sidebar list/snapshot responses. A running zmx terminal whose foreground process is Codex/Claude/etc. must be promoted to the matching agent row in durable state so macOS shows the same session identity after the server cutover.

@@ -731,6 +731,12 @@ ZCode supports chat messages, thinking, tool results, attachments, and imported
 conversation history. Install its hooks in Settings > Agents to connect new
 conversations and keep activity in sync. ZCode runs in the same terminal, so
 you can switch to Terminal for its setup, model menus, and permission prompts.
+Freebuff supports chat messages, its replies and thinking, tool results, and its
+questions: when Freebuff asks a question, it appears as a card in the chat, one
+question at a time, and the answer goes to Freebuff as if you had picked it in
+its terminal. Freebuff has no hooks, so a new session's chat appears after its
+first message. Switch to Terminal for sign-in, `/model`, and Freebuff's other
+commands and settings.
 Scrolling up collapses the composer; returning to the bottom expands it.
 Settings > Chat > Keep chat box expanded while scrolling leaves the desktop
 chat box at full size instead (`sessionChatKeepComposerExpanded`, off by default).
@@ -1282,6 +1288,8 @@ selected computer and keep running if Settings closes. From a terminal,
 do the same. Start a new session to use the installed version. ZCode launches with `zcode`; install
 and update it with `npm install -g zcode-app-cli@latest`, as documented at
 [the ZCode installation docs](https://github.com/kingsword09/zcode-cli).
+Freebuff launches with `freebuff` and installs with `npm install -g freebuff`;
+sign in once in its terminal the first time it starts.
 Agent Hooks let gxserver watch agent status, questions, and
 completions for chat and notifications. Installing the Claude Code hooks also
 sets Claude Code's transcript retention (`cleanupPeriodDays`) so past

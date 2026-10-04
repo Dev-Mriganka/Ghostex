@@ -180,6 +180,7 @@ impl GhostexGpuiApp {
                     | "pi"
                     | "omp"
                     | "zcode"
+                    | "freebuff"
             )
         ) {
             return;

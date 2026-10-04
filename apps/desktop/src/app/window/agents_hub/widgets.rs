@@ -189,7 +189,7 @@ pub(crate) fn agent_logo_color(icon: &str, hp: &HubPalette) -> Rgba {
     rgb(brand)
 }
 
-const AGENT_ICONS: [&str; 24] = [
+const AGENT_ICONS: [&str; 25] = [
     "amp-cli",
     "antigravity-cli",
     "browser",
@@ -201,6 +201,7 @@ const AGENT_ICONS: [&str; 24] = [
     "copilot",
     "devin",
     "factory-droid",
+    "freebuff",
     "gemini",
     "grok-build",
     "hermes-agent",

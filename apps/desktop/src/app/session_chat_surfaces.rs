@@ -31,6 +31,7 @@ impl GhostexGpuiApp {
             Some("pi") => Some("pi"),
             Some("omp") => Some("omp"),
             Some("zcode") => Some("zcode"),
+            Some("freebuff") => Some("freebuff"),
             _ => None,
         }
     }

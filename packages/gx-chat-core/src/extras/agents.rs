@@ -33,6 +33,7 @@ const AGENTS: &[(&str, &str, &str)] = &[
     ("devin", "devin", "Devin"),
     ("mastra", "mastra", "Mastra Code"),
     ("zcode", "zcode", "ZCode"),
+    ("freebuff", "freebuff", "Freebuff"),
 ];
 
 /// The icon of the browser rows; not an agent, but part of the same icon vocabulary.
@@ -70,6 +71,7 @@ pub fn transcript_agent(candidates: [Option<&str>; 2]) -> Option<&'static str> {
             "hermes" | "hermes-agent" | "hermes agent" => Some("hermes"),
             "pi" | "omp" => Some("pi"),
             "zcode" | "zcode-cli" => Some("zcode"),
+            "freebuff" => Some("freebuff"),
             _ => None,
         };
         if resolved.is_some() {

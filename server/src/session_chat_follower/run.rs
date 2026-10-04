@@ -180,6 +180,14 @@ pub async fn run_session_chat_follower(
             }
         }
         if resolved.is_none() {
+            if transcript_agent == SessionChatTranscriptAgent::Freebuff
+                && identity.agent_session_id.is_none()
+            {
+                if let Some((id, path)) = adopt_unbound_freebuff_chat(&config).await {
+                    identity.agent_session_id = Some(id);
+                    identity.agent_session_path = Some(path);
+                }
+            }
             let agent_session_id = identity.agent_session_id.clone();
             let agent_session_path = identity.agent_session_path.clone();
             resolved = tokio::task::spawn_blocking(move || {

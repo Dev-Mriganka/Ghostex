@@ -271,6 +271,7 @@ pub(super) fn parse_transcript(
             SessionChatTranscriptAgent::Hermes => parse_hermes_record(&mut builder, &record),
             SessionChatTranscriptAgent::Pi => parse_pi_record(&mut builder, &record),
             SessionChatTranscriptAgent::Zcode => parse_zcode_record(&mut builder, line),
+            SessionChatTranscriptAgent::Freebuff => parse_freebuff_record(&mut builder, line),
             SessionChatTranscriptAgent::OpenCode => parse_opencode_record(&mut builder, line),
         }
     }

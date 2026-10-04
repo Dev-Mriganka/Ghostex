@@ -169,6 +169,7 @@ pub(crate) fn gpui_sidebar_agent_icon(value: Option<&str>) -> Option<&'static st
         "command-code" | "command code" | "commandcode" => Some("command-code"),
         "mastra" | "mastracode" | "mastra code" => Some("mastra"),
         "zcode" => Some("zcode"),
+        "freebuff" => Some("freebuff"),
         "devin" => Some("devin"),
         _ => None,
     }

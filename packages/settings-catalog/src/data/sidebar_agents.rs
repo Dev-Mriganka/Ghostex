@@ -298,4 +298,10 @@ pub const DEFAULT_SIDEBAR_AGENTS: J = J::Arr(&[
         ("icon", J::Str("zcode")),
         ("name", J::Str("ZCode")),
     ]),
+    J::Obj(&[
+        ("agentId", J::Str("freebuff")),
+        ("command", J::Str("freebuff")),
+        ("icon", J::Str("freebuff")),
+        ("name", J::Str("Freebuff")),
+    ]),
 ]);

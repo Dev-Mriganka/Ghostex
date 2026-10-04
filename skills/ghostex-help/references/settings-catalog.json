@@ -8291,6 +8291,10 @@
         {
           "label": "ZCode",
           "value": "ZCode"
+        },
+        {
+          "label": "Freebuff",
+          "value": "Freebuff"
         }
       ],
       "agentWritable": false

@@ -417,6 +417,12 @@ pub(crate) fn build_agent_resume_command(
         }
         "grok" => exact_reference
             .map(|reference| format!("{agent_command} -r {}", quote_shell_double_arg(&reference))),
+        "freebuff" => exact_reference.map(|reference| {
+            format!(
+                "{agent_command} --continue {}",
+                quote_shell_double_arg(&reference)
+            )
+        }),
         "kiro" => exact_reference.map(|reference| {
             format!(
                 "{agent_command} --resume-id {}",
@@ -564,6 +570,12 @@ pub(crate) fn build_agent_resume_copy_command(input: &AgentResumeInput) -> Optio
         }
         "grok" => exact_reference
             .map(|reference| format!("{agent_command} -r {}", quote_shell_double_arg(&reference))),
+        "freebuff" => exact_reference.map(|reference| {
+            format!(
+                "{agent_command} --continue {}",
+                quote_shell_double_arg(&reference)
+            )
+        }),
         "kiro" => exact_reference.map(|reference| {
             format!(
                 "{agent_command} --resume-id {}",
@@ -680,8 +692,9 @@ pub(crate) fn restorable_agent_id(value: Option<&str>) -> Option<&str> {
     let value = value?.trim();
     match value {
         "amp" | "antigravity" | "claude" | "codebuddy" | "codex" | "command-code" | "copilot"
-        | "cursor" | "devin" | "droid" | "gemini" | "grok" | "hermes-agent" | "kimi" | "kiro"
-        | "omp" | "openclaude" | "opencode" | "pi" | "qoder" | "rovodev" | "zcode" => Some(value),
+        | "cursor" | "devin" | "droid" | "freebuff" | "gemini" | "grok" | "hermes-agent"
+        | "kimi" | "kiro" | "omp" | "openclaude" | "opencode" | "pi" | "qoder" | "rovodev"
+        | "zcode" => Some(value),
         _ => None,
     }
 }
