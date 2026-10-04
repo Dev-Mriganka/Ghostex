@@ -1422,9 +1422,11 @@ version of the Projects features in Cursor and Claude Code.
   coordinators, one per stream of work.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo, and a crew icon
-  with one number: how many thread sessions it has in the sidebar, whatever
-  their state. The icon turns orange while a thread works and light blue when
-  one waits on you. Its
+  with one number: how many of its threads are working; when none are
+  working, how many are waiting on you; when neither, how many thread sessions
+  it has in the sidebar. The icon and number are orange when the number counts
+  working threads, light blue when it counts threads waiting on you, and grey
+  when it counts them all. Its
   threads sit indented right under it with their own status dots; the chevron
   beside the crown folds them away and back (remembered across restarts), and a
   folded coordinator keeps its number and colour. Click a thread to watch it or

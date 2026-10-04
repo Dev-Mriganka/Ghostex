@@ -247,8 +247,8 @@ pub struct ThreadTally {
 /// What a coordinator row's badge shows.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CoordinatorBadge {
-    /// The number beside the crew icon: every thread session of the coordinator. `0` draws no
-    /// number.
+    /// The number beside the crew icon: the working threads, else the waiting ones, else every
+    /// thread session of the coordinator. `0` draws no number.
     pub count: u16,
     pub tone: CoordinatorBadgeTone,
 }
@@ -264,16 +264,22 @@ pub enum CoordinatorBadgeTone {
 impl RowNesting {
     /// The coordinator row's badge.
     ///
-    /// CDXC:Coordinators 2026-10-01 DECISION:
-    /// User: "I don't like seeing 3 like this; make it just show the people icon and the total number of sessions that are part of this one." The badge is the crew icon and one number: every thread session of the coordinator still in the sidebar, whatever its state (working, waiting, finished, sleeping, or done but not closed), including worktree threads drawn under their worktree's project. A thread whose session was closed is no longer a session in the sidebar, so it does not count; coordinators close finished threads, so the number is the work still around. The tint keeps its meaning: light blue while a thread waits on someone, orange while one works. Supersedes the 2026-10-01 rule that showed the working count first and the sleeping and done counts beside it.
+    /// CDXC:Coordinators 2026-10-04 DECISION:
+    /// User: "in this state the main coordinator should show 2 working not 5" (5 threads, 2 working). The badge is the crew icon and one number: how many threads are working; when none work, how many wait on the user; when neither, the total number of thread sessions of the coordinator still in the sidebar (worktree threads included). The tint follows the number: orange when it is the working count, light blue when it is the waiting count, neutral when it is the total. Supersedes the 2026-10-01 decision ("make it just show the people icon and the total number of sessions that are part of this one"), which always showed the total.
     pub fn coordinator_badge(&self) -> CoordinatorBadge {
         let threads = self.threads;
         CoordinatorBadge {
-            count: threads.total,
-            tone: if threads.waiting > 0 {
-                CoordinatorBadgeTone::Waiting
-            } else if threads.working > 0 {
+            count: if threads.working > 0 {
+                threads.working
+            } else if threads.waiting > 0 {
+                threads.waiting
+            } else {
+                threads.total
+            },
+            tone: if threads.working > 0 {
                 CoordinatorBadgeTone::Working
+            } else if threads.waiting > 0 {
+                CoordinatorBadgeTone::Waiting
             } else {
                 CoordinatorBadgeTone::Idle
             },
