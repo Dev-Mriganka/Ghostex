@@ -253,12 +253,7 @@ async fn start_gxserver_background(build_identity: &str, version: &str) -> Resul
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    #[cfg(windows)]
-    let this_call_only =
-        placement == crate::platform::desktop_session::ServerPlacement::ThisCallOnly;
-    #[cfg(not(windows))]
-    let this_call_only = false;
-    let child_pid = spawn_detached(&mut command, this_call_only)?;
+    let child_pid = spawn_detached(&mut command)?;
 
     let status = wait_for_status(
         build_identity,
@@ -278,15 +273,6 @@ async fn start_gxserver_background(build_identity: &str, version: &str) -> Resul
             ok: false,
             product: GXSERVER_PRODUCT.to_string(),
             state: "starting".to_string(),
-        });
-    }
-    if this_call_only {
-        return Ok(StatusResponse {
-            message: format!(
-                "{} Nobody is signed in to this PC's desktop, so it runs only until this SSH call ends.",
-                status.message
-            ),
-            ..status
         });
     }
     Ok(status)
@@ -356,7 +342,7 @@ async fn start_gxserver_in_user_desktop(
 async fn hand_off_windows_foreground_start() -> Result<Option<String>> {
     use crate::platform::{
         desktop_session::{server_placement, ServerPlacement},
-        process::{spawn_server, ServerLifetime},
+        process::spawn_server,
         standard_user::current_process_is_elevated,
     };
     let placement = server_placement().context("find the Windows session gxserver may run in")?;
@@ -373,45 +359,15 @@ async fn hand_off_windows_foreground_start() -> Result<Option<String>> {
             }
             Ok(Some(status.message))
         }
-        ServerPlacement::ThisCallOnly if elevated => {
-            let (pid, process) = spawn_server(executable.as_os_str(), ServerLifetime::ThisCall)
-                .context("start gxserver without administrator rights")?;
-            eprintln!("Nobody is signed in to this PC's desktop, so gxserver runs without administrator rights as pid {pid} only until this call ends.");
-            let code = tokio::task::spawn_blocking(move || wait_for_process_exit(&process))
-                .await
-                .context("wait for gxserver")??;
-            if code != 0 {
-                return Err(anyhow!("gxserver (pid {pid}) exited with code {code}."));
-            }
-            Ok(Some(format!("gxserver (pid {pid}) exited.")))
-        }
-        ServerPlacement::ThisCallOnly => {
-            eprintln!("Nobody is signed in to this PC's desktop, so gxserver runs only until this call ends.");
-            Ok(None)
-        }
-        ServerPlacement::Here if elevated => {
-            let (pid, _process) = spawn_server(executable.as_os_str(), ServerLifetime::Detached)
+        ServerPlacement::Here | ServerPlacement::NobodySignedIn if elevated => {
+            let pid = spawn_server(executable.as_os_str())
                 .context("restart gxserver without administrator rights")?;
             Ok(Some(format!(
                 "gxserver restarted without administrator rights as pid {pid}."
             )))
         }
-        ServerPlacement::Here => Ok(None),
+        ServerPlacement::Here | ServerPlacement::NobodySignedIn => Ok(None),
     }
-}
-
-#[cfg(windows)]
-fn wait_for_process_exit(process: &std::os::windows::io::OwnedHandle) -> Result<u32> {
-    use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::System::Threading::{
-        GetExitCodeProcess, WaitForSingleObject, INFINITE,
-    };
-    unsafe { WaitForSingleObject(process.as_raw_handle(), INFINITE) };
-    let mut code = 0u32;
-    if unsafe { GetExitCodeProcess(process.as_raw_handle(), &mut code) } == 0 {
-        return Err(std::io::Error::last_os_error()).context("read gxserver's exit code");
-    }
-    Ok(code)
 }
 
 async fn stop_gxserver_control_plane(
@@ -800,22 +756,12 @@ fn json_array(values: Vec<String>) -> Value {
     Value::Array(values.into_iter().map(Value::String).collect())
 }
 
-/// `this_call_only` (Windows) keeps the server in the caller's job, so it ends with the SSH call that started it.
-fn spawn_detached(command: &mut Command, this_call_only: bool) -> Result<u32> {
+fn spawn_detached(command: &mut Command) -> Result<u32> {
     #[cfg(windows)]
     {
-        use crate::platform::process::{spawn_server, ServerLifetime};
-        let lifetime = if this_call_only {
-            ServerLifetime::ThisCall
-        } else {
-            ServerLifetime::Detached
-        };
-        return spawn_server(command.get_program(), lifetime)
-            .map(|(pid, _process)| pid)
+        return crate::platform::process::spawn_server(command.get_program())
             .with_context(|| "spawn gxserver background");
     }
-    #[cfg(not(windows))]
-    let _ = this_call_only;
     #[cfg(not(windows))]
     {
         #[cfg(unix)]

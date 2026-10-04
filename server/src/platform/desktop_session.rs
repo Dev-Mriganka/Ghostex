@@ -43,19 +43,19 @@ pub(crate) enum ServerPlacement {
     Here,
     /// This process runs in session 0 or with a network logon, and this user is signed in to the desktop session `session_id`.
     UserDesktop { session_id: u32 },
-    /// Nobody is signed in as this user: the server runs only as long as the call that started it.
-    ThisCallOnly,
+    /// Nobody is signed in as this user: the server starts detached in the background session, as before, until the app replaces it.
+    NobodySignedIn,
 }
 
 /// CDXC:PlatformSupport 2026-10-04 DECISION:
-/// The user chose "Prevent and cure" (Q15 a): Ghostex must never host the user's sessions from a gxserver in Windows' background session. A server that SSH (session 0, network logon, administrators deny-only, sometimes RedirectionGuard) started broke Codex and cua-driver (junction PATH folders), CIM queries and administrator prompts on 2026-10-03. So a caller outside the desktop starts gxserver in the signed-in user's desktop session instead; when nobody is signed in, the server lives only as long as that call, and the app replaces any such server when it opens (`gpui_local_gxserver_limited_launch` in apps/desktop).
+/// The user chose "Prevent and cure" (Q15 a): Ghostex must never host the user's sessions from a gxserver in Windows' background session. A server that SSH (session 0, network logon, administrators deny-only, sometimes RedirectionGuard) started broke Codex and cua-driver (junction PATH folders), CIM queries and administrator prompts on 2026-10-03. So a caller outside the desktop starts gxserver in the signed-in user's desktop session instead, and the app replaces any background server when it opens (`gpui_local_gxserver_limited_launch` in apps/desktop). When nobody is signed in, the user decided to "keep it running like before, so remote connections don't break" (Q26 c): a remote desktop runs `ghostex server start --json` and opens its tunnel afterwards, so a server that ended with the SSH call would never be reached.
 pub(crate) fn server_placement() -> io::Result<ServerPlacement> {
     if !launch_context::current().is_background() {
         return Ok(ServerPlacement::Here);
     }
     Ok(match user_desktop_session()? {
         Some(session_id) => ServerPlacement::UserDesktop { session_id },
-        None => ServerPlacement::ThisCallOnly,
+        None => ServerPlacement::NobodySignedIn,
     })
 }
 

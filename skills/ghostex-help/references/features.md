@@ -1677,9 +1677,8 @@ or another SSH server is already installed, the message under the button says
 what to do. When a connection needs Ghostex's background service on Windows
 and you are signed in to that computer's desktop, the service starts in your
 desktop session, so agents there work as if you had opened Ghostex yourself.
-When nobody is signed in, it runs only until that SSH connection ends, and
-opening Ghostex on the desktop later replaces it with one started from the
-desktop. The administrator prompt can only appear when the background service
+When nobody is signed in, it starts in the background as before, and opening
+Ghostex on the desktop later replaces it with one started from the desktop. The administrator prompt can only appear when the background service
 runs in your desktop session; if Ghostex says it cannot show it, quit Ghostex
 together with its background service and open it again from the Start menu.
 Leave Advanced > Windows WSL distribution blank to use the
