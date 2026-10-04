@@ -178,8 +178,10 @@ impl NativeAutomateView {
             host.main_window_bounds.center(),
             size(px(DIALOG_WIDTH), px(DIALOG_INITIAL_HEIGHT)),
         );
+        // A child window like every app modal: on Windows that makes it a popup owned by the main
+        // window, so it moves along when the main window moves (CDXC:AppModal 2026-10-04 in
+        // workspace_windows/owned_windows.rs) and stays off the taskbar and out of FancyZones.
         let options = WindowOptions {
-            #[cfg(target_os = "linux")]
             kind: crate::app::window::popup_frame::child_window_kind(),
             window_decorations: crate::app::window::popup_frame::child_window_decorations(),
             #[cfg(target_os = "linux")]
@@ -203,11 +205,21 @@ impl NativeAutomateView {
         };
         let dialog_slot = Rc::new(RefCell::new(None));
         let dialog_out = dialog_slot.clone();
+        let window_border = palette.window_border();
+        #[cfg(target_os = "macos")]
+        let main_window_native_view = host.main_window_native_view;
+        #[cfg(not(target_os = "macos"))]
+        let main_window_native_view = std::ptr::null_mut();
         let window = cx
             .open_window(options, move |window, cx| {
+                crate::app::window::popup_frame::frame_app_modal_window(window, window_border);
                 window.set_window_title("");
                 crate::app::helpers::apply_frosted_menu_blur(window);
                 window.activate_window();
+                crate::app::window::attach_gpui_app_modal_window_to_main_window(
+                    window,
+                    main_window_native_view,
+                );
                 let dialog = cx.new(|cx| AutomationDialog::new(config, view, window, cx));
                 *dialog_out.borrow_mut() = Some(dialog.clone());
                 let frame = cx.new(|_| crate::app::window::ModalWindowFrame::new(dialog, palette));
