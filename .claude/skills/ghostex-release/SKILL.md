@@ -55,6 +55,15 @@ The local checks that need macOS are **optional** and skipped on Windows:
 - `bun run release:verify` has DMG checks (`hdiutil`, `codesign`) and Homebrew
   checks. On Windows, pass `--skip-dmg --skip-brew --skip-repo` (step 8).
 - `bun run release:homebrew` is a local tap updater. Never needed; CI does it.
+- `bun run release:test` has 14 tests that cannot pass on Windows: 10 in
+  `verify-code-server-archive.test.mjs` and the 4 "rolls back a WSL Source
+  install failure" tests in `release-macos-code-server-workflow.test.mjs`. Their
+  fixtures need POSIX execute bits and symlinks, which Git Bash on NTFS can't
+  make. The dispatcher runs the whole suite and stops on any failure, so on
+  Windows run `bun run release:test` yourself first. If exactly those 14 fail
+  and nothing else does, dispatch with `--skip-local-tests`. The remote `gates`
+  job (macos-15) still runs the full suite before any publish stage. Any other
+  failure is real: fix it before dispatching.
 
 `release-preflight-fast.mjs` and `release-final-verify.mjs` resolve the repo
 root with `new URL(...).pathname` (`/C:/...` on Windows), so even skipped they
