@@ -78,10 +78,15 @@ impl NativeChatView {
                 motions.follow_paused = false;
                 drop(motions);
                 // Tail mode again without jumping: scrolling to the current top leaves it waiting
-                // until the reader is back at the bottom, where the list re-engages on its own.
+                // until the reader is back at the bottom, where the list re-engages on its own. A
+                // reader still at the bottom keeps following, so rows arriving with this frame
+                // are not left below the fold.
                 let top = self.list.logical_scroll_top();
+                let at_bottom = !super::scroll_bottom::transcript_left_bottom(&self.list);
                 self.list.set_follow_mode(FollowMode::Tail);
-                self.list.scroll_to(top);
+                if !at_bottom {
+                    self.list.scroll_to(top);
+                }
             }
         }
     }
