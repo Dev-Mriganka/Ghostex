@@ -287,7 +287,7 @@ pub(crate) fn open_workspace_window(
                 */
                 if note_workspace_window_frame(window, cx) {
                     app.close_gpui_titlebar_popup(None, window, cx);
-                    app.recycle_gpui_new_thread_picker_preload(cx);
+                    app.schedule_gpui_new_thread_picker_recycle(cx);
                 }
             })
             .detach();

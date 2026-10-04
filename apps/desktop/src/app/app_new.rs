@@ -338,6 +338,7 @@ impl GhostexGpuiApp {
                 new_thread_picker: None,
                 new_thread_picker_visible: false,
                 new_thread_picker_preloaded_agent_count: 0,
+                new_thread_picker_recycle_task: None,
                 new_thread_picker_accounts: None,
                 new_thread_picker_agents: None,
                 new_thread_picker_agents_refresh_in_flight: false,
