@@ -1431,8 +1431,10 @@ version of the Projects features in Cursor and Claude Code.
   arrow beside its agent button) and choose **New Coordinator…**, the first
   item of that menu. On the phone, open the same menu from the project's agent
   button and pick **New Coordinator…** at its top. Name it, pick
-  Claude or Codex and its model and effort (Opus 5.5 on Claude, medium effort
-  by default, which is plenty for routing work), and optionally give it a one-line goal and a first request;
+  Claude, Codex or ZCode and its model (Opus 5.5 on Claude, GLM 5.3 Flash on
+  ZCode; without a choice each agent starts on its own default) and the effort
+  the model takes — medium by default, which is plenty for routing work — and
+  optionally give it a one-line goal and a first request;
   it opens in chat. The name is what its sidebar row shows, and the
   coordinator keeps it: unlike other sessions it is not renamed from your
   first message (Rename in the sidebar still changes it; left blank, it is
@@ -1509,8 +1511,8 @@ version of the Projects features in Cursor and Claude Code.
   a status of every thread", "use a cheaper model for threads", "don't merge
   anything without asking" all work in plain words.
 
-Coordinators run on Claude or Codex; threads can be any configured agent. From
-a terminal or another agent: `ghostex coordinator create --title <name>
+Coordinators run on Claude, Codex or ZCode; threads can be any configured
+agent. From a terminal or another agent: `ghostex coordinator create --title <name>
 [--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator
 promote <session> [--goal <text>]` (make an existing session a coordinator), `ghostex coordinator status`,
 `ghostex coordinator options` (the agents, models and efforts a coordinator can use),

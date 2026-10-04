@@ -6,19 +6,19 @@
 //! SEE-ALSO: apps/desktop/src/app/window/new_coordinator_modal.rs, apps/desktop/src/app/new_coordinator_modal_lifecycle.rs, server/src/server/route_http/sessions.rs (`/api/createAgentSession` with `coordinator`).
 
 use ghostex_gx_core::{
-    ProjectKey, SessionKey, created_session, default_agent_id_for_icon, local_agent_launch_params,
+    created_session, default_agent_id_for_icon, local_agent_launch_params,
     open_remote_session_terminal, queue_startup_prompt_params, remote_agent_launch_params,
-    remote_launch_agent_id, resolve_sidebar_agent, start_provider_params,
+    remote_launch_agent_id, resolve_sidebar_agent, start_provider_params, ProjectKey, SessionKey,
 };
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 
 use super::super::gx_rpc;
 use super::terminal::REMOTE_TIMEOUT;
-use crate::GhostexGpuiApp;
 use crate::app::remote_conn::sidebar_rpc::{
-    GpuiRemoteSidebarRpcMode, gpui_remote_sidebar_rpc_failure_reason,
+    gpui_remote_sidebar_rpc_failure_reason, GpuiRemoteSidebarRpcMode,
 };
 use crate::app::window::{NewCoordinatorAgent, NewCoordinatorModel};
+use crate::GhostexGpuiApp;
 
 /// The agent families a coordinator can run on (gxserver `coordinator_agent_family_supported`).
 fn coordinator_family(agent: &Value) -> Option<&'static str> {
@@ -30,8 +30,18 @@ fn coordinator_family(agent: &Value) -> Option<&'static str> {
     match family {
         "claude" => Some("claude"),
         "codex" => Some("codex"),
+        "zcode" => Some("zcode"),
         _ => None,
     }
+}
+
+/// The family of a launcher chosen by id, for the create flows that hold only the id.
+fn coordinator_family_for_agent(hud: Option<&Value>, agent_id: &str) -> Option<&'static str> {
+    hud?.get("agents")?
+        .as_array()?
+        .iter()
+        .find(|row| row.get("agentId").and_then(Value::as_str) == Some(agent_id))
+        .and_then(coordinator_family)
 }
 
 /// The model lineup a coordinator on this family can pick from: the newest catalog this computer
@@ -98,7 +108,7 @@ fn coordinator_params(
 }
 
 impl GhostexGpuiApp {
-    /// The Claude and Codex launchers, Claude first, in launcher order.
+    /// The Claude, Codex and ZCode launchers, Claude first, in launcher order.
     pub(crate) fn gx_store_coordinator_agents(&self) -> Vec<NewCoordinatorAgent> {
         let hud = self.gx_store_launch_hud();
         let rows = hud
@@ -148,6 +158,23 @@ impl GhostexGpuiApp {
         let hud = self.gx_store_launch_hud();
         let first_request = first_request.trim().to_string();
         let (name, title_source) = coordinator_title(name);
+        // A ZCode coordinator has no launch model flag: the chosen model reaches the session as
+        // a `/model` line queued ahead of the first request (gxserver refuses it anywhere else).
+        let zcode_model_line = (coordinator_family_for_agent(hud.as_deref(), agent_id)
+            == Some("zcode"))
+        .then(|| {
+            model
+                .filter(|model| !model.is_empty())
+                .map(|model| format!("/model {model}"))
+        })
+        .flatten();
+        let mut startup_prompts: Vec<String> = Vec::new();
+        if let Some(line) = zcode_model_line {
+            startup_prompts.push(line);
+        }
+        if !first_request.is_empty() {
+            startup_prompts.push(first_request);
+        }
         if let Some(machine_id) = project.machine.remote_id().map(str::to_string) {
             let params = coordinator_params(
                 remote_agent_launch_params(
@@ -173,7 +200,7 @@ impl GhostexGpuiApp {
             let project_id = project.project_id.clone();
             cx.spawn(async move |this, cx| {
                 let result = task.await;
-                let _ = this.update(cx, |this, cx| {
+                let created = this.update(cx, |this, cx| {
                     const NOT_CREATED: &str =
                         "The remote computer could not create it. Its Ghostex may need an update.";
                     let created = match result {
@@ -183,8 +210,11 @@ impl GhostexGpuiApp {
                             Err(gpui_remote_sidebar_rpc_failure_reason(&error, NOT_CREATED))
                         }
                     };
-                    let (created_project, session_id) = match created {
-                        Ok(created) => created,
+                    match created {
+                        Ok((created_project, session_id)) => {
+                            let created_project = created_project.unwrap_or(project_id.clone());
+                            Some((created_project, session_id))
+                        }
                         Err(reason) => {
                             this.gx_store_create_toast(
                                 "warning",
@@ -192,24 +222,38 @@ impl GhostexGpuiApp {
                                 Some(&reason),
                                 cx,
                             );
-                            return;
+                            None
                         }
-                    };
-                    let created_project = created_project.unwrap_or(project_id.clone());
-                    if !first_request.is_empty() {
-                        let _ = this.start_gpui_remote_sidebar_rpc(
+                    }
+                });
+                let Ok(Some((created_project, session_id))) = created else {
+                    return;
+                };
+                // Queued one at a time, each awaited before the next starts, so the `/model`
+                // line lands before the first request.
+                for prompt in &startup_prompts {
+                    let task = this.update(cx, |this, cx| {
+                        this.start_gpui_remote_sidebar_rpc(
                             &machine_id,
                             "/api/queueSessionChatPrompt",
                             Some(queue_startup_prompt_params(
                                 &created_project,
                                 &session_id,
-                                &first_request,
+                                prompt,
                             )),
                             REMOTE_TIMEOUT,
                             GpuiRemoteSidebarRpcMode::Awaited,
                             cx,
-                        );
+                        )
+                    });
+                    match task {
+                        Ok(task) => {
+                            let _ = task.await;
+                        }
+                        Err(_) => return,
                     }
+                }
+                let _ = this.update(cx, |this, cx| {
                     let session =
                         SessionKey::remote(machine_id.as_str(), created_project, session_id);
                     let payload = open_remote_session_terminal(
@@ -275,11 +319,11 @@ impl GhostexGpuiApp {
                 start_provider_params(&created_project, &session_id),
             )
             .await;
-            if !first_request.is_empty() {
+            for prompt in &startup_prompts {
                 let _ = gx_rpc(
                     None,
                     "/api/queueSessionChatPrompt",
-                    queue_startup_prompt_params(&created_project, &session_id, &first_request),
+                    queue_startup_prompt_params(&created_project, &session_id, prompt),
                 )
                 .await;
             }

@@ -428,7 +428,44 @@ pub(crate) fn ingest_agent_hook_event(
         Value::Bool(agent_session_id_changed),
     );
     result.insert("session".to_string(), session);
+    if let Some(context) = coordinator_session_start_context(repository, lifecycle, params)? {
+        result.insert("additionalContext".to_string(), Value::String(context));
+    }
     Ok(Value::Object(result))
+}
+
+/*
+CDXC:Coordinators 2026-10-03 WHY:
+ZCode has no system-prompt or config flag its launch command could carry, so a ZCode coordinator's
+guide pointer rides the SessionStart hook: this endpoint answers the ingest with `additionalContext`
+and the hook prints it for zcode to fold into context. Only a ZCode SessionStart on a session with
+a coordinators row is answered, so every other hook response stays unchanged.
+*/
+fn coordinator_session_start_context(
+    repository: &DomainRepository<'_>,
+    lifecycle: &LifecycleParams,
+    params: &Map<String, Value>,
+) -> Result<Option<String>, DomainStateError> {
+    let agent = crate::agent_hooks::event_mapping::normalized_hook_agent_key(
+        read_text(params, "agentName")
+            .as_deref()
+            .unwrap_or_default(),
+    );
+    let is_session_start = read_text(params, "eventName")
+        .is_some_and(|event| event.eq_ignore_ascii_case("SessionStart"));
+    if !(agent == "zcode" && is_session_start) {
+        return Ok(None);
+    }
+    let coordinator = crate::coordinators::read_coordinator(
+        repository.connection(),
+        &lifecycle.project_id,
+        &lifecycle.session_id,
+    )?
+    .is_some();
+    Ok(
+        coordinator
+            .then(|| crate::coordinators::GUIDE_POINTER_COORDINATOR_INSTRUCTIONS.to_string()),
+    )
 }
 
 /// A working↔not-working flip is the only activity change the chat channel

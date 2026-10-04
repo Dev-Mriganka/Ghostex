@@ -42,8 +42,14 @@ if [ -z "$SESSION_STATE_FILE" ] && {{ [ -z "${{GHOSTEX_GLOBAL_SESSION_REF:-}}" ]
   exit 0
 fi
 
-{executable} agent-hook-notify "$SESSION_STATE_FILE" "$INPUT_ARG" "$HOOK_STATE_DIR" >/dev/null 2>/dev/null || true
-printf '%s' "$HOOK_RESPONSE"
+# The helper answers with hook context only for a ZCode coordinator's
+# SessionStart; an empty answer keeps the canned response every agent expects.
+HELPER_RESPONSE=$({executable} agent-hook-notify "$SESSION_STATE_FILE" "$INPUT_ARG" "$HOOK_STATE_DIR" 2>/dev/null || true)
+if [ -n "$HELPER_RESPONSE" ]; then
+  printf '%s' "$HELPER_RESPONSE"
+else
+  printf '%s' "$HOOK_RESPONSE"
+fi
 exit 0
 "#,
         executable = shell_quote(executable),
