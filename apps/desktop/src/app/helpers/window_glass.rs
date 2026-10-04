@@ -27,7 +27,7 @@ static WINDOW_GLASS_WALLPAPER: AtomicBool = AtomicBool::new(false);
 static WINDOW_GLASS_PICTURE_FOLLOWS_SCREEN: AtomicBool = AtomicBool::new(false);
 
 /// CDXC:Theming 2026-09-30 DECISION:
-/// User: "i'm not able to set the transparency blur level in ghostex on macos please add sliders for this (hope they can work on other oses too)". Settings has a Blur slider (`windowGlassBlurRadius`, 0 to 100 points, default 60: the main window's glass as it always was) and a Menu blur slider (`windowGlassMenuBlurRadius`, default 20: `FROSTED_MENU_BLUR_RADIUS`). Blur reaches every GPUI backend through `set_background_blur_style`: on macOS it sets the live blur, the wallpaper and picture blur and the video blur; on Windows and Linux the system draws the Desktop and windows blur and has no radius to set, so there it sets the wallpaper, picture and video blur. Menu blur is macOS only for the same reason. 0 shows what is behind the glass sharp.
+/// User: "i'm not able to set the transparency blur level in ghostex on macos please add sliders for this (hope they can work on other oses too)". Settings has a Blur slider (`windowGlassBlurRadius`, 0 to 100 points, default 60: the main window's glass as it always was) and a Menu blur slider (`windowGlassMenuBlurRadius`, default 20: `FROSTED_MENU_BLUR_RADIUS`). Blur reaches every GPUI backend through `set_background_blur_style`: on macOS it sets the live blur, the wallpaper and picture blur and the video blur; on Windows and Linux the system draws the Desktop and windows blur and has no radius to set, so there it sets the wallpaper, picture and video blur. Menu blur is macOS only for the same reason. 0 shows what is behind the glass sharp. On 2026-10-04 the user chose "hide the Blur slider on Windows only while 'What shows behind the glass' is 'Desktop and windows'" (it does nothing there), and Menu blur is hidden off macOS (`availability.rs` in the settings catalog).
 static WINDOW_GLASS_BLUR_RADIUS: AtomicU8 = AtomicU8::new(WINDOW_GLASS_BLUR_RADIUS_DEFAULT);
 
 /// The main window glass's blur radius in points until Settings says otherwise.
@@ -159,15 +159,16 @@ struct AppliedWindowGlass {
 /// with `window_glass_active_in` so they stay opaque there.
 static MAIN_WINDOW_ID: AtomicU64 = AtomicU64::new(u64::MAX);
 
-/// Default coverage of the sidebar's and the work area's tints over the blurred desktop: point 20
-/// of the Transparency strength slider (`transparencyStrengthPatch` in
-/// packages/core-ui/settings-modal/theme-simple-controls.tsx (deleted 2026-10-01)), which keeps the sidebar 7 points
+/// Default coverage of the sidebar's and the work area's tints over the blurred desktop: point 10
+/// of the Transparency strength slider (CDXC:Theming 2026-10-04 DECISION on the tint defaults in
+/// packages/settings-catalog/src/data/defaults.rs; `transparencyStrengthPatch` in
+/// packages/core-ui/settings-modal/theme-simple-controls.tsx (deleted 2026-10-01)), which keeps the sidebar a little
 /// more solid than the work area. SEE-ALSO: the CDXC:Theming 2026-09-25 DECISION on
 /// `DEFAULT_WINDOW_GLASS_SIDEBAR_OPACITY_DARK_PERCENT` in packages/shared/ghostex-settings/types.ts (deleted 2026-10-01).
-const SIDEBAR_GLASS_ALPHA_DARK: f32 = 0.88;
-const SIDEBAR_GLASS_ALPHA_LIGHT: f32 = 0.93;
-const WORK_AREA_GLASS_ALPHA_DARK: f32 = 0.81;
-const WORK_AREA_GLASS_ALPHA_LIGHT: f32 = 0.86;
+const SIDEBAR_GLASS_ALPHA_DARK: f32 = 0.94;
+const SIDEBAR_GLASS_ALPHA_LIGHT: f32 = 0.97;
+const WORK_AREA_GLASS_ALPHA_DARK: f32 = 0.91;
+const WORK_AREA_GLASS_ALPHA_LIGHT: f32 = 0.93;
 
 /// CDXC:Theming 2026-09-23 DECISION:
 /// User: "implement sliders for the glass for sidebar vs main area (2 different sliders for dark mode, and 2 for light mode)", then "can we make the sidebar darker than main area somehow? currently this isn't possible / i feel would be nicer if they are separate and each can be modified freely? not doubling up the transparency for workarea when i do for sidebar??". Under glass the sidebar and the work area each paint their own tint straight over the blurred desktop, and nothing tints the window underneath both, so either area can be the darker one. Settings holds four percentages (`windowGlassSidebarOpacityDark`, `windowGlassWorkAreaTintDark`, `windowGlassSidebarOpacityLight`, `windowGlassWorkAreaTintLight`) whose defaults are the constants above. This supersedes the same day's shell tint under the whole window with the work area's value as an extra layer over it; a saved extra layer (`windowGlassMainOpacity*`) is carried over as the coverage the two layers added up to.
@@ -246,10 +247,17 @@ fn load_glass_alpha(source: &AtomicU8) -> f32 {
 /// Returns whether the resolved state changed.
 pub(crate) fn refresh_window_glass(object: &serde_json::Map<String, serde_json::Value>) -> bool {
     let light = CHROME_LIGHT_APPEARANCE.load(Ordering::Relaxed);
+    // A setting never saved takes the platform's default (Never on Windows, Dark only elsewhere).
     let wanted = match object
         .get("windowGlass")
         .and_then(serde_json::Value::as_str)
-    {
+        .or_else(|| {
+            ghostex_settings_catalog::availability::default_value_on(
+                ghostex_settings_catalog::Platform::current(),
+                "windowGlass",
+            )
+            .and_then(ghostex_settings_catalog::J::as_str)
+        }) {
         Some("frosted") => true,
         Some("opaque") => false,
         _ => !light,

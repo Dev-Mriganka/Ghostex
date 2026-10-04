@@ -7430,7 +7430,10 @@
           "value": "opaque"
         }
       ],
-      "agentWritable": true
+      "agentWritable": true,
+      "platformDefaults": {
+        "windows": "opaque"
+      }
     },
     {
       "key": "windowGlassSource",
@@ -7702,12 +7705,13 @@
       "sectionTitle": "Theme",
       "type": "number",
       "default": 60,
-      "agentWritable": true
+      "agentWritable": true,
+      "availability": "Not shown on Windows while What shows behind the glass is Desktop and windows."
     },
     {
       "key": "windowGlassMenuBlurRadius",
       "title": "Menu blur",
-      "subtitle": "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp. macOS only.",
+      "subtitle": "How soft what shows behind menus and tooltips looks, in points. 0 shows it sharp.",
       "tab": "theme",
       "tabTitle": "Theme",
       "group": "appearance",
@@ -7716,7 +7720,8 @@
       "sectionTitle": "Theme",
       "type": "number",
       "default": 20,
-      "agentWritable": true
+      "agentWritable": true,
+      "availability": "Only on macOS."
     },
     {
       "key": "windowGlassSidebarOpacityDark",
@@ -7729,7 +7734,7 @@
       "section": "theming",
       "sectionTitle": "Theme",
       "type": "number",
-      "default": 88,
+      "default": 94,
       "agentWritable": true
     },
     {
@@ -7743,7 +7748,7 @@
       "section": "theming",
       "sectionTitle": "Theme",
       "type": "number",
-      "default": 81,
+      "default": 91,
       "agentWritable": true
     },
     {
@@ -7757,7 +7762,7 @@
       "section": "theming",
       "sectionTitle": "Theme",
       "type": "number",
-      "default": 93,
+      "default": 97,
       "agentWritable": true
     },
     {
@@ -7771,7 +7776,7 @@
       "section": "theming",
       "sectionTitle": "Theme",
       "type": "number",
-      "default": 86,
+      "default": 93,
       "agentWritable": true
     },
     {

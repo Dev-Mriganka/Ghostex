@@ -225,7 +225,12 @@ impl ThemeTab {
                 cx,
             ));
         }
-        if glass_on && visible("windowGlassBlurRadius") {
+        let blur_hidden = ghostex_settings_catalog::availability::row_hidden(
+            ghostex_settings_catalog::Platform::current(),
+            "windowGlassBlurRadius",
+            |key| Some(values.string(key)),
+        );
+        if glass_on && visible("windowGlassBlurRadius") && !blur_hidden {
             rows.push(slider_number_field(
                 self,
                 &p,

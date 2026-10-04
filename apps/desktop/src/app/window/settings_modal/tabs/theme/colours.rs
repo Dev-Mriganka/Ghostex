@@ -547,7 +547,8 @@ pub(super) fn colourfulness_patch(step: usize) -> Map<String, Value> {
     patch
 }
 
-/// `TRANSPARENCY_STRENGTH_*` and the tints the shipped default sits on.
+/// `TRANSPARENCY_STRENGTH_*` and the anchor the strength-to-tint curve is drawn from: strength 20 is
+/// 88/93, and the shipped default is strength 10 (94/91/97/93 in the settings catalog).
 pub(super) const STRENGTH_MIN: f64 = 0.0;
 pub(super) const STRENGTH_MAX: f64 = 100.0;
 pub(super) const STRENGTH_STEP: f64 = 5.0;

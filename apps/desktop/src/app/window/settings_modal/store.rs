@@ -650,10 +650,14 @@ impl SettingsStore {
     fn refresh_search(&mut self) {
         let show_advanced = self.show_advanced();
         let show_experimental = self.bool("showBetaFeatures");
-        let hidden_keys =
+        let mut hidden_keys =
             ghostex_settings_catalog::built_in_extensions::hidden_setting_keys_with(|key| {
                 Some(self.bool(key))
             });
+        hidden_keys.extend(ghostex_settings_catalog::availability::hidden_row_keys(
+            ghostex_settings_catalog::Platform::current(),
+            |key| Some(self.string(key)),
+        ));
         if self.general_search.query != self.search_query
             || self.general_search.show_advanced != show_advanced
             || self.general_search.show_experimental != show_experimental

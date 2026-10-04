@@ -153,10 +153,31 @@ pub(super) fn read_settings_file() -> CliResult<Map<String, Value>> {
     }
 }
 
+/// The catalog default of `entry` on this computer: a platform default (Enable transparency is
+/// Never on Windows) wins over the shared one the catalog JSON carries.
+fn effective_default(entry: &CatalogEntry) -> Option<Value> {
+    ghostex_settings_catalog::availability::platform_default(
+        ghostex_settings_catalog::Platform::current(),
+        &entry.key,
+    )
+    .map(|value| ghostex_settings_catalog::ToJson::to_json(value).to_value())
+    .or_else(|| entry.default.clone())
+}
+
+/// Whether Settings leaves the row out on this computer for the saved values (Blur on Windows
+/// while the glass shows the desktop, Menu blur off macOS).
+fn hidden_here(entry: &CatalogEntry, file: &Map<String, Value>) -> bool {
+    ghostex_settings_catalog::availability::row_hidden(
+        ghostex_settings_catalog::Platform::current(),
+        &entry.key,
+        |key| file.get(key).and_then(Value::as_str).map(str::to_string),
+    )
+}
+
 fn current_value(entry: &CatalogEntry, file: &Map<String, Value>) -> (Value, &'static str) {
     match file.get(&entry.key) {
         Some(value) if !value.is_null() => (value.clone(), "file"),
-        _ => (entry.default.clone().unwrap_or(Value::Null), "default"),
+        _ => (effective_default(entry).unwrap_or(Value::Null), "default"),
     }
 }
 
@@ -232,8 +253,8 @@ fn entry_json(entry: &CatalogEntry, file: &Map<String, Value>) -> Value {
     object.insert("section".into(), json!(entry.section));
     object.insert("sectionTitle".into(), json!(entry.section_title));
     object.insert("type".into(), json!(entry.value_type));
-    if let Some(default) = &entry.default {
-        object.insert("default".into(), default.clone());
+    if let Some(default) = effective_default(entry) {
+        object.insert("default".into(), default);
     }
     if let Some(options) = &entry.options {
         object.insert(
@@ -319,6 +340,7 @@ fn list_command(args: &[String]) -> CliResult<()> {
     let entries: Vec<&CatalogEntry> = catalog
         .settings
         .iter()
+        .filter(|entry| !hidden_here(entry, &file))
         .filter(|entry| !writable_only || entry.agent_writable)
         .filter(|entry| tab_filter.as_deref().is_none_or(|tab| entry.tab == tab))
         .collect();
@@ -404,8 +426,11 @@ fn get_command(args: &[String]) -> CliResult<()> {
         println!("  about:     {}", entry.subtitle);
     }
     println!("  type:      {}", type_summary(entry));
-    if let Some(default) = &entry.default {
-        println!("  default:   {}", format_value(default));
+    if let Some(default) = effective_default(entry) {
+        println!("  default:   {}", format_value(&default));
+    }
+    if hidden_here(entry, &file) {
+        println!("  note:      Settings does not show this row on this computer right now.");
     }
     println!(
         "  source:    {}",
@@ -682,7 +707,7 @@ fn reset_command(args: &[String]) -> CliResult<()> {
     if !entry.agent_writable {
         return Err(not_writable_error(entry));
     }
-    let default = entry.default.clone().ok_or_else(|| {
+    let default = effective_default(entry).ok_or_else(|| {
         CliError::Other(format!(
             "\"{}\" has no catalog default to reset to.",
             entry.key

@@ -90,8 +90,24 @@ fn render_entry(entry: &CatalogEntry) -> String {
     } else {
         format!(" Option labels: {option_labels}.")
     };
+    let platform_text: String = entry
+        .platform_defaults
+        .iter()
+        .map(|(platform, value)| {
+            format!(
+                " Default on {}: {}.",
+                crate::availability::platform_name(*platform),
+                format_default(Some(value))
+            )
+        })
+        .collect();
+    let availability_text = entry
+        .availability
+        .as_ref()
+        .map(|note| format!(" {note}"))
+        .unwrap_or_default();
     format!(
-        "- **{}** `{}` ({}){flag_text}: {}{option_text}",
+        "- **{}** `{}` ({}){flag_text}: {}{option_text}{platform_text}{availability_text}",
         entry.title,
         entry.key,
         describe_type(entry),

@@ -173,6 +173,7 @@ impl SettingsCatalog {
         }
         let mut defaults = Map::new();
         for (key, value) in catalog::defaults() {
+            let value = catalog::availability::platform_default(platform, key).unwrap_or(value);
             defaults.insert(key.to_string(), value.to_json().to_value());
         }
         Self {

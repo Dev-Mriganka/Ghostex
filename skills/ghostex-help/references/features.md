@@ -2086,13 +2086,15 @@ dark theme's tint hue, and a neutral tint keeps the sky-blue accent.
 Window glass lets the blurred desktop show through the sidebar, the work area,
 terminals, and chat on macOS, Windows and Linux. On macOS and Windows, menus and most dialogs (Rename
 Session, Quick Access and the like) turn frosted to match. The Transparency group's Enable
-transparency switch turns it on (Dark only, the default) or off, and
+transparency switch turns it on (Dark only, the default on macOS and Linux; Never, so
+the window is fast and solid, on Windows) or off, and
 Strength sets how see-through it is, from 0 (fully solid) to 100 (fully clear); the default
-is 20. Blur sets how soft what shows behind the window looks, from 0 (sharp) to 100 points;
-the default is 60. On Windows and Linux, Desktop and windows uses the system's own blur, so
-there Blur softens the wallpaper, picture and video (`windowGlassBlurRadius`). On macOS,
-Menu blur under More transparency options does the same for menus and tooltips (default 20;
-menus opened after the change use it) (`windowGlassMenuBlurRadius`). More transparency options goes
+is 10. Blur sets how soft what shows behind the window looks, from 0 (sharp) to 100 points;
+the default is 60. On Windows, Desktop and windows uses the system's own blur, which has no
+setting, so Blur only shows there once What shows behind the glass is Wallpaper only, Custom
+image or Live, where it softens the wallpaper, picture and video (`windowGlassBlurRadius`).
+On macOS, Menu blur under More transparency options does the same for menus and tooltips
+(default 20; menus opened after the change use it; macOS only) (`windowGlassMenuBlurRadius`). More transparency options goes
 in the order you decide: 1 what shows behind the glass, 2 the pictures or videos,
 3 their position, then Fine-tune the tints and Use transparency (Dark only,
 Always, or Never). With Dark only, light mode stays opaque, so the light-mode

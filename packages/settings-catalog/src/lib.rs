@@ -12,6 +12,7 @@
 //! To add a setting: give it a default in `data/defaults.rs`, a row in the `general/` or `pages/`
 //! file of the page that shows it, and run `cargo xtask help-generate`.
 
+pub mod availability;
 pub mod built_in_extensions;
 mod data;
 mod general;
