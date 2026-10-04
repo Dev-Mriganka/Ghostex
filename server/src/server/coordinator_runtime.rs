@@ -817,6 +817,58 @@ pub(crate) fn prepare_coordinator_create_params(
     Ok(params)
 }
 
+/// `/api/promoteCoordinator`: makes an existing session a coordinator, then queues its playbook
+/// in the session's chat queue, which hands it over only once the agent is idle (never mid-turn).
+/// See the CDXC:Coordinators decision on `promote_session_to_coordinator`.
+pub(crate) fn promote_coordinator(
+    state: &AppState,
+    db: &rusqlite::Connection,
+    repository: &DomainRepository<'_>,
+    params: &Map<String, Value>,
+) -> std::result::Result<Value, DomainStateError> {
+    let role_file = coordinators::ensure_coordinator_role_file(&state.paths).map_err(|error| {
+        DomainStateError {
+            code: "internalError",
+            message: format!("Could not write the coordinator role file: {error}"),
+        }
+    })?;
+    let promotion = coordinators::promote_session_to_coordinator(
+        db,
+        state.metadata.server_id.as_str(),
+        params,
+        &role_file,
+    )?;
+    let (project_id, session_id) = &promotion.key;
+    schedule_presentation_session_delta(state, db, repository, project_id, session_id)?;
+    let mut queue_params = Map::new();
+    queue_params.insert("projectId".to_string(), json!(project_id));
+    queue_params.insert("sessionId".to_string(), json!(session_id));
+    queue_params.insert("text".to_string(), json!(promotion.playbook_message));
+    let playbook_error = match crate::session_chat_queue::handle_session_chat_queue_endpoint(
+        &state.paths,
+        state.metadata.server_id.as_str(),
+        "/api/queueSessionChatPrompt",
+        &queue_params,
+    ) {
+        Ok(result) => {
+            if result.broadcast {
+                crate::session_chat_queue_runtime::broadcast_session_chat_queue_state(
+                    state, project_id, session_id,
+                );
+            }
+            None
+        }
+        Err(error) => Some(error.message),
+    };
+    Ok(json!({
+        "ok": true,
+        "globalRef": crate::ids::create_global_session_ref(state.metadata.server_id.as_str(), project_id, session_id),
+        "title": promotion.title,
+        "playbookQueued": playbook_error.is_none(),
+        "playbookError": playbook_error,
+    }))
+}
+
 pub(crate) fn handle_coordinator_http(
     state: &AppState,
     endpoint_path: &str,

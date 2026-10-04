@@ -295,4 +295,43 @@ impl GhostexGpuiApp {
         })
         .detach();
     }
+
+    /// Makes an existing session of this computer a coordinator (`/api/promoteCoordinator`). The
+    /// session keeps running untouched; gxserver queues its playbook for after the current turn.
+    pub(crate) fn gx_store_promote_coordinator(
+        &mut self,
+        sidebar_session_id: &str,
+        goal: &str,
+        cx: &mut gpui::Context<Self>,
+    ) {
+        let Some(session) = SessionKey::parse_sidebar_session_id(sidebar_session_id) else {
+            return;
+        };
+        if !session.machine.is_local() {
+            return;
+        }
+        let params = json!({
+            "projectId": session.project_id,
+            "sessionId": session.session_id,
+            "goal": goal.trim(),
+        });
+        cx.spawn(async move |this, cx| {
+            let result = gx_rpc(None, "/api/promoteCoordinator", params).await;
+            let _ = this.update(cx, |this, cx| match result {
+                Ok(_) => this.gx_store_create_toast(
+                    "info",
+                    "Now a coordinator",
+                    Some("Its playbook reaches it once its current turn is over."),
+                    cx,
+                ),
+                Err(error) => this.gx_store_create_toast(
+                    "warning",
+                    "Not made a coordinator",
+                    Some(&error.message),
+                    cx,
+                ),
+            });
+        })
+        .detach();
+    }
 }

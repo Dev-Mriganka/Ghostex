@@ -117,7 +117,11 @@ view from the strip.
   Cmd+Shift+O go to VS Code instead (New File, Go to Symbol).
   A new chat that you leave without typing anything closes on its own, so empty
   sessions do not pile up in the sidebar, and pressing Cmd+Shift+O again while
-  one is open takes you back to it. Once you type or send something it stays
+  one is open takes you back to it. Starting a new session in a project (the
+  hotkey, the project's agent button or menu, the New Thread picker, or a
+  project's agent on the phone) also closes that project's other sessions that are
+  still completely empty: nothing sent, no chat draft, nothing queued, and no
+  text in the agent's input box. Once you type or send something it stays
   like any other session.
   Cmd+Option+Arrow moves focus between the session panes and the Commands pane;
   it skips the view panel.
@@ -1433,6 +1437,17 @@ version of the Projects features in Cursor and Claude Code.
   first message (Rename in the sidebar still changes it; left blank, it is
   named once from its first conversation). A project can have several
   coordinators, one per stream of work.
+- **Turn a session into a coordinator**: right-click a Claude or Codex
+  session in the sidebar, open **Advanced** and choose **Make Coordinator**
+  (optionally with a goal); on the phone it is in the session's menu too.
+  The session keeps its conversation and is never restarted or interrupted:
+  it gets the crown right away, and the coordinator playbook waits in its
+  chat queue until its current turn is over. The next time the session
+  starts again on its own (waking from sleep, a Full Reload, an app
+  restart) it runs with the coordinator role built in, like one made with
+  New Coordinator. Sessions it started before are not its threads yet; ask
+  it to adopt them. A thread of another coordinator, a session in a box, or
+  a draft cannot be made a coordinator.
 - **Threads in the sidebar**: a coordinator's row shows a crown in
   place of its agent's logo, and a crew icon
   with one number: how many of its threads are working; when none are
@@ -1495,7 +1510,8 @@ version of the Projects features in Cursor and Claude Code.
 
 Coordinators run on Claude or Codex; threads can be any configured agent. From
 a terminal or another agent: `ghostex coordinator create --title <name>
-[--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator status`,
+[--model <m>] [--effort <e>] [--goal <text>] [--task <first request>]`, `ghostex coordinator
+promote <session> [--goal <text>]` (make an existing session a coordinator), `ghostex coordinator status`,
 `ghostex coordinator options` (the agents, models and efforts a coordinator can use),
 `ghostex coordinator start-thread --title <title> --task <brief> [--worktree]
 [--agent <id>] [--model <m>] [--effort <e>]`, `ghostex coordinator resolve
@@ -2133,8 +2149,8 @@ Related settings: `sidebarTheme`, `darkThemePreset`, `lightThemePreset`,
 ## Sending feedback
 
 The chat-bubble button at the top of the sidebar, after Search, opens Send
-Feedback (when the sidebar is too narrow it moves into the sidebar menu with
-Search and Notifications). Write what is broken, confusing or missing and paste
+Feedback (when the sidebar is too narrow the button moves into the sidebar
+menu; Search and Notifications always stay in the top row). Write what is broken, confusing or missing and paste
 screenshots into the text box with Cmd+V (Ctrl+V on Windows and Linux): up to
 five PNG, JPEG or WebP images of 5 MB each; a larger PNG screenshot is scaled
 down to fit. Review then shows the exact GitHub issue, title and description,

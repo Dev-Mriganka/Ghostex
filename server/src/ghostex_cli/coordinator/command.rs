@@ -28,6 +28,7 @@ pub(crate) fn run(args: &[String]) -> CliResult<()> {
             Ok(())
         }
         "create" => create(&parsed),
+        "promote" => promote(&parsed),
         "options" => options(&parsed),
         "list" => list(&parsed),
         "status" => status(&parsed),
@@ -223,6 +224,52 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
         println!("Created coordinator \"{title}\" ({reference}).");
         println!("Talk to it in Ghostex, or send it work with: ghostex agents send {reference} \"<request>\"");
     }
+    Ok(())
+}
+
+/// `promote [<session-ref>]`: makes an existing Claude or Codex session (the calling session when
+/// no ref is given) a coordinator without restarting or interrupting it; see
+/// `promote_session_to_coordinator` in server/src/coordinators/promote.rs.
+fn promote(parsed: &ParsedArgs) -> CliResult<()> {
+    let base = server_flags(&parsed.flags);
+    let (session, flags) = match parsed.rest.first().map(String::as_str) {
+        Some(reference) => resolve_session(reference, &base)?,
+        None => {
+            let caller = agents::caller().map_err(|error| {
+                CliError::Other(format!(
+                    "{error} Outside an agent session, pass the session to promote: ghostex coordinator promote <session-ref>."
+                ))
+            })?;
+            let flags = agents::inventory_flags(&base, agents::text(&caller, "globalRef"))?;
+            (caller, flags)
+        }
+    };
+    let mut params = json!({
+        "projectId": session["projectId"],
+        "sessionId": session["sessionId"],
+    });
+    if let Some(goal) = flag_text(&parsed.flags, "goal") {
+        params["goal"] = json!(goal);
+    }
+    let result = call_gxserver_rpc("/api/promoteCoordinator", &params, &flags)?;
+    if parsed.flags.truthy("json") {
+        print_json(&result);
+        return Ok(());
+    }
+    let reference = agents::text(&result, "globalRef");
+    println!(
+        "\"{}\" ({reference}) is now a coordinator. Its running turn was not interrupted.",
+        agents::text(&result, "title")
+    );
+    if result["playbookQueued"].as_bool() == Some(true) {
+        println!("Its playbook is queued and reaches it once it is idle; its next resume loads the role as a system prompt.");
+    } else {
+        println!(
+            "Its playbook could not be queued ({}). Send it with: ghostex agents send {reference} \"Run ghostex coordinator guide and follow it from now on.\"",
+            agents::text(&result, "playbookError")
+        );
+    }
+    println!("Sessions it started earlier are not its threads yet; adopt each with: ghostex coordinator link <session-ref> --coordinator {reference}");
     Ok(())
 }
 

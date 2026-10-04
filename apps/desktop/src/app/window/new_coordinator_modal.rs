@@ -625,3 +625,158 @@ impl ModalCornerClose for GpuiNewCoordinatorModalWindow {
         self.cancel(window, cx);
     }
 }
+
+pub(crate) const MAKE_COORDINATOR_MODAL_INITIAL_HEIGHT: f32 = 330.0;
+
+pub(crate) enum MakeCoordinatorModalCommand {
+    Make { goal: String },
+    Cancel,
+}
+
+pub(crate) type MakeCoordinatorModalHost = Rc<dyn Fn(MakeCoordinatorModalCommand, &mut App)>;
+
+/// The Make Coordinator dialog: the session's Advanced > Make Coordinator. One optional field
+/// (the goal) and a confirm, in the New Coordinator dialog's look.
+pub(crate) struct GpuiMakeCoordinatorModalWindow {
+    host: MakeCoordinatorModalHost,
+    palette: ModalPalette,
+    session_title: String,
+    goal_input: Entity<InputState>,
+    goal: String,
+    fit: ModalFit,
+    focus_handle: FocusHandle,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl GpuiMakeCoordinatorModalWindow {
+    pub(crate) fn new(
+        session_title: String,
+        palette: ModalPalette,
+        host: MakeCoordinatorModalHost,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let goal_input = cx.new(|cx| InputState::new(window, cx).placeholder(GOAL_PLACEHOLDER));
+        let subscriptions = vec![cx.subscribe_in(
+            &goal_input,
+            window,
+            |this: &mut Self, input, event: &InputEvent, _window, cx| {
+                if matches!(event, InputEvent::Change) {
+                    this.goal = input.read(cx).value().to_string();
+                    cx.notify();
+                }
+            },
+        )];
+        goal_input.update(cx, |input, cx| input.focus(window, cx));
+        Self {
+            host,
+            palette,
+            session_title,
+            goal_input,
+            goal: String::new(),
+            fit: ModalFit::fixed(),
+            focus_handle: cx.focus_handle(),
+            _subscriptions: subscriptions,
+        }
+    }
+
+    fn close_window_and_send(
+        &mut self,
+        command: MakeCoordinatorModalCommand,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        window.remove_window();
+        (self.host)(command, cx);
+    }
+
+    fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_window_and_send(MakeCoordinatorModalCommand::Cancel, window, cx);
+    }
+
+    fn make(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let goal = self.goal.trim().to_string();
+        self.close_window_and_send(MakeCoordinatorModalCommand::Make { goal }, window, cx);
+    }
+
+    fn on_enter_action(&mut self, _: &Enter, window: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        self.make(window, cx);
+    }
+
+    fn on_escape_action(&mut self, _: &Escape, window: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        self.cancel(window, cx);
+    }
+
+    fn on_key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        match event.keystroke.key.as_str() {
+            "escape" => self.cancel(window, cx),
+            "enter" if !event.is_held => self.make(window, cx),
+            _ => return,
+        }
+        cx.stop_propagation();
+    }
+}
+
+impl Render for GpuiMakeCoordinatorModalWindow {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let p = self.palette;
+        let description = format!(
+            "\"{}\" keeps its conversation and keeps running: nothing restarts or interrupts it. It gets the crown now, and its coordinator playbook arrives once its current turn is over.",
+            self.session_title
+        );
+        let body = v_flex()
+            .w_full()
+            .gap(px(8.0))
+            .child(modal_section_title(&p, FIELD_GOAL))
+            .child(modal_text_input(&p, &self.goal_input, false, window, cx))
+            .child(modal_hint(
+                &p,
+                "Sessions it started before are not its threads yet; ask it to adopt them (ghostex coordinator link).",
+            ))
+            .into_any_element();
+        let cancel = modal_action_button(
+            &p,
+            "make-coordinator-cancel",
+            CANCEL,
+            None,
+            ModalButtonTone::Neutral,
+            false,
+            |this, window, cx| this.cancel(window, cx),
+            cx,
+        );
+        let make = modal_action_button(
+            &p,
+            "make-coordinator-confirm",
+            "Make Coordinator",
+            None,
+            ModalButtonTone::Primary,
+            false,
+            |this, window, cx| this.make(window, cx),
+            cx,
+        );
+        modal_shell(
+            &p,
+            "ghostex-gpui-make-coordinator-modal",
+            &self.focus_handle,
+            &self.fit,
+            Self::on_key_down,
+            vec![
+                modal_header(&p, "Make Coordinator", Some(description)),
+                body,
+            ],
+            modal_footer(vec![cancel, make]),
+            None,
+            cx,
+        )
+        .capture_action(cx.listener(Self::on_enter_action))
+        .capture_action(cx.listener(Self::on_escape_action))
+    }
+}
+
+impl ModalCornerClose for GpuiMakeCoordinatorModalWindow {
+    fn close_from_corner(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel(window, cx);
+    }
+}

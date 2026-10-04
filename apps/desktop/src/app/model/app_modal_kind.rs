@@ -45,6 +45,8 @@ pub(crate) enum GpuiAppModalKind {
     UpdateAvailable,
     /// Name, agent, goal and first request of a new coordinator (new_coordinator_modal_lifecycle.rs).
     NewCoordinator,
+    /// Make an existing session a coordinator, with an optional goal (new_coordinator_modal_lifecycle.rs).
+    MakeCoordinator,
     /// Send Feedback, from the sidebar's chat-bubble button (feedback_modal_lifecycle.rs).
     Feedback,
 }
@@ -88,6 +90,7 @@ impl GpuiAppModalKind {
             }
             "updateAvailable" => Some(Self::UpdateAvailable),
             "newCoordinator" => Some(Self::NewCoordinator),
+            "makeCoordinator" => Some(Self::MakeCoordinator),
             "feedback" => Some(Self::Feedback),
             _ => None,
         }
@@ -129,6 +132,7 @@ impl GpuiAppModalKind {
             Self::Extension(id) => extension_modal_id(id),
             Self::UpdateAvailable => "updateAvailable",
             Self::NewCoordinator => "newCoordinator",
+            Self::MakeCoordinator => "makeCoordinator",
             Self::Feedback => "feedback",
         }
     }
@@ -168,6 +172,7 @@ impl GpuiAppModalKind {
             Self::Extension(_) => "Ghostex Extension",
             Self::UpdateAvailable => "Ghostex Update",
             Self::NewCoordinator => "Ghostex New Coordinator",
+            Self::MakeCoordinator => "Ghostex Make Coordinator",
             Self::Feedback => "Ghostex Send Feedback",
         }
     }
@@ -312,6 +317,10 @@ impl GpuiAppModalKind {
                 px(crate::app::window::NEW_COORDINATOR_MODAL_WIDTH),
                 px(crate::app::window::NEW_COORDINATOR_MODAL_INITIAL_HEIGHT),
             ),
+            Self::MakeCoordinator => size(
+                px(crate::app::window::NEW_COORDINATOR_MODAL_WIDTH),
+                px(crate::app::window::MAKE_COORDINATOR_MODAL_INITIAL_HEIGHT),
+            ),
             Self::Feedback => size(
                 px(crate::app::window::FEEDBACK_MODAL_WIDTH),
                 px(crate::app::window::FEEDBACK_MODAL_INITIAL_HEIGHT),
@@ -436,8 +445,11 @@ impl GpuiAppModalKind {
             Self::MermaidDiagram | Self::MarkdownTable => serde_json::json!({
                 "modal": self.modal_id(), "source": "", "type": "open",
             }),
-            // A New Coordinator open names its project, which only the sidebar knows.
-            Self::Extension(_) | Self::NewCoordinator => serde_json::Value::Null,
+            // A New Coordinator open names its project and a Make Coordinator open its session,
+            // which only the sidebar knows.
+            Self::Extension(_) | Self::NewCoordinator | Self::MakeCoordinator => {
+                serde_json::Value::Null
+            }
             Self::UpdateAvailable => serde_json::json!({
                 "modal": self.modal_id(),
                 "type": "open",
