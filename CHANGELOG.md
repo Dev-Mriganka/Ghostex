@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 10.11.1 - 2026-10-04
+
+**Ghostex 10.11.1 is out.** On Windows, Ghostex's small pop-ups now stay with Ghostex instead of floating over other apps, and the agent menu keeps all its rows.
+
+### 🪟 Windows
+- **The chat's scroll-down and Esc pills, tooltips, toasts and menus no longer stay on top of other apps** after you switch away from Ghostex, including when one opens while Ghostex is in the background.
+- **The agent menu keeps its last rows,** New Coordinator… and Configure, when it opens right after a smaller menu.
+
 ## 10.11.0 - 2026-10-04
 
 **Ghostex 10.11.0 is out.** Send feedback straight from the sidebar, new threads fill in and agents start sooner, Freebuff and seven more agents get a status line, and on Windows the window drags smoothly with its dialogs, menus and toasts following along.
