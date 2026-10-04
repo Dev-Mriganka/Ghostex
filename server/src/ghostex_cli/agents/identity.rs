@@ -157,10 +157,13 @@ fn header_value(row: &Value, key: &str) -> String {
 /// User: the block must not render as a heading. The old `MESSAGE FROM` header ended in a dashed line, which Markdown reads as a setext underline, so the chat turned the whole header into an h2. A blank line now separates the block from the body.
 /// CDXC:Cli 2026-10-05 DECISION:
 /// User: move the block BELOW the body (identity stays in every message), so Claude and Codex title the session from the task text instead of the sender's `Session:` title. Supersedes the 2026-09-17 placement at the top.
+/// CDXC:Cli 2026-10-05 DECISION:
+/// User: a body that starts with `/` or `!` (after leading whitespace) keeps the block FIRST, as before, so the receiving agent never runs the body's first line as a slash or shell command.
 /// SEE-ALSO: packages/gx-chat-core/src/transcript/agent_message.rs parses the block in both positions (and the old dashed one) into the chat's message card; server/src/coordinators/brief.rs `agent_message` writes the same block.
 pub(crate) fn message(sender: &Value, body: &str) -> String {
     let sender = summary(sender);
-    format!("{}\n\nMessage from another agent\nAgent: {}\nSession: {}\nSession ID: {}\nAgent ID: {}\nAgent Session ID: {}\nReply to: {}",
-        body, header_value(&sender, "agentName"), header_value(&sender, "title"), header_value(&sender, "sessionId"),
-        header_value(&sender, "agentId"), header_value(&sender, "agentSessionId"), header_value(&sender, "globalRef"))
+    let block = format!("Message from another agent\nAgent: {}\nSession: {}\nSession ID: {}\nAgent ID: {}\nAgent Session ID: {}\nReply to: {}",
+        header_value(&sender, "agentName"), header_value(&sender, "title"), header_value(&sender, "sessionId"),
+        header_value(&sender, "agentId"), header_value(&sender, "agentSessionId"), header_value(&sender, "globalRef"));
+    crate::coordinators::place_agent_message_block(&block, body)
 }

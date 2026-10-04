@@ -45,17 +45,29 @@ fn header_value(value: &str) -> String {
 /// Thread briefs and thread reports use the block `ghostex agents send` writes, so every chat (desktop, web, phone) already draws them as "Message from" cards and the coordinator already knows to answer the `Reply to` reference.
 /// CDXC:Cli 2026-10-05 DECISION:
 /// User: the sender block goes BELOW the message body, so Claude and Codex title a session from the task text instead of the sender's `Session:` title; identity stays in every message. The block itself is unchanged (opener, six labelled lines, `Reply to` last) and follows the body after a blank line. This supersedes the 2026-09-17 decision that put it first; transcripts recorded with the block first still parse.
+/// CDXC:Cli 2026-10-05 DECISION:
+/// User: a body that starts with `/` or `!` (after leading whitespace) keeps the sender block FIRST, as before, so the receiving agent never runs the body's first line as a slash or shell command. Every other body gets the block last.
 /// SEE-ALSO: server/src/ghostex_cli/agents/identity.rs `message` (same block), packages/gx-chat-core/src/transcript/agent_message.rs (parses both positions), `split_agent_message` below.
 pub fn agent_message(sender: &MessageSender, body: &str) -> String {
-    format!(
-        "{body}\n\n{AGENT_MESSAGE_OPENER}\nAgent: {}\nSession: {}\nSession ID: {}\nAgent ID: {}\nAgent Session ID: {}\nReply to: {}",
+    let block = format!(
+        "{AGENT_MESSAGE_OPENER}\nAgent: {}\nSession: {}\nSession ID: {}\nAgent ID: {}\nAgent Session ID: {}\nReply to: {}",
         header_value(&sender.agent_name),
         header_value(&sender.title),
         header_value(&sender.session_id),
         header_value(&sender.agent_id),
         header_value(&sender.agent_session_id),
         header_value(&sender.global_ref),
-    )
+    );
+    place_agent_message_block(&block, body)
+}
+
+/// The block after the body, or before it when the body would otherwise open with a slash or shell command.
+pub fn place_agent_message_block(block: &str, body: &str) -> String {
+    if body.trim_start().starts_with(['/', '!']) {
+        format!("{block}\n\n{body}")
+    } else {
+        format!("{body}\n\n{block}")
+    }
 }
 
 pub const AGENT_MESSAGE_OPENER: &str = "Message from another agent";

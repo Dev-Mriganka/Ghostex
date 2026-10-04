@@ -49,7 +49,9 @@ IDENTITY AND RECIPIENTS
 SENDER BLOCK
   send and create --task/--body-file attach your identity automatically, after
   the body so the recipient names its session from your task. Supply only the
-  body. Queued messages retain the original sender block.
+  body. Queued messages retain the original sender block. A body that starts
+  with / or ! keeps the block first instead, so the recipient never runs your
+  first line as a slash or shell command; agents send has no way to send one.
 
   <message body>
 
