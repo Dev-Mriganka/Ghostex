@@ -76,7 +76,7 @@ ghostex coordinator start-thread --title "<3 to 6 words>" --task "<brief>" [--wo
 ## Waiting means ending your turn
 
 Never poll, sleep, or run `wait-for-text` to watch a thread. When a thread finishes a turn, Ghostex
-sends you its final message as a "Message from another agent" whose `Reply to` is the thread, with
+sends you its final message as a "Message from another agent" whose `Reply to` (in the block after the text) is the thread, with
 the first line `Ghostex thread report: finished its turn.` When a thread is waiting on a question
 or an approval, you get `Ghostex thread report: waiting for an answer.` with what it asks. Until
 then, end your turn so the user can talk to you.

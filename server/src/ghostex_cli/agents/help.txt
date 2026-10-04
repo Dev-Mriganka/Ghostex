@@ -46,9 +46,12 @@ IDENTITY AND RECIPIENTS
   server through configured connections; sender identity remains your own.
   create, send, and close return JSON; --json is also accepted for errors.
 
-SENDER HEADER
-  send and create --task/--body-file attach your identity automatically.
-  Supply only the body. Queued messages retain the original sender header.
+SENDER BLOCK
+  send and create --task/--body-file attach your identity automatically, after
+  the body so the recipient names its session from your task. Supply only the
+  body. Queued messages retain the original sender block.
+
+  <message body>
 
   Message from another agent
   Agent: <agent name>
@@ -57,8 +60,6 @@ SENDER HEADER
   Agent ID: <configured agent ID>
   Agent Session ID: <conversation ID, or unavailable>
   Reply to: <global session reference>
-
-  <message body>
 
 DELIVERY
   Default       Submit normally. Use it for every message, whether the agent

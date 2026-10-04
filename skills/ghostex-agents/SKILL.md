@@ -29,8 +29,8 @@ ghostex --help          # full catalog: create-agent --model/--effort, wait-for-
                         # read-session-chat, select-session-chat-model, queues, sleep/wake
 ```
 
-`ghostex agents --help` covers identity, recipients, the sender header other
-agents see, delivery modes (default, interrupt, queue), reading replies, and
+`ghostex agents --help` covers identity, recipients, the sender block other
+agents see (after the message body in current versions, before it in older ones), delivery modes (default, interrupt, queue), reading replies, and
 closing. `ghostex --help` lists the session-level verbs around it, including
 the one that starts an agent with a specific model and effort for that session
 only, and the one that changes model or effort on a session that already
@@ -99,7 +99,7 @@ the waiting habits below.
    PowerShell, send text containing backticks with `--body-file` or single
    quotes: inside double quotes a backtick is an escape character.
 7. **Wait on a signal, not a guess.** Ask the agent to send its result back to
-   you with `ghostex agents send <the Reply to ref from its header>` when it
+   you with `ghostex agents send <the Reply to ref from its sender block>` when it
    finishes, and to end its final message with a unique last line (for example
    `TASK 3 COMPLETE` or `TASK 3 BLOCKED: reason`). The send reaches you
    without polling; `wait-for-text` on the sentinel is the backup. If the task

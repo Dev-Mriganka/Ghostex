@@ -28,7 +28,7 @@ WHAT A COORDINATOR IS
   work. Threads are ordinary agent sessions; they sit under their coordinator in
   the sidebar. When a thread finishes a turn, Ghostex forwards its final message
   to the coordinator as a "Message from another agent" (first line
-  "Ghostex thread report: ..."); when a thread waits on a question or an
+  "Ghostex thread report: ...", sender block last); when a thread waits on a question or an
   approval, the coordinator is told what it asks. The coordinator never has to
   poll. `ghostex coordinator guide` prints the coordinator's full playbook.
 
