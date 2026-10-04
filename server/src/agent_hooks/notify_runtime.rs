@@ -123,6 +123,12 @@ pub fn run_notify_hook(args: Vec<String>) -> Result<Option<String>, DomainStateE
     {
         return Ok(None);
     }
+    // See CDXC:SessionIdentity 2026-10-05 in nested_agent.rs: a Claude run another agent started from its tool is not the session's agent.
+    if matches!(agent_key.as_str(), "claude" | "openclaude")
+        && super::nested_agent::claude_hook_is_nested()
+    {
+        return Ok(None);
+    }
     /*
     CDXC:SessionIdentity 2026-09-27 WHY:
     Hermes runs a delegate_task subagent inside the terminal's own process, and its terminal tool can start another `hermes` run; both fire this terminal's hooks under their own session id, without the parent's. Each one rebound the Ghostex session to the child: chat showed the child's transcript, the row took the child's title ("Subagent: …"), and the child's end marked the session idle mid-turn (observed 2026-09-27 in the Dobby bot, sessions G26an and G30nd). Hermes marks every process it starts for a subagent with `HERMES_DELEGATED_CHILD_CONTEXT` and starts terminal-tool commands in a new session with no controlling terminal, so neither is the session's agent. A nested run is dropped; a subagent keeps only its approval prompt, which waits in this terminal, and never names the conversation.
