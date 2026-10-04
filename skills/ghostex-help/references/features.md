@@ -445,8 +445,8 @@ where they are while you open, change and close views.
   Parked parks it. Dropped between two pinned sessions, it is pinned right
   there; dropped on the Pinned heading, it goes to the end of Pinned. Sessions
   and Parked keep their own order, so the drop line shows where the session
-  will sit in them. While you drag, an empty Pinned, Sessions or Parked section
-  shows its heading so you can drop onto it.
+  will sit in them. Only sections already shown can be dropped onto;
+  dragging never adds a heading or moves the list.
 - Sidebar section headings (Pinned, Sessions, Drafts, Parked, and
   Snoozed) show an orange dot when a session is working, a blue dot when
   a session is done, and a pink dot when an agent is waiting for an answer,

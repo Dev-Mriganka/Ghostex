@@ -137,45 +137,6 @@ impl GhostexGpuiApp {
             }))
             .into_any_element()
     }
-
-    /// The heading of a section this group does not draw yet, shown only while a session drag
-    /// can land in it (section_move.rs).
-    pub(super) fn render_native_section_drop_placeholder(
-        &self,
-        group: &NativeSidebarGroup,
-        section_id: &'static str,
-        appearance: &SidebarAppearance,
-        cx: &mut gpui::Context<Self>,
-    ) -> AnyElement {
-        let scale = appearance.scale;
-        let drop_target = self.native_sidebar_section_drop_target(&group.group_id, section_id);
-        h_flex()
-            .id(format!(
-                "native-sidebar-section-drop-{}-{section_id}",
-                group.group_id
-            ))
-            .mx(px(3.0 * scale))
-            .h(px(20.0 * scale))
-            .py(px(3.0 * scale))
-            .pl(px(5.0 * scale))
-            .pr(px(6.0 * scale))
-            .text_size(px(12.0 * scale))
-            .font_weight(FontWeight::LIGHT)
-            .text_color(chrome_color(0xd8d8d8, 0x292929).opacity(0.34))
-            .rounded(px(5.0 * scale))
-            .border_1()
-            .border_dashed()
-            .border_color(chrome_ink().opacity(0.12))
-            .when(drop_target, |row| section_drop_highlight(row, scale))
-            .sidebar_drop_target(
-                "section",
-                section_id.to_string(),
-                Some(group.group_id.clone()),
-                cx,
-            )
-            .child(section_id.to_uppercase())
-            .into_any_element()
-    }
 }
 
 /// The accent a section heading takes while a dragged session would land in that section.
