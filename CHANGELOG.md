@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+## 10.12.0 - 2026-10-05
+
+**Ghostex 10.12.0 is out.** Make any session a coordinator without interrupting it, run coordinators on ZCode, switch Claude accounts on Windows, copy whole tool calls from the chat, and a new session tidies away the project's empty ones.
+
+### 🧭 Coordinators
+- **Make Coordinator turns an existing session into a coordinator without interrupting it.** Right-click a Claude, Codex or ZCode session, open Advanced and choose Make Coordinator, or use the session's menu on the phone. It keeps its conversation, gets the crown right away, and picks up the coordinator playbook once its current turn ends. From a terminal: `ghostex coordinator promote <session>`.
+- **Coordinators can run on ZCode, with a model picker** in New Coordinator…, thanks to @Ni7e.
+- **Messages between agents name the sender after the message,** so a new thread titles itself from its task instead of from the agent that sent it.
+
+### 👥 Accounts
+- **Windows: Ghostex confirms a Claude account switch by checking which account the restarted agent really uses.** Switching on Windows also needs a Claude Swap version with Windows history sharing, which is on its way upstream.
+- **Switching the account of a session you never sent a message to works,** instead of failing with "No conversation found".
+- **A failed account switch card has a close (X) button** that dismisses it on the computer and the phone.
+- **Add account in Settings > Accounts always opens the sign-in form,** and long email addresses in menus are shortened instead of stretching the menu.
+- **Account chips fill their row in the sidebar.**
+
+### 💬 Chat
+- **Tool calls in the chat are selectable and have a copy-all button** that copies the tool's name, input and result, on the computer, the web and the phone.
+- **The spinning working icon no longer shows flickering square lines.**
+
+### ⌨️ Terminal
+- **Shift+Insert pastes** in terminals and in text fields such as the chat composer and dialogs, thanks to @rgruenewald.
+- **Windows: Shift+Enter inserts a newline in Claude Code.**
+- **Windows: no more leftover characters at the left edge of a terminal,** for example after Claude's /usage.
+
+### 🗂️ Sessions and sidebar
+- **Starting a new session closes the project's older sessions that are still completely empty:** nothing sent, no chat draft, nothing queued and no text in the agent's input box. This applies to the hotkey, the project's agent button and menu, the New Thread picker and the phone.
+- **Windows: a session can no longer take on another session's identity** when Windows reuses a process ID or an agent runs `claude -p` inside it, and a title taken from the wrong conversation corrects itself.
+- **Search and Notifications stay in the sidebar's top row;** only Feedback moves into the sidebar menu when the sidebar is narrow.
+- **Windows: the sidebar's minimum width is 200 px (300 px on a 150% screen),** so its top row always fits.
+
+### 📱 On the phone
+- **SVG project icons show on the phone,** such as a project's favicon.svg.
+- **Image chips in the phone's composer no longer leave a stray line after them.**
+- **Windows: Easy Connect pairing with the phone works,** because the pairing code now names the port the Ghostex server really listens on.
+
+### 🩹 Fixes and polish
+- **Model pickers show this release's model lineup right after an update** instead of the previous release's, thanks to @Ni7e.
+
 ## 10.11.1 - 2026-10-04
 
 **Ghostex 10.11.1 is out.** On Windows, Ghostex's small pop-ups now stay with Ghostex instead of floating over other apps, and the agent menu keeps all its rows.
