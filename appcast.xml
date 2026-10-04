@@ -8,6 +8,56 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
         <link>https://github.com/maddada/Ghostex/releases</link>
         <description>Sparkle appcast for Ghostex macOS releases.</description>
         <item>
+            <title>10.10.0</title>
+            <pubDate>Sun, 04 Oct 2026 08:42:26 +0000</pubDate>
+            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.10.0</sparkle:fullReleaseNotesLink>
+            <sparkle:version>101000</sparkle:version>
+            <sparkle:shortVersionString>10.10.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.10.0
+
+## 10.10.0 - 2026-10-04
+
+**Ghostex 10.10.0 is out.** Coordinators check that the work they hand to a thread actually arrives, Freebuff joins the agents with chat, the phone can start a coordinator and nests its threads, embedded pages can open apps like Okta Verify, and Windows gets a working account sign-in, a red Close button and more reliable remote setup.
+
+### 🧭 Coordinators
+- **Coordinators check that a thread received its work.** A new thread reports started only once its brief has arrived, and the coordinator hears about any message that never reached a thread.
+- **`ghostex agents send` says whether a message was delivered,** pending, accepted or queued, and control characters in a message no longer act as keys.
+- **New Coordinator… is first in a project's agent menu,** and a coordinator keeps the name you gave it.
+- **The crew badge counts working threads, else waiting ones, else all of them,** with a tint that matches.
+
+### 🤖 Agents
+- **Freebuff joins the agents with simple chat support:** messages, replies, tool results and its questions as chat cards. Its chat appears after the first message, and sign-in and `/model` stay in its terminal.
+- **macOS: agents start for fish users whose agent command is only on fish's PATH,** and they keep Ghostex's prompt editor, thanks to @escottalexander.
+- **A chat message sent while the computer is busy is no longer lost** when its paste arrives late.
+
+### 📱 On the phone
+- **Start a coordinator from the phone's agent menu,** and its threads nest under it as they do on the computer.
+- **A Handoff's new conversation opens with the handover link in its chat box.**
+
+### 🪟 Windows
+- **Signing in to an account from Settings > Accounts works on Windows.**
+- **The window buttons reach the top-right corner, and Close turns red on hover.**
+- **Remote setup over SSH finds the SSH server reliably** and says clearly what blocks it, such as missing admin rights, a pending restart or a policy block.
+- **The Ghostex server never runs your sessions from an SSH or background session,** and a server started over SSH keeps running when nobody is signed in.
+- **A new agent created in another project gets focus.**
+
+### 🌐 Browser and extensions
+- **Embedded pages can open other apps and reach local apps after asking,** so sign-ins that use Okta Verify work. Ghostex asks before opening an app or letting a site connect to apps on this computer.
+- **Prerender Buddy is in the extension store:** open your Prerender Buddy workspace beside your agent to review AI visibility, crawler access, website health and articles.
+
+### 🩹 Fixes and polish
+- **Full Reload keeps focus on the session it reloads.**
+- **The chat keeps following new output** at the bottom, and the scroll-down button shows exactly when it doesn't.
+- **The chat history rail is shorter and starts below the fork button.**
+- **A modal's close X sits on its top-right corner** and shows whenever the pointer is in the modal's top 80px.
+- **Dragging a session no longer reveals hidden sidebar sections.**
+- **Experimental terminal shaders skip terminals they can't draw on,** thanks to @vespillo-tech.
+]]></description>
+            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.10.0/ghostex-10.10.0-arm64.dmg" length="111136119" type="application/octet-stream" sparkle:edSignature="Mgdqq3QeC20nDpr7fV8gA6luMWl6QhUUk/CuRrTrlnuuwoSZbVoaO3Cg9mCGuB0HKhlf2s5K30h3pBj4tygXBQ=="/>
+        </item>
+        <item>
             <title>10.9.1</title>
             <pubDate>Fri, 02 Oct 2026 16:09:36 +0000</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.9.1</sparkle:fullReleaseNotesLink>
@@ -230,59 +280,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
             <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.5.5/ghostex-10.5.5-arm64.dmg" length="121356347" type="application/octet-stream" sparkle:edSignature="/QgQKdhs0q45EJeDpf0bQ8bppI7UD3swqsh48b8G16+EqBkuLL7KNFv+DyZiu9G3IeupQ6WIgdI4RQB9qsRlAQ=="/>
         </item>
         <item>
-            <title>10.5.0</title>
-            <pubDate>Mon, 28 Sep 2026 05:05:22 +0000</pubDate>
-            <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v10.5.0</sparkle:fullReleaseNotesLink>
-            <sparkle:version>100500</sparkle:version>
-            <sparkle:shortVersionString>10.5.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Ghostex 10.5.0
-
-## 10.5.0 - 2026-09-28
-
-**Ghostex 10.5.0 is out.** Bots turns the sidebar into your Hermes agents with a feed of every scheduled run, glass backdrops come to Windows and Linux, terminals start on pure black or white, chat shows a delivery icon beside each prompt, Codex's fullscreen view works everywhere, and a large batch of Windows fixes.
-
-### 🤖 Bots for your Hermes agents
-- **Bots switches the sidebar to your Hermes agents,** one row per Hermes profile with its gateway status, Edit SOUL and Edit config, pinned Actions and a + that starts a new chat with that bot, thanks to @banozz0. Turn it on in Settings > Extensions under Planning and automation; it appears only on a computer with the Hermes CLI installed.
-- **Hermes conversations started elsewhere show up under their bot.** Chats begun in a terminal, the Hermes app, Discord or Telegram are listed with the bot that had them and resume with one click.
-- **Bot automations collects every Hermes cron run in one feed,** thanks to @banozz0. An Automations row at the top of Bots opens a channel per scheduled job, an all-runs channel, your own groups, unread counts and a bot filter, with failed runs marked.
-
-### 🪟 Glass on Windows and Linux
-- **Wallpaper, Picture and Live backdrops now work on Windows,** so the glass can show your wallpaper, a picture you choose or a calm animation behind the window.
-- **Every transparency setting works on Linux,** thanks to @alp82.
-
-### 💬 Chat
-- **A delivery icon beside your prompt replaces Waiting and QUEUED.** A spinner means the message is waiting for the agent; a play button means it is queued behind the running turn, and clicking it interrupts the agent so it takes your message now. The phone shows the same.
-- **The chat box slides closed over its draft** instead of fading, on the computer and the phone.
-- **Right-click a previewed image** for Copy Image, Copy Path, Save Image, Reset Zoom and Dismiss.
-- **Sending closes Claude's open side question first,** so the message is never stuck behind the side-question panel, and the side question's Fork button explains what it does.
-- **Codex's fullscreen view works with Ghostex.** Command-click still opens links, Stop works while you are scrolled up or selecting text, and automations and model picks keep working with Codex 0.157 and later.
-
-### 🖥 Terminals and accounts
-- **Terminals start on pure black or white.** Settings > Terminal > Terminal background offers Black / white (the new default), Follow theme, or Custom color, and a custom colour you set before is kept.
-- **Terminal panes start without side padding,** so the terminal uses the pane's full width.
-- **Update, reinstall or uninstall Claude Swap and Codex Swap from Settings > Accounts.** Hover a button to see the installed and latest versions; uninstalling keeps your saved logins.
-- **Reconnecting a Codex account no longer has to stop its sessions first;** when Codex still needs them stopped, Settings offers Sleep sessions and continue.
-- **Find by Prompt opens in a native window** that matches the rest of the app.
-
-### 🔧 Windows fixes
-- **Chat messages send reliably on Windows** now that the background service no longer freezes on a send.
-- **No more flashing console windows** when Ghostex starts helpers in the background.
-- **Windows sessions take their agent's title again,** instead of staying "Claude Session".
-- **Onboarding installs agent CLIs and skills correctly, and a custom install folder is found everywhere,** thanks to @gvastethecreator. Onboarding and Settings > Agents install and update Claude, Codex, Cursor and Grok, and newly installed CLIs are found without restarting.
-- **Codex runs without administrator rights,** and Add Project's Local folder opens the list of drives with your home folder first.
-- **Settings sliders show their thumbs** as soon as the window opens.
-
-### 🩹 Fixes
-- **The Linux browser keeps WebGL working** after a browser view closes, thanks to @alp82.
-- **The Files view's Send button shows how many new notes are waiting,** and the separate Review menu is gone: Send covers the open file's notes.
-- **The sidebar's Search button is always an icon,** with its label and shortcut in the tooltip.
-- **Claude chats show the context size Claude reports,** and server errors show the actual reason instead of a bare error code.
-]]></description>
-            <enclosure url="https://github.com/maddada/Ghostex/releases/download/v10.5.0/ghostex-10.5.0-arm64.dmg" length="120906769" type="application/octet-stream" sparkle:edSignature="LHgO/NKRtaJqhKIqpOV12V+TsX3j1DfhFhaKLxYJkBW+NRK67Gdu80jpOi3UWn4yz01wXOzoqrQiLg+I3CimAw=="/>
-        </item>
-        <item>
             <title>3.26.1</title>
             <pubDate>Mon, 01 Jun 2026 18:43:20 +0400</pubDate>
             <sparkle:fullReleaseNotesLink>https://github.com/maddada/Ghostex/releases/tag/v3.26.1</sparkle:fullReleaseNotesLink>
@@ -294,6 +291,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: jlXV4wZmrAGl/BvdtI1faerj8nY9CrvmK4cyigJxBFA4STpGUkZXyzmMzHzZntRVPPHTKktVyCAFgyanYmAIDg==
-length: 30168
+edSignature: lG/zTuzC+qynKzq/wpDUDykpr1YE44qsOQ9Ia3A2K72Xas+bhNJP0RHDaZp5TvMWgXVTsbBjSpGtVImM5n5zBA==
+length: 28986
 -->
