@@ -415,6 +415,18 @@ pub(crate) fn ingest_agent_hook_event(
         "sessionChatActivityChanged".to_string(),
         Value::Bool(session_chat_activity_changed),
     );
+    let agent_session_id = |session: &Value| {
+        session
+            .pointer("/runtimeSettings/agentSessionId")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    };
+    let agent_session_id_changed = agent_session_id(&session).is_some()
+        && agent_session_id(&session) != agent_session_id(&current);
+    result.insert(
+        "agentSessionIdChanged".to_string(),
+        Value::Bool(agent_session_id_changed),
+    );
     result.insert("session".to_string(), session);
     Ok(Value::Object(result))
 }
