@@ -115,6 +115,8 @@ impl AccountsTab {
                     page.adding = if page.adding.as_deref() == Some(provider) {
                         None
                     } else {
+                        // CDXC:AgentProviders 2026-10-04 WHY: the setup flow is keyed per provider and keeps its finished job, so without this reset a second Add account showed the first add's "Account connected" message instead of the email field.
+                        page.reset_setup_flows(provider);
                         Some(provider.to_string())
                     };
                     cx.notify();
