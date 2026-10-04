@@ -139,12 +139,7 @@ impl FeedbackSubmission {
                     .header("Retry-After")
                     .and_then(|value| value.trim().parse::<u64>().ok());
                 let answer: Value = response.into_json().unwrap_or(Value::Null);
-                Err(relay_error_message(
-                    status,
-                    answer["error"]["code"].as_str().unwrap_or_default(),
-                    answer["error"]["message"].as_str(),
-                    retry_after,
-                ))
+                Err(relay_error_message(status, &answer["error"], retry_after))
             }
             Err(ureq::Error::Transport(transport)) => Err(format!(
                 "Could not reach the feedback service. Check your internet connection and try again. ({transport})"
@@ -154,14 +149,11 @@ impl FeedbackSubmission {
 }
 
 /// What the user reads when the relay refused the issue (its `{ error: { code, message } }`).
-/// The relay's own sentence is kept where it says what to fix (a bad image, the daily limit);
-/// the rest are its internals, so they get a sentence about what the user can do.
-fn relay_error_message(
-    status: u16,
-    code: &str,
-    message: Option<&str>,
-    retry_after: Option<u64>,
-) -> String {
+/// The relay's own sentence is kept where it says what to fix (a bad image); the rest are its
+/// internals, so they get a sentence about what the user can do.
+fn relay_error_message(status: u16, error: &Value, retry_after: Option<u64>) -> String {
+    let code = error["code"].as_str().unwrap_or_default();
+    let message = error["message"].as_str();
     let relay_said = |fallback: &str| {
         format!(
             "The feedback service refused the issue: {}",
@@ -169,13 +161,10 @@ fn relay_error_message(
         )
     };
     match (status, code) {
-        (429, _) | (_, "rate_limited") => {
-            let base = message.unwrap_or("Too many feedback submissions.");
-            match retry_after {
-                Some(seconds) => format!("{base} Try again in {}.", wait_label(seconds)),
-                None => base.to_string(),
-            }
-        }
+        (429, _) | (_, "rate_limited") => rate_limit_message(
+            error["limit"].as_str(),
+            error["retryAfterSeconds"].as_u64().or(retry_after),
+        ),
         (401, _) | (_, "unauthorized") => {
             "This version of Ghostex can no longer send feedback. Update Ghostex and try again."
                 .to_string()
@@ -197,9 +186,30 @@ fn relay_error_message(
     }
 }
 
-/// `45 s`, `3 min`, `2 h`: a `Retry-After` the user can read.
+/// CDXC:Feedback 2026-10-04 WHY:
+/// The relay caps feedback per minute, per network per day and in total per day, and says which
+/// cap was hit (`limit`). A daily cap's wait runs to midnight UTC, so it is told as "tomorrow",
+/// never as a raw number of seconds; the per-minute caps (`burst`, `flood`) say how long to wait.
+fn rate_limit_message(limit: Option<&str>, retry_after: Option<u64>) -> String {
+    match limit {
+        Some("daily_ip") => "You've sent the daily maximum of feedback from this network. You can send more tomorrow."
+            .to_string(),
+        Some("daily_global") => {
+            "We've received a lot of feedback today. Please try again tomorrow.".to_string()
+        }
+        _ => match retry_after {
+            Some(seconds) => format!(
+                "Too many feedback submissions. Try again in {}.",
+                wait_label(seconds)
+            ),
+            None => "Too many feedback submissions. Please try again in a minute.".to_string(),
+        },
+    }
+}
+
+/// `60 s`, `3 min`, `2 h`: a wait the user can read.
 fn wait_label(seconds: u64) -> String {
-    if seconds < 60 {
+    if seconds <= 120 {
         format!("{} s", seconds.max(1))
     } else if seconds < 3600 {
         format!("{} min", seconds.div_ceil(60))
