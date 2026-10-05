@@ -299,18 +299,27 @@ pub(crate) fn other_workspace_window_apps(except: gpui::EntityId) -> Vec<Entity<
 }
 
 /// The open window that shows the session behind `row_id` (focused or on screen), the one last
-/// active first; `None` when no window shows it.
+/// active first; `None` when no window shows it. `caller` is the asking window's app with its own
+/// answer.
+///
+/// CDXC:AppWindows 2026-10-05 WHY:
+/// The asking app is mid-update when it asks (a notification click, a menu bar row), and reading an entity that is being updated panics; on Windows that panic crossed the task wndproc and aborted Ghostex when an Attention toast was clicked. The caller answers for itself and only the other windows' apps are read.
 pub(super) fn workspace_window_showing_session(
     row_id: &str,
+    caller: (gpui::EntityId, bool),
     cx: &App,
 ) -> Option<(AnyWindowHandle, WeakEntity<GhostexGpuiApp>)> {
     let active = ACTIVE_WINDOW_NUMBER.get();
+    let (caller_id, caller_shows) = caller;
     WORKSPACE_WINDOWS.with(|windows| {
         let windows = windows.borrow();
         let showing = windows
             .iter()
             .filter(|entry| !entry.closing)
             .filter(|entry| {
+                if entry.app.entity_id() == caller_id {
+                    return caller_shows;
+                }
                 entry
                     .app
                     .upgrade()
