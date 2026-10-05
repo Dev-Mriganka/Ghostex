@@ -62,7 +62,7 @@ impl NativeChatView {
                 .flex()
                 .flex_col()
                 .gap(px(2.0 * s))
-                .max_h(px(240.0 * s))
+                .max_h(px(360.0 * s))
                 .overflow_y_scroll();
             for group in panel["groups"].as_array().into_iter().flatten() {
                 rows = rows.child(
