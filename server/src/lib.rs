@@ -143,6 +143,7 @@ pub(crate) mod session_chat_screen_styles;
 pub(crate) mod session_chat_screen_watch;
 pub mod session_chat_send;
 pub(crate) mod session_chat_send_diagnostics;
+pub(crate) mod session_chat_send_requests;
 pub(crate) mod session_chat_send_submit;
 pub(crate) mod session_chat_send_wake;
 pub(crate) mod session_chat_skill_invocation;

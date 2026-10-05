@@ -237,7 +237,7 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
             "/api/queueSessionChatPrompt",
             &json!({
                 "globalRef": reference, "projectId": session["projectId"], "sessionId": session["sessionId"],
-                "text": prompt, "startupSend": true,
+                "text": prompt, "startupSend": true, "sendRequestId": uuid::Uuid::new_v4().to_string(),
             }),
             &flags,
         )?;

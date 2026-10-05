@@ -7,7 +7,9 @@ USAGE
                        [--task <text> | --body-file <path>]
   ghostex agents list [--all] [--json]
   ghostex agents send <session-ref> <text> [--interrupt | --queue]
+                     [--request-id <id>]
   ghostex agents send <session-ref> --body-file <path> [--interrupt | --queue]
+                     [--request-id <id>]
   ghostex agents close <session-ref>
 
 QUICK START
@@ -107,6 +109,15 @@ DELIVERY
   never shows is cleared and typed once more before the send fails.
   None of these means read, acknowledged, or completed.
   Blocking prompts can prevent delivery. Inspect chat and queue before retrying.
+
+  RETRYING THE SAME MESSAGE
+  Every send has a request id: sendRequestId in the result, and in the error
+  text when a send fails. To retry that same message, pass the id back with
+  --request-id <id>. Ghostex delivers one request id at most once: a retry of
+  a message that already went out answers from the first attempt (duplicate:
+  true) instead of typing it again, a retry of one that was refused before
+  anything was submitted sends it now, and --interrupt is not repeated. A
+  send without --request-id is always a new message.
   A coordinator's message to its own thread is also watched by Ghostex: if
   the thread goes idle without it, the coordinator gets a thread report
   saying the message did not reach it.
@@ -161,5 +172,6 @@ TROUBLESHOOTING
   Unknown agent type: run types and use its agentId, not a session ID.
   Unknown or ambiguous target: refresh list and use its global reference.
   Missing identity: run whoami inside your Ghostex session.
-  Delivery uncertain: inspect chat and queue before sending again.
+  Delivery uncertain: inspect chat and queue before sending again, and resend
+  with the first attempt's --request-id so it cannot arrive twice.
   Session idle: check its reply and work; idle alone does not prove completion.

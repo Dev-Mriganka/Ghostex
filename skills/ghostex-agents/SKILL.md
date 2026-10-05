@@ -95,7 +95,10 @@ the waiting habits below.
    same message again. `ghostex coordinator start-thread` likewise answers
    `started` only once the thread's transcript shows the brief, else
    `pending` with the reason; older CLIs print "Started thread" without
-   checking, so read the thread's chat. None of these means the agent has read it. In
+   checking, so read the thread's chat. None of these means the agent has read it.
+   Newer CLIs print a `sendRequestId` with every send (and in a failed send's
+   error); to retry that same message, add `--request-id <that id>` and Ghostex
+   delivers it at most once. Older CLIs reject the flag; read the chat instead. In
    PowerShell, send text containing backticks with `--body-file` or single
    quotes: inside double quotes a backtick is an escape character.
 7. **Wait on a signal, not a guess.** Ask the agent to send its result back to

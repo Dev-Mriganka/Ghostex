@@ -46,6 +46,9 @@ struct SupervisorMemory {
     delivery_checked_at: HashMap<SessionKey, i64>,
     /// Since when a thread has been idle without its pending message (sent at, since).
     undelivered_idle_since: HashMap<SessionKey, (String, i64)>,
+    /// The `sendRequestId` of each report still waiting to reach its coordinator, by coordinator
+    /// and report text, so a retried report is the same send to gxserver's send ledger.
+    report_send_ids: HashMap<(SessionKey, String), String>,
 }
 
 enum ReportKind {
@@ -507,8 +510,22 @@ async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, del
             ),
         };
         let message = agent_message(&report.sender, &body);
-        match send_to_coordinator(&state, &coordinator, &message).await {
+        let report_key = (coordinator.clone(), message.clone());
+        let send_request_id = memory
+            .lock()
+            .map(|mut memory| {
+                memory
+                    .report_send_ids
+                    .entry(report_key.clone())
+                    .or_insert_with(|| Uuid::new_v4().to_string())
+                    .clone()
+            })
+            .unwrap_or_else(|_| Uuid::new_v4().to_string());
+        match send_to_coordinator(&state, &coordinator, &message, &send_request_id).await {
             Ok(()) => {
+                if let Ok(mut memory) = memory.lock() {
+                    memory.report_send_ids.remove(&report_key);
+                }
                 let settle_state = state.clone();
                 let thread = report.thread.clone();
                 let kind_key = match &report.kind {
@@ -547,6 +564,7 @@ async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, del
                             "coordinatorProjectId": coordinator.0,
                             "coordinatorSessionId": coordinator.1,
                             "threadSessionId": report.thread.session_id,
+                            "sendRequestId": send_request_id,
                         })),
                     },
                 );
@@ -569,6 +587,9 @@ async fn deliver(state: Arc<AppState>, memory: Arc<Mutex<SupervisorMemory>>, del
                 .insert(coordinator, (failures + 1, now_ms() + delay));
         } else {
             memory.retry.remove(&coordinator);
+            memory
+                .report_send_ids
+                .retain(|(owner, _), _| owner != &coordinator);
         }
     }
 }
@@ -741,17 +762,20 @@ fn settle_undelivered(state: &AppState, thread: &ThreadRecord, sent_at: &str) {
 }
 
 /// The same default delivery `ghostex agents send` uses: typed now, picked up by a busy agent at
-/// its next input boundary, and a sleeping coordinator is woken for it.
+/// its next input boundary, and a sleeping coordinator is woken for it. A report retried after a
+/// failure keeps its `sendRequestId`, so one that did arrive is never typed again.
 async fn send_to_coordinator(
     state: &AppState,
     coordinator: &SessionKey,
     message: &str,
+    send_request_id: &str,
 ) -> std::result::Result<(), String> {
     let body = json!({
         "params": {
             "projectId": coordinator.0,
             "sessionId": coordinator.1,
             "text": message,
+            "sendRequestId": send_request_id,
         }
     });
     let routed = crate::session_chat_send::handle_send_session_chat_message_http(
