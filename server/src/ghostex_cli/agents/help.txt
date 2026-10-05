@@ -28,8 +28,10 @@ CHOOSE AND CREATE
   The agent uses configured model and approval settings. --task submits an
   initial message when input is ready; --body-file reads that task from disk.
   Without either, the agent starts waiting for a message. --title sets the
-  initial name; the agent's own auto-naming can replace it. Copy globalRef from
-  the result for follow-ups. Created does not mean the task has completed.
+  initial name; the agent's own auto-naming can replace it, except for a thread
+  created by a coordinator, which keeps its --title (only a user's rename
+  changes it). Copy globalRef from the result for follow-ups. Created does
+  not mean the task has completed.
 
 IDENTITY AND RECIPIENTS
   whoami resolves your calling session from its Ghostex environment, never
