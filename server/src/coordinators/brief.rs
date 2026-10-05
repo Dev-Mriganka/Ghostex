@@ -2,7 +2,6 @@
 
 /// What a brief carries from its coordinator.
 pub struct BriefContext<'a> {
-    pub title: &'a str,
     pub goal: &'a str,
     pub instructions: &'a str,
     pub notes: &'a [String],
@@ -134,13 +133,12 @@ pub fn strip_agent_message_header(text: &str) -> &str {
 
 /// CDXC:Coordinators 2026-09-30 WHY:
 /// Claude's projects send "the project's instructions" to every new thread so a rule stated once reaches all of them. Here the goal, the standing instructions and the memory notes ride under the coordinator's task, followed by the reporting rules the supervisor depends on: the thread's final message is its report, so it must not message the coordinator itself.
+/// CDXC:Coordinators 2026-10-05 DECISION:
+/// User chose to drop the coordinator's name from the brief's "You are a thread started by…" line: with a short task it was the only name in the first message, and Claude named the thread after its coordinator (thread G9c61, 2026-10-05). The sender block below the brief still names the coordinator.
 pub fn thread_brief(coordinator: &BriefContext<'_>, task: &str) -> String {
     let mut brief = task.trim().to_string();
     brief.push_str("\n\n---\n");
-    brief.push_str(&format!(
-        "You are a thread started by the Ghostex coordinator \"{}\".",
-        coordinator.title.trim()
-    ));
+    brief.push_str("You are a thread started by a Ghostex coordinator.");
     if !coordinator.goal.trim().is_empty() {
         brief.push_str(&format!("\nThe overall goal: {}", coordinator.goal.trim()));
     }

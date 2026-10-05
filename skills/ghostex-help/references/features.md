@@ -1461,7 +1461,9 @@ version of the Projects features in Cursor and Claude Code.
   threads sit indented right under it with their own status dots; the chevron
   beside the crown folds them away and back (remembered across restarts), and a
   folded coordinator keeps its number and colour. Click a thread to watch it or
-  talk to it directly; answer its questions and approvals there. Pinning the
+  talk to it directly; answer its questions and approvals there. A thread keeps
+  the name its coordinator gave it, like the coordinator keeps its own (Rename in
+  the sidebar still changes it). Pinning the
   coordinator takes its threads along. The phone's session list shows the same
   tree: crown, crew count, threads indented under their coordinator, and the
   chevron to fold them.

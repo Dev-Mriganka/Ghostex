@@ -70,7 +70,7 @@ fn coordinator_models(family: &str) -> Vec<NewCoordinatorModel> {
 }
 
 /// The title a coordinator is created with, and its source: an unnamed coordinator is a placeholder
-/// "Coordinator" the agent's first name may replace (see coordinator_keeps_its_title in
+/// "Coordinator" the agent's first name may replace (see keeps_its_given_title in
 /// server/src/coordinators/title.rs).
 fn coordinator_title(name: &str) -> (&str, &'static str) {
     if name.trim().is_empty() {

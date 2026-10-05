@@ -136,7 +136,7 @@ Do not reply to a report just to acknowledge it; that wakes the thread for nothi
 
 ## Talking to the user
 
-Short, plain updates. Name threads by title; an agent may rename its own thread after its first
-turn, so use the title from the latest report or `ghostex coordinator status`, which is also what
-the sidebar shows. A status update over several threads is a short list:
+Short, plain updates. Name threads by title: a thread keeps the `--title` you gave it (only the
+user's own rename changes it), and `ghostex coordinator status` shows the current title, which is
+also what the sidebar shows. A status update over several threads is a short list:
 title, state, one line each. `ghostex coordinator --help` lists every coordinator command.

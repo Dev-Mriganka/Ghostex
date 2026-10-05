@@ -47,10 +47,8 @@ pub(super) fn start_thread(parsed: &ParsedArgs) -> CliResult<()> {
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let coordinator_title = agents::text(coordinator, "title").to_string();
     let brief = thread_brief(
         &BriefContext {
-            title: &coordinator_title,
             goal: agents::text(coordinator, "goal"),
             instructions: agents::text(coordinator, "instructions"),
             notes: &notes,

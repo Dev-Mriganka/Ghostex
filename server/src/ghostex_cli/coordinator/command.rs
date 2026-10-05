@@ -148,7 +148,7 @@ fn create(parsed: &ParsedArgs) -> CliResult<()> {
         })?,
     };
     let named = flag_text(&parsed.flags, "title");
-    // CDXC:Coordinators 2026-10-03 SEE-ALSO: coordinator_keeps_its_title in server/src/coordinators/title.rs; an unnamed coordinator's "Coordinator" is a placeholder the agent's first name may replace.
+    // CDXC:Coordinators 2026-10-03 SEE-ALSO: keeps_its_given_title in server/src/coordinators/title.rs; an unnamed coordinator's "Coordinator" is a placeholder the agent's first name may replace.
     let title_source = if named.is_some() {
         "user"
     } else {
