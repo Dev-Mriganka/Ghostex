@@ -38,6 +38,9 @@ pub(crate) fn dispatch(
     if operation == "redeemReset" {
         return super::reset_claim::redeem(state, params);
     }
+    if operation == "resetWatch" {
+        return super::reset_watch::endpoint(state, params);
+    }
     let titlebar_has_accounts = if operation == "titlebar" {
         let db = crate::storage::open_gxserver_database(&state.paths).map_err(store::error)?;
         store::read(&db)?

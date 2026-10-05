@@ -243,6 +243,10 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     ("hideLastActiveTimeOnSessionCards", J::Bool(true)),
     ("highlightPendingQuestions", J::Bool(false)),
     ("hideAccountEmails", J::Bool(false)),
+    // CDXC:AgentProviders 2026-10-05 DECISION:
+    // User: Claude and Codex each get a setting to auto-redeem banked resets that are going to expire anyway. Off by default because a redeemed reset cannot be given back; gxserver owns the rule (server/src/accounts/reset_watch.rs).
+    ("claudeAutoRedeemExpiringResets", J::Bool(false)),
+    ("codexAutoRedeemExpiringResets", J::Bool(false)),
     // CDXC:Sessions 2026-06-13-17:50:
     // First-run sidebar tag filter settings should show the default triage tags,
     // the No tag filter, and the default separators. Users opt out by hiding or
@@ -435,6 +439,9 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     // Keep this default-on even after adding macOS permission prompts and test
     // controls; users should opt out explicitly when they do not want banners.
     ("showMacOSAttentionNotifications", J::Bool(true)),
+    // CDXC:Notifications 2026-10-05 DECISION:
+    // User: a banked reset that expires within 3 days, and again within 24 hours, also gets a system notification, which "can be switched off for the system" while the red bell row stays.
+    ("resetExpirySystemNotifications", J::Bool(true)),
     ("hideMenuBarSessionStatusIndicators", J::Bool(false)),
     ("petOverlayEnabled", J::Bool(false)),
     ("selectedPetId", J::Str("boo")),

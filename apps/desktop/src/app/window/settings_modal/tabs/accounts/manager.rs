@@ -206,6 +206,7 @@ impl AccountsTab {
             items.push(self.render_saved_account(p, account, accounts, busy, hide, window, cx));
         }
         items.push(self.render_defaults_row(p, provider, data, accounts, busy, hide, window, cx));
+        items.push(self.render_auto_redeem_row(p, provider, cx));
         v_flex()
             .w_full()
             .children(items.into_iter().enumerate().map(|(index, item)| {
@@ -215,6 +216,42 @@ impl AccountsTab {
                     .child(item)
             }))
             .into_any_element()
+    }
+
+    /// The provider's Auto-redeem switch, a shared setting gxserver reads (server/src/accounts/reset_watch.rs).
+    fn render_auto_redeem_row(
+        &mut self,
+        p: &SettingsPalette,
+        provider: &'static str,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let key: &'static str = if provider == "codex" {
+            "codexAutoRedeemExpiringResets"
+        } else {
+            "claudeAutoRedeemExpiringResets"
+        };
+        let on = self.store.read(cx).bool(key);
+        setting_row(
+            p,
+            SharedString::from(format!("accounts-{provider}-auto-redeem")),
+            RowSpec::new("Auto-redeem expiring resets").description(
+                "Use a banked reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. A used reset can't be given back.",
+            ),
+            None,
+            switch_control(
+                p,
+                SharedString::from(format!("accounts-{provider}-auto-redeem-switch")),
+                on,
+                false,
+                None,
+                move |page: &mut Self, next, _window, cx| {
+                    let store = page.store.clone();
+                    store.update(cx, |store, cx| store.update_setting(key, json!(next), cx));
+                },
+                cx,
+            ),
+            cx,
+        )
     }
 
     /// One saved account: its management row and, while expanded, its editor.

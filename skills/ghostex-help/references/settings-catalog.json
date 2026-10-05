@@ -2602,6 +2602,20 @@
       "agentWritable": true
     },
     {
+      "key": "resetExpirySystemNotifications",
+      "title": "Reset Expiry Notifications",
+      "subtitle": "Show a system notification when a banked Claude or Codex usage reset expires within 3 days and again within 24 hours. The red notification in the bell stays either way.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "notifications",
+      "groupTitle": "Notifications",
+      "section": "sounds",
+      "sectionTitle": "Sounds",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true
+    },
+    {
       "key": "attentionNotificationActions",
       "title": "Agent Completion Alert Test",
       "subtitle": "Test the current completion alert settings or open Notification Settings.",
@@ -8029,6 +8043,30 @@
       "section": "accounts",
       "sectionTitle": "Accounts",
       "type": "ui",
+      "agentWritable": false
+    },
+    {
+      "key": "claudeAutoRedeemExpiringResets",
+      "title": "Auto-redeem expiring Claude resets",
+      "subtitle": "Use a banked Claude usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back.",
+      "tab": "accounts",
+      "tabTitle": "Accounts",
+      "section": "accounts",
+      "sectionTitle": "Accounts",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": false
+    },
+    {
+      "key": "codexAutoRedeemExpiringResets",
+      "title": "Auto-redeem expiring Codex resets",
+      "subtitle": "Use a banked Codex usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back.",
+      "tab": "accounts",
+      "tabTitle": "Accounts",
+      "section": "accounts",
+      "sectionTitle": "Accounts",
+      "type": "boolean",
+      "default": false,
       "agentWritable": false
     },
     {

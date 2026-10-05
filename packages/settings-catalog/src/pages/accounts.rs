@@ -14,6 +14,8 @@ pub(crate) fn accounts() -> Section {
         "Accounts",
         vec![
             row("accounts", "Accounts, usage stats and automatic continuation", "Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings."),
+            row("claudeAutoRedeemExpiringResets", "Auto-redeem expiring Claude resets", "Use a banked Claude usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back."),
+            row("codexAutoRedeemExpiringResets", "Auto-redeem expiring Codex resets", "Use a banked Codex usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back."),
         ],
     )
 }

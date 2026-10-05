@@ -27,6 +27,8 @@ pub(crate) mod process_and_constants;
 pub(crate) mod source_code_server_spawn;
 pub(crate) mod spaceo_job;
 pub(crate) mod spaceo_status;
+#[cfg(target_os = "windows")]
+pub(crate) mod windows_notifications;
 
 pub(crate) use agent_folder_trust::*;
 pub(crate) use app_state_persistence::*;
@@ -49,3 +51,5 @@ pub(crate) use process_and_constants::*;
 pub(crate) use source_code_server_spawn::*;
 pub(crate) use spaceo_job::*;
 pub(crate) use spaceo_status::*;
+#[cfg(target_os = "windows")]
+pub(crate) use windows_notifications::*;

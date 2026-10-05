@@ -1775,14 +1775,19 @@ pick another location; default `local`, this computer). CLI:
 ## Notifications and status
 
 Ghostex tells you when an agent needs you: a completion sound when a session
-finishes, an attention state on the session card, OS notifications on macOS,
-menu bar badges with running and done counts (click one to jump to the
+finishes, an attention state on the session card, system notifications
+(macOS banners, Windows toasts, and Linux desktop notifications; clicking one on
+macOS or Windows opens the session), menu bar badges with running and done counts (click one to jump to the
 session), terminal bell detection, and push notifications on the mobile app.
 The optional status pet in the sidebar mirrors session state.
 Claude progress updates do not trigger completion notifications while Claude
 reports background work still running. Completion notifications arrive when
 Claude finishes after that work completes; requests for your input or permission
 still get your attention.
+Pi sessions ring the same way: a finished Pi turn marks the session done (after
+any automatic retry or queued follow-up), stopping it with Esc or a provider error
+does not, and a question or confirmation a Pi extension asks marks the session as
+waiting for you.
 Every copy shows a small "Copied!" bubble at the pointer for a moment, whether
 it came from a terminal, a chat message, a copy button, or a menu. Copy Sound is
 off by default. Enable it under Settings > Notifications > Sounds to also hear a
@@ -1805,9 +1810,12 @@ too: marking a notification read, or using Mark all read, clears the
 finished or needs-input mark on its session in the sidebar.
 Scripts and agent hooks can post their own rows with
 `ghostex notify --title <text> [--body <text>]`.
+A banked Claude or Codex usage reset that is about to expire shows as a red
+row; it opens that account's usage dropdown instead of a session.
 
 Related settings: `completionSound`, `actionCompletionSound`, `copySound`,
-`showMacOSAttentionNotifications`, `showNotificationOnTerminalBell`,
+`showMacOSAttentionNotifications`, `resetExpirySystemNotifications`,
+`showNotificationOnTerminalBell`,
 `hideMenuBarSessionStatusIndicators`, `petOverlayEnabled`,
 `notificationsTitlebarButtonHidden`.
 
@@ -1964,7 +1972,21 @@ docs directory), `hideProjectHeaderDiffStats`,
   each reset with its expiry date, click Use beside one, then Reset to confirm:
   Ghostex uses that reset right away, without opening a terminal, and the
   limits refresh in the dropdown. Using a reset can't be undone; if your usage
-  doesn't need a reset yet, nothing is used. Shared history stays visible
+  doesn't need a reset yet, nothing is used. When a saved account's banked
+  reset expires within 3 days, and again within 24 hours, a red notification
+  appears in the Notifications bell (once per reset, also after a restart) and
+  as a system notification; click it to open that account's usage dropdown,
+  or Settings > Accounts when the account has no usage button. Turn the
+  system notification off under Settings > Notifications > Sounds (Reset
+  Expiry Notifications); the bell row stays. Each provider on Settings >
+  Accounts has Auto-redeem expiring resets (off by default): Ghostex then
+  uses a reset only when it would otherwise expire unused, right away when
+  the account hits a usage limit in the reset's last 24 hours (unless the
+  limit resets on its own within 30 minutes), or in its last hour if the
+  account has used anything. A Claude reset that only works at a limit is
+  used only at a limit, and each automatic use appears in the bell
+  (`claudeAutoRedeemExpiringResets`, `codexAutoRedeemExpiringResets`,
+  `resetExpirySystemNotifications`). Shared history stays visible
   below: today's, yesterday's, and the last 30 days' token totals with a daily
   trend. History combines conversations across accounts of the same provider
   on that computer, counts shared copies once, and includes cached tokens.

@@ -530,6 +530,8 @@ impl GhostexGpuiApp {
             register_gpui_sparkle_updater_callback_target(cx.weak_entity(), cx.to_async());
             register_gpui_os_integration_callback_target(cx.weak_entity(), cx.to_async());
         }
+        #[cfg(target_os = "windows")]
+        register_gpui_windows_notification_click_target(cx);
     }
 
     /// The lead closed and this is the oldest remaining window: it runs the app-wide work from now
