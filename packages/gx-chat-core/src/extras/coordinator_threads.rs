@@ -2,6 +2,9 @@
 //!
 //! CDXC:Coordinators 2026-09-30 WHY:
 //! The panel answers "what needs me, what is running, what finished" without opening the sidebar, which the phone does not have. Grouping, order, labels and the done fold are decided here once for the desktop, web and phone renderers; gxserver only sends each thread's state and one line of detail (`coordinatorThreads`).
+//!
+//! CDXC:Coordinators 2026-10-05 DECISION:
+//! The user, on the panel that showed only "8 done" and no rows: "I think we shouldn't collapse all the done ones, let's show latest 3 from them so it looks better pls". The 3 most recently finished threads (gxserver sends done rows newest first) are normal rows after the running and waiting ones, and only the rest fold into "N more done"; with 3 or fewer done threads nothing folds.
 //! SEE-ALSO: server/src/coordinators/panel.rs (the field), apps/desktop/src/app/native_chat/coordinator_threads.rs and apps/mobile/app/src/chat/native/cards/AgentPanels.tsx (the renderers).
 
 use serde::{Deserialize, Serialize};
@@ -44,9 +47,12 @@ pub struct CoordinatorThreadsPanel {
     pub attention: bool,
     pub collapsed: bool,
     pub show_done: bool,
-    /// "3 done" / "Hide done", or "" when nothing is done.
+    /// "5 more done" / "Hide done", or "" when every done thread is already listed.
     pub done_label: String,
 }
+
+/// Done threads listed as normal rows while the rest stay folded behind `done_label`.
+const DONE_ROWS_SHOWN: usize = 3;
 
 const GROUPS: [(&str, &str); 6] = [
     ("waiting", "Waiting on you"),
@@ -129,7 +135,12 @@ pub fn coordinator_threads_panel(
                 _ => format!("{count} {state}"),
             });
         }
-        if group_rows.is_empty() || (state == "done" && !show_done) {
+        let group_rows = if state == "done" && !show_done {
+            group_rows.into_iter().take(DONE_ROWS_SHOWN).collect()
+        } else {
+            group_rows
+        };
+        if group_rows.is_empty() {
             continue;
         }
         groups.push(CoordinatorThreadGroup {
@@ -143,10 +154,10 @@ pub fn coordinator_threads_panel(
         attention: groups.iter().any(|group| group.state == "waiting"),
         collapsed,
         show_done,
-        done_label: match (done_count, show_done) {
-            (0, _) => String::new(),
-            (_, true) => "Hide done".to_string(),
-            (count, false) => format!("{count} done"),
+        done_label: match (done_count as usize > DONE_ROWS_SHOWN, show_done) {
+            (false, _) => String::new(),
+            (true, true) => "Hide done".to_string(),
+            (true, false) => format!("{} more done", done_count as usize - DONE_ROWS_SHOWN),
         },
         groups,
     })
