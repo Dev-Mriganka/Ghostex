@@ -8498,7 +8498,7 @@
     {
       "key": "bundledAgentSkills",
       "title": "Bundled Agent Skills",
-      "subtitle": "Install the Ghostex skills you want agents to discover. Ghostex Computer Use and Ghostex Browser Use need Fast Computer Use installed first, and Ghostex SpaceO needs SpaceO (Mac only). Each skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All.",
+      "subtitle": "Install the Ghostex skills you want agents to discover. Cua Driver, Ghostex Computer Use and Ghostex Browser Use need Fast Computer & Browser Use installed first, and Ghostex SpaceO needs SpaceO (Mac only). Each Ghostex skill is copied to ~/.agents/skills and can be updated or uninstalled independently, or removed together with Uninstall All; Cua Driver is installed by cua-driver itself.",
       "tab": "integrations",
       "tabTitle": "Integrations",
       "section": "integrations",
@@ -8550,8 +8550,8 @@
     },
     {
       "key": "cuaPermissions",
-      "title": "Fast Computer Use Permissions",
-      "subtitle": "Fast Computer Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.",
+      "title": "Fast Computer & Browser Use Permissions",
+      "subtitle": "Fast Computer & Browser Use needs Accessibility to click and type in apps, and Screen Recording to understand what is visible on the desktop.",
       "tab": "integrations",
       "tabTitle": "Integrations",
       "section": "integrations",

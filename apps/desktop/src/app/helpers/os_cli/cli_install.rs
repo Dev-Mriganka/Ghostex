@@ -45,26 +45,34 @@ pub(crate) fn gpui_finish_desktop_control_setup(
     if !driver_installed {
         return Err(
             if was_update {
-                "The Fast Computer Use update did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                "The Fast Computer & Browser Use update did not finish successfully. Settings shows its last output; plugin status was refreshed."
             } else {
-                "The Fast Computer Use installer did not finish successfully. Settings shows its last output; plugin status was refreshed."
+                "The Fast Computer & Browser Use installer did not finish successfully. Settings shows its last output; plugin status was refreshed."
             }
             .to_string(),
         );
     }
 
+    // The cua-driver skill follows the driver it describes; a failure here only adds a note.
+    let skill_note = match gpui_install_cua_driver_skill() {
+        Ok(_) => "",
+        Err(_) => " The Cua Driver skill could not be installed; install it from Settings.",
+    };
     match gpui_install_bundled_ghostex_skill(
         &["computer-use", "install-skill"],
         "Ghostex Computer Use",
     ) {
         Ok(_) => Ok(if was_update {
-            "Fast Computer Use is up to date. Ghostex Computer Use is ready.".to_string()
+            format!(
+                "Fast Computer & Browser Use is up to date. Ghostex Computer Use is ready.{skill_note}"
+            )
         } else {
-            "Fast Computer Use installed. Grant accessibility and screen recording permissions if needed."
-                .to_string()
+            format!(
+                "Fast Computer & Browser Use installed. Grant accessibility and screen recording permissions if needed.{skill_note}"
+            )
         }),
         Err(message) => Err(format!(
-            "Fast Computer Use {}, but Ghostex Computer Use skill could not be installed. {message}",
+            "Fast Computer & Browser Use {}, but Ghostex Computer Use skill could not be installed. {message}",
             if was_update { "updated" } else { "installed" }
         )),
     }

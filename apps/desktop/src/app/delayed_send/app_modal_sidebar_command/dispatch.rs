@@ -77,6 +77,8 @@ impl GhostexGpuiApp {
             | "installGenerateTitleSkill"
             | "installMoveCodexSessionSkill"
             | "installHelpSkill"
+            | "installCuaDriverSkill"
+            | "uninstallCuaDriverSkill"
             | "installCuaDriver"
             | "reinstallCuaDriver"
             | "uninstallCuaDriver"

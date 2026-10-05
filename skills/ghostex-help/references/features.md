@@ -2011,19 +2011,25 @@ docs directory), `hideProjectHeaderDiffStats`,
   and menus, and keeps your apps and custom targets for when you turn it back
   on (`openInTitlebarButtonHidden`).
 - Settings > Integrations installs the bundled agent skills (Ghostex CLI,
-  Ghostex Help, Computer Use and Browser Use through Fast Computer Use, SpaceO
-  through SpaceO, Embedded Browser Use, Project Board Beads) and shows their
-  install status. Skills are copied
+  Ghostex Help, Computer Use and Browser Use through Fast Computer & Browser
+  Use, SpaceO through SpaceO, Embedded Browser Use, Project Board Beads) and
+  shows their install status. Skills are copied
   into the global skill folders every agent CLI reads. When the computer is
   online they are downloaded from the Ghostex GitHub repository, so skill fixes
   arrive between releases, and installed skills are refreshed automatically
   each time Ghostex starts. Offline installs use the copy inside the app.
-  Its Desktop control section installs Fast Computer Use (Trycua). Once it is installed, its
+  Its Desktop control section installs Fast Computer & Browser Use, Trycua's
+  open-source driver (the `trycua/cua` link next to its name opens the project
+  on GitHub). Installing it also installs its Cua Driver skill, which teaches
+  agents the driver's own commands; if that skill is missing, the row shows an
+  Install skill button, and the Agent skills list installs or removes the same
+  skill (`cua-driver skills install`). Once it is installed, its
   row shows an update button when a newer release is out (on a Mac), or a
   check mark when it is up to date (click it to check again), a reinstall
   button that runs the official installer again, and an uninstall button
-  that removes Fast Computer Use but keeps its Accessibility and Screen Recording
-  permissions. Hover them to see the installed and latest versions.
+  that removes Fast Computer & Browser Use but keeps its Accessibility and
+  Screen Recording permissions. Hover them to see the installed and latest
+  versions.
   On an Apple Silicon Mac with macOS 14 or later, the same section also
   installs SpaceO, which gives agents their own hidden screen: apps open on a
   virtual display, so agents click, type and take screenshots there while you

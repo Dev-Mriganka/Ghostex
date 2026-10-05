@@ -60,6 +60,14 @@ pub fn exports(module: &str, platform: Platform) -> Vec<(&'static str, Json)> {
                 GHOSTEX_TRYCUA_PRODUCT_NAME.to_json(),
             ),
             (
+                "GHOSTEX_TRYCUA_REPOSITORY_LABEL",
+                GHOSTEX_TRYCUA_REPOSITORY_LABEL.to_json(),
+            ),
+            (
+                "GHOSTEX_TRYCUA_REPOSITORY_URL",
+                GHOSTEX_TRYCUA_REPOSITORY_URL.to_json(),
+            ),
+            (
                 "VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS",
                 VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS.to_json(),
             ),
