@@ -470,6 +470,20 @@
       "agentWritable": true
     },
     {
+      "key": "groupWorkingSessions",
+      "title": "Group working sessions",
+      "subtitle": "Move sessions into a collapsed Working section under their project while their agent works; they return to Sessions when it stops or needs you. Also in the sidebar's Sort & Filter menu.",
+      "tab": "settings",
+      "tabTitle": "General",
+      "group": "sidebar",
+      "groupTitle": "Sidebar",
+      "section": "sidebar",
+      "sectionTitle": "Sidebar",
+      "type": "boolean",
+      "default": false,
+      "agentWritable": true
+    },
+    {
       "key": "agentManagerZoomPercent",
       "title": "Sidebar Interface Size",
       "subtitle": "Scale the sidebar interface.",

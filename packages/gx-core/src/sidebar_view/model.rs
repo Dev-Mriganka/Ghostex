@@ -45,6 +45,7 @@ struct GroupKey {
     active_project_matches: bool,
     selected_rows: Vec<usize>,
     tag_filters: Vec<String>,
+    group_working_sessions: bool,
     collapsed: bool,
     expanded: bool,
     hover_actions_expanded: bool,
@@ -954,6 +955,7 @@ fn group_key(
             .map(|(index, _)| index)
             .collect(),
         tag_filters: inputs.ui.selected_tag_filters.clone(),
+        group_working_sessions: inputs.settings.group_working_sessions,
         collapsed: inputs.ui.collapse.collapsed_groups.contains(&plan.group_id),
         expanded: inputs
             .ui

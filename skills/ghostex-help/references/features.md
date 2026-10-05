@@ -294,6 +294,14 @@ Shortcuts: `focusNextSession`, `focusPreviousSession`, `focusNextPaneTab`,
 Top chrome holds the Quick section (projectless Quick chats and terminals),
 tag filters, Spaces, and More Options: Settings, Search by
 Prompt, Previous Sessions, Mobile & Remote, Extensions, Tips.
+**Group working sessions** (in the More menu's Sort & Filter page, and in
+Settings > Sidebar; both switch the same setting, off by default) moves each
+project's sessions into a Working section under that project while their agent
+works. The section is collapsed by default (click its heading to open it) and
+its heading shows the count. A session goes back to Sessions on its own when
+its agent stops. The session you have open, and a working session with an
+unanswered question (pink), stay in Sessions. Pinned, draft, parked and snoozed
+sessions keep their own sections (`groupWorkingSessions`).
 Spaces group projects or groups together; they are not saved filters, and a
 filter cannot be saved as a Space. Spaces is a built-in extension, off by
 default: turn it on with its switch in Settings > Extensions (Features). While

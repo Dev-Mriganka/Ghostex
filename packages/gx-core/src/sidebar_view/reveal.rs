@@ -173,6 +173,7 @@ pub fn reveal_plan(
     });
     let inputs = switched.as_ref().unwrap_or(inputs);
     let parking = inputs.settings.enable_session_parking;
+    let group_working = inputs.settings.group_working_sessions;
     // A bot row is only in Bots mode's list and a project row only in Projects mode's, so the
     // row's kind names the mode the reveal has to be in. Bots switched off draws no bot row at all.
     let row_mode = match row_is_bot(core, sidebar_session_id) {
@@ -188,7 +189,7 @@ pub fn reveal_plan(
     // The drawn list is the OTHER machine's, or the other mode's, when the reveal moves either, so
     // it is not asked at all.
     let drawn = (select_machine.is_none() && select_mode.is_none())
-        .then(|| locate(view, sidebar_session_id, parking, now_ms))
+        .then(|| locate(view, sidebar_session_id, parking, group_working, now_ms))
         .flatten();
     let found = match drawn {
         Some(found) => found,
@@ -196,7 +197,7 @@ pub fn reveal_plan(
             // Nothing filtering: no Space, no Show Hidden, no tags. The row is then wherever it is.
             let probe = probe.insert(unfiltered(inputs, row_mode));
             let list = built.insert(SidebarViewModel::build_from_scratch(core, probe, now_ms));
-            locate(list, sidebar_session_id, parking, now_ms)?
+            locate(list, sidebar_session_id, parking, group_working, now_ms)?
         }
     };
     let located = built.as_ref().unwrap_or(view);
@@ -447,6 +448,7 @@ fn locate(
     view: &SidebarView,
     sidebar_session_id: &str,
     enable_parking: bool,
+    group_working: bool,
     now_ms: u64,
 ) -> Option<Located> {
     let group = find_group(view, sidebar_session_id)?;
@@ -489,7 +491,14 @@ fn locate(
         .map(|section| section.id)
         // A row its heading does not draw is in no heading's list, so its heading is worked out
         // from the row itself, exactly as the sections are built.
-        .or_else(|| row.map(|row| super::ordering::section_of(row, enable_parking, now_ms)))?;
+        .or_else(|| {
+            row.map(|row| {
+                let group_working = group_working
+                    && !super::ordering::held_out_of_working(sessions)
+                        .contains(&row.sidebar_session_id);
+                super::ordering::section_of(row, enable_parking, group_working, now_ms)
+            })
+        })?;
     Some(Located {
         group_id: group.core.group_id.clone(),
         storage_id: group.core.storage_id.clone(),

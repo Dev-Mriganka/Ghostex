@@ -40,6 +40,7 @@ How to use this file:
 - **Hide New Terminal button** `hideTabStripNewTerminalButton` (boolean, default false): Hide the New Terminal button from the tab strip.
 - **Hide New Browser Tab button** `hideTabStripNewBrowserButton` (boolean, default false): Hide the New Browser Tab button from the tab strip.
 - **Compact Session Rows** `projectSessionListCollapsedCount` (number 1 to 50 default 13) [advanced]: Rows a project shows in Compact mode before its "Show all" row. Rows in collapsed sections do not count.
+- **Group working sessions** `groupWorkingSessions` (boolean, default false): Move sessions into a collapsed Working section under their project while their agent works; they return to Sessions when it stops or needs you. Also in the sidebar's Sort & Filter menu.
 - **Sidebar Interface Size** `agentManagerZoomPercent` (number 50 to 200 default 100): Scale the sidebar interface.
 - **Double-click empty sidebar space to create a session** `createSessionOnSidebarDoubleClick` (boolean, default false) [advanced]: Create a session from empty sidebar space.
 - **Enable session parking** `enableSessionParking` (boolean, default true): Move deferred sessions into a collapsible Parked section at the bottom of the sidebar.

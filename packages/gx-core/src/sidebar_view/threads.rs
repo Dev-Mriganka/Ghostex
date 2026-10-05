@@ -2,7 +2,7 @@
 //!
 //! SEE-ALSO: server/src/coordinators/presentation.rs (the fields), view.rs `RowNesting`.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::keys::SessionKey;
@@ -60,12 +60,17 @@ fn is_nestable_thread(session: &SessionView, enable_parking: bool, now_ms: u64) 
 pub(crate) fn nest_threads(
     sessions: Vec<SessionView>,
     enable_parking: bool,
+    group_working: bool,
+    held: &HashSet<String>,
     collapsed: &BTreeSet<String>,
     now_ms: u64,
 ) -> (Vec<SessionView>, Vec<SectionId>) {
     let base_sections: Vec<SectionId> = sessions
         .iter()
-        .map(|session| section_of(&session.row, enable_parking, now_ms))
+        .map(|session| {
+            let group_working = group_working && !held.contains(&session.row.sidebar_session_id);
+            section_of(&session.row, enable_parking, group_working, now_ms)
+        })
         .collect();
     let coordinators: HashMap<&SessionKey, usize> = sessions
         .iter()

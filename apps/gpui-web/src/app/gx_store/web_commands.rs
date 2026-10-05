@@ -17,6 +17,7 @@ fn section_id(value: &str) -> Option<SectionId> {
         "browser" => SectionId::Browser,
         "pinned" => SectionId::Pinned,
         "drafts" => SectionId::Drafts,
+        "working" => SectionId::Working,
         "sessions" => SectionId::Sessions,
         "parked" => SectionId::Parked,
         "snoozed" => SectionId::Snoozed,

@@ -470,6 +470,7 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     // last-width restore path used at app restart.
     ("sidebarDefaultWidthPx", J::Num(275.0)),
     ("projectSessionListCollapsedCount", J::Num(13.0)),
+    ("groupWorkingSessions", J::Bool(false)),
     ("sidebarSpacesEnabled", J::Bool(false)),
     ("sidebarSpaceSwitchBehavior", J::Str("restore")),
     ("projectSwitchKeepAliveMinutes", J::Num(10.0)),

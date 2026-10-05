@@ -149,8 +149,10 @@ pub use crate::sidebar_actions::{
 };
 pub use crate::sidebar_actions::{
     delayed_send_seed, normalize_remote_machine_settings, owns_agent_run_command,
-    owns_delayed_send_command, owns_machine_disable_command, plan_agent_run,
-    plan_delayed_send_action, plan_machine_disable, MACHINE_DISABLE_SETTINGS_SOURCE,
+    owns_delayed_send_command, owns_group_working_sessions_command, owns_machine_disable_command,
+    plan_agent_run, plan_delayed_send_action, plan_group_working_sessions, plan_machine_disable,
+    GROUP_WORKING_SESSIONS_ACTION, GROUP_WORKING_SESSIONS_SETTINGS_SOURCE,
+    MACHINE_DISABLE_SETTINGS_SOURCE,
 };
 pub use crate::sidebar_actions::{
     open_remote_session_terminal, plan_generate_session_title, plan_group_sleep,
