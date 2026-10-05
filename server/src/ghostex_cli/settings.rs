@@ -748,7 +748,18 @@ fn open_command(args: &[String]) -> CliResult<()> {
     {
         super::built_in_extensions::require_built_in_extension(feature)?;
     }
-    let search_query = entry.map(|entry| entry.title.clone());
+    /*
+    CDXC:Settings 2026-10-05 WHY:
+    Settings searches only its own rows. A key the Help catalog adds without one (a supplemental row such as `hideAccountEmails`, or app state) was opened with its title searched, which matched nothing and showed "No settings match your search" over a page that has the setting. Those keys open on their page without a search.
+    */
+    let search_query = entry
+        .filter(|entry| {
+            ghostex_settings_catalog::has_search_row(
+                ghostex_settings_catalog::Platform::current(),
+                &entry.key,
+            )
+        })
+        .map(|entry| entry.title.clone());
     let mut payload = Map::new();
     payload.insert("tab".into(), json!(tab));
     if let Some(query) = &search_query {
@@ -780,6 +791,10 @@ fn open_command(args: &[String]) -> CliResult<()> {
             (Some(query), Some(entry)) => println!(
                 "Opened Settings > {} with \"{query}\" searched ({}).",
                 entry.tab_title, entry.key
+            ),
+            (None, Some(entry)) => println!(
+                "Opened Settings > {}; \"{}\" is on that page ({}).",
+                entry.tab_title, entry.title, entry.key
             ),
             _ => println!("Opened Settings tab {tab}."),
         }
