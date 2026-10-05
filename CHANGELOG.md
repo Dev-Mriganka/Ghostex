@@ -37,6 +37,7 @@
 - **The Dev servers panel lists this computer's servers in PowerShell mode** instead of saying it could not inspect WSL ports.
 - **`ghostex ports` works on native Windows,** so the phone's Web preview lists this computer's servers with their page titles.
 - **Clicking the title bar no longer leaves the chat selecting text as the mouse moves.**
+- **The "Paste potentially unsafe text?" confirmation opens above browser tabs and the Files view** instead of being hidden behind them.
 
 ### 📱 On the phone
 - **Android: the status bar shows the Ghostex flower** instead of a terminal icon.
