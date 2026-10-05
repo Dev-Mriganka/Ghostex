@@ -5,6 +5,7 @@ use crate::ghostex_cli::{
     sessions,
 };
 use serde_json::{json, Value};
+use std::time::{Duration, Instant};
 
 pub(crate) fn text<'a>(session: &'a Value, key: &str) -> &'a str {
     session
@@ -43,7 +44,7 @@ pub(crate) fn caller() -> CliResult<Value> {
         .find_map(|key| std::env::var(key).ok().filter(|value| !value.trim().is_empty()).map(|value| (key, value.trim().to_owned())))
         .ok_or_else(|| CliError::Other("Cannot identify the caller. Run inside a Ghostex agent session with GHOSTEX_GLOBAL_SESSION_REF or GHOSTEX_SESSION_ID set.".into()))?;
     let flags = inventory_flags(&Flags::default(), &reference)?;
-    let rows = sessions::fetch_session_list(&flags, false)?;
+    let rows = live_session_rows(&flags)?;
     let matches: Vec<_> = rows
         .iter()
         .filter(|row| {
@@ -64,6 +65,34 @@ pub(crate) fn caller() -> CliResult<Value> {
     let mut caller = matches[0].clone();
     resolve_names(std::slice::from_mut(&mut caller), &flags);
     Ok(caller)
+}
+
+/// How long the caller lookup waits for gxserver to answer, which covers a gxserver restart.
+const CALLER_LIVE_WAIT: Duration = Duration::from_secs(20);
+const CALLER_LIVE_POLL: Duration = Duration::from_millis(500);
+
+/// CDXC:Cli 2026-10-05 WHY:
+/// The session list falls back to gxserver's persisted state when gxserver does not answer, and those rows carry no agent session id and no launcher name. A coordinator that messaged its threads right after a gxserver restart sent `Agent: claude` and `Agent Session ID: unavailable` (observed 2026-10-05, coordinator G4snt), while its own record still had the id. The caller's identity is therefore read only from the running gxserver, waiting out a restart; a message cannot be sent without gxserver anyway, so a gxserver that stays down fails the command instead of sending a header with missing identity.
+/// SEE-ALSO: server/src/ghostex_cli/sessions/persisted.rs (the fallback rows), `caller` above.
+fn live_session_rows(flags: &Flags) -> CliResult<Vec<Value>> {
+    let deadline = Instant::now() + CALLER_LIVE_WAIT;
+    loop {
+        match sessions::fetch_live_gxserver_session_list(flags) {
+            Ok(result) => {
+                return Ok(result
+                    .get("sessions")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default())
+            }
+            Err(error) if Instant::now() >= deadline => {
+                return Err(CliError::Other(format!(
+                    "gxserver did not answer, so your own identity for the message header could not be read: {error} It may be restarting; try again in a few seconds."
+                )))
+            }
+            Err(_) => std::thread::sleep(CALLER_LIVE_POLL),
+        }
+    }
 }
 
 pub(crate) fn resolve_names(rows: &mut [Value], flags: &Flags) {

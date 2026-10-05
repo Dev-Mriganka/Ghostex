@@ -42,7 +42,8 @@ pub fn fetch_gxserver_session_list(flags: &Flags) -> CliResult<Value> {
     }
 }
 
-fn fetch_live_gxserver_session_list(flags: &Flags) -> CliResult<Value> {
+/// The session list as the running gxserver reports it, with no fallback to its persisted state.
+pub fn fetch_live_gxserver_session_list(flags: &Flags) -> CliResult<Value> {
     let projects_response = call_gxserver_rpc("/api/listProjects", &json!({}), flags)?;
     let recent_projects_response = call_gxserver_rpc("/api/listRecentProjects", &json!({}), flags)?;
     /*
