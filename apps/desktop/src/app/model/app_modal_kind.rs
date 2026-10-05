@@ -49,6 +49,8 @@ pub(crate) enum GpuiAppModalKind {
     MakeCoordinator,
     /// Send Feedback, from the sidebar's chat-bubble button (feedback_modal_lifecycle.rs).
     Feedback,
+    /// "Paste potentially unsafe text?" for terminal paste protection (terminal_input/paste_and_shortcuts.rs).
+    TerminalPasteConfirm,
 }
 
 impl GpuiAppModalKind {
@@ -92,6 +94,7 @@ impl GpuiAppModalKind {
             "newCoordinator" => Some(Self::NewCoordinator),
             "makeCoordinator" => Some(Self::MakeCoordinator),
             "feedback" => Some(Self::Feedback),
+            "terminalPasteConfirm" => Some(Self::TerminalPasteConfirm),
             _ => None,
         }
     }
@@ -134,6 +137,7 @@ impl GpuiAppModalKind {
             Self::NewCoordinator => "newCoordinator",
             Self::MakeCoordinator => "makeCoordinator",
             Self::Feedback => "feedback",
+            Self::TerminalPasteConfirm => "terminalPasteConfirm",
         }
     }
 
@@ -174,6 +178,7 @@ impl GpuiAppModalKind {
             Self::NewCoordinator => "Ghostex New Coordinator",
             Self::MakeCoordinator => "Ghostex Make Coordinator",
             Self::Feedback => "Ghostex Send Feedback",
+            Self::TerminalPasteConfirm => "Ghostex Paste",
         }
     }
 
@@ -326,6 +331,8 @@ impl GpuiAppModalKind {
                 px(crate::app::window::FEEDBACK_MODAL_INITIAL_HEIGHT),
             ),
             Self::Extension(id) => extension_modal_window_size(id),
+            // `TERMINAL_PASTE_CONFIRM_MODAL_WIDTH` / `_INITIAL_HEIGHT` in window/terminal_paste_confirm_modal.rs.
+            Self::TerminalPasteConfirm => size(px(440.0), px(180.0)),
             Self::RemoteGxserverInstall => size(
                 px(APP_MODAL_HOST_REMOTE_GXSERVER_INSTALL_WINDOW_WIDTH),
                 px(APP_MODAL_HOST_REMOTE_GXSERVER_INSTALL_WINDOW_HEIGHT),
@@ -438,6 +445,7 @@ impl GpuiAppModalKind {
             | Self::SessionNote
             | Self::RemoteSetup
             | Self::Feedback
+            | Self::TerminalPasteConfirm
             | Self::Onboarding => serde_json::json!({
                 "modal": self.modal_id(),
                 "type": "open",

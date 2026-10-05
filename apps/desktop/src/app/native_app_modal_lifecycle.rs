@@ -375,6 +375,11 @@ impl GhostexGpuiApp {
         if modal.kind == GpuiAppModalKind::ExportTranscriptResult {
             self.pending_export_transcript_reveal_path = None;
         }
+        // A paste confirmation replaced by another modal is a cancel.
+        if modal.kind == GpuiAppModalKind::TerminalPasteConfirm {
+            self.pending_terminal_paste_confirmation = None;
+            self.terminal_paste_confirmation_dialog_open = false;
+        }
         // Quick Access keeps a live controller (quick_access/host.rs); tell it to
         // stop publishing when its window is replaced or dismissed.
         if crate::app::window::quick_access::QuickAccessTabId::from_modal_kind(modal.kind).is_some()
