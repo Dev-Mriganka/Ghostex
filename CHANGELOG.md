@@ -15,6 +15,7 @@
 
 ### 🗂️ Sidebar
 - **Group working sessions moves sessions into a collapsed Working section under their project while their agent works.** The session you have open and sessions with an unanswered question stay in Sessions, and a session goes back on its own when its agent stops. Turn it on in Settings > Sidebar or the sidebar's More > Sort & Filter (off by default).
+- **Drag sideways with the mouse on an empty part of the sidebar list to switch Spaces,** like a sideways trackpad swipe; one switch per drag, with a grabbing hand cursor.
 - **Sidebar setting changes show right away** instead of after a delay.
 
 ### 🧭 Coordinators
