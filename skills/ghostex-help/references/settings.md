@@ -312,28 +312,28 @@ How to use this file:
 
 ### Cloud Boxes
 
-- **agentbox** `agentboxStatus` (Settings UI row without a settings key; use `ghostex settings open`): Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check.
-- **Set it up for me** `agentboxSetUpForMe` (Settings UI row without a settings key; use `ghostex settings open`): Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes.
-- **What is a box?** `agentboxWhatIsABox` (Settings UI row without a settings key; use `ghostex settings open`): A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer.
+- **agentbox** `agentboxStatus` (Settings UI row without a settings key; use `ghostex settings open`): Install agentbox, the free open-source command line tool Ghostex uses to run agent sessions in boxes, see its version and whether Docker is running, and run its check. Only on macOS and Linux.
+- **Set it up for me** `agentboxSetUpForMe` (Settings UI row without a settings key; use `ghostex settings open`): Start an agent that installs agentbox, asks which clouds you want, creates the API tokens in your browser, and signs Claude and Codex in for boxes. Only on macOS and Linux.
+- **What is a box?** `agentboxWhatIsABox` (Settings UI row without a settings key; use `ghostex settings open`): A box is an isolated copy of your project where an agent works without touching this computer. Your agent's settings, skills and Codex sign-in go with it, and its web app opens on this computer. Only on macOS and Linux.
 ### Where boxes run
 
-- **Where boxes run** `agentboxProviders` (Settings UI row without a settings key; use `ghostex settings open`): Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist.
-- **Your own server (SSH)** `agentboxRemoteDocker` (Settings UI row without a settings key; use `ghostex settings open`): Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there.
+- **Where boxes run** `agentboxProviders` (Settings UI row without a settings key; use `ghostex settings open`): Set up Docker on this computer, or log in to a cloud provider with an API token and prepare its base image once. Cloud boxes bill while they exist. Only on macOS and Linux.
+- **Your own server (SSH)** `agentboxRemoteDocker` (Settings UI row without a settings key; use `ghostex settings open`): Add your own server with Docker by a name and its SSH address (user@host or a name from ~/.ssh/config), then check that boxes can run there. Only on macOS and Linux.
 ### Agent sign-in
 
-- **Claude in boxes** `agentboxClaudeSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it.
-- **Codex in boxes** `agentboxCodexSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in.
+- **Claude in boxes** `agentboxClaudeSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Claude needs its own one-time sign-in for boxes, so Claude on this computer stays signed in. Every box uses it. Only on macOS and Linux.
+- **Codex in boxes** `agentboxCodexSignIn` (Settings UI row without a settings key; use `ghostex settings open`): Boxes on this computer reuse your Codex sign-in. Sign in here for cloud boxes when Codex is not signed in. Only on macOS and Linux.
 ### New threads
 
-- **Default location** `agentboxDefaultLocation` (one of local | agentbox:docker | agentbox:hetzner | agentbox:vercel | agentbox:daytona | agentbox:e2b | agentbox:digitalocean; default local): Where new threads run unless you pick another location. Option labels: local = This computer, agentbox:docker = Docker on this computer, agentbox:hetzner = Hetzner, agentbox:vercel = Vercel, agentbox:daytona = Daytona, agentbox:e2b = E2B, agentbox:digitalocean = DigitalOcean.
+- **Default location** `agentboxDefaultLocation` (one of local | agentbox:docker | agentbox:hetzner | agentbox:vercel | agentbox:daytona | agentbox:e2b | agentbox:digitalocean; default local): Where new threads run unless you pick another location. Option labels: local = This computer, agentbox:docker = Docker on this computer, agentbox:hetzner = Hetzner, agentbox:vercel = Vercel, agentbox:daytona = Daytona, agentbox:e2b = E2B, agentbox:digitalocean = DigitalOcean. Only on macOS and Linux.
 ### Your boxes
 
-- **Your boxes** `agentboxBoxes` (Settings UI row without a settings key; use `ghostex settings open`): See every box, open a box's web app, stop a box, or destroy it to delete it for good.
+- **Your boxes** `agentboxBoxes` (Settings UI row without a settings key; use `ghostex settings open`): See every box, open a box's web app, stop a box, or destroy it to delete it for good. Only on macOS and Linux.
 ### How it works
 
-- **Start a thread in a box** `agentboxStartThread` (Settings UI row without a settings key; use `ghostex settings open`): Open New Thread and pick where it runs under Run on. Boxes open in the terminal view.
-- **Open a box's web app** `agentboxWebApp` (Settings UI row without a settings key; use `ghostex settings open`): Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically.
-- **Cloud boxes bill until stopped** `agentboxBilling` (Settings UI row without a settings key; use `ghostex settings open`): Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box.
+- **Start a thread in a box** `agentboxStartThread` (Settings UI row without a settings key; use `ghostex settings open`): Open New Thread and pick where it runs under Run on. Boxes open in the terminal view. Only on macOS and Linux.
+- **Open a box's web app** `agentboxWebApp` (Settings UI row without a settings key; use `ghostex settings open`): Right-click the session and choose Open Box Web App to open it on this computer. Add an agentbox.yaml with services.web.expose.port to start your dev server in the box automatically. Only on macOS and Linux.
+- **Cloud boxes bill until stopped** `agentboxBilling` (Settings UI row without a settings key; use `ghostex settings open`): Cloud providers charge while a box exists. Deleting a session stops its box and keeps its work; Destroy removes the box. Only on macOS and Linux.
 ## Extensions (tab `extensions`)
 
 ### Views
@@ -392,6 +392,7 @@ How to use this file:
 - **Actions** `quickActions` (Settings UI row without a settings key; use `ghostex settings open`): Saved terminal commands and web pages you start in one click from the Start button, a hotkey, Quick Access or a project row.
 - **Open In** `openIn` (Settings UI row without a settings key; use `ghostex settings open`): Open the active project or a session's folder in your editor, terminal or file manager from the Open button and the Open In menus.
 - **Spaces** `spaces` (Settings UI row without a settings key; use `ghostex settings open`): Group projects into Spaces and switch between them from a row of icons at the top of the sidebar, or by swiping.
+- **Cloud Boxes** `cloudBoxes` (Settings UI row without a settings key; use `ghostex settings open`): Run agent sessions in isolated boxes, in Docker on this computer or in the cloud, from New Thread's Run on choice or Run in a Box in the Select Agent menu.
 - **Extensions** `extensionsButton` (Settings UI row without a settings key; use `ghostex settings open`): An entry in the work area header’s ⋯ menu that opens this Extensions page.
 - **Chromium runtime (CEF)** `cef` (Settings UI row without a settings key; use `ghostex settings open`): Install, reinstall or uninstall the optional web runtime used by the Browser, the Code view, website and extension views, and HTML files in Files.
 - **Hide Bots** `botsHidden` (boolean, default true): Stop offering Bots, the sidebar mode with one row per Hermes profile. Hidden by default; offered only where the Hermes CLI is installed.
@@ -399,6 +400,7 @@ How to use this file:
 - **Turn off Actions** `actionsHidden` (boolean, default true): Turn off Actions everywhere: the Start button, the Actions page in Settings, Actions pinned to project rows, the Start Action hotkeys and the Quick Access rows. Off by default; your saved actions are kept.
 - **Turn off Open In** `openInTitlebarButtonHidden` (boolean, default false): Turn off Open In everywhere: the Open button, the Open In page in Settings and the Open In menus. Your apps and custom commands are kept.
 - **Spaces** `sidebarSpacesEnabled` (boolean, default false): Turn on Spaces: a row of Space icons at the top of the sidebar, Space menus, and the Space settings. Off by default; your saved Spaces are kept while it is off.
+- **Turn off Cloud Boxes** `cloudBoxesHidden` (boolean, default true): Turn off Cloud Boxes everywhere: the Cloud Boxes page in Settings, the Run on choice of a new thread, Run in a Box in the Select Agent menu and the agentbox commands. Off by default; your boxes and box settings are kept. Only on macOS and Linux.
 ### Extensions Store
 
 - **Extension store** `store` (Settings UI row without a settings key; use `ghostex settings open`): Browse audited extensions, install them, and manage what is already installed.

@@ -8655,7 +8655,8 @@
       "section": "overview",
       "sectionTitle": "Cloud Boxes",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxSetUpForMe",
@@ -8666,7 +8667,8 @@
       "section": "overview",
       "sectionTitle": "Cloud Boxes",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxWhatIsABox",
@@ -8677,7 +8679,8 @@
       "section": "overview",
       "sectionTitle": "Cloud Boxes",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxProviders",
@@ -8714,7 +8717,8 @@
           "value": "digitalocean"
         }
       ],
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxRemoteDocker",
@@ -8725,7 +8729,8 @@
       "section": "providers",
       "sectionTitle": "Where boxes run",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxClaudeSignIn",
@@ -8736,7 +8741,8 @@
       "section": "agentSignIn",
       "sectionTitle": "Agent sign-in",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxCodexSignIn",
@@ -8747,7 +8753,8 @@
       "section": "agentSignIn",
       "sectionTitle": "Agent sign-in",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxDefaultLocation",
@@ -8789,7 +8796,8 @@
           "value": "agentbox:digitalocean"
         }
       ],
-      "agentWritable": true
+      "agentWritable": true,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxBoxes",
@@ -8800,7 +8808,8 @@
       "section": "boxes",
       "sectionTitle": "Your boxes",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxStartThread",
@@ -8811,7 +8820,8 @@
       "section": "howTo",
       "sectionTitle": "How it works",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxWebApp",
@@ -8822,7 +8832,8 @@
       "section": "howTo",
       "sectionTitle": "How it works",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "agentboxBilling",
@@ -8833,7 +8844,8 @@
       "section": "howTo",
       "sectionTitle": "How it works",
       "type": "ui",
-      "agentWritable": false
+      "agentWritable": false,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "titlebarViewOrder",
@@ -9433,6 +9445,17 @@
       "agentWritable": false
     },
     {
+      "key": "cloudBoxes",
+      "title": "Cloud Boxes",
+      "subtitle": "Run agent sessions in isolated boxes, in Docker on this computer or in the cloud, from New Thread's Run on choice or Run in a Box in the Select Agent menu.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "ui",
+      "agentWritable": false
+    },
+    {
       "key": "extensionsButton",
       "title": "Extensions",
       "subtitle": "An entry in the work area header’s ⋯ menu that opens this Extensions page.",
@@ -9513,6 +9536,19 @@
       "type": "boolean",
       "default": false,
       "agentWritable": true
+    },
+    {
+      "key": "cloudBoxesHidden",
+      "title": "Turn off Cloud Boxes",
+      "subtitle": "Turn off Cloud Boxes everywhere: the Cloud Boxes page in Settings, the Run on choice of a new thread, Run in a Box in the Select Agent menu and the agentbox commands. Off by default; your boxes and box settings are kept.",
+      "tab": "extensions",
+      "tabTitle": "Extensions",
+      "section": "official",
+      "sectionTitle": "Built-in",
+      "type": "boolean",
+      "default": true,
+      "agentWritable": true,
+      "availability": "Only on macOS and Linux."
     },
     {
       "key": "store",

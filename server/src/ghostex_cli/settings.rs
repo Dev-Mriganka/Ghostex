@@ -165,9 +165,13 @@ fn effective_default(entry: &CatalogEntry) -> Option<Value> {
 }
 
 /// Whether Settings leaves the row out on this computer for the saved values (Blur on Windows
-/// while the glass shows the desktop, Menu blur off macOS).
+/// while the glass shows the desktop, Menu blur off macOS), or the page is one a built-in extension
+/// this platform does not have owns (Cloud Boxes on Windows).
 fn hidden_here(entry: &CatalogEntry, file: &Map<String, Value>) -> bool {
-    ghostex_settings_catalog::availability::row_hidden(
+    !ghostex_settings_catalog::built_in_extensions::page_available_on(
+        &entry.tab,
+        ghostex_settings_catalog::Platform::current(),
+    ) || ghostex_settings_catalog::availability::row_hidden(
         ghostex_settings_catalog::Platform::current(),
         &entry.key,
         |key| file.get(key).and_then(Value::as_str).map(str::to_string),

@@ -245,6 +245,18 @@ pub const GHOSTEX_OFFICIAL_EXTENSIONS: J = J::Arr(&[
         ("title", J::Str("Spaces")),
         ("settingKeys", J::Arr(&[J::Str("sidebarSpaceSwitchBehavior"), J::Str("sidebarSpaceFollowActiveSession")])),
     ]),
+    // CDXC:AgentBox 2026-10-06 DECISION:
+    // User: "Add this feature to extensions page and keep it off by default and only show it on linux/macos. Hide the page from the sidebar in settings if not enabled." Cloud Boxes is a whole-feature entry like Actions, with a new key (`cloudBoxesHidden`, default on = hidden) because the settings file stores every default; `platforms` leaves it out on Windows, where it is always off. Saved boxes (agentbox's own state) and `agentboxDefaultLocation` are kept while it is off.
+    J::Obj(&[
+        ("description", J::Str("Run agent sessions in isolated boxes, in Docker on this computer or in the cloud, from New Thread's Run on choice or Run in a Box in the Select Agent menu.")),
+        ("category", J::Str("features")),
+        ("id", J::Str("cloudBoxes")),
+        ("placement", J::Str("feature")),
+        ("settingsKey", J::Str("cloudBoxesHidden")),
+        ("title", J::Str("Cloud Boxes")),
+        ("settingsPages", J::Arr(&[J::Str("cloudBoxes")])),
+        ("platforms", J::Arr(&[J::Str("macos"), J::Str("linux")])),
+    ]),
     J::Obj(&[
         ("description", J::Str("An entry in the work area header’s ⋯ menu that opens this Extensions page.")),
         ("category", J::Str("menus-and-panels")),

@@ -1754,6 +1754,14 @@ in a box. Your agent's settings, skills and Codex sign-in go with it. Claude
 needs its own one-time sign-in for boxes, so Claude on this computer stays
 signed in.
 
+Cloud Boxes is a built-in extension, off by default and only on macOS and
+Linux: turn it on with its switch in Settings > Extensions (Features). While it
+is off the Cloud Boxes page in Settings, the Run on choice in New Thread and in
+a new chat thread, Run in a Box in the Select Agent menu and the
+`ghostex agentbox` commands are gone (they say Cloud Boxes is turned off), and
+new threads run on this computer. Your boxes, provider logins and default
+location are kept and come back when you turn it on (`cloudBoxesHidden`).
+
 - **Set up**: Settings > Cloud Boxes. "Set It Up for Me" starts an agent that
   installs agentbox, asks which clouds you want before anything that costs
   money, creates the provider API token in your browser, and signs Claude and
@@ -1780,7 +1788,8 @@ signed in.
   every box with Open Web App, Stop and Destroy (deletes the box for good).
 - Boxes run on macOS and Linux; on Windows, use Ghostex inside WSL.
 
-Related settings: `agentboxDefaultLocation` (where new threads run unless you
+Related settings: `cloudBoxesHidden` (turns the feature off; default on, so
+Cloud Boxes starts off), `agentboxDefaultLocation` (where new threads run unless you
 pick another location; default `local`, this computer). CLI:
 `ghostex agentbox status`, `ghostex agentbox list`,
 `ghostex create-agent <agent> --project-id <id> --run-on docker`.
@@ -1940,11 +1949,12 @@ docs directory), `hideProjectHeaderDiffStats`,
   extension supplies a folder; relative folders are resolved inside the active
   project.
   Features are whole parts of Ghostex you can switch off to keep the app
-  simple: Actions (off by default), Open In (on by default) and Spaces (off by
-  default). Turning one off removes it everywhere at once (its header button,
+  simple: Actions (off by default), Open In (on by default), Spaces (off by
+  default) and Cloud Boxes (off by default; macOS and Linux only, not listed on
+  Windows). Turning one off removes it everywhere at once (its header button,
   Settings pages and rows, hotkeys, Quick Access rows and menus) and turning it
   back on restores everything you had set up. Settings: `actionsHidden`,
-  `openInTitlebarButtonHidden`, `sidebarSpacesEnabled`.
+  `openInTitlebarButtonHidden`, `sidebarSpacesEnabled`, `cloudBoxesHidden`.
   The Edit (pencil) button on a card chooses where that view, header button, or
   extension appears. Pick **Everywhere** or **Only in selected places**, then
   choose projects and spaces from the dropdown next to **Except in** (or
