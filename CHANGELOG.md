@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+## 10.13.0 - 2026-10-06
+
+**Ghostex 10.13.0 is out.** Ghostex can spend a banked Claude or Codex reset before it expires, Windows gets real system notifications, working sessions can fold into a Working section, the built-in browser can open, save and copy links and images, and Pi works much better.
+
+### 👥 Accounts
+- **Ghostex can spend a banked Claude or Codex reset for you before it expires.** It only uses a reset that would otherwise be lost. Turn it on per provider in Settings > Accounts > Auto-redeem expiring resets (off by default).
+- **The bell warns in red when a banked reset expires within 3 days and again within 24 hours,** with an optional system notification (Settings > General > Notifications > Reset Expiry Notifications).
+
+### 🔔 Notifications
+- **Windows: attention alerts and reset warnings show as real Windows notifications,** and clicking one brings Ghostex forward on that session. Linux shows them through the desktop's notifications.
+
+### 🗂️ Sidebar
+- **Group working sessions moves sessions into a collapsed Working section under their project while their agent works.** The session you have open and sessions with an unanswered question stay in Sessions, and a session goes back on its own when its agent stops. Turn it on in Settings > Sidebar or the sidebar's More > Sort & Filter (off by default).
+- **Sidebar setting changes show right away** instead of after a delay.
+
+### 🧭 Coordinators
+- **The Threads panel lists the 3 most recently finished threads,** with older ones folded into "N more done", on the computer and the phone.
+- **Threads keep the title their coordinator gives them.**
+- **A message to an agent is typed at most once,** even when the send is retried after a timeout or a restart.
+
+### 🤖 Pi
+- **Pi works on native Windows and reports its state accurately:** a finished turn only when nothing more is coming, Esc as an interrupt, and its dialogs as needing you.
+- **The chat shows Pi's thinking, links each tool call to its result, and shows provider errors and Pi's edit diffs.**
+
+### 🌐 Browser
+- **Right-click a link or an image in the built-in browser** to open it in a new tab, save it, or copy it or its address. Downloads a page starts ask where to save instead of being dropped.
+
+### 🧩 Integrations
+- **Desktop control is now called Fast Computer & Browser Use,** links to the trycua/cua project, and installs the driver's own Cua Driver skill, which the Agent skills list can also install or remove.
+
+### 🪟 Windows
+- **The Dev servers panel lists this computer's servers in PowerShell mode** instead of saying it could not inspect WSL ports.
+- **`ghostex ports` works on native Windows,** so the phone's Web preview lists this computer's servers with their page titles.
+- **Clicking the title bar no longer leaves the chat selecting text as the mouse moves.**
+
+### 📱 On the phone
+- **Android: the status bar shows the Ghostex flower** instead of a terminal icon.
+
+### 🩹 Fixes and polish
+- **macOS: arrow keys move the cursor in the VS Code view** instead of typing red FS/GS/RS/US characters.
+- **Every tooltip has rounded corners.**
+- **Opening a General setting by name lands on General with the setting found,** instead of an empty search on the last page you used.
+- **A `ghostex` command that times out says so** instead of telling you to start Ghostex.
+
 ## 10.12.0 - 2026-10-05
 
 **Ghostex 10.12.0 is out.** Make any session a coordinator without interrupting it, run coordinators on ZCode, switch Claude accounts on Windows, copy whole tool calls from the chat, and a new session tidies away the project's empty ones.
