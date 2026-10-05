@@ -257,6 +257,7 @@ Ghostex builds on open source work from these projects and communities:
 
 - [Ghostty](https://github.com/ghostty-org/ghostty) and [Zed / GPUI](https://github.com/zed-industries/zed) for the terminal and the native shell
 - [CEF](https://github.com/chromiumembedded/cef) for embedded Chromium panes
+- [Trycua](https://github.com/trycua/cua) for built-in Computer Use
 - [VS Code](https://github.com/microsoft/vscode) and [code-server](https://github.com/coder/code-server) for the embedded IDE
 - [Beads](https://github.com/gastownhall/beads) by [Steve Yegge](https://github.com/steveyegge) and [Beads Viewer](https://github.com/Dicklesworthstone/beads_viewer) for the Kanban board
 - [OpenUsage](https://github.com/robinebers/openusage) for Claude and Codex usage stats
