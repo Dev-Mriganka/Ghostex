@@ -146,6 +146,9 @@ view from the strip.
   with its last tab on) when Browser was the last one. **Browser Tab** at the top of the strip's **+** menu opens
   another tab. A tab with no address yet is blank: type or paste an address, or
   pick a running server from the ⋯ menu's Dev servers panel.
+  Right-click a link or image in a page to open it in a new tab, save it
+  (Save link as / Save image as ask where to save), copy its address, or copy
+  the image itself; any page download also asks where to save.
   Web links from terminals, chat, and detected dev servers
   open here or in the system browser depending on Open links in.
   The Browser runs on the web runtime (Chromium), an optional one-time install
