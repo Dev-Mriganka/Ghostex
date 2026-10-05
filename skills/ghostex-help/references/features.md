@@ -313,7 +313,9 @@ hidden, and a view limited to some Spaces shows everywhere; your Spaces are
 kept and come back when you turn it on (`sidebarSpacesEnabled`). Create one with the "Create space" button
 that fills the Space row while you have none, by right-clicking the Other
 button or a Space icon and choosing New Space, or from the More menu when
-Spaces overflow.
+Spaces overflow. To switch to the next or previous Space, swipe sideways over
+the sidebar list with the trackpad, or drag sideways with the mouse on an
+empty part of the list (below the last project or between projects).
 A project added with Add Project (from the More menu, from the "Add Project"
 button that an empty project list or empty Space shows, or by right-clicking
 the empty sidebar area) joins the Space that is open at the time and appears at
