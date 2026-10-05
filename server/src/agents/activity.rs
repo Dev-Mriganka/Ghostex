@@ -1113,6 +1113,15 @@ pub(crate) fn normalize_agent_hook_activity(
             return Some("idle".to_string());
         }
     }
+    // Pi's Stop is a completed turn (CDXC:Notifications in agent_hooks/event_mapping.rs); its
+    // dialogs need the user, and an Esc ends the run without finishing it.
+    if normalized_agent.as_deref() == Some("pi") {
+        match lower.as_str() {
+            "stop" | "notification" => return Some("attention".to_string()),
+            "interrupt" => return Some("idle".to_string()),
+            _ => {}
+        }
+    }
     // OpenClaude ships Claude's hook contract verbatim, so it shares every
     // Claude rule here exactly as it does in the notify hook's mapping.
     if matches!(normalized_agent.as_deref(), Some("claude" | "openclaude")) {

@@ -184,7 +184,11 @@ fn read_lineup(agent: PiFamilyAgent) -> Option<Value> {
 fn pinned_models(agent: PiFamilyAgent, home: &Path) -> (Option<String>, Vec<String>) {
     match agent {
         PiFamilyAgent::Pi => {
-            let settings = std::fs::read(home.join(".pi").join("agent").join("settings.json"))
+            let agent_dir = crate::session_chat_paths::configured_agent_directory(
+                "PI_CODING_AGENT_DIR",
+                ".pi/agent",
+            );
+            let settings = std::fs::read(agent_dir.join("settings.json"))
                 .ok()
                 .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
                 .unwrap_or(Value::Null);

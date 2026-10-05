@@ -157,6 +157,14 @@ pub(crate) fn activity_for_hook_event(
             return Some("idle".to_string());
         }
     }
+    /*
+    CDXC:Notifications 2026-10-05 WHY:
+    Ghostex's Pi extension sends Stop only for a turn Pi finished on its own: once `agent_settled` says no retry or queued follow-up continues it, and never for an Esc (Interrupt) or a provider failure (StopFailure). That makes Pi's Stop the same completed-turn boundary as Claude's and Codex's, so a finished Pi turn enters attention and rings instead of settling silently to idle.
+    SEE-ALSO: build_pi_extension_source in server/src/agent_hooks/plugin_sources.rs and normalize_agent_hook_activity in server/src/agents/activity.rs.
+    */
+    if agent_key == "pi" && lower == "stop" {
+        return Some("attention".to_string());
+    }
     // OpenClaude emits Claude's hook contract verbatim, so it shares every
     // Claude-specific rule below instead of falling through to the generic
     // tables (which have no PostCompact trigger check and no StopFailure arm).

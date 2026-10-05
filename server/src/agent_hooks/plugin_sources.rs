@@ -463,7 +463,7 @@ fn build_pi_extension_source(notify_hook_path: &Path) -> String {
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { AgentEndEvent, ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { AgentEndEvent, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 function firstString(...values: unknown[]): string | null {
   for (const value of values) {
@@ -494,6 +494,7 @@ function looksLikePiScript(value: string): boolean {
   const normalized = value.replaceAll("\\", "/");
   const base = path.basename(normalized).toLowerCase();
   return (
+    normalized.includes("/@earendil-works/pi-coding-agent/") ||
     normalized.includes("/@mariozechner/pi-coding-agent/") ||
     normalized.includes("/packages/coding-agent/") ||
     (base === "cli.js" && normalized.includes("pi-coding-agent")) ||
@@ -601,6 +602,31 @@ function registerOptional(api: ExtensionAPI, name: string, handler: OptionalEven
   } catch (_) {}
 }
 
+type TurnEnd = { event: string; extra: Record<string, unknown> };
+
+// Esc ends a run as `aborted` and a provider failure as `error`; neither is a finished turn.
+function turnEndFor(event: AgentEndEvent): TurnEnd {
+  let stopReason: unknown;
+  for (let index = event.messages.length - 1; index >= 0; index -= 1) {
+    const message = event.messages[index] as { role?: unknown; stopReason?: unknown } | undefined;
+    if (message && message.role === "assistant") {
+      stopReason = message.stopReason;
+      break;
+    }
+  }
+  const name = stopReason === "aborted" ? "Interrupt" : stopReason === "error" ? "StopFailure" : "Stop";
+  return { event: name, extra: { last_assistant_message: lastAssistantMessage(event) } };
+}
+
+function isIdle(ctx: ExtensionContext): boolean {
+  try {
+    const typed = ctx as unknown as { isIdle?: () => boolean };
+    return typeof typed.isIdle === "function" ? typed.isIdle() : false;
+  } catch (_) {
+    return false;
+  }
+}
+
 function sendHook(subcommand: string, ctx: ExtensionContext, extra: Record<string, unknown> = {}): void {
   if (process.env.GHOSTEX_PI_HOOKS_DISABLED === "1") return;
 
@@ -618,18 +644,31 @@ function sendHook(subcommand: string, ctx: ExtensionContext, extra: Record<strin
     transcript_path: ctx.sessionManager.getSessionFile() || undefined,
     ...extra,
   };
+  // Windows cannot run the notify hook script itself; gxserver runs it for the agent there.
+  const [command, args] =
+    process.platform === "win32"
+      ? [__GXSERVER_PATH_JSON__, ["agent-hook-notify-native", __NOTIFY_HOOK_PATH_JSON__, "pi"]]
+      : [__NOTIFY_HOOK_PATH_JSON__, []];
   try {
-    spawnSync(__NOTIFY_HOOK_PATH_JSON__, [], {
+    spawnSync(command, args, {
       input: JSON.stringify(payload),
       encoding: "utf8",
       env: hookEnvironment(cwd),
       stdio: ["pipe", "ignore", "ignore"],
       timeout: 5000,
+      windowsHide: true,
     });
   } catch (_) {}
 }
 
 export default function ghostexPiSessionExtension(pi: ExtensionAPI) {
+  // `agent_end` can be followed by an automatic retry or queued follow-ups; Pi 1.0 marks the real
+  // end of the work with `agent_settled`. Older Pi never fires it, so the turn ends on `agent_end`
+  // until the first `agent_settled` proves the event exists, then waits for it.
+  let settledSeen = false;
+  let pendingTurnEnd: TurnEnd | null = null;
+  let promptOpen = false;
+
   pi.on("session_start", async (_event, ctx) => {
     sendHook("session-start", ctx);
   });
@@ -638,8 +677,42 @@ export default function ghostexPiSessionExtension(pi: ExtensionAPI) {
     sendHook("prompt-submit", ctx, { prompt: event.prompt });
   });
 
+  registerOptional(pi, "agent_start", () => {
+    pendingTurnEnd = null;
+  });
+
   pi.on("agent_end", async (event, ctx) => {
-    sendHook("stop", ctx, { last_assistant_message: lastAssistantMessage(event) });
+    const turnEnd = turnEndFor(event);
+    if (settledSeen) {
+      pendingTurnEnd = turnEnd;
+      return;
+    }
+    sendHook(turnEnd.event, ctx, turnEnd.extra);
+  });
+
+  registerOptional(pi, "agent_settled", (_event, ctx) => {
+    const firstSettle = !settledSeen;
+    settledSeen = true;
+    const turnEnd = pendingTurnEnd;
+    pendingTurnEnd = null;
+    if (turnEnd && !firstSettle) sendHook(turnEnd.event, ctx, turnEnd.extra);
+  });
+
+  // A dialog an extension opens mid-run (a question, a confirmation) blocks Pi on the user.
+  registerOptional(pi, "ui_prompt_start", (event, ctx) => {
+    if (isIdle(ctx)) return;
+    promptOpen = true;
+    const typed = event as { title?: unknown; kind?: unknown };
+    sendHook("Notification", ctx, {
+      message: firstString(typed.title) ?? "Pi is waiting for your answer",
+      notification_type: firstString(typed.kind) ?? undefined,
+    });
+  });
+
+  registerOptional(pi, "ui_prompt_end", (_event, ctx) => {
+    if (!promptOpen) return;
+    promptOpen = false;
+    sendHook(isIdle(ctx) ? "SessionIdle" : "PostToolUse", ctx);
   });
 
   registerOptional(pi, "tool_execution_start", (event, ctx) => {
@@ -666,8 +739,14 @@ export default function ghostexPiSessionExtension(pi: ExtensionAPI) {
   });
 }
 "###;
+    // CDXC:AgentHooks 2026-10-05 WHY: native Windows cannot spawn the notify hook script, so the extension hands it to this gxserver's `agent-hook-notify-native`, as Claude's Windows hook command and OpenCode's v2 plugin do. Before this a Pi session on native Windows reported nothing: no session id, no working or done state.
+    let gxserver = std::env::current_exe()
+        .map(|path| path_string(&path))
+        .unwrap_or_default();
+    let gxserver_json = serde_json::to_string(&gxserver).unwrap_or_else(|_| "\"\"".to_string());
     source
         .replace("__MARKER__", &current_plugin_marker(PI_EXTENSION_MARKER))
+        .replace("__GXSERVER_PATH_JSON__", &gxserver_json)
         .replace("__NOTIFY_HOOK_PATH_JSON__", &notify_json)
 }
 
@@ -912,10 +991,9 @@ export default function ghostexOmpSessionExtension(api: ExtensionAPI) {
 }
 
 pub(crate) fn current_plugin_marker(marker: &str) -> String {
-    if matches!(
-        marker,
-        OPENCODE_PLUGIN_MARKER | AMP_PLUGIN_MARKER | PI_EXTENSION_MARKER
-    ) {
+    if marker == PI_EXTENSION_MARKER {
+        format!("{marker} v5")
+    } else if matches!(marker, OPENCODE_PLUGIN_MARKER | AMP_PLUGIN_MARKER) {
         format!("{marker} v4")
     } else if marker == OMP_EXTENSION_MARKER {
         format!("{marker} v2")
