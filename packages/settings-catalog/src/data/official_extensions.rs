@@ -244,6 +244,7 @@ pub const GHOSTEX_OFFICIAL_EXTENSIONS: J = J::Arr(&[
         ("appWide", J::Bool(true)),
         ("title", J::Str("Spaces")),
         ("settingKeys", J::Arr(&[J::Str("sidebarSpaceSwitchBehavior"), J::Str("sidebarSpaceFollowActiveSession")])),
+        ("hotkeys", J::Arr(&[J::Str("goToSpace1"), J::Str("goToSpace2"), J::Str("goToSpace3"), J::Str("goToSpace4"), J::Str("goToSpace5"), J::Str("goToSpace6"), J::Str("goToSpace7"), J::Str("goToSpace8"), J::Str("goToSpace9")])),
     ]),
     // CDXC:AgentBox 2026-10-06 DECISION:
     // User: "Add this feature to extensions page and keep it off by default and only show it on linux/macos. Hide the page from the sidebar in settings if not enabled." Cloud Boxes is a whole-feature entry like Actions, with a new key (`cloudBoxesHidden`, default on = hidden) because the settings file stores every default; `platforms` leaves it out on Windows, where it is always off. Saved boxes (agentbox's own state) and `agentboxDefaultLocation` are kept while it is off.

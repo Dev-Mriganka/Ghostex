@@ -316,6 +316,9 @@ button or a Space icon and choosing New Space, or from the More menu when
 Spaces overflow. To switch to the next or previous Space, swipe sideways over
 the sidebar list with the trackpad, or drag sideways with the mouse on an
 empty part of the list (below the last project or between projects).
+To jump straight to a Space, press Cmd+Option+Shift+1 to 9 (Ctrl+Alt+Shift+1 to 9
+on Windows and Linux) for the first to ninth Space in the order the Space row
+shows them; rebind them under Go to Space 1-9 in Settings > Hotkeys.
 A project added with Add Project (from the More menu, from the "Add Project"
 button that an empty project list or empty Space shows, or by right-clicking
 the empty sidebar area) joins the Space that is open at the time and appears at

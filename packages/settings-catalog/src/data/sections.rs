@@ -244,6 +244,24 @@ pub const HOTKEY_SETTINGS_SECTIONS: J = J::Arr(&[
         ),
     ]),
     J::Obj(&[
+        ("id", J::Str("spaces")),
+        ("title", J::Str("Spaces")),
+        (
+            "ids",
+            J::Arr(&[
+                J::Str("goToSpace1"),
+                J::Str("goToSpace2"),
+                J::Str("goToSpace3"),
+                J::Str("goToSpace4"),
+                J::Str("goToSpace5"),
+                J::Str("goToSpace6"),
+                J::Str("goToSpace7"),
+                J::Str("goToSpace8"),
+                J::Str("goToSpace9"),
+            ]),
+        ),
+    ]),
+    J::Obj(&[
         ("id", J::Str("sessionSlots")),
         ("title", J::Str("Session Slots")),
         (

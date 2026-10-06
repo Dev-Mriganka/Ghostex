@@ -3036,6 +3036,15 @@
         "jumpToProject7": "cmd+ctrl+7",
         "jumpToProject8": "cmd+ctrl+8",
         "jumpToProject9": "cmd+ctrl+9",
+        "goToSpace1": "cmd+alt+shift+1",
+        "goToSpace2": "cmd+alt+shift+2",
+        "goToSpace3": "cmd+alt+shift+3",
+        "goToSpace4": "cmd+alt+shift+4",
+        "goToSpace5": "cmd+alt+shift+5",
+        "goToSpace6": "cmd+alt+shift+6",
+        "goToSpace7": "cmd+alt+shift+7",
+        "goToSpace8": "cmd+alt+shift+8",
+        "goToSpace9": "cmd+alt+shift+9",
         "focusSessionSlot1": "cmd+1",
         "focusSessionSlot2": "cmd+2",
         "focusSessionSlot3": "cmd+3",
@@ -11066,6 +11075,60 @@
       "description": "Jump to project 9 as shown in the sidebar.",
       "defaultKey": "cmd+ctrl+9",
       "windowsLinuxDefaultKey": "cmd+alt+9"
+    },
+    {
+      "id": "goToSpace1",
+      "title": "Go to Space 1",
+      "description": "Switch to Space 1 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+1"
+    },
+    {
+      "id": "goToSpace2",
+      "title": "Go to Space 2",
+      "description": "Switch to Space 2 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+2"
+    },
+    {
+      "id": "goToSpace3",
+      "title": "Go to Space 3",
+      "description": "Switch to Space 3 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+3"
+    },
+    {
+      "id": "goToSpace4",
+      "title": "Go to Space 4",
+      "description": "Switch to Space 4 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+4"
+    },
+    {
+      "id": "goToSpace5",
+      "title": "Go to Space 5",
+      "description": "Switch to Space 5 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+5"
+    },
+    {
+      "id": "goToSpace6",
+      "title": "Go to Space 6",
+      "description": "Switch to Space 6 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+6"
+    },
+    {
+      "id": "goToSpace7",
+      "title": "Go to Space 7",
+      "description": "Switch to Space 7 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+7"
+    },
+    {
+      "id": "goToSpace8",
+      "title": "Go to Space 8",
+      "description": "Switch to Space 8 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+8"
+    },
+    {
+      "id": "goToSpace9",
+      "title": "Go to Space 9",
+      "description": "Switch to Space 9 as shown in the sidebar.",
+      "defaultKey": "cmd+alt+shift+9"
     },
     {
       "id": "focusSessionSlot1",

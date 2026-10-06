@@ -261,6 +261,36 @@ impl GhostexGpuiApp {
         self.start_native_space_transition(snapshot, direction, destination, cx);
     }
 
+    /// Go to Space `position` (1-based, in the sidebar's current order) with the swipe's slide-and-fade.
+    /// Nothing happens while Spaces is off, in Bots mode, when no Space has that position, or when it is already selected.
+    pub(crate) fn go_to_native_space(&mut self, position: usize, cx: &mut gpui::Context<Self>) {
+        let Some(snapshot) = self
+            .native_sidebar
+            .snapshot
+            .clone()
+            .filter(|snapshot| snapshot.spaces_enabled && !snapshot.bots_mode)
+        else {
+            return;
+        };
+        let Some(target) = position
+            .checked_sub(1)
+            .filter(|index| *index < snapshot.spaces.len())
+        else {
+            return;
+        };
+        let selected = snapshot.spaces.iter().position(|space| space.selected);
+        if selected == Some(target) {
+            return;
+        }
+        let direction = if selected.is_none_or(|selected| target > selected) {
+            1.0
+        } else {
+            -1.0
+        };
+        let destination = Some(snapshot.spaces[target].id.clone());
+        self.start_native_space_transition(snapshot, direction, destination, cx);
+    }
+
     /// CDXC:Spaces 2026-09-23 DECISION:
     /// User: clicking a Space in the Spaces row plays the same slide-and-fade the trackpad swipe plays. It slides the way a swipe to that Space would: forward for a Space to the right of the selected one, back for one to the left.
     pub(crate) fn select_native_space(&mut self, space_id: &str, cx: &mut gpui::Context<Self>) {
