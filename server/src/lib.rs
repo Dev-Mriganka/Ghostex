@@ -128,6 +128,7 @@ pub mod session_chat_options;
 pub mod session_chat_paths;
 pub mod session_chat_pi_blocking;
 pub mod session_chat_pi_models;
+pub mod session_chat_pi_status;
 pub mod session_chat_question_liveness;
 pub mod session_chat_question_row_align;
 pub mod session_chat_queue;

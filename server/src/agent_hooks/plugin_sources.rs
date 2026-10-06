@@ -410,11 +410,17 @@ function sendHook(
     session_id: sessionId,
     ...extra,
   };
+  // Windows cannot run the notify hook script itself; gxserver runs it for the agent there.
+  const [command, args] =
+    process.platform === "win32"
+      ? [__GXSERVER_PATH_JSON__, ["agent-hook-notify-native", __NOTIFY_HOOK_PATH_JSON__, "amp"]]
+      : [__NOTIFY_HOOK_PATH_JSON__, []];
   try {
-    const child = spawn(__NOTIFY_HOOK_PATH_JSON__, [], {
+    const child = spawn(command, args, {
       stdio: ["pipe", "ignore", "ignore"],
       env: hookEnvironment(cwd),
       detached: true,
+      windowsHide: true,
     });
     child.on("error", () => {});
     child.stdin.on("error", () => {});
@@ -446,14 +452,26 @@ export default function ghostexAmpSessionPlugin(amp: PluginAPI) {
     });
   });
 
+  // Only a `done` turn finished; a cancel (Esc) or an error ends it without finishing it.
   amp.on("agent.end", async (event: AgentEndEvent, ctx) => {
-    sendHook("Stop", threadIdFrom(event, ctx), cwdFromEnv(), { status: event.status });
+    const name = event.status === "cancelled" ? "Interrupt" : event.status === "error" ? "StopFailure" : "Stop";
+    sendHook(name, threadIdFrom(event, ctx), cwdFromEnv(), { status: event.status });
   });
 }
 "###;
     source
         .replace("__MARKER__", &current_plugin_marker(AMP_PLUGIN_MARKER))
+        .replace("__GXSERVER_PATH_JSON__", &gxserver_path_json())
         .replace("__NOTIFY_HOOK_PATH_JSON__", &notify_json)
+}
+
+/// CDXC:AgentHooks 2026-10-05 WHY:
+/// Native Windows cannot spawn the notify hook script, so the Pi, OMP and Amp extensions hand it to this gxserver's `agent-hook-notify-native`, as Claude's Windows hook command and OpenCode's v2 plugin do. Before this a session of any of them on native Windows reported nothing: no session id, no working or done state.
+fn gxserver_path_json() -> String {
+    let gxserver = std::env::current_exe()
+        .map(|path| path_string(&path))
+        .unwrap_or_default();
+    serde_json::to_string(&gxserver).unwrap_or_else(|_| "\"\"".to_string())
 }
 
 fn build_pi_extension_source(notify_hook_path: &Path) -> String {
@@ -739,14 +757,9 @@ export default function ghostexPiSessionExtension(pi: ExtensionAPI) {
   });
 }
 "###;
-    // CDXC:AgentHooks 2026-10-05 WHY: native Windows cannot spawn the notify hook script, so the extension hands it to this gxserver's `agent-hook-notify-native`, as Claude's Windows hook command and OpenCode's v2 plugin do. Before this a Pi session on native Windows reported nothing: no session id, no working or done state.
-    let gxserver = std::env::current_exe()
-        .map(|path| path_string(&path))
-        .unwrap_or_default();
-    let gxserver_json = serde_json::to_string(&gxserver).unwrap_or_else(|_| "\"\"".to_string());
     source
         .replace("__MARKER__", &current_plugin_marker(PI_EXTENSION_MARKER))
-        .replace("__GXSERVER_PATH_JSON__", &gxserver_json)
+        .replace("__GXSERVER_PATH_JSON__", &gxserver_path_json())
         .replace("__NOTIFY_HOOK_PATH_JSON__", &notify_json)
 }
 
@@ -931,11 +944,17 @@ async function sendHook(subcommand: string, ctx: ExtensionContext, extra: Record
       settled = true;
       resolve();
     };
+    // Windows cannot run the notify hook script itself; gxserver runs it for the agent there.
+    const [command, args] =
+      process.platform === "win32"
+        ? [__GXSERVER_PATH_JSON__, ["agent-hook-notify-native", __NOTIFY_HOOK_PATH_JSON__, "omp"]]
+        : [__NOTIFY_HOOK_PATH_JSON__, []];
     try {
-      const child = spawn(__NOTIFY_HOOK_PATH_JSON__, [], {
+      const child = spawn(command, args, {
         env: invocation.env,
         stdio: ["pipe", "ignore", "ignore"],
         detached: true,
+        windowsHide: true,
       });
       child.on("error", settle);
       child.stdin.on("error", settle);
@@ -948,7 +967,38 @@ async function sendHook(subcommand: string, ctx: ExtensionContext, extra: Record
   });
 }
 
+type TurnEnd = { event: string; extra: Record<string, unknown> };
+
+// Esc ends a run as `aborted` and a provider failure as `error`; neither is a finished turn.
+function turnEndFor(event: AgentEndEvent): TurnEnd {
+  let stopReason: unknown;
+  for (let index = event.messages.length - 1; index >= 0; index -= 1) {
+    const message = event.messages[index] as { role?: unknown; stopReason?: unknown } | undefined;
+    if (message && message.role === "assistant") {
+      stopReason = message.stopReason;
+      break;
+    }
+  }
+  const name = stopReason === "aborted" ? "Interrupt" : stopReason === "error" ? "StopFailure" : "Stop";
+  return { event: name, extra: { last_assistant_message: lastAssistantMessage(event) } };
+}
+
+function isIdle(ctx: ExtensionContext): boolean {
+  try {
+    const typed = ctx as unknown as { isIdle?: () => boolean };
+    return typeof typed.isIdle === "function" ? typed.isIdle() : false;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default function ghostexOmpSessionExtension(api: ExtensionAPI) {
+  // The same turn-end rules as Ghostex's Pi extension: wait for `agent_settled` once it is known
+  // to exist, so a retry or queued follow-up does not end the turn early.
+  let settledSeen = false;
+  let pendingTurnEnd: TurnEnd | null = null;
+  let promptOpen = false;
+
   api.on("session_start", async (_event, ctx) => {
     await sendHook("session-start", ctx);
   });
@@ -957,8 +1007,41 @@ export default function ghostexOmpSessionExtension(api: ExtensionAPI) {
     await sendHook("prompt-submit", ctx, { prompt: event.prompt });
   });
 
+  registerOptional(api, "agent_start", () => {
+    pendingTurnEnd = null;
+  });
+
   api.on("agent_end", async (event, ctx) => {
-    await sendHook("stop", ctx, { last_assistant_message: lastAssistantMessage(event) });
+    const turnEnd = turnEndFor(event);
+    if (settledSeen) {
+      pendingTurnEnd = turnEnd;
+      return;
+    }
+    await sendHook(turnEnd.event, ctx, turnEnd.extra);
+  });
+
+  registerOptional(api, "agent_settled", async (_event, ctx) => {
+    const firstSettle = !settledSeen;
+    settledSeen = true;
+    const turnEnd = pendingTurnEnd;
+    pendingTurnEnd = null;
+    if (turnEnd && !firstSettle) await sendHook(turnEnd.event, ctx, turnEnd.extra);
+  });
+
+  registerOptional(api, "ui_prompt_start", async (event, ctx) => {
+    if (isIdle(ctx)) return;
+    promptOpen = true;
+    const typed = event as { title?: unknown; kind?: unknown };
+    await sendHook("Notification", ctx, {
+      message: firstString(typed.title) ?? "OMP is waiting for your answer",
+      notification_type: firstString(typed.kind) ?? undefined,
+    });
+  });
+
+  registerOptional(api, "ui_prompt_end", async (_event, ctx) => {
+    if (!promptOpen) return;
+    promptOpen = false;
+    await sendHook(isIdle(ctx) ? "SessionIdle" : "PostToolUse", ctx);
   });
 
   registerOptional(api, "tool_execution_start", async (event, ctx) => {
@@ -987,16 +1070,17 @@ export default function ghostexOmpSessionExtension(api: ExtensionAPI) {
 "###;
     source
         .replace("__MARKER__", &current_plugin_marker(OMP_EXTENSION_MARKER))
+        .replace("__GXSERVER_PATH_JSON__", &gxserver_path_json())
         .replace("__NOTIFY_HOOK_PATH_JSON__", &notify_json)
 }
 
 pub(crate) fn current_plugin_marker(marker: &str) -> String {
-    if marker == PI_EXTENSION_MARKER {
+    if marker == PI_EXTENSION_MARKER || marker == AMP_PLUGIN_MARKER {
         format!("{marker} v5")
-    } else if matches!(marker, OPENCODE_PLUGIN_MARKER | AMP_PLUGIN_MARKER) {
+    } else if marker == OPENCODE_PLUGIN_MARKER {
         format!("{marker} v4")
     } else if marker == OMP_EXTENSION_MARKER {
-        format!("{marker} v2")
+        format!("{marker} v3")
     } else {
         format!("{marker} v2")
     }

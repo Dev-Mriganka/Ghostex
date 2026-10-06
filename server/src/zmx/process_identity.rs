@@ -650,7 +650,11 @@ fn extract_agent_process_session_id(
             .or_else(|| read_agent_process_flag_value(agent_id, args, "-s"));
     }
     if matches!(agent_id, "pi" | "omp") {
-        return read_agent_process_flag_value(agent_id, args, "--session");
+        return read_agent_process_flag_value(agent_id, args, "--session").or_else(|| {
+            (agent_id == "pi")
+                .then(|| read_agent_process_flag_value(agent_id, args, "--session-id"))
+                .flatten()
+        });
     }
     if agent_id == "kiro" {
         return read_agent_process_flag_value(agent_id, args, "--resume-id");
