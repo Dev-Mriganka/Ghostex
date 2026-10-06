@@ -304,6 +304,13 @@ fn system_bd_directories(
     // Beads installed by Ghostex (Project board's Install Beads button).
     directories.push(crate::managed_tools::paths::bin_dir());
     let windows_mounts = wsl_windows_mount_points();
+    filter_system_bd_directories(directories, &windows_mounts)
+}
+
+fn filter_system_bd_directories(
+    directories: Vec<PathBuf>,
+    windows_mounts: &[PathBuf],
+) -> Vec<PathBuf> {
     let mut seen = std::collections::HashSet::new();
     directories
         .into_iter()
@@ -330,6 +337,10 @@ fn wsl_windows_mount_points() -> Vec<PathBuf> {
     let Ok(mounts) = fs::read_to_string("/proc/mounts") else {
         return Vec::new();
     };
+    windows_mount_points_from(&mounts)
+}
+
+fn windows_mount_points_from(mounts: &str) -> Vec<PathBuf> {
     mounts
         .lines()
         .filter_map(|line| {
@@ -411,6 +422,71 @@ mod tests {
     use super::*;
 
     #[test]
+    fn windows_mount_points_parse_wsl_mounts() {
+        for (mounts, expected) in [
+            (
+                r"C:\134 /mnt/c 9p rw,noatime,aname=drvfs;path=C:\134;uid=1000;gid=1000;symlinkroot=/mnt/,mmap,trans=fd,rfdno=5,wfdno=5 0 0",
+                "/mnt/c",
+            ),
+            (r"C:\134 /mnt/c drvfs rw,relatime 0 0", "/mnt/c"),
+            (r"D:\134 /win/d 9p rw,aname=drvfs 0 0", "/win/d"),
+            (r"D:\134 /mnt/my\040drive drvfs rw 0 0", "/mnt/my drive"),
+            (
+                r"D:\134 /mnt/my\011drive\012dir\134name drvfs rw 0 0",
+                "/mnt/my\tdrive\ndir\\name",
+            ),
+            (
+                r"D:\134 /mnt/literal\134040 drvfs rw 0 0",
+                r"/mnt/literal\040",
+            ),
+        ] {
+            assert_eq!(
+                windows_mount_points_from(mounts),
+                vec![PathBuf::from(expected)]
+            );
+        }
+    }
+
+    #[test]
+    fn windows_mount_points_exclude_non_windows_filesystems() {
+        let mounts = "drivers /usr/lib/wsl/drivers 9p ro,aname=drivers;fmask=222 0 0\n\
+            /dev/sdb /mnt/data ext4 rw,relatime 0 0\n\
+            tmpfs /run tmpfs rw,nosuid,nodev 0 0\n\
+            other /mnt/other 9p rw,aname=drvfs-other 0 0\n\
+            other /mnt/embedded 9p rw,other=aname=drvfs 0 0";
+        assert!(windows_mount_points_from(mounts).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn bd_system_directories_exclude_only_windows_mounts() {
+        let mounts = windows_mount_points_from(
+            "C: /mnt/c 9p rw,aname=drvfs;path=C: 0 0\n\
+            D: /win/d drvfs rw 0 0\n\
+            /dev/sdb /mnt/data ext4 rw 0 0",
+        );
+        let directories = filter_system_bd_directories(
+            [
+                "/mnt/c",
+                "/mnt/c/bin",
+                "/win/d/bin",
+                "/mnt/data",
+                "/mnt/copy/bin",
+                "relative-bin",
+                "/mnt/data",
+            ]
+            .into_iter()
+            .map(PathBuf::from)
+            .collect(),
+            &mounts,
+        );
+        assert_eq!(
+            directories,
+            vec![PathBuf::from("/mnt/data"), PathBuf::from("/mnt/copy/bin")]
+        );
+    }
+
+    #[test]
     fn gxserver_root_from_packaged_executable_uses_package_parent() {
         let root = gxserver_root_from_executable_path(Path::new(
             "/Applications/Ghostex.app/Contents/Resources/Web/gxserver/bin/gxserver",
@@ -469,6 +545,47 @@ mod tests {
         assert_eq!(status.availability, "notExecutable");
         assert!(status.message.contains("not executable"));
         assert!(status.guidance.unwrap_or_default().contains("update Beads"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn bd_status_remembers_first_non_executable_candidate() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let missing = dir.path().join("missing-bd");
+        let first = dir.path().join("first-bd");
+        let second = dir.path().join("second-bd");
+        for bd in [&first, &second] {
+            fs::write(bd, "#!/bin/sh\nexit 0\n").expect("write bd");
+            fs::set_permissions(bd, fs::Permissions::from_mode(0o644)).expect("chmod bd");
+        }
+        let candidates =
+            [missing, first.clone(), second.clone()].map(|executable_path| ToolCandidate {
+                executable_path,
+                source: ToolSource::SystemPath,
+            });
+        let status = get_bd_tool_status_for_candidates(&candidates);
+
+        assert_eq!(status.availability, "notExecutable");
+        assert!(status.message.contains(first.to_str().unwrap()));
+        assert!(!status.message.contains(second.to_str().unwrap()));
+        assert!(status.executable_path.is_none());
+        assert_eq!(
+            status.candidate_paths,
+            Some(
+                candidates
+                    .iter()
+                    .map(|candidate| candidate.executable_path.to_string_lossy().to_string())
+                    .collect()
+            )
+        );
+
+        make_executable(&second);
+        let status = get_bd_tool_status_for_candidates(&candidates);
+        assert_eq!(status.availability, "available");
+        assert_eq!(status.executable_path.as_deref(), second.to_str());
+        assert!(status.candidate_paths.is_none());
     }
 
     #[test]

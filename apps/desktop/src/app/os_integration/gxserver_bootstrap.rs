@@ -23,6 +23,9 @@ use crate::*;
 #[cfg(target_os = "windows")]
 use futures::channel::mpsc;
 
+#[cfg(any(target_os = "windows", test))]
+mod message;
+
 impl GhostexGpuiApp {
     /// Startup daemon bootstrap, mirroring the macOS GxserverClient contract:
     /// reuse a healthy protocol-matched daemon silently, surface protocol and
@@ -268,6 +271,7 @@ impl GhostexGpuiApp {
                 windows_terminal_backend::resolve_current(),
                 Ok(windows_terminal_backend::ResolvedWindowsTerminalBackend::Wsl { .. })
             ) {
+                let detail = message::bounded_health_detail(&detail);
                 let message = format!(
                     "gxserver started inside WSL2, but its health check from Windows failed: {detail}. Check the server status and WSL localhost connectivity, then retry."
                 );
