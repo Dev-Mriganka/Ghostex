@@ -75,6 +75,10 @@ jobs:
       - name: Build and stage the Windows app
         shell: pwsh
         run: |
+          # Match release-gpui/windows.ps1: archive helpers do not request OIDC.
+          # Keep the runtime token available for sccache's GitHub cache.
+          Remove-Item Env:ACTIONS_ID_TOKEN_REQUEST_TOKEN -ErrorAction SilentlyContinue
+          Remove-Item Env:ACTIONS_ID_TOKEN_REQUEST_URL -ErrorAction SilentlyContinue
           cargo xtask start --build-only --optimized --verbose
           if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
           $out = 'apps/desktop/build/windows/Ghostex'
