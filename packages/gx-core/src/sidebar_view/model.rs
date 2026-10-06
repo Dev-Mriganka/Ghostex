@@ -719,6 +719,7 @@ impl SidebarViewModel {
             spaces: side_state
                 .and_then(|side| side.spaces.as_ref())
                 .map(SpacesState::from_wire),
+            spaces_enabled: super::machine_spaces::spaces_enabled_on(store, effective, &machine),
             collections: match side_state.and_then(|side| side.project_collections.as_ref()) {
                 // A document has arrived for this machine, so the daemon is authoritative from
                 // here on, an empty one included: after the user deletes their last collection

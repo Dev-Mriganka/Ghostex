@@ -142,6 +142,7 @@ mod project_docs_http;
 pub mod project_paths;
 mod session_auto_sleep_sweep;
 pub mod session_state_sync;
+mod sidebar_spaces_switch;
 pub mod telemetry_http;
 pub mod telemetry_tasks;
 #[cfg(test)]

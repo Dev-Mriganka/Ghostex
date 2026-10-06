@@ -399,6 +399,8 @@ pub(super) async fn route_sidebar_http(
                     "revision": revision,
                     "serverId": state.metadata.server_id.clone(),
                     "sidebarSpaces": spaces.clone(),
+                    "sidebarSpacesEnabled":
+                        crate::sidebar_spaces::read_sidebar_spaces_enabled(&state.paths),
                     "type": "sidebarSpacesChanged",
                 }));
                 Ok(json!({ "sidebarSpaces": spaces }))

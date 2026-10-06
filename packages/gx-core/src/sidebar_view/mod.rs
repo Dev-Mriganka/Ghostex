@@ -18,6 +18,7 @@ pub(crate) mod collections;
 mod groups;
 mod inputs;
 mod machine_connection;
+pub(crate) mod machine_spaces;
 mod machines;
 pub(crate) mod membership;
 mod model;

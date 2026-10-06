@@ -258,6 +258,8 @@ pub const GROUP_WORKING_SESSIONS_SETTING_KEY: &str = "groupWorkingSessions";
 pub struct SidebarSettings {
     pub enable_session_parking: bool,
     pub project_session_list_collapsed_count: u32,
+    /// THIS computer's Spaces switch. A remote machine's section follows that machine's own switch
+    /// instead (`machine_spaces::spaces_enabled_on`).
     pub sidebar_spaces_enabled: bool,
     /// The section follows the active session into its Space.
     pub sidebar_space_follow_active_session: bool,
@@ -553,6 +555,9 @@ pub struct SidebarInputs {
     pub ui: SidebarUiState,
     pub settings: SidebarSettings,
     pub host: SidebarHostInputs,
+    /// A probe that draws every group: Spaces read as off on every machine
+    /// (`machine_spaces::spaces_enabled_on`).
+    pub(crate) spaces_lifted: bool,
 }
 
 /// The mode the list is drawn in: the remembered one while Bots is on, Projects otherwise, so

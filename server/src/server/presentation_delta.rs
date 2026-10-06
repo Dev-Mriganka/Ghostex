@@ -155,6 +155,7 @@ pub(crate) fn broadcast_pruned_sidebar_spaces(
         "revision": revision,
         "serverId": state.metadata.server_id.clone(),
         "sidebarSpaces": spaces,
+        "sidebarSpacesEnabled": crate::sidebar_spaces::read_sidebar_spaces_enabled(&state.paths),
         "type": "sidebarSpacesChanged",
     }));
     Ok(())
@@ -177,12 +178,14 @@ pub(crate) fn read_presentation_snapshot_in_sequence(
     */
     let auto_settle_after_days = session_lifecycle::read_sweep_auto_settle_after_days(&state.paths);
     let sidebar_v2_selected = session_lifecycle::read_sidebar_v2_selected(&state.paths);
+    let sidebar_spaces_enabled = crate::sidebar_spaces::read_sidebar_spaces_enabled(&state.paths);
     let _event_sequence = lock_presentation_event_sequence(state)?;
     read_presentation_snapshot(
         db,
         server_id,
         auto_settle_after_days,
         sidebar_v2_selected,
+        sidebar_spaces_enabled,
         sessions,
     )
 }

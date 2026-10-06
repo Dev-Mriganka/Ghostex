@@ -35,6 +35,7 @@ use crate::sidebar_ui::SidebarUiIntent;
 use super::inputs::{
     effective_sidebar_mode, SectionId, SidebarInputs, SidebarMode, SidebarUiState, LOCAL_MACHINE_ID,
 };
+use super::machine_spaces::section_spaces_enabled;
 use super::model::SidebarViewModel;
 use super::spaces::{resolve_selected_space, space_for_group, SpacesState};
 use super::tags::matches_tag_filters;
@@ -312,7 +313,7 @@ pub(crate) fn unfiltered(inputs: &SidebarInputs, mode: SidebarMode) -> SidebarIn
     probe.ui.selected_tag_filters.clear();
     // Not by clearing the section's Space: an absent selection resolves to the section's FIRST
     // Space, which filters just as hard. Only turning Spaces off draws every group.
-    probe.settings.sidebar_spaces_enabled = false;
+    probe.spaces_lifted = true;
     probe
 }
 
@@ -348,19 +349,21 @@ pub fn space_for_focused_row(
     sidebar_session_id: &str,
     now_ms: u64,
 ) -> Option<FocusedRowSpace> {
-    // Spaces off is the whole answer, and it is the common case: `describeNativeSidebarMachine`
-    // reads no Spaces state at all then, so neither the follow nor the memory has anything to say
-    // and nothing below runs.
     // A bot belongs to no Space, and Bots mode draws none, so neither has a Space to follow or
     // remember; asking a build would only find that out the slow way.
-    if !inputs.settings.sidebar_spaces_enabled
-        || effective_sidebar_mode(&inputs.settings, &inputs.ui) == SidebarMode::Bots
+    if effective_sidebar_mode(&inputs.settings, &inputs.ui) == SidebarMode::Bots
         || row_is_bot(core, sidebar_session_id)
     {
         return None;
     }
     let (moved, other_machine) = inputs_for_row_machine(core, inputs, sidebar_session_id);
     let inputs = moved.as_ref().unwrap_or(inputs);
+    // Spaces off on the row's machine is the whole answer, and it is the common case:
+    // `describeNativeSidebarMachine` reads no Spaces state at all then, so neither the follow nor
+    // the memory has anything to say and nothing below runs.
+    if !section_spaces_enabled(core.presentation(), inputs) {
+        return None;
+    }
     let section_key = inputs.ui.section_key();
     // The drawn list is the SELECTED machine's, so it can only answer for a row on it.
     let drawn = (!other_machine)
@@ -522,7 +525,7 @@ fn space_of_group(core: &Core, inputs: &SidebarInputs, group: &GroupView) -> Opt
         .project_context
         .as_ref()
         .is_some_and(|project| project.bot_profile.is_some());
-    if !inputs.settings.sidebar_spaces_enabled || is_bot {
+    if !section_spaces_enabled(core.presentation(), inputs) || is_bot {
         return None;
     }
     let machine = machine_key(&inputs.ui.selected_machine_id);
