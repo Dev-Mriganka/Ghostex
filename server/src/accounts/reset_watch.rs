@@ -36,9 +36,11 @@ const CODEX_SETTING: &str = "codexAutoRedeemExpiringResets";
 const CLAUDE_AT_LIMIT_SETTING: &str = "claudeAutoRedeemResetsAtLimit";
 const CODEX_AT_LIMIT_SETTING: &str = "codexAutoRedeemResetsAtLimit";
 /// How long before a banked reset expires Auto-redeem uses it. The Settings and Help copy name this number.
-pub(crate) const LAST_CALL_MINUTES: i64 = 60;
-/// An automatic claim of one reset is tried at most this often, whatever it answered.
-const RETRY_AFTER: Duration = Duration::from_secs(30 * 60);
+pub(crate) const LAST_CALL_MINUTES: i64 = 5;
+/// A claim that failed (network, sign-in, Anthropic's cooldown) is tried again after this, so several tries fit in the last 5 minutes.
+const RETRY_FAILED_AFTER: Duration = Duration::from_secs(45);
+/// A claim that answered (used, nothing to reset, no longer offered) is not repeated for this long.
+const RETRY_ANSWERED_AFTER: Duration = Duration::from_secs(30 * 60);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Threshold {
@@ -58,14 +60,14 @@ impl Threshold {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum RedeemReason {
     AtLimit,
-    LastHour,
+    LastCall,
 }
 
 impl RedeemReason {
     fn id(self) -> &'static str {
         match self {
             Self::AtLimit => "atLimit",
-            Self::LastHour => "lastHour",
+            Self::LastCall => "lastCall",
         }
     }
 }
@@ -85,11 +87,10 @@ pub(crate) struct Decision {
 }
 
 /// CDXC:AgentProviders 2026-10-06 DECISION:
-/// User: "implement a setting for Claude and Codex to auto redeem banked resets if they're going to expire anyways" (2026-10-05), then on the switch's text: "add 'automatically' and we need to say how many minute it's used before expiry. also no need to use it automatically in case expired with 24 hours remaining except if user enables that toggle". This supersedes the 2026-10-05 rule that also spent a reset at any usage limit in its last 24 hours by default.
+/// User: "implement a setting for Claude and Codex to auto redeem banked resets if they're going to expire anyways" (2026-10-05); on the switch's text: "add 'automatically' and we need to say how many minute it's used before expiry. also no need to use it automatically in case expired with 24 hours remaining except if user enables that toggle"; then: "no no shouldn't be 60 minutes before that's big waste. Let's do 5 minutes instead." This supersedes the 2026-10-05 rule (any usage limit in the last 24 hours by default) and the 60-minute last call.
 /// Looking only at the soonest-expiring reset that can be claimed (Anthropic serves Claude grants in order; paused grants cannot be claimed):
-/// 1. Auto-redeem expiring resets: in the reset's last 60 minutes (`LAST_CALL_MINUTES`, the number the Settings and Help copy name), use it if the account has used anything, since it is lost then anyway. A Claude grant that only works at a limit is used then only at a limit; Anthropic refuses it otherwise.
-/// 2. Only with its own switch (`at_limit`, off by default): at a usage limit in the reset's last 24 hours, use it at once, since at a limit a reset gives back the whole window. It waits while the limit resets on its own within 30 minutes (that costs a short wait, not the reset).
-/// Readings older than 10 minutes, or with a usage error, never trigger a redeem.
+/// 1. Auto-redeem expiring resets: in the reset's last 5 minutes (`LAST_CALL_MINUTES`, the number the Settings and Help copy name), use it. It is lost minutes later anyway, so this needs no fresh usage reading and spends nothing worth keeping; only a Claude grant that works only at a limit is skipped while a fresh reading shows no limit, since Anthropic would refuse it.
+/// 2. Only with its own switch (`at_limit`, off by default): at a usage limit in the reset's last 24 hours, use it at once, since at a limit a reset gives back the whole window. It waits while the limit resets on its own within 30 minutes (that costs a short wait, not the reset). This one needs a usage reading under 10 minutes old without an error.
 pub(crate) fn decide(
     account: &DiscoveredAccount,
     now: DateTime<Utc>,
@@ -145,13 +146,11 @@ pub(crate) fn decide(
         } else {
             redeem = Some(RedeemReason::AtLimit);
         }
-    } else if fresh && remaining <= Span::minutes(LAST_CALL_MINUTES) {
-        if first.requires_limit && limited.is_empty() {
+    } else if remaining <= Span::minutes(LAST_CALL_MINUTES) {
+        if first.requires_limit && fresh && limited.is_empty() {
             wait = Some("This reset only works at a usage limit.");
-        } else if limits.iter().any(|w| w.used_percent >= 1.) {
-            redeem = Some(RedeemReason::LastHour);
         } else {
-            wait = Some("Nothing has been used, so the reset would give nothing back.");
+            redeem = Some(RedeemReason::LastCall);
         }
     }
     Some(Decision {
@@ -203,8 +202,14 @@ fn write_shown(db: &Connection, shown: &[ShownWarning]) -> Result<(), DomainStat
     Ok(())
 }
 
-/// The last automatic claim of each reset, so a refused or failed claim is retried at most every 30 minutes and its failure is shown once.
-static ATTEMPTS: Mutex<Option<HashMap<String, Instant>>> = Mutex::new(None);
+/// The last automatic claim of each reset: when it ran, whether it failed, and whether its failure was already shown.
+struct Attempt {
+    at: Instant,
+    failed: bool,
+    failure_shown: bool,
+}
+
+static ATTEMPTS: Mutex<Option<HashMap<String, Attempt>>> = Mutex::new(None);
 
 /// A test reset for the dry-run endpoint: replaces the account's resets with one expiring after `expiresInMinutes`, and optionally its usage, so warnings and the redeem decision can be checked without touching a real reset.
 struct Simulation {
@@ -244,10 +249,10 @@ pub(crate) fn start(state: Arc<AppState>) {
             delay = TICK;
             let pass_state = state.clone();
             match tokio::task::spawn_blocking(move || pass(&pass_state, None, false, false)).await {
-                // The next look also lands right after the soonest reset reaches its last 60 minutes, so Auto-redeem uses it then rather than up to one check later.
+                // A 5-minute check cannot hit a 5-minute window: the next look lands right after the soonest reset reaches its last 5 minutes, and again when a failed claim may be retried.
                 Ok(Ok(report)) => {
-                    if let Some(seconds) = report["nextLastCallInSeconds"].as_i64() {
-                        delay = delay.min(Duration::from_secs(seconds.max(0) as u64 + 2));
+                    if let Some(seconds) = report["nextWakeInSeconds"].as_i64() {
+                        delay = delay.min(Duration::from_secs(seconds.max(1) as u64));
                     }
                 }
                 Ok(Err(error)) => log(
@@ -346,7 +351,10 @@ fn pass(
     let mut changed_shown = shown.len() != shown_before;
     let mut feed_changed = false;
     let mut report = Vec::new();
-    let mut next_last_call: Option<Span> = None;
+    let mut next_wake: Option<Span> = None;
+    let mut wake_in = |span: Span| {
+        next_wake = Some(next_wake.map_or(span, |n: Span| n.min(span)));
+    };
     for saved in &registry.accounts {
         let Some(found) = snapshot
             .accounts
@@ -392,8 +400,7 @@ fn pass(
         };
         let until_last_call = decision.expires_at - Span::minutes(LAST_CALL_MINUTES) - now;
         if auto_redeem && simulated.is_none() && until_last_call > Span::zero() {
-            next_last_call =
-                Some(next_last_call.map_or(until_last_call, |n| n.min(until_last_call)));
+            wake_in(until_last_call + Span::seconds(2));
         }
         let expires = decision.expires_at.to_rfc3339();
         let mut warned = None;
@@ -449,16 +456,32 @@ fn pass(
         if let (Some(reason), true, false, None) =
             (decision.redeem, auto_redeem, dry_run, simulated)
         {
-            if let Some((kind, message)) = auto_redeem_now(state, saved, &decision, reason) {
-                action = if kind == "success" {
-                    "redeemed"
-                } else {
-                    "attempted"
-                };
-                outcome = json!({ "outcome": kind, "message": message });
-                feed_changed |= notify_redeem(&db, saved, &decision, reason, kind, &message)?;
-            } else {
-                action = "retryLater";
+            match auto_redeem_now(state, saved, &decision, reason) {
+                Claim::Ran {
+                    kind,
+                    message,
+                    show,
+                } => {
+                    action = if kind == "success" {
+                        "redeemed"
+                    } else {
+                        "attempted"
+                    };
+                    outcome = json!({ "outcome": kind, "message": message });
+                    if show {
+                        feed_changed |=
+                            notify_redeem(&db, saved, &decision, reason, kind, &message)?;
+                    }
+                    if kind == "failed" {
+                        wake_in(Span::seconds(RETRY_FAILED_AFTER.as_secs() as i64));
+                    }
+                }
+                Claim::Wait(retry_in) => {
+                    action = "retryLater";
+                    if let Some(retry_in) = retry_in {
+                        wake_in(Span::seconds(retry_in.as_secs() as i64 + 1));
+                    }
+                }
             }
         }
         report.push(json!({
@@ -489,7 +512,7 @@ fn pass(
     Ok(json!({
         "accounts": report,
         "dryRun": dry_run,
-        "nextLastCallInSeconds": next_last_call.map(|span| span.num_seconds()),
+        "nextWakeInSeconds": next_wake.map(|span| span.num_seconds()),
     }))
 }
 
@@ -503,13 +526,24 @@ fn same_time(a: &str, b: &str) -> bool {
     }
 }
 
-/// Claims the reset unless this one was tried within the last 30 minutes. Returns the outcome kind and message of a claim that ran.
+enum Claim {
+    /// The claim ran; `show` is false for a repeated failure, which the bell already shows once.
+    Ran {
+        kind: &'static str,
+        message: String,
+        show: bool,
+    },
+    /// Tried too recently; `Some` is when a failed claim may run again.
+    Wait(Option<Duration>),
+}
+
+/// Claims the reset unless it was just tried: a failed claim runs again after 45 seconds, an answered one not for 30 minutes.
 fn auto_redeem_now(
     state: &AppState,
     saved: &SavedAccount,
     decision: &Decision,
     reason: RedeemReason,
-) -> Option<(&'static str, String)> {
+) -> Claim {
     let key = format!(
         "{}|{}|{}|{}",
         saved.id,
@@ -517,15 +551,30 @@ fn auto_redeem_now(
         decision.expires_at.to_rfc3339(),
         decision.count
     );
-    {
+    let failure_shown = {
         let mut attempts = ATTEMPTS.lock().unwrap_or_else(|e| e.into_inner());
         let attempts = attempts.get_or_insert_with(HashMap::new);
-        attempts.retain(|_, at| at.elapsed() < RETRY_AFTER);
-        if attempts.contains_key(&key) {
-            return None;
-        }
-        attempts.insert(key.clone(), Instant::now());
-    }
+        attempts.retain(|_, attempt| attempt.at.elapsed() < RETRY_ANSWERED_AFTER);
+        let failure_shown = match attempts.get(&key) {
+            Some(attempt) if attempt.failed => {
+                if attempt.at.elapsed() < RETRY_FAILED_AFTER {
+                    return Claim::Wait(Some(RETRY_FAILED_AFTER - attempt.at.elapsed()));
+                }
+                attempt.failure_shown
+            }
+            Some(_) => return Claim::Wait(None),
+            None => false,
+        };
+        attempts.insert(
+            key.clone(),
+            Attempt {
+                at: Instant::now(),
+                failed: false,
+                failure_shown,
+            },
+        );
+        failure_shown
+    };
     // A stable key per reset (and per remaining count of a Claude grant) makes a retried claim replay instead of spending a second reset.
     let request_id = format!(
         "auto-{}",
@@ -553,7 +602,22 @@ fn auto_redeem_now(
             "expiresAt": decision.expires_at.to_rfc3339(),
         }),
     );
-    Some((kind, message))
+    if kind == "failed" {
+        if let Some(attempt) = ATTEMPTS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_or_insert_with(HashMap::new)
+            .get_mut(&key)
+        {
+            attempt.failed = true;
+            attempt.failure_shown = true;
+        }
+    }
+    Claim::Ran {
+        kind,
+        message,
+        show: !(kind == "failed" && failure_shown),
+    }
 }
 
 fn provider_name(provider: Provider) -> &'static str {
@@ -646,7 +710,7 @@ fn notify_redeem(
                     "You were at a usage limit and the reset expired {}. Your limits are fresh again.",
                     local_time(decision.expires_at)
                 ),
-                RedeemReason::LastHour => format!(
+                RedeemReason::LastCall => format!(
                     "It would have expired unused {}. Your limits are fresh again.",
                     local_time(decision.expires_at)
                 ),

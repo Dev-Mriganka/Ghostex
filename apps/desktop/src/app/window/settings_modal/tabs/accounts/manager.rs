@@ -219,7 +219,7 @@ impl AccountsTab {
     }
 
     /// The provider's Auto-redeem switches, shared settings gxserver reads
-    /// (server/src/accounts/reset_watch.rs): using a reset 60 minutes before it expires, and, under
+    /// (server/src/accounts/reset_watch.rs): using a reset 5 minutes before it expires, and, under
     /// it, also using one at a usage limit in its last 24 hours.
     fn render_auto_redeem_rows(
         &mut self,
@@ -251,7 +251,7 @@ impl AccountsTab {
                 p,
                 SharedString::from(format!("accounts-{provider}-auto-redeem")),
                 RowSpec::new("Auto-redeem expiring resets").description(
-                    "Ghostex automatically uses a banked reset 60 minutes before it expires, so it isn't lost.",
+                    "Ghostex automatically uses a banked reset 5 minutes before it expires, so it isn't lost.",
                 ),
                 None,
                 switch_control(
@@ -269,7 +269,7 @@ impl AccountsTab {
                 p,
                 SharedString::from(format!("accounts-{provider}-auto-redeem-at-limit")),
                 RowSpec::new("Also use it when I hit a limit").description(
-                    "When you hit a usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes.",
+                    "When you hit a usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 5 minutes.",
                 ),
                 None,
                 switch_control(

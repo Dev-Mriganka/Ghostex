@@ -8062,7 +8062,7 @@
     {
       "key": "claudeAutoRedeemExpiringResets",
       "title": "Auto-redeem expiring Claude resets",
-      "subtitle": "Ghostex automatically uses a banked Claude reset 60 minutes before it expires, so it isn't lost.",
+      "subtitle": "Ghostex automatically uses a banked Claude reset 5 minutes before it expires, so it isn't lost.",
       "tab": "accounts",
       "tabTitle": "Accounts",
       "section": "accounts",
@@ -8074,7 +8074,7 @@
     {
       "key": "claudeAutoRedeemResetsAtLimit",
       "title": "Also use expiring Claude resets at a limit",
-      "subtitle": "When you hit a Claude usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Claude resets.",
+      "subtitle": "When you hit a Claude usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 5 minutes. Needs Auto-redeem expiring Claude resets.",
       "tab": "accounts",
       "tabTitle": "Accounts",
       "section": "accounts",
@@ -8086,7 +8086,7 @@
     {
       "key": "codexAutoRedeemExpiringResets",
       "title": "Auto-redeem expiring Codex resets",
-      "subtitle": "Ghostex automatically uses a banked Codex reset 60 minutes before it expires, so it isn't lost.",
+      "subtitle": "Ghostex automatically uses a banked Codex reset 5 minutes before it expires, so it isn't lost.",
       "tab": "accounts",
       "tabTitle": "Accounts",
       "section": "accounts",
@@ -8098,7 +8098,7 @@
     {
       "key": "codexAutoRedeemResetsAtLimit",
       "title": "Also use expiring Codex resets at a limit",
-      "subtitle": "When you hit a Codex usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Codex resets.",
+      "subtitle": "When you hit a Codex usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 5 minutes. Needs Auto-redeem expiring Codex resets.",
       "tab": "accounts",
       "tabTitle": "Accounts",
       "section": "accounts",

@@ -273,10 +273,10 @@ How to use this file:
 ### Accounts
 
 - **Accounts, usage stats and automatic continuation** `accounts` (Settings UI row without a settings key; use `ghostex settings open`): Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings.
-- **Auto-redeem expiring Claude resets** `claudeAutoRedeemExpiringResets` (boolean, default false) [not agent-writable]: Ghostex automatically uses a banked Claude reset 60 minutes before it expires, so it isn't lost.
-- **Also use expiring Claude resets at a limit** `claudeAutoRedeemResetsAtLimit` (boolean, default false) [not agent-writable]: When you hit a Claude usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Claude resets.
-- **Auto-redeem expiring Codex resets** `codexAutoRedeemExpiringResets` (boolean, default false) [not agent-writable]: Ghostex automatically uses a banked Codex reset 60 minutes before it expires, so it isn't lost.
-- **Also use expiring Codex resets at a limit** `codexAutoRedeemResetsAtLimit` (boolean, default false) [not agent-writable]: When you hit a Codex usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Codex resets.
+- **Auto-redeem expiring Claude resets** `claudeAutoRedeemExpiringResets` (boolean, default false) [not agent-writable]: Ghostex automatically uses a banked Claude reset 5 minutes before it expires, so it isn't lost.
+- **Also use expiring Claude resets at a limit** `claudeAutoRedeemResetsAtLimit` (boolean, default false) [not agent-writable]: When you hit a Claude usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 5 minutes. Needs Auto-redeem expiring Claude resets.
+- **Auto-redeem expiring Codex resets** `codexAutoRedeemExpiringResets` (boolean, default false) [not agent-writable]: Ghostex automatically uses a banked Codex reset 5 minutes before it expires, so it isn't lost.
+- **Also use expiring Codex resets at a limit** `codexAutoRedeemResetsAtLimit` (boolean, default false) [not agent-writable]: When you hit a Codex usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 5 minutes. Needs Auto-redeem expiring Codex resets.
 - **Hide account emails** `hideAccountEmails` (boolean, default false) [not agent-writable]: Hide account email addresses in the Accounts page and account switchers.
 ## Agents (tab `agents`)
 

@@ -246,7 +246,7 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     ("highlightPendingQuestions", J::Bool(false)),
     ("hideAccountEmails", J::Bool(false)),
     // CDXC:AgentProviders 2026-10-06 DECISION:
-    // User: Claude and Codex each get a setting to auto-redeem banked resets that are going to expire anyway, used 60 minutes before expiry; using one at a usage limit in its last 24 hours happens only "if user enables that toggle", the separate AtLimit switch. All off by default because a redeemed reset cannot be given back; gxserver owns the rule (server/src/accounts/reset_watch.rs). Supersedes the 2026-10-05 single switch that also covered the limit case.
+    // User: Claude and Codex each get a setting to auto-redeem banked resets that are going to expire anyway, used 5 minutes before expiry ("no no shouldn't be 60 minutes before that's big waste. Let's do 5 minutes instead."); using one at a usage limit in its last 24 hours happens only "if user enables that toggle", the separate AtLimit switch. All off by default because a redeemed reset cannot be given back; gxserver owns the rule (server/src/accounts/reset_watch.rs). Supersedes the 2026-10-05 single switch that also covered the limit case, and the 60-minute last call.
     ("claudeAutoRedeemExpiringResets", J::Bool(false)),
     ("codexAutoRedeemExpiringResets", J::Bool(false)),
     ("claudeAutoRedeemResetsAtLimit", J::Bool(false)),
