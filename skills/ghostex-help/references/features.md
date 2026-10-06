@@ -1700,6 +1700,9 @@ sessions, so any client can control agents on any machine.
   phone, and Reload picks up an agent's latest edit. HTML pages include the
   Agentation annotation tool (the pen button hides it); its copy button puts
   your notes on the phone's clipboard, ready to paste into a session.
+  Tapping a link to a file on the computer in a chat or terminal opens it in
+  the same reader: Markdown, HTML, text and code files, and pictures (other
+  files show their path, copied, since the phone cannot preview them).
 - **From another computer**: Settings > Remote > Remote machines > Add a
   machine with SSH details or an Easy Connect code, then Install / Connect
   gxserver on it. The machine appears as a sidebar section with its own
