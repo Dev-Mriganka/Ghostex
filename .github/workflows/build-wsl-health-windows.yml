@@ -86,6 +86,7 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $out $file))) { throw "Missing staged resource: $file" }
           }
       - name: Verify startup guard on native Windows
+        if: ${{ !cancelled() }}
         working-directory: server
         shell: pwsh
         run: |
@@ -93,6 +94,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Startup guard tests failed' }
           cargo test --locked --lib runtime::tests::current_process_is_alive_and_pid_zero_is_not
           if ($LASTEXITCODE -ne 0) { throw 'Windows process liveness test failed' }
+      - name: Preserve compiled Windows inputs after packaging failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compiled-windows-inputs
+          include-hidden-files: true
+          path: |
+            apps/desktop/target/release/*.exe
+            server/target/release/*.exe
+            .dependencies/wmx/target/release/wmx.exe
+            apps/editor/desktop/target/release/ghostex-editor.exe
+            apps/desktop/dist/sidebar/
+            apps/editor/dist/web/
+          if-no-files-found: ignore
+          retention-days: 14
       - uses: actions/upload-artifact@v7
         with:
           name: patched-windows-stage
