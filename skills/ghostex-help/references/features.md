@@ -310,7 +310,10 @@ filter cannot be saved as a Space. Spaces is a built-in extension, off by
 default: turn it on with its switch in Settings > Extensions (Features). While
 it is off the sidebar has no Space row or Space menus, the Space settings are
 hidden, and a view limited to some Spaces shows everywhere; your Spaces are
-kept and come back when you turn it on (`sidebarSpacesEnabled`). Create one with the "Create space" button
+kept and come back when you turn it on (`sidebarSpacesEnabled`). Spaces follow the
+machine: a remote machine shows its own Spaces when Spaces is turned on on that
+machine, and the switch in Settings turns Spaces on or off for this computer
+only. Create one with the "Create space" button
 that fills the Space row while you have none, by right-clicking the Other
 button or a Space icon and choosing New Space, or from the More menu when
 Spaces overflow. To switch to the next or previous Space, swipe sideways over
@@ -797,8 +800,11 @@ Context details. Claude
 Code starts with Account, Model limit, 5h limit, 7d limit, and Repository
 starred; Codex starts with Account email, 7d limit, 7d reset, and Account
 resets; Cursor starts with Context used, Branch, and Lines changed; Hermes
-starts with Context used, Cost, Tokens, and Session time; every other chat
-agent (Freebuff, Pi, OMP, Grok Build, Antigravity, OpenCode, ZCode) starts with
+starts with Context used, Cost, Tokens, and Session time; Pi starts with Model,
+Context used, Cost, and Tokens (read from Pi's own session record) and can also
+show Context tokens, Thinking level, Session time, Output tokens, Repository,
+Folder, Branch, and Session title; every other chat
+agent (Freebuff, OMP, Grok Build, Antigravity, OpenCode, ZCode) starts with
 Repository and Branch, and can also show Folder, Model, and Session title. Reset
 to recommended returns to these.
 Items without a value are hidden until their data is available again;
@@ -1417,7 +1423,9 @@ Cross-agent orchestration also works through the `$ghostex-cli` skill. For
    `ghostex read-text` or `ghostex read-session-chat`, and wait with
    `ghostex wait-for-text`.
    To pick the worker's model and effort, add `--model <model> --effort <level>`
-   to `create-agent` or `board start-work` (Claude and Codex). The choice
+   to `create-agent` or `board start-work` (Claude, Codex and Pi; for Pi the
+   model is `<provider>/<model>`, as in Pi's `/model`, and the effort is its
+   thinking level, such as `high`). The choice
    applies to that session only, survives a resume, and leaves your default
    model unchanged. For `board start-work`, these flags apply only when a new
    worker is created; a reused linked worker keeps its existing model and effort.
@@ -1809,10 +1817,10 @@ Claude progress updates do not trigger completion notifications while Claude
 reports background work still running. Completion notifications arrive when
 Claude finishes after that work completes; requests for your input or permission
 still get your attention.
-Pi sessions ring the same way: a finished Pi turn marks the session done (after
-any automatic retry or queued follow-up), stopping it with Esc or a provider error
-does not, and a question or confirmation a Pi extension asks marks the session as
-waiting for you.
+Pi, OMP and Amp sessions ring the same way: a finished turn marks the session
+done (for Pi and OMP after any automatic retry or queued follow-up), stopping it
+with Esc or a provider error does not, and a question or confirmation a Pi or OMP
+extension asks marks the session as waiting for you.
 Every copy shows a small "Copied!" bubble at the pointer for a moment, whether
 it came from a terminal, a chat message, a copy button, or a menu. Copy Sound is
 off by default. Enable it under Settings > Notifications > Sounds to also hear a
@@ -2031,17 +2039,19 @@ docs directory), `hideProjectHeaderDiffStats`,
 - Settings > Integrations installs the bundled agent skills (Ghostex CLI,
   Ghostex Help, Computer Use and Browser Use through Fast Computer & Browser
   Use, SpaceO through SpaceO, Embedded Browser Use, Project Board Beads) and
-  shows their install status. Skills are copied
+  shows their install status; an installed skill's row shows the command you
+  type to use it, such as `$ghostex-computer-use`. Skills are copied
   into the global skill folders every agent CLI reads. When the computer is
   online they are downloaded from the Ghostex GitHub repository, so skill fixes
   arrive between releases, and installed skills are refreshed automatically
   each time Ghostex starts. Offline installs use the copy inside the app.
   Its Desktop control section installs Fast Computer & Browser Use, Trycua's
   open-source driver (the `trycua/cua` link next to its name opens the project
-  on GitHub). Installing it also installs its Cua Driver skill, which teaches
-  agents the driver's own commands; if that skill is missing, the row shows an
-  Install skill button, and the Agent skills list installs or removes the same
-  skill (`cua-driver skills install`). Once it is installed, its
+  on GitHub). Installing it, Ghostex Computer Use or Ghostex Browser Use also
+  installs Trycua's cua-driver skill (`cua-driver skills install`), which
+  teaches agents the driver's own commands and which both Ghostex skills read
+  first; if that skill is missing, the row shows an Install skill button.
+  Once it is installed, its
   row shows an update button when a newer release is out (on a Mac), or a
   check mark when it is up to date (click it to check again), a reinstall
   button that runs the official installer again, and an uninstall button

@@ -14,7 +14,6 @@ pub(crate) enum GpuiGhostexCliSettingsAction {
     InstallMoveCodexSessionSkill,
     InstallHelpSkill,
     InstallCuaDriverSkill,
-    UninstallCuaDriverSkill,
     FinishDesktopControlSetup {
         driver_installed: bool,
         was_update: bool,
@@ -48,7 +47,6 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallMoveCodexSessionSkill => "installMoveCodexSessionSkill",
             Self::InstallHelpSkill => "installHelpSkill",
             Self::InstallCuaDriverSkill => "installCuaDriverSkill",
-            Self::UninstallCuaDriverSkill => "uninstallCuaDriverSkill",
             Self::FinishDesktopControlSetup { .. } => "installCuaDriver",
             Self::FinishTrycuaUninstall { .. } => "uninstallCuaDriver",
             Self::FinishSpaceoSetup { .. } => "installSpaceo",
@@ -72,7 +70,6 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallMoveCodexSessionSkill => "Ghostex Move Codex Session installed",
             Self::InstallHelpSkill => "Ghostex Help installed",
             Self::InstallCuaDriverSkill => "Cua Driver skill installed",
-            Self::UninstallCuaDriverSkill => "Cua Driver skill uninstalled",
             Self::FinishDesktopControlSetup {
                 was_update: true, ..
             } => "Fast Computer & Browser Use updated",
@@ -102,7 +99,6 @@ impl GpuiGhostexCliSettingsAction {
             Self::InstallMoveCodexSessionSkill => "Ghostex Move Codex Session install failed",
             Self::InstallHelpSkill => "Ghostex Help install failed",
             Self::InstallCuaDriverSkill => "Cua Driver skill install failed",
-            Self::UninstallCuaDriverSkill => "Cua Driver skill uninstall failed",
             Self::FinishDesktopControlSetup {
                 was_update: true, ..
             } => "Fast Computer & Browser Use update failed",
@@ -168,14 +164,14 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
             )
         }
         GpuiGhostexCliSettingsAction::InstallBrowserUseSkill => {
-            gpui_install_bundled_ghostex_skill_action(
+            gpui_install_cua_driver_wrapper_skill_action(
                 action,
                 &["browser-use", "install-skill"],
                 "Ghostex Browser Use",
             )
         }
         GpuiGhostexCliSettingsAction::InstallComputerUseSkill => {
-            gpui_install_bundled_ghostex_skill_action(
+            gpui_install_cua_driver_wrapper_skill_action(
                 action,
                 &["computer-use", "install-skill"],
                 "Ghostex Computer Use",
@@ -232,12 +228,6 @@ pub(crate) fn gpui_run_ghostex_cli_settings_action(
         }
         GpuiGhostexCliSettingsAction::InstallCuaDriverSkill => {
             match gpui_install_cua_driver_skill() {
-                Ok(message) => GpuiGhostexCliActionResult::success(action, message),
-                Err(message) => GpuiGhostexCliActionResult::failure(action, message),
-            }
-        }
-        GpuiGhostexCliSettingsAction::UninstallCuaDriverSkill => {
-            match gpui_uninstall_cua_driver_skill() {
                 Ok(message) => GpuiGhostexCliActionResult::success(action, message),
                 Err(message) => GpuiGhostexCliActionResult::failure(action, message),
             }
@@ -384,10 +374,18 @@ pub(crate) fn gpui_cua_driver_uninstall_command_action() -> GpuiInstallJobAction
     }
 }
 
+/// CDXC:ManagedTools 2026-10-06 WHY:
+/// The official Windows installer stops at `Read-Host "Trigger UAC prompt to kill the stale daemon now? [Y/n]"` when a cua-driver daemon is alive but its pipe is dead, and Read-Host throws in the job's headless PowerShell, so the install failed. Its `Repair-CuaDriverStaleDaemon -AutoConfirm` switch is upstream's answer for automated runs (UAC still asks for consent), and the installer exposes no other way to pass it, so the job sets it as a default parameter value before running the installer.
+#[cfg(target_os = "windows")]
+const GPUI_TRYCUA_JOB_PRELUDE: &str =
+    "$PSDefaultParameterValues['Repair-CuaDriverStaleDaemon:AutoConfirm'] = $true; ";
+
 fn gpui_cua_driver_installer_command_action() -> GpuiInstallJobAction {
     #[cfg(target_os = "macos")]
     let script = format!("{GPUI_TRYCUA_INSTALL_COMMAND} && {GPUI_CUA_DRIVER_START_COMMAND}");
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    let script = format!("{GPUI_TRYCUA_JOB_PRELUDE}{GPUI_TRYCUA_INSTALL_COMMAND}");
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let script = GPUI_TRYCUA_INSTALL_COMMAND.to_string();
 
     GpuiInstallJobAction {

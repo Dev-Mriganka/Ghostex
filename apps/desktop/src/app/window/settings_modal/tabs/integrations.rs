@@ -54,7 +54,7 @@ fn skill_icon(skill_id: &str) -> &'static str {
     match skill_id {
         "browserUse" | "embeddedBrowserUse" => "modals/settings/browser.svg",
         "cli" => ICON_TERMINAL,
-        "computerUse" | "cuaDriver" => ICON_DEVICE_DESKTOP,
+        "computerUse" => ICON_DEVICE_DESKTOP,
         "spaceo" => ICON_DEVICE_LAPTOP,
         "agentsOrchestration" => "modals/settings/sitemap.svg",
         "generateTitle" => "modals/settings/pencil.svg",
@@ -71,7 +71,6 @@ fn skill_install_message(skill_id: &str) -> Option<&'static str> {
         "cli" => "installCliSkill",
         "browserUse" => "installBrowserUseSkill",
         "computerUse" => "installComputerUseSkill",
-        "cuaDriver" => "installCuaDriverSkill",
         "spaceo" => "installSpaceoSkill",
         "embeddedBrowserUse" => "installBrowserControl",
         "agentsOrchestration" => "installAgentsOrchestrationSkill",
@@ -89,7 +88,6 @@ fn skill_installed(skill_id: &str, status: Option<&Value>) -> bool {
         "browserUse" => "browserSkillInstalled",
         "embeddedBrowserUse" => "embeddedBrowserSkillInstalled",
         "computerUse" => "computerUseSkillInstalled",
-        "cuaDriver" => "cuaDriverSkillInstalled",
         "spaceo" => "spaceoSkillInstalled",
         "cli" => "cliSkillInstalled",
         "agentsOrchestration" => "agentsOrchestrationSkillInstalled",
@@ -119,6 +117,8 @@ fn text<'a>(status: Option<&'a Value>, key: &str) -> Option<&'a str> {
 struct Skill {
     id: String,
     name: String,
+    /// The folder name agents invoke it by, as `$<skill_name>`.
+    skill_name: String,
     description: String,
     command: String,
     tier: String,
@@ -142,6 +142,7 @@ fn visible_skills() -> Vec<Skill> {
                     Some(Skill {
                         id: text("id")?,
                         name: text("name")?,
+                        skill_name: text("skillName").unwrap_or_default(),
                         description: text("description").unwrap_or_default(),
                         command: text("command").unwrap_or_default(),
                         tier: text("tier").unwrap_or_default(),
@@ -312,6 +313,19 @@ fn tinted_label(
         .into_any_element()
 }
 
+/// CDXC:Settings 2026-10-06 DECISION:
+/// User: every skill row shows the command that runs it ("`$ghostex-computer-use` for example"), but "only show the command to run it if it's installed".
+fn skill_invocation(p: &SettingsPalette, skill_name: &str) -> AnyElement {
+    div()
+        .flex_shrink_0()
+        .font_family(MODAL_MONO_FONT)
+        .text_size(px(13.0))
+        .line_height(px(18.9))
+        .text_color(hsla(p.muted))
+        .child(format!("${skill_name}"))
+        .into_any_element()
+}
+
 /// `amber-500` (a pill that needs attention) and `sky-500` (Beta).
 const AMBER_500: u32 = 0xf59e0b;
 const AMBER_200: u32 = 0xfde68a;
@@ -419,7 +433,7 @@ struct RowTitle {
     badge: Option<&'static str>,
     /// A dependency note such as Needs Trycua.
     pill: Option<String>,
-    /// A link after the label, such as the tool's repository.
+    /// An element after the label: the tool's repository link, or an installed skill's `$name`.
     link: Option<AnyElement>,
 }
 
@@ -443,6 +457,7 @@ fn integration_row(
         .gap(px(8.0))
         .child(
             div()
+                .min_w_0()
                 .text_size(px(14.0))
                 .line_height(px(18.9))
                 .text_color(hsla(p.foreground))
@@ -1071,10 +1086,8 @@ impl IntegrationsTab {
         let cli_ready = flag(status, "installed") == Some(true);
         let driver_installed = flag(status, "cuaDriverInstalled") == Some(true);
         let skills = visible_skills();
-        // Uninstall all removes Ghostex's own skills; the Cua Driver skill belongs to cua-driver.
         let any_installed = skills
             .iter()
-            .filter(|skill| skill.id != "cuaDriver")
             .any(|skill| skill_installed(&skill.id, status));
         let actions = h_flex()
             .items_center()
@@ -1210,14 +1223,10 @@ impl IntegrationsTab {
                 checking,
                 "Skill status is being checked.".to_string(),
                 move |page, _window, cx| {
-                    if skill_id == "cuaDriver" {
-                        page.post("uninstallCuaDriverSkill", cx);
-                    } else {
-                        page.post_message(
-                            json!({ "skillId": skill_id, "type": "uninstallBundledAgentSkill" }),
-                            cx,
-                        );
-                    }
+                    page.post_message(
+                        json!({ "skillId": skill_id, "type": "uninstallBundledAgentSkill" }),
+                        cx,
+                    );
                 },
                 cx,
             ));
@@ -1232,7 +1241,8 @@ impl IntegrationsTab {
             }),
             Some(skill_icon(&skill.id)),
             RowTitle {
-                link: None,
+                link: (installed && !skill.skill_name.is_empty())
+                    .then(|| skill_invocation(p, &skill.skill_name)),
                 label: skill.name.clone(),
                 description: format!("{}\n\n{}", skill.description, skill.command),
                 badge: None,

@@ -54,10 +54,24 @@ pub(crate) fn gpui_install_cua_driver_skill() -> Result<String, String> {
     })
 }
 
-pub(crate) fn gpui_uninstall_cua_driver_skill() -> Result<String, String> {
-    gpui_run_cua_driver_skills(&["skills", "uninstall"])?;
-    Ok(
-        "Cua Driver skill removed from your agents. You can install it again from Settings."
-            .to_string(),
-    )
+/// CDXC:AgentSkills 2026-10-06 DECISION:
+/// User: "make the browser/computer use ones install cua-driver and also tell the agent to read that skill". Installing Ghostex Computer Use or Ghostex Browser Use also installs Trycua's `cua-driver` skill, which both send the agent to first. The Ghostex skill installs even when the driver is missing or its skill fetch fails; the message then says how to add the cua-driver skill.
+pub(crate) fn gpui_install_cua_driver_wrapper_skill_action(
+    action: GpuiGhostexCliSettingsAction,
+    args: &[&str],
+    display_name: &str,
+) -> GpuiGhostexCliActionResult {
+    let message = match gpui_install_bundled_ghostex_skill(args, display_name) {
+        Ok(message) => message,
+        Err(message) => return GpuiGhostexCliActionResult::failure(action, message),
+    };
+    let note = if gpui_cua_driver_executable_path().is_none() {
+        " Install Fast Computer & Browser Use to add the cua-driver skill it reads.".to_string()
+    } else {
+        match gpui_install_cua_driver_skill() {
+            Ok(skill_message) => format!(" {skill_message}"),
+            Err(_) => " The cua-driver skill could not be installed; use Install skill on the Fast Computer & Browser Use row.".to_string(),
+        }
+    };
+    GpuiGhostexCliActionResult::success(action, format!("{message}{note}"))
 }

@@ -121,12 +121,6 @@ impl GhostexGpuiApp {
                     cx,
                 );
             }
-            "uninstallCuaDriverSkill" => {
-                self.run_gpui_ghostex_cli_settings_action(
-                    GpuiGhostexCliSettingsAction::UninstallCuaDriverSkill,
-                    cx,
-                );
-            }
             "installCuaDriver" => {
                 self.handle_gpui_cua_driver_install_or_update(window, cx);
             }

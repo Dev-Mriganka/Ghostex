@@ -33,7 +33,7 @@ pub const BUNDLED_GHOSTEX_AGENT_SKILLS: J = J::Arr(&[
     ]),
     J::Obj(&[
         ("command", J::Str("ghostex computer-use install-skill")),
-        ("description", J::Str("Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer & Browser Use, and your operating system may ask for accessibility and screen recording permissions.")),
+        ("description", J::Str("Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer & Browser Use and also installs its cua-driver skill, which the agent reads first; your operating system may ask for accessibility and screen recording permissions.")),
         ("id", J::Str("computerUse")),
         ("name", J::Str("Ghostex Computer Use")),
         ("requiresCuaDriver", J::Bool(true)),
@@ -52,7 +52,7 @@ pub const BUNDLED_GHOSTEX_AGENT_SKILLS: J = J::Arr(&[
     ]),
     J::Obj(&[
         ("command", J::Str("ghostex browser-use install-skill")),
-        ("description", J::Str("Let agents control your browser: open pages, click, fill forms, and read what is on screen in supported external browsers.")),
+        ("description", J::Str("Let agents control your browser: open pages, click, fill forms, and read what is on screen in supported external browsers. Runs through Fast Computer & Browser Use and also installs its cua-driver skill, which the agent reads first.")),
         ("id", J::Str("browserUse")),
         ("name", J::Str("Ghostex Browser Use")),
         ("requiresCuaDriver", J::Bool(true)),
@@ -116,8 +116,8 @@ pub const GHOSTEX_TRYCUA_REPOSITORY_URL: &str = "https://github.com/trycua/cua";
 
 /// The bundled skills that app surfaces (onboarding, Settings, search) may show.
 ///
-/// CDXC:AgentSkills 2026-10-05 DECISION:
-/// User: the cua-driver skill installs from the Fast Computer & Browser Use row and from the Agent skills list ("2 places to install the same skill"). It is Trycua's own skill pack, installed by `cua-driver skills install` rather than copied from Ghostex's `skills/`, so it is listed here but not in `BUNDLED_GHOSTEX_AGENT_SKILLS`, and Uninstall All leaves it alone.
+/// CDXC:AgentSkills 2026-10-06 DECISION:
+/// User: "keep the 2 shown in ui and hide the cua-driver one" because its row did not explain what it does, and "make the browser/computer use ones install cua-driver and also tell the agent to read that skill". Trycua's own `cua-driver` skill is not a row here: installing Ghostex Computer Use or Ghostex Browser Use also runs `cua-driver skills install`, and both skills send the agent to it first. The Fast Computer & Browser Use row keeps its Install skill button for when it is missing. Supersedes the 2026-10-05 decision that listed it as its own Cua Driver row.
 pub const VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS: J = J::Arr(&[
     J::Obj(&[
         ("command", J::Str("ghostex cli install-skill")),
@@ -136,17 +136,8 @@ pub const VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS: J = J::Arr(&[
         ("tier", J::Str("recommended")),
     ]),
     J::Obj(&[
-        ("command", J::Str("cua-driver skills install")),
-        ("description", J::Str("Trycua's own skill for Fast Computer & Browser Use: the commands, safety rules and per-platform notes of the driver you have installed. cua-driver installs it and keeps it in step with its version.")),
-        ("id", J::Str("cuaDriver")),
-        ("name", J::Str("Cua Driver")),
-        ("requiresCuaDriver", J::Bool(true)),
-        ("skillName", J::Str("cua-driver")),
-        ("tier", J::Str("recommended")),
-    ]),
-    J::Obj(&[
         ("command", J::Str("ghostex computer-use install-skill")),
-        ("description", J::Str("Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer & Browser Use, and your operating system may ask for accessibility and screen recording permissions.")),
+        ("description", J::Str("Let agents control your machine: click, type, and see the screen in native apps. Runs through Fast Computer & Browser Use and also installs its cua-driver skill, which the agent reads first; your operating system may ask for accessibility and screen recording permissions.")),
         ("id", J::Str("computerUse")),
         ("name", J::Str("Ghostex Computer Use")),
         ("requiresCuaDriver", J::Bool(true)),
@@ -165,7 +156,7 @@ pub const VISIBLE_BUNDLED_GHOSTEX_AGENT_SKILLS: J = J::Arr(&[
     ]),
     J::Obj(&[
         ("command", J::Str("ghostex browser-use install-skill")),
-        ("description", J::Str("Let agents control your browser: open pages, click, fill forms, and read what is on screen in supported external browsers.")),
+        ("description", J::Str("Let agents control your browser: open pages, click, fill forms, and read what is on screen in supported external browsers. Runs through Fast Computer & Browser Use and also installs its cua-driver skill, which the agent reads first.")),
         ("id", J::Str("browserUse")),
         ("name", J::Str("Ghostex Browser Use")),
         ("requiresCuaDriver", J::Bool(true)),
