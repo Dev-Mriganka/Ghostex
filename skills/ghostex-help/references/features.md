@@ -2003,12 +2003,14 @@ docs directory), `hideProjectHeaderDiffStats`,
   system notification off under Settings > Notifications > Sounds (Reset
   Expiry Notifications); the bell row stays. Each provider on Settings >
   Accounts has Auto-redeem expiring resets (off by default): Ghostex then
-  uses a reset only when it would otherwise expire unused, right away when
-  the account hits a usage limit in the reset's last 24 hours (unless the
-  limit resets on its own within 30 minutes), or in its last hour if the
-  account has used anything. A Claude reset that only works at a limit is
-  used only at a limit, and each automatic use appears in the bell
-  (`claudeAutoRedeemExpiringResets`, `codexAutoRedeemExpiringResets`,
+  automatically uses a banked reset 60 minutes before it expires, so it
+  isn't lost (only if the account has used anything; a Claude reset that
+  only works at a limit is used then only at a limit). Under it, Also use it
+  when I hit a limit (off by default) also uses a reset right away when the
+  account hits a usage limit in the reset's last 24 hours, unless the limit
+  resets on its own within 30 minutes. Each automatic use appears in the
+  bell (`claudeAutoRedeemExpiringResets`, `codexAutoRedeemExpiringResets`,
+  `claudeAutoRedeemResetsAtLimit`, `codexAutoRedeemResetsAtLimit`,
   `resetExpirySystemNotifications`). Shared history stays visible
   below: today's, yesterday's, and the last 30 days' token totals with a daily
   trend. History combines conversations across accounts of the same provider

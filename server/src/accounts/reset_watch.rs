@@ -33,6 +33,10 @@ const FIRST_TICK: Duration = Duration::from_secs(60);
 const WARNINGS_KEY: &str = "agents.accounts.resetWarnings.v1";
 const CLAUDE_SETTING: &str = "claudeAutoRedeemExpiringResets";
 const CODEX_SETTING: &str = "codexAutoRedeemExpiringResets";
+const CLAUDE_AT_LIMIT_SETTING: &str = "claudeAutoRedeemResetsAtLimit";
+const CODEX_AT_LIMIT_SETTING: &str = "codexAutoRedeemResetsAtLimit";
+/// How long before a banked reset expires Auto-redeem uses it. The Settings and Help copy name this number.
+pub(crate) const LAST_CALL_MINUTES: i64 = 60;
 /// An automatic claim of one reset is tried at most this often, whatever it answered.
 const RETRY_AFTER: Duration = Duration::from_secs(30 * 60);
 
@@ -80,13 +84,17 @@ pub(crate) struct Decision {
     pub wait: Option<&'static str>,
 }
 
-/// CDXC:AgentProviders 2026-10-05 DECISION:
-/// User: "implement a setting for Claude and Codex to auto redeem banked resets if they're going to expire anyways", and warn in red when one expires within 3 days and again within 24 hours.
-/// The rule never spends a reset the user could still use well, and looks only at the soonest-expiring reset that can be claimed (Anthropic serves Claude grants in order; paused grants cannot be claimed):
-/// 1. At a usage limit in the reset's last 24 hours, use it now: at a limit a reset gives back the whole window. It waits only while the limit resets on its own within 30 minutes (that costs a short wait, not the reset).
-/// 2. Otherwise, in the reset's last hour, use it if the account has used anything, since it is lost an hour later anyway. A Claude grant that only works at a limit is left alone here; Anthropic would refuse it.
+/// CDXC:AgentProviders 2026-10-06 DECISION:
+/// User: "implement a setting for Claude and Codex to auto redeem banked resets if they're going to expire anyways" (2026-10-05), then on the switch's text: "add 'automatically' and we need to say how many minute it's used before expiry. also no need to use it automatically in case expired with 24 hours remaining except if user enables that toggle". This supersedes the 2026-10-05 rule that also spent a reset at any usage limit in its last 24 hours by default.
+/// Looking only at the soonest-expiring reset that can be claimed (Anthropic serves Claude grants in order; paused grants cannot be claimed):
+/// 1. Auto-redeem expiring resets: in the reset's last 60 minutes (`LAST_CALL_MINUTES`, the number the Settings and Help copy name), use it if the account has used anything, since it is lost then anyway. A Claude grant that only works at a limit is used then only at a limit; Anthropic refuses it otherwise.
+/// 2. Only with its own switch (`at_limit`, off by default): at a usage limit in the reset's last 24 hours, use it at once, since at a limit a reset gives back the whole window. It waits while the limit resets on its own within 30 minutes (that costs a short wait, not the reset).
 /// Readings older than 10 minutes, or with a usage error, never trigger a redeem.
-pub(crate) fn decide(account: &DiscoveredAccount, now: DateTime<Utc>) -> Option<Decision> {
+pub(crate) fn decide(
+    account: &DiscoveredAccount,
+    now: DateTime<Utc>,
+    at_limit: bool,
+) -> Option<Decision> {
     let credits = account.reset_credit_details.as_ref()?;
     let (first, expires_at) = credits.iter().filter(|c| !c.paused).find_map(|credit| {
         let expires = credit
@@ -120,7 +128,7 @@ pub(crate) fn decide(account: &DiscoveredAccount, now: DateTime<Utc>) -> Option<
     let limited: Vec<_> = limits.iter().filter(|w| w.used_percent >= 100.).collect();
     let mut redeem = None;
     let mut wait = None;
-    if fresh && remaining <= Span::hours(24) && !limited.is_empty() {
+    if at_limit && fresh && remaining <= Span::hours(24) && !limited.is_empty() {
         // The moment the account could work again without the reset: the last of its full windows to reset.
         let natural = limited
             .iter()
@@ -137,8 +145,8 @@ pub(crate) fn decide(account: &DiscoveredAccount, now: DateTime<Utc>) -> Option<
         } else {
             redeem = Some(RedeemReason::AtLimit);
         }
-    } else if fresh && remaining <= Span::hours(1) {
-        if first.requires_limit {
+    } else if fresh && remaining <= Span::minutes(LAST_CALL_MINUTES) {
+        if first.requires_limit && limited.is_empty() {
             wait = Some("This reset only works at a usage limit.");
         } else if limits.iter().any(|w| w.used_percent >= 1.) {
             redeem = Some(RedeemReason::LastHour);
@@ -227,15 +235,21 @@ fn simulate(account: &mut DiscoveredAccount, simulation: &Simulation, now: DateT
 pub(crate) fn start(state: Arc<AppState>) {
     let mut shutdown = state.shutdown_tx.subscribe();
     tokio::spawn(async move {
-        let mut clock = tokio::time::interval_at(tokio::time::Instant::now() + FIRST_TICK, TICK);
+        let mut delay = FIRST_TICK;
         loop {
             tokio::select! {
                 _ = shutdown.recv() => break,
-                _ = clock.tick() => {}
+                _ = tokio::time::sleep(delay) => {}
             }
+            delay = TICK;
             let pass_state = state.clone();
             match tokio::task::spawn_blocking(move || pass(&pass_state, None, false, false)).await {
-                Ok(Ok(_)) => {}
+                // The next look also lands right after the soonest reset reaches its last 60 minutes, so Auto-redeem uses it then rather than up to one check later.
+                Ok(Ok(report)) => {
+                    if let Some(seconds) = report["nextLastCallInSeconds"].as_i64() {
+                        delay = delay.min(Duration::from_secs(seconds.max(0) as u64 + 2));
+                    }
+                }
                 Ok(Err(error)) => log(
                     &state,
                     LogLevel::Warn,
@@ -305,16 +319,20 @@ fn pass(
         return Ok(json!({ "accounts": [] }));
     }
     let settings = crate::session_lifecycle::read_sidebar_settings(&state.paths);
-    let auto = |provider: Provider| {
-        let key = match provider {
-            Provider::Claude => CLAUDE_SETTING,
-            Provider::Codex => CODEX_SETTING,
-        };
+    let enabled = |key: &str| {
         settings
             .as_ref()
             .and_then(|s| s.get(key))
             .and_then(Value::as_bool)
             == Some(true)
+    };
+    let auto = |provider: Provider| match provider {
+        Provider::Claude => enabled(CLAUDE_SETTING),
+        Provider::Codex => enabled(CODEX_SETTING),
+    };
+    let at_limit = |provider: Provider| match provider {
+        Provider::Claude => enabled(CLAUDE_AT_LIMIT_SETTING),
+        Provider::Codex => enabled(CODEX_AT_LIMIT_SETTING),
     };
     let snapshot = state.accounts.refresh(&state.paths.home_dir, false);
     let now = Utc::now();
@@ -328,6 +346,7 @@ fn pass(
     let mut changed_shown = shown.len() != shown_before;
     let mut feed_changed = false;
     let mut report = Vec::new();
+    let mut next_last_call: Option<Span> = None;
     for saved in &registry.accounts {
         let Some(found) = snapshot
             .accounts
@@ -342,6 +361,7 @@ fn pass(
             simulate(&mut account, simulation, now);
         }
         let auto_redeem = auto(saved.provider);
+        let auto_at_limit = at_limit(saved.provider);
         // A warning whose reset is gone (used, or no longer offered) stops asking for attention.
         if simulated.is_none() && !dry_run {
             if let Some(credits) = &account.reset_credit_details {
@@ -367,9 +387,14 @@ fn pass(
                 }
             }
         }
-        let Some(decision) = decide(&account, now) else {
+        let Some(decision) = decide(&account, now, auto_at_limit) else {
             continue;
         };
+        let until_last_call = decision.expires_at - Span::minutes(LAST_CALL_MINUTES) - now;
+        if auto_redeem && simulated.is_none() && until_last_call > Span::zero() {
+            next_last_call =
+                Some(next_last_call.map_or(until_last_call, |n| n.min(until_last_call)));
+        }
         let expires = decision.expires_at.to_rfc3339();
         let mut warned = None;
         if let Some(threshold) = decision.warning {
@@ -387,8 +412,14 @@ fn pass(
                 !dry_run && !already(threshold, &shown)
             };
             if post {
-                let id =
-                    post_warning(&db, saved, &decision, auto_redeem, simulated.is_some(), now)?;
+                let id = post_warning(
+                    &db,
+                    saved,
+                    &decision,
+                    auto_redeem.then_some(auto_at_limit),
+                    simulated.is_some(),
+                    now,
+                )?;
                 feed_changed = true;
                 warned = Some(threshold.id());
                 if simulated.is_none() {
@@ -444,6 +475,7 @@ fn pass(
             "redeem": decision.redeem.map(RedeemReason::id),
             "wait": decision.wait,
             "autoRedeem": auto_redeem,
+            "autoRedeemAtLimit": auto_at_limit,
             "action": action,
             "result": outcome,
         }));
@@ -454,7 +486,11 @@ fn pass(
     if feed_changed {
         broadcast_notification_feed_changed(state);
     }
-    Ok(json!({ "accounts": report, "dryRun": dry_run }))
+    Ok(json!({
+        "accounts": report,
+        "dryRun": dry_run,
+        "nextLastCallInSeconds": next_last_call.map(|span| span.num_seconds()),
+    }))
 }
 
 fn same_time(a: &str, b: &str) -> bool {
@@ -548,7 +584,8 @@ fn post_warning(
     db: &Connection,
     saved: &SavedAccount,
     decision: &Decision,
-    auto_redeem: bool,
+    // `Some(at_limit)` while Auto-redeem is on for this provider.
+    auto_redeem: Option<bool>,
     simulated: bool,
     now: DateTime<Utc>,
 ) -> Result<String, DomainStateError> {
@@ -558,12 +595,14 @@ fn post_warning(
     } else {
         format!("{} banked resets", decision.count)
     };
-    let plan = if auto_redeem {
-        "Auto-redeem uses it before then if it would otherwise go unused."
+    let plan = if auto_redeem == Some(true) {
+        format!("Auto-redeem uses it when you hit a usage limit, or {LAST_CALL_MINUTES} minutes before it expires.")
+    } else if auto_redeem == Some(false) {
+        format!("Auto-redeem uses it {LAST_CALL_MINUTES} minutes before it expires.")
     } else if decision.requires_limit {
-        "It only works at a usage limit. Open usage to use it."
+        "It only works at a usage limit. Open usage to use it.".to_string()
     } else {
-        "Open usage to use it before then."
+        "Open usage to use it before then.".to_string()
     };
     let item = insert_notification_feed_row(
         db,

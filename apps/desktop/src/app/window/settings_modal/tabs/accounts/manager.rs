@@ -206,7 +206,7 @@ impl AccountsTab {
             items.push(self.render_saved_account(p, account, accounts, busy, hide, window, cx));
         }
         items.push(self.render_defaults_row(p, provider, data, accounts, busy, hide, window, cx));
-        items.push(self.render_auto_redeem_row(p, provider, cx));
+        items.extend(self.render_auto_redeem_rows(p, provider, cx));
         v_flex()
             .w_full()
             .children(items.into_iter().enumerate().map(|(index, item)| {
@@ -218,40 +218,72 @@ impl AccountsTab {
             .into_any_element()
     }
 
-    /// The provider's Auto-redeem switch, a shared setting gxserver reads (server/src/accounts/reset_watch.rs).
-    fn render_auto_redeem_row(
+    /// The provider's Auto-redeem switches, shared settings gxserver reads
+    /// (server/src/accounts/reset_watch.rs): using a reset 60 minutes before it expires, and, under
+    /// it, also using one at a usage limit in its last 24 hours.
+    fn render_auto_redeem_rows(
         &mut self,
         p: &SettingsPalette,
         provider: &'static str,
         cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let key: &'static str = if provider == "codex" {
-            "codexAutoRedeemExpiringResets"
+    ) -> Vec<AnyElement> {
+        let (key, at_limit_key): (&'static str, &'static str) = if provider == "codex" {
+            (
+                "codexAutoRedeemExpiringResets",
+                "codexAutoRedeemResetsAtLimit",
+            )
         } else {
-            "claudeAutoRedeemExpiringResets"
+            (
+                "claudeAutoRedeemExpiringResets",
+                "claudeAutoRedeemResetsAtLimit",
+            )
         };
         let on = self.store.read(cx).bool(key);
-        setting_row(
-            p,
-            SharedString::from(format!("accounts-{provider}-auto-redeem")),
-            RowSpec::new("Auto-redeem expiring resets").description(
-                "Use a banked reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. A used reset can't be given back.",
-            ),
-            None,
-            switch_control(
+        let at_limit = self.store.read(cx).bool(at_limit_key);
+        let save = |key: &'static str| {
+            move |page: &mut Self, next: bool, _window: &mut Window, cx: &mut Context<Self>| {
+                let store = page.store.clone();
+                store.update(cx, |store, cx| store.update_setting(key, json!(next), cx));
+            }
+        };
+        vec![
+            setting_row(
                 p,
-                SharedString::from(format!("accounts-{provider}-auto-redeem-switch")),
-                on,
-                false,
+                SharedString::from(format!("accounts-{provider}-auto-redeem")),
+                RowSpec::new("Auto-redeem expiring resets").description(
+                    "Ghostex automatically uses a banked reset 60 minutes before it expires, so it isn't lost.",
+                ),
                 None,
-                move |page: &mut Self, next, _window, cx| {
-                    let store = page.store.clone();
-                    store.update(cx, |store, cx| store.update_setting(key, json!(next), cx));
-                },
+                switch_control(
+                    p,
+                    SharedString::from(format!("accounts-{provider}-auto-redeem-switch")),
+                    on,
+                    false,
+                    None,
+                    save(key),
+                    cx,
+                ),
                 cx,
             ),
-            cx,
-        )
+            setting_row(
+                p,
+                SharedString::from(format!("accounts-{provider}-auto-redeem-at-limit")),
+                RowSpec::new("Also use it when I hit a limit").description(
+                    "When you hit a usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes.",
+                ),
+                None,
+                switch_control(
+                    p,
+                    SharedString::from(format!("accounts-{provider}-auto-redeem-at-limit-switch")),
+                    at_limit,
+                    !on,
+                    (!on).then(|| SharedString::from("Turn on Auto-redeem expiring resets first.")),
+                    save(at_limit_key),
+                    cx,
+                ),
+                cx,
+            ),
+        ]
     }
 
     /// One saved account: its management row and, while expanded, its editor.

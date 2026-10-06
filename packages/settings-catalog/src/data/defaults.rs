@@ -245,10 +245,12 @@ pub const DEFAULT_GHOSTEX_SETTINGS: &[(&str, J)] = &[
     ("hideLastActiveTimeOnSessionCards", J::Bool(true)),
     ("highlightPendingQuestions", J::Bool(false)),
     ("hideAccountEmails", J::Bool(false)),
-    // CDXC:AgentProviders 2026-10-05 DECISION:
-    // User: Claude and Codex each get a setting to auto-redeem banked resets that are going to expire anyway. Off by default because a redeemed reset cannot be given back; gxserver owns the rule (server/src/accounts/reset_watch.rs).
+    // CDXC:AgentProviders 2026-10-06 DECISION:
+    // User: Claude and Codex each get a setting to auto-redeem banked resets that are going to expire anyway, used 60 minutes before expiry; using one at a usage limit in its last 24 hours happens only "if user enables that toggle", the separate AtLimit switch. All off by default because a redeemed reset cannot be given back; gxserver owns the rule (server/src/accounts/reset_watch.rs). Supersedes the 2026-10-05 single switch that also covered the limit case.
     ("claudeAutoRedeemExpiringResets", J::Bool(false)),
     ("codexAutoRedeemExpiringResets", J::Bool(false)),
+    ("claudeAutoRedeemResetsAtLimit", J::Bool(false)),
+    ("codexAutoRedeemResetsAtLimit", J::Bool(false)),
     // CDXC:Sessions 2026-06-13-17:50:
     // First-run sidebar tag filter settings should show the default triage tags,
     // the No tag filter, and the default separators. Users opt out by hiding or

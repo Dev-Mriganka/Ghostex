@@ -14,8 +14,10 @@ pub(crate) fn accounts() -> Section {
         "Accounts",
         vec![
             row("accounts", "Accounts, usage stats and automatic continuation", "Current CLI login, Claude cswap, Codex xswap, update, reinstall or uninstall Claude Swap and Codex Swap, sidebar usage strip, status lines, usage limits and resets, account indicators, switching, hide emails, privacy, error recovery and retry settings."),
-            row("claudeAutoRedeemExpiringResets", "Auto-redeem expiring Claude resets", "Use a banked Claude usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back."),
-            row("codexAutoRedeemExpiringResets", "Auto-redeem expiring Codex resets", "Use a banked Codex usage reset automatically when it would otherwise expire unused: at a usage limit in its last 24 hours, or in its last hour. Off by default because a used reset cannot be given back."),
+            row("claudeAutoRedeemExpiringResets", "Auto-redeem expiring Claude resets", "Ghostex automatically uses a banked Claude reset 60 minutes before it expires, so it isn't lost."),
+            row("claudeAutoRedeemResetsAtLimit", "Also use expiring Claude resets at a limit", "When you hit a Claude usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Claude resets."),
+            row("codexAutoRedeemExpiringResets", "Auto-redeem expiring Codex resets", "Ghostex automatically uses a banked Codex reset 60 minutes before it expires, so it isn't lost."),
+            row("codexAutoRedeemResetsAtLimit", "Also use expiring Codex resets at a limit", "When you hit a Codex usage limit and a banked reset expires within 24 hours, Ghostex automatically uses it right away instead of waiting for its last 60 minutes. Needs Auto-redeem expiring Codex resets."),
         ],
     )
 }
