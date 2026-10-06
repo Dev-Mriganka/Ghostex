@@ -1,0 +1,160 @@
+name: Build patched Windows app and WSL runtime
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: patched-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux_runtime:
+    uses: ./.github/workflows/release-gpui-gxserver.yml
+    with:
+      version: "10.13.0"
+      arch: x64
+
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 100
+    env:
+      GHOSTEX_WINDOWS_ARCH: x64
+      GHOSTEX_ON_DEMAND_ASSETS: "1"
+      # The assembler adds this run's freshly built Linux runtime after both
+      # compilers finish. Do not download the unpatched release runtime here.
+      GHOSTEX_WINDOWS_REQUIRE_WSL_RUNTIME: "0"
+      GH_TOKEN: ${{ github.token }}
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
+      SCCACHE_GHA_ENABLED: "true"
+      SCCACHE_GHA_VERSION: patched-windows-x64-1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Prepare pinned source dependencies
+        shell: bash
+        run: |
+          tooling/release-gpui/prepare-references.sh
+          git submodule update --init --depth=1 -- .dependencies/wmx
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .dependencies/code-server/.node-version
+          architecture: x64
+      - uses: mozilla-actions/sccache-action@v0.0.11
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: patched-cargo-windows-x64-${{ hashFiles('apps/desktop/Cargo.lock', 'server/Cargo.lock') }}
+          restore-keys: patched-cargo-windows-x64-
+      - name: Install pinned Rust and Zig
+        shell: pwsh
+        run: |
+          $pin = [regex]::Match((Get-Content -Raw apps/desktop/rust-toolchain.toml), '(?m)^channel\s*=\s*"([^"]+)"').Groups[1].Value
+          if (-not $pin) { throw 'Missing Rust toolchain pin' }
+          rustup toolchain install $pin --profile minimal
+          if ($LASTEXITCODE -ne 0) { throw 'Rust installation failed' }
+          "RUSTUP_TOOLCHAIN=$pin" >> $env:GITHUB_ENV
+          tooling/release-gpui/prepare-zig.ps1 -Arch x64
+      - name: Install JavaScript dependencies
+        shell: pwsh
+        run: |
+          bun install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+      - name: Build and stage the Windows app
+        shell: pwsh
+        run: |
+          cargo xtask start --build-only --optimized --verbose
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+          $out = 'apps/desktop/build/windows/Ghostex'
+          foreach ($file in @('Ghostex.exe', 'ghostex-gpui-runtime.exe', 'resources/build-identity.json', 'resources/native/gxserver.exe', 'resources/native/wmx.exe')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $out $file))) { throw "Missing staged resource: $file" }
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: patched-windows-stage
+          path: apps/desktop/build/windows/Ghostex/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - name: Report compiler cache
+        if: ${{ always() }}
+        shell: pwsh
+        run: sccache --show-stats
+
+  assemble:
+    runs-on: ubuntu-24.04
+    needs: [linux_runtime, windows]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: patched-windows-stage
+          path: build/patched/Ghostex
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-gxserver-linux-x64
+          path: build/patched-linux
+      - name: Verify and bundle the patched WSL runtime
+        env:
+          EXPECTED_REVISION: ${{ github.sha }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import shutil
+          import subprocess
+          import tarfile
+
+          root = pathlib.Path('build/patched')
+          app = root / 'Ghostex'
+          runtime = pathlib.Path('build/patched-linux/gxserver-linux-x64.tar.gz')
+          with tarfile.open(runtime, 'r:gz') as archive:
+              identity_file = next(item for item in archive.getmembers() if item.name.removeprefix('./') == 'build-identity.json')
+              identity = json.load(archive.extractfile(identity_file))
+          zmx_revision = subprocess.check_output(['git', 'rev-parse', 'HEAD:.dependencies/zmx'], text=True).strip()
+          if identity.get('sourceRevision') != os.environ['EXPECTED_REVISION'] or identity.get('sourceDirty') is not False or identity.get('zmxSourceDirty') is not False or identity.get('zmxSourceRevision') != zmx_revision:
+              raise RuntimeError('WSL runtime does not identify this clean source revision')
+          wsl = app / 'resources/wsl'
+          wsl.mkdir(parents=True, exist_ok=True)
+          destination = wsl / runtime.name
+          shutil.copy2(runtime, destination)
+          digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+          destination.with_suffix(destination.suffix + '.sha256').write_text(digest + '\n', encoding='utf-8')
+          shutil.copy2('tooling/install-windows-gpui.ps1', root / 'install-windows-gpui.ps1')
+          (root / 'build-provenance.json').write_text(json.dumps({
+              'sourceRevision': os.environ['EXPECTED_REVISION'],
+              'buildUrl': os.environ['BUILD_URL'],
+              'wslRuntimeSha256': digest,
+              'wslRuntimeIdentity': identity,
+          }, indent=2) + '\n', encoding='utf-8')
+          print('Verified patched WSL runtime:', identity['sourceRevision'])
+          PY
+          cd build/patched
+          zip -q -r ../Ghostex-patched-windows-x64.zip Ghostex install-windows-gpui.ps1 build-provenance.json
+          sha256sum ../Ghostex-patched-windows-x64.zip > ../Ghostex-patched-windows-x64.zip.sha256
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ghostex-patched-windows-x64
+          path: |
+            build/Ghostex-patched-windows-x64.zip
+            build/Ghostex-patched-windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
