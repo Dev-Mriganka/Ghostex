@@ -81,6 +81,14 @@ jobs:
           foreach ($file in @('Ghostex.exe', 'ghostex-gpui-runtime.exe', 'resources/build-identity.json', 'resources/native/gxserver.exe', 'resources/native/wmx.exe')) {
             if (-not (Test-Path -LiteralPath (Join-Path $out $file))) { throw "Missing staged resource: $file" }
           }
+      - name: Verify startup guard on native Windows
+        working-directory: server
+        shell: pwsh
+        run: |
+          cargo test --locked --lib cli::startup::tests
+          if ($LASTEXITCODE -ne 0) { throw 'Startup guard tests failed' }
+          cargo test --locked --lib runtime::tests::current_process_is_alive_and_pid_zero_is_not
+          if ($LASTEXITCODE -ne 0) { throw 'Windows process liveness test failed' }
       - uses: actions/upload-artifact@v7
         with:
           name: patched-windows-stage
