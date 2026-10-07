@@ -19,6 +19,23 @@ jobs:
       version: "10.13.0"
       arch: x64
 
+  verify_code_server:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - run: bun install --frozen-lockfile
+      - name: Verify existing Code archive contracts
+        run: bun run release:test tooling/release-macos-code-server-workflow.test.mjs
+
   windows:
     runs-on: windows-2025
     timeout-minutes: 100
@@ -123,7 +140,7 @@ jobs:
 
   assemble:
     runs-on: ubuntu-24.04
-    needs: [linux_runtime, windows]
+    needs: [linux_runtime, windows, verify_code_server]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
